@@ -4,7 +4,8 @@ import {
   RELEASES_METADATA_COLUMN,
   RELEASES_NAME_COLUMN,
   RELEASES_THUMBNAIL_COLUMN,
-  RELEASES_TYPE_COLUMN,
+  RELEASES_CATEGORY_COLUMN,
+  RELEASES_STATUS_COLUMN,
 } from '../consts';
 import type Orbiter from '../orbiter';
 
@@ -45,6 +46,7 @@ export const loadStubData = async (app: Orbiter) => {
     [RELEASES_THUMBNAIL_COLUMN]: thumbnailCid,
     [RELEASES_FILE_COLUMN]: audioCid,
     [RELEASES_METADATA_COLUMN]: 'With an open-access licence, of course.',
-    [RELEASES_TYPE_COLUMN]: 'audio',
+    [RELEASES_CATEGORY_COLUMN]: 'audio',
+    [RELEASES_STATUS_COLUMN]: 'pending',
   });
 };

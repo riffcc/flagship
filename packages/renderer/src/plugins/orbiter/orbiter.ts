@@ -8,28 +8,31 @@ import {ignorerNonDéfinis, suivreBdDeFonction, uneFois} from '@constl/utils-ipa
 import type {JSONSchemaType} from 'ajv';
 
 import {
-  BLOCKED_RELEASES_TABLE_KEY,
-  BLOCKED_RELEASE_CID_COL,
   COLLECTIONS_AUTHOR_COLUMN,
   COLLECTIONS_DB_TABLE_KEY,
   COLLECTIONS_METADATA_COLUMN,
   COLLECTIONS_NAME_COLUMN,
   COLLECTIONS_RELEASES_COLUMN,
   COLLECTIONS_THUMBNAIL_COLUMN,
-  COLLECTIONS_TYPE_COLUMN,
+  COLLECTIONS_CATEGORY_COLUMN,
   RELEASES_AUTHOR_COLUMN,
   RELEASES_DB_TABLE_KEY,
   RELEASES_FILE_COLUMN,
   RELEASES_METADATA_COLUMN,
   RELEASES_NAME_COLUMN,
   RELEASES_THUMBNAIL_COLUMN,
-  RELEASES_TYPE_COLUMN,
+  RELEASES_CATEGORY_COLUMN,
   TRUSTED_SITES_NAME_COL,
   TRUSTED_SITES_SITE_ID_COL,
   TRUSTED_SITES_TABLE_KEY,
+  RELEASES_STATUS_COLUMN,
+  COLLECTIONS_STATUS_COLUMN,
+  FEATURED_RELEASES_END_TIME,
+  FEATURED_RELEASES_RELEASE_ID,
+  FEATURED_RELEASES_STAR_TIME,
+  FEATURED_RELEASES_TABLE_KEY,
 } from './consts.js';
 import type {
-  BlockedCid,
   Collection,
   CollectionWithId,
   Release,
@@ -83,7 +86,8 @@ export default class Orbiter {
   constellation: Constellation;
   events: TypedEmitter<OrbiterEvents>;
 
-  contentTypes = ['tvShow', 'movie', 'audiobook', 'game', 'book', 'music', 'video', 'other'];
+  statusType = ['approved', 'deleted', 'pending', 'rejected'];
+  contentCategories = ['tvShow', 'movie', 'audiobook', 'game', 'book', 'music', 'video', 'other'];
 
   constructor({
     siteId,
@@ -123,10 +127,16 @@ export default class Orbiter {
     const trustedSitesNameVariableId =
       this.initialVariableIds.trustedSitesNameVariableId ||
       (await this.constellation.variables.créerVariable({catégorie: 'chaîneNonTraductible'}));
-    const blockedCidsVariableId =
-      this.initialVariableIds.blockedCidsVariableId ||
+    const featuredReleasesReleaseIdVar =
+    this.initialVariableIds.featuredReleasesReleaseIdVar ||
+    (await this.constellation.variables.créerVariable({catégorie: 'chaîneNonTraductible'}));
+    const featuredReleasesStartTimeVar =
+      this.initialVariableIds.featuredReleasesStartTimeVar ||
+      (await this.constellation.variables.créerVariable({catégorie: 'horoDatage'}));
+    const featuredReleasesEndTimeVar =
+      this.initialVariableIds.featuredReleasesEndTimeVar ||
       (await this.constellation.variables.créerVariable({
-        catégorie: 'chaîneNonTraductible',
+        catégorie: 'horoDatage',
       }));
     console.log('ici 1');
     // Variables for releases table
@@ -158,21 +168,40 @@ export default class Orbiter {
     console.log('ici 2');
     // The release type variable is a bit more complicated, because we need to specify
     // allowed categories to enforce.
-    let releasesTypeVar: string;
-    if (this.initialVariableIds.releasesTypeVar) {
-      releasesTypeVar = this.initialVariableIds.releasesTypeVar;
+    let releasesCategoryVar: string;
+    if (this.initialVariableIds.releasesCategoryVar) {
+      releasesCategoryVar = this.initialVariableIds.releasesCategoryVar;
     } else {
-      releasesTypeVar = await this.constellation.variables.créerVariable({
+      releasesCategoryVar = await this.constellation.variables.créerVariable({
         catégorie: 'chaîneNonTraductible',
       });
       // Specify allowed categories
       await this.constellation.variables.ajouterRègleVariable({
-        idVariable: releasesTypeVar,
+        idVariable: releasesCategoryVar,
         règle: {
           typeRègle: 'valeurCatégorique',
           détails: {
             type: 'fixe',
-            options: this.contentTypes,
+            options: this.contentCategories,
+          },
+        },
+      });
+    }
+    let releasesStatusVar: string;
+    if (this.initialVariableIds.releasesStatusVar) {
+      releasesStatusVar = this.initialVariableIds.releasesStatusVar;
+    } else {
+      releasesStatusVar = await this.constellation.variables.créerVariable({
+        catégorie: 'chaîneNonTraductible',
+      });
+      // Specify allowed categories
+      await this.constellation.variables.ajouterRègleVariable({
+        idVariable: releasesStatusVar,
+        règle: {
+          typeRègle: 'valeurCatégorique',
+          détails: {
+            type: 'fixe',
+            options: this.statusType,
           },
         },
       });
@@ -206,21 +235,40 @@ export default class Orbiter {
       }));
     console.log('ici 4');
     // Same thing for collections type variable.
-    let collectionsTypeVar: string;
-    if (this.initialVariableIds.collectionsTypeVar) {
-      collectionsTypeVar = this.initialVariableIds.collectionsTypeVar;
+    let collectionsCategoryVar: string;
+    if (this.initialVariableIds.collectionsCategoryVar) {
+      collectionsCategoryVar = this.initialVariableIds.collectionsCategoryVar;
     } else {
-      collectionsTypeVar = await this.constellation.variables.créerVariable({
+      collectionsCategoryVar = await this.constellation.variables.créerVariable({
         catégorie: 'chaîneNonTraductible',
       });
       // Specify allowed categories
       await this.constellation.variables.ajouterRègleVariable({
-        idVariable: collectionsTypeVar,
+        idVariable: collectionsCategoryVar,
         règle: {
           typeRègle: 'valeurCatégorique',
           détails: {
             type: 'fixe',
-            options: this.contentTypes,
+            options: this.contentCategories,
+          },
+        },
+      });
+    }
+    let collectionsStatusVar: string;
+    if (this.initialVariableIds.collectionsStatusVar) {
+      collectionsStatusVar = this.initialVariableIds.collectionsStatusVar;
+    } else {
+      collectionsStatusVar = await this.constellation.variables.créerVariable({
+        catégorie: 'chaîneNonTraductible',
+      });
+      // Specify allowed categories
+      await this.constellation.variables.ajouterRègleVariable({
+        idVariable: collectionsStatusVar,
+        règle: {
+          typeRègle: 'valeurCatégorique',
+          détails: {
+            type: 'fixe',
+            options: this.statusType,
           },
         },
       });
@@ -235,17 +283,19 @@ export default class Orbiter {
       // Now we can specify the format for individual release dbs and collections
       const releasesDbFormat = this.getSwarmDbSchema({
         releasesFileVar,
-        releasesTypeVar,
+        releasesCategoryVar,
         releasesThumbnailVar,
         releasesAuthorVar,
         releasesContentNameVar,
         releasesMetadataVar,
+        releasesStatusVar,
         collectionsAuthorVar,
         collectionsMetadataVar,
         collectionsNameVar,
         collectionsReleasesVar,
         collectionsThumbnailVar,
-        collectionsTypeVar,
+        collectionsCategoryVar,
+        collectionsStatusVar,
         swarmId: swarmId,
       });
       for (const table of releasesDbFormat.tableaux) {
@@ -284,11 +334,19 @@ export default class Orbiter {
           {
             cols: [
               {
-                idVariable: blockedCidsVariableId,
-                idColonne: BLOCKED_RELEASE_CID_COL,
+                idVariable: featuredReleasesReleaseIdVar,
+                idColonne: FEATURED_RELEASES_RELEASE_ID,
+              },
+              {
+                idVariable: featuredReleasesStartTimeVar,
+                idColonne: FEATURED_RELEASES_STAR_TIME,
+              },
+              {
+                idVariable: featuredReleasesEndTimeVar,
+                idColonne: FEATURED_RELEASES_END_TIME,
               },
             ],
-            clef: BLOCKED_RELEASES_TABLE_KEY,
+            clef: FEATURED_RELEASES_TABLE_KEY,
           },
         ],
       },
@@ -298,7 +356,11 @@ export default class Orbiter {
       // Federation stuff
       trustedSitesSiteIdVariableId,
       trustedSitesNameVariableId,
-      blockedCidsVariableId,
+
+      // featured relases
+      featuredReleasesReleaseIdVar,
+      featuredReleasesStartTimeVar,
+      featuredReleasesEndTimeVar,
 
       // releases
       releasesFileVar,
@@ -306,7 +368,8 @@ export default class Orbiter {
       releasesContentNameVar,
       releasesThumbnailVar,
       releasesMetadataVar,
-      releasesTypeVar,
+      releasesCategoryVar,
+      releasesStatusVar,
 
       // collections
       collectionsAuthorVar,
@@ -314,7 +377,8 @@ export default class Orbiter {
       collectionsNameVar,
       collectionsThumbnailVar,
       collectionsReleasesVar,
-      collectionsTypeVar,
+      collectionsCategoryVar,
+      collectionsStatusVar,
     };
 
     const siteId = await this.constellation.créerBdIndépendante({
@@ -351,31 +415,35 @@ export default class Orbiter {
 
   getSwarmDbSchema({
     releasesFileVar,
-    releasesTypeVar,
+    releasesCategoryVar,
     releasesThumbnailVar,
     releasesAuthorVar,
     releasesContentNameVar,
     releasesMetadataVar,
+    releasesStatusVar,
     collectionsNameVar,
-    collectionsTypeVar,
+    collectionsCategoryVar,
     collectionsReleasesVar,
     collectionsAuthorVar,
     collectionsMetadataVar,
     collectionsThumbnailVar,
+    collectionsStatusVar,
     swarmId,
   }: {
     releasesFileVar: string;
-    releasesTypeVar: string;
+    releasesCategoryVar: string;
     releasesThumbnailVar: string;
     releasesAuthorVar: string;
     releasesContentNameVar: string;
     releasesMetadataVar: string;
+    releasesStatusVar: string;
     collectionsNameVar: string;
-    collectionsTypeVar: string;
+    collectionsCategoryVar: string;
     collectionsReleasesVar: string;
     collectionsAuthorVar: string;
     collectionsMetadataVar: string;
     collectionsThumbnailVar: string;
+    collectionsStatusVar: string;
     swarmId: string;
   }): bds.schémaSpécificationBd {
     return {
@@ -389,8 +457,8 @@ export default class Orbiter {
               idColonne: RELEASES_FILE_COLUMN,
             },
             {
-              idVariable: releasesTypeVar,
-              idColonne: RELEASES_TYPE_COLUMN,
+              idVariable: releasesCategoryVar,
+              idColonne: RELEASES_CATEGORY_COLUMN,
             },
             {
               idVariable: releasesThumbnailVar,
@@ -408,6 +476,10 @@ export default class Orbiter {
               idVariable: releasesMetadataVar,
               idColonne: RELEASES_METADATA_COLUMN,
             },
+            {
+              idVariable: releasesStatusVar,
+              idColonne: RELEASES_STATUS_COLUMN,
+            },
           ],
           clef: RELEASES_DB_TABLE_KEY,
         },
@@ -418,8 +490,8 @@ export default class Orbiter {
               idColonne: COLLECTIONS_NAME_COLUMN,
             },
             {
-              idVariable: collectionsTypeVar,
-              idColonne: COLLECTIONS_TYPE_COLUMN,
+              idVariable: collectionsCategoryVar,
+              idColonne: COLLECTIONS_CATEGORY_COLUMN,
             },
             {
               idVariable: collectionsReleasesVar,
@@ -436,6 +508,10 @@ export default class Orbiter {
             {
               idVariable: collectionsThumbnailVar,
               idColonne: COLLECTIONS_THUMBNAIL_COLUMN,
+            },
+            {
+              idVariable: collectionsStatusVar,
+              idColonne: COLLECTIONS_STATUS_COLUMN,
             },
           ],
           clef: COLLECTIONS_DB_TABLE_KEY,
@@ -585,50 +661,50 @@ export default class Orbiter {
     });
   }
 
-  async listenForSiteBlockedReleases({
-    f,
-    siteId,
-  }: {
-    f: (releases?: {cid: string; id: string}[]) => void;
-    siteId?: string;
-  }): Promise<forgetFunction> {
-    return await suivreBdDeFonction({
-      fRacine: async ({
-        fSuivreRacine,
-      }: {
-        fSuivreRacine: (nouvelIdBdCible?: string) => Promise<void>;
-      }): Promise<forgetFunction> => {
-        return await this.followSiteModDbId({
-          f: fSuivreRacine,
-          siteId,
-        });
-      },
-      f: ignorerNonDéfinis(f),
-      fSuivre: async ({
-        id,
-        fSuivreBd,
-      }: {
-        id: string;
-        fSuivreBd: types.schémaFonctionSuivi<{cid: string; id: string}[] | undefined>;
-      }): Promise<forgetFunction> => {
-        return await this.constellation.bds.suivreDonnéesDeTableauParClef<BlockedCid>({
-          idBd: id,
-          clefTableau: BLOCKED_RELEASES_TABLE_KEY,
-          f: async blocked => {
-            if (blocked)
-              await fSuivreBd(
-                blocked.map(b => {
-                  return {
-                    cid: b.données[BLOCKED_RELEASE_CID_COL],
-                    id: b.id,
-                  };
-                }),
-              );
-          },
-        });
-      },
-    });
-  }
+  // async listenForSiteBlockedReleases({
+  //   f,
+  //   siteId,
+  // }: {
+  //   f: (releases?: {cid: string; id: string}[]) => void;
+  //   siteId?: string;
+  // }): Promise<forgetFunction> {
+  //   return await suivreBdDeFonction({
+  //     fRacine: async ({
+  //       fSuivreRacine,
+  //     }: {
+  //       fSuivreRacine: (nouvelIdBdCible?: string) => Promise<void>;
+  //     }): Promise<forgetFunction> => {
+  //       return await this.followSiteModDbId({
+  //         f: fSuivreRacine,
+  //         siteId,
+  //       });
+  //     },
+  //     f: ignorerNonDéfinis(f),
+  //     fSuivre: async ({
+  //       id,
+  //       fSuivreBd,
+  //     }: {
+  //       id: string;
+  //       fSuivreBd: types.schémaFonctionSuivi<{cid: string; id: string}[] | undefined>;
+  //     }): Promise<forgetFunction> => {
+  //       return await this.constellation.bds.suivreDonnéesDeTableauParClef<BlockedCid>({
+  //         idBd: id,
+  //         clefTableau: BLOCKED_RELEASES_TABLE_KEY,
+  //         f: async blocked => {
+  //           if (blocked)
+  //             await fSuivreBd(
+  //               blocked.map(b => {
+  //                 return {
+  //                   cid: b.données[BLOCKED_RELEASE_CID_COL],
+  //                   id: b.id,
+  //                 };
+  //               }),
+  //             );
+  //         },
+  //       });
+  //     },
+  //   });
+  // }
 
   async listenForSiteReleases({
     f,
@@ -776,13 +852,13 @@ export default class Orbiter {
 
         const {siteName} = site;
         siteInfos[siteName] = {};
-        this.listenForSiteBlockedReleases({
-          f: async cids => {
-            siteInfos[siteName].blockedCids = cids?.map(c => c.cid);
-            await fFinal();
-          },
-          siteId: site.siteId,
-        }).then(fForget => fsForgetSite.push(fForget));
+        // this.listenForSiteBlockedReleases({
+        //   f: async cids => {
+        //     siteInfos[siteName].blockedCids = cids?.map(c => c.cid);
+        //     await fFinal();
+        //   },
+        //   siteId: site.siteId,
+        // }).then(fForget => fsForgetSite.push(fForget));
 
         this.listenForSiteReleases({
           f: async entries => {
@@ -1159,27 +1235,27 @@ export default class Orbiter {
     }
   }
 
-  async blockRelease({cid}: {cid: string}): Promise<string> {
-    const {modDbId} = await this.orbiterConfig();
+  // async blockRelease({cid}: {cid: string}): Promise<string> {
+  //   const {modDbId} = await this.orbiterConfig();
 
-    return (
-      await this.constellation.bds.ajouterÉlémentÀTableauParClef({
-        idBd: modDbId,
-        clefTableau: BLOCKED_RELEASES_TABLE_KEY,
-        vals: {[BLOCKED_RELEASE_CID_COL]: cid},
-      })
-    )[0];
-  }
+  //   return (
+  //     await this.constellation.bds.ajouterÉlémentÀTableauParClef({
+  //       idBd: modDbId,
+  //       clefTableau: BLOCKED_RELEASES_TABLE_KEY,
+  //       vals: {[BLOCKED_RELEASE_CID_COL]: cid},
+  //     })
+  //   )[0];
+  // }
 
-  async unblockRelease({id}: {id: string}): Promise<void> {
-    const {modDbId} = await this.orbiterConfig();
+  // async unblockRelease({id}: {id: string}): Promise<void> {
+  //   const {modDbId} = await this.orbiterConfig();
 
-    await this.constellation.bds.effacerÉlémentDeTableauParClef({
-      idBd: modDbId,
-      clefTableau: BLOCKED_RELEASES_TABLE_KEY,
-      idÉlément: id,
-    });
-  }
+  //   await this.constellation.bds.effacerÉlémentDeTableauParClef({
+  //     idBd: modDbId,
+  //     clefTableau: BLOCKED_RELEASES_TABLE_KEY,
+  //     idÉlément: id,
+  //   });
+  // }
 
   async makeSitePrivate(): Promise<void> {
     const {swarmId} = await this.orbiterConfig();

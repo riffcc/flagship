@@ -1,37 +1,45 @@
 import type {
-  BLOCKED_RELEASE_CID_COL,
   COLLECTIONS_AUTHOR_COLUMN,
   COLLECTIONS_METADATA_COLUMN,
   COLLECTIONS_NAME_COLUMN,
   COLLECTIONS_RELEASES_COLUMN,
   COLLECTIONS_THUMBNAIL_COLUMN,
-  COLLECTIONS_TYPE_COLUMN,
+  COLLECTIONS_CATEGORY_COLUMN,
+  COLLECTIONS_STATUS_COLUMN,
   RELEASES_AUTHOR_COLUMN,
   RELEASES_FILE_COLUMN,
   RELEASES_METADATA_COLUMN,
   RELEASES_NAME_COLUMN,
   RELEASES_THUMBNAIL_COLUMN,
-  RELEASES_TYPE_COLUMN,
+  RELEASES_STATUS_COLUMN,
+  RELEASES_CATEGORY_COLUMN,
   TRUSTED_SITES_NAME_COL,
   TRUSTED_SITES_SITE_ID_COL,
+  FEATURED_RELEASES_END_TIME,
+  FEATURED_RELEASES_RELEASE_ID,
+  FEATURED_RELEASES_STAR_TIME,
 } from './consts';
 
 export const variableIdKeys = [
   'trustedSitesSiteIdVariableId',
   'trustedSitesNameVariableId',
-  'blockedCidsVariableId',
   'releasesContentNameVar',
   'releasesFileVar',
   'releasesThumbnailVar',
   'releasesAuthorVar',
   'releasesMetadataVar',
-  'releasesTypeVar',
+  'releasesCategoryVar',
+  'releasesStatusVar',
   'collectionsNameVar',
   'collectionsAuthorVar',
   'collectionsThumbnailVar',
   'collectionsMetadataVar',
-  'collectionsTypeVar',
+  'collectionsCategoryVar',
   'collectionsReleasesVar',
+  'collectionsStatusVar',
+  'featuredReleasesReleaseIdVar',
+  'featuredReleasesStartTimeVar',
+  'featuredReleasesEndTimeVar',
 ] as const;
 
 export type VariableIds = Record<(typeof variableIdKeys)[number], string>;
@@ -44,7 +52,8 @@ export type Release = {
   [RELEASES_AUTHOR_COLUMN]: string;
   [RELEASES_THUMBNAIL_COLUMN]?: string;
   [RELEASES_METADATA_COLUMN]?: string;
-  [RELEASES_TYPE_COLUMN]: string;
+  [RELEASES_CATEGORY_COLUMN]: string;
+  [RELEASES_STATUS_COLUMN]: string;
 };
 
 export type ReleaseWithId = {
@@ -57,8 +66,15 @@ export type Collection = {
   [COLLECTIONS_AUTHOR_COLUMN]?: string;
   [COLLECTIONS_THUMBNAIL_COLUMN]?: string;
   [COLLECTIONS_METADATA_COLUMN]?: string;
-  [COLLECTIONS_TYPE_COLUMN]: string;
+  [COLLECTIONS_CATEGORY_COLUMN]: string;
   [COLLECTIONS_RELEASES_COLUMN]: string;
+  [COLLECTIONS_STATUS_COLUMN]: string;
+};
+
+export type FeaturedRelease = {
+  [FEATURED_RELEASES_RELEASE_ID]: string;
+  [FEATURED_RELEASES_STAR_TIME]: string;
+  [FEATURED_RELEASES_END_TIME]: string;
 };
 
 export type CollectionWithId = {
@@ -71,6 +87,26 @@ export type TrustedSite = {
   [TRUSTED_SITES_NAME_COL]: string;
 };
 
-export type BlockedCid = {
-  [BLOCKED_RELEASE_CID_COL]: string;
-};
+
+export interface ReleaseMetadata {
+  description?: string;
+  license?: string;
+}
+
+export interface MusicReleaseMetadata {
+  tags?: string;
+  musicBrainzID?: string;
+  albumTitle?: string;
+  initialReleaseYear?: string;
+  releaseType?: string;
+  fileFormat?: string;
+  bitrate?: string;
+  mediaFormat?: string;
+}
+
+export interface MovieReleaseMetadata {
+  posterCID?: string;
+  TMDBID?: string;
+  IMDBID?: string;
+  releaseType?: string;
+}
