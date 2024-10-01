@@ -26,24 +26,6 @@
               subtitle="Riff.CC is a dynamic platform for music, videos, and creative content. Discover, share, and enjoy a wide variety of multimedia in one place, with personalized recommendations and a vibrant community of creators."
               class="pa-0"
             ></v-list-item>
-            <div class="w-50 d-flex justify-space-around">
-              <v-icon
-                icon="fab fa-facebook-f"
-                size="x-small"
-              ></v-icon>
-              <v-icon
-                icon="fab fa-instagram"
-                size="x-small"
-              ></v-icon>
-              <v-icon
-                icon="fab fa-skype"
-                size="x-small"
-              ></v-icon>
-              <v-icon
-                icon="fab fa-twitter"
-                size="x-small"
-              ></v-icon>
-            </div>
           </v-sheet>
         </v-col>
         <v-col
