@@ -1,0 +1,13 @@
+/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+
+// https://vuetifyjs.com/features/sass-variables/`
+@use 'vuetify/settings' with (
+  $field-border-radius: 0,
+  $tooltip-background-color: rgb(var(--v-theme-info)),
+  $button-text-letter-spacing: 0,
+  $slider-vertical-min-height: 120px
+)
