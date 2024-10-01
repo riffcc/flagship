@@ -51,7 +51,7 @@
                   size="small"
                   color="primary"
                 />
-                <p class="ml-4">{{ `${featured.rating} (Imbd)` }}</p>
+                <p class="ml-4">{{ `${featured.rating}` }}</p>
               </div>
               <div class="d-flex align-center">
                 <p class="ml-4 bg-background.lighten-2 pa-1 mr-2">{{ featured.classification }}</p>

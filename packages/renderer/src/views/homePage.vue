@@ -55,7 +55,7 @@ const featuredReleases: Array<FeaturedItem> = [
     date: 'Feb 2018',
     duration: '1h 44m',
     description: 'Dream your moments, Dinosaurs are a diverse group of reptiles[note 1] of the clade Dinosauria. They first appeared during the Triassic period, between 243 and 233.23 million years ago (mya), although the exact origin and timing of the evolution of dinosaurs is the subject of active research.',
-    name: 'The Dinosaur',
+    name: 'RiP! A Remix Manifesto',
     rating: 4.5,
   },
 ];
