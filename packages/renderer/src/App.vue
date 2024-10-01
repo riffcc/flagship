@@ -1,21 +1,19 @@
 <template>
   <v-app>
-    <app-bar v-show="accountExists || enterAnonymously" />
-    <v-main>
-      <Home @enter="enterAnonymously = true" />
+    <app-bar />
+    <v-main min-height="100vh">
+      <router-view />
     </v-main>
+    <app-footer />
   </v-app>
 </template>
 
 <script setup lang="ts">
-import {suivre as follow} from '@constl/vue';
-import {ref} from 'vue';
-import Home from './views/homePage.vue';
-import appBar from '/@/components/appBar.vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import appBar from '/@/components/layout/appBar.vue';
+import appFooter from '/@/components/layout/appFooter.vue';
+// import {suivre as follow} from '@constl/vue';
+// import {useOrbiter} from '/@/plugins/orbiter/utils';
 
-const {orbiter} = useOrbiter();
-
-const accountExists = follow(orbiter.listenForAccountExists.bind(orbiter));
-const enterAnonymously = ref(false);
+// const {orbiter} = useOrbiter();
+// const orbiterReady = follow(({f}) => orbiter.listenForSiteConfigured({f}));
 </script>
