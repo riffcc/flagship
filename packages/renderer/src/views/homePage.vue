@@ -51,7 +51,17 @@ const featuredReleases: Array<FeaturedItem> = [
   {
     id: '1',
     classification: 'PG',
-    cover: '/mock/movie-abc.png',
+    cover: '/mock/movie-aaronsw.jpg',
+    date: '2014',
+    duration: '1h 45m',
+    description: 'The Internet\'s Own Boy follows the story of programming prodigy and information activist Aaron Swartz.',
+    name: 'The Internet\'s Own Boy: The Story of Aaron Swartz',
+    rating: 4,
+  },
+  {
+    id: '2',
+    classification: 'PG',
+    cover: '/mock/movie-rip.png',
     date: '2008',
     duration: '1h 26m',
     description: 'Join filmmaker Brett Gaylor and mashup artist Girl Talk as they explore copyright and content creation in the digital age. In the process they dissect the media landscape of the 21st century and shatter the wall between users and producers.',
