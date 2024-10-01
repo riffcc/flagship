@@ -54,7 +54,7 @@ const routes: Array<Route> = [
   { label: 'Home', path: '/' },
   { label: 'Music', path: '/music' },
   { label: 'Movies', path: '/movies' },
-  { label: 'Tv Shows', path: '/tv-shows' },
+  { label: 'TV Shows', path: '/tv-shows' },
 ];
 
 const authenticatedRoutes: Array<Route> = [
