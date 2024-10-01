@@ -5,7 +5,7 @@ import UploadPage from '/@/views/uploadPage.vue';
 import HomePage from '/@/views/homePage.vue';
 import BuildingPage from '/@/views/buildingPage.vue';
 
-import InitScreen from '/@/components/initScreen.vue';
+import InitScreen from '/@/views/initScreen.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
