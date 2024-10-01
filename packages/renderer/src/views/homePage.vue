@@ -2,22 +2,23 @@
   <v-container class="fill-height">
     <featured-slider :featured-list="featuredReleases" />
     <content-section
-      title="TV Popular Shows"
-      :items="staticData['tv-popular-shows']"
-      layout="card"
-      :show-navigation="true"
+      title="Featured"
+      :items="staticData['featured-various']"
+      layout="list"
+      description="Various featured content of mixed media"
+      :show-view-all="true"
     />
     <content-section
       title="Featured Music"
       :items="staticData['featured-music']"
-      layout="list"
+      layout="grid"
       :show-view-all="true"
     />
     <content-section
-      title="Latest Movies"
-      :items="staticData['latest-movies']"
-      layout="grid"
-      :show-view-all="true"
+      title="TV Shows"
+      :items="staticData['tv-popular-shows']"
+      layout="card"
+      :show-navigation="true"
     />
   </v-container>
 </template>
@@ -96,17 +97,17 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       thumbnail: '/mock/tv-show-4.png',
     },
   ],
-  'featured-music': [
+  'featured-various': [
     {
       id: '1',
-      title: 'Nine Inch Nails',
-      subtitle: 'The Slip',
+      title: 'RiP!: A Remix Manifesto',
+      subtitle: '(2008)',
       thumbnail: '/mock/featured-music-5.png',
     },
     {
       id: '2',
       title: 'Adam McHeffey',
-      subtitle: "Let' Kick Fire",
+      subtitle: "Let's Kick Fire",
       thumbnail: '/mock/featured-music-4.png',
     },
     {
@@ -123,12 +124,18 @@ const staticData: {[key: string]: Array<ItemContent>} = {
     },
     {
       id: '5',
-      title: 'Adam McHeffey',
-      subtitle: "Let' Kick Fire",
+      title: 'Radiohead',
+      subtitle: 'In Rainbows',
       thumbnail: '/mock/featured-music-1.png',
     },
+    {
+      id: '6',
+      title: 'The Internet\'s Own Boy: The Story of Aaron Swartz',
+      subtitle: '(2014)',
+      thumbnail: '/mock/movie-aaronsw.jpg',
+    },
   ],
-  'latest-movies': [
+  'featured-music': [
       {
         id: '1',
         title: 'Adam McHeffey',
