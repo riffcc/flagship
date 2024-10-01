@@ -78,6 +78,9 @@ importers:
       image-file-resize:
         specifier: ^1.0.5
         version: 1.0.5
+      is-ipfs:
+        specifier: ^8.0.4
+        version: 8.0.4
       node-gyp-build:
         specifier: ^4.8.1
         version: 4.8.1
@@ -118,6 +121,9 @@ importers:
       '@eslint/js':
         specifier: ^9.7.0
         version: 9.7.0
+      '@fortawesome/fontawesome-free':
+        specifier: ^6.6.0
+        version: 6.6.0
       '@rollup/plugin-node-resolve':
         specifier: ^15.2.3
         version: 15.2.3(rollup@4.18.1)
@@ -147,7 +153,7 @@ importers:
         version: 7.16.1(eslint@9.5.0)(typescript@5.2.2)
       '@vitejs/plugin-vue':
         specifier: 5.0.5
-        version: 5.0.5(vite@5.3.3(@types/node@18.19.39)(terser@5.31.2))(vue@3.4.31(typescript@5.2.2))
+        version: 5.0.5(vite@5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2))(vue@3.4.31(typescript@5.2.2))
       '@vue/test-utils':
         specifier: 2.4.6
         version: 2.4.6
@@ -190,6 +196,12 @@ importers:
       rollup-plugin-resolve-id:
         specifier: ^1.0.2
         version: 1.0.2
+      sass:
+        specifier: ^1.78.0
+        version: 1.78.0
+      sass-loader:
+        specifier: ^16.0.1
+        version: 16.0.1(sass@1.78.0)
       simple-git-hooks:
         specifier: 2.11.1
         version: 2.11.1
@@ -207,16 +219,16 @@ importers:
         version: 0.3.0(rollup@4.18.1)
       vite:
         specifier: 5.3.3
-        version: 5.3.3(@types/node@18.19.39)(terser@5.31.2)
+        version: 5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2)
       vite-plugin-node-polyfills:
         specifier: ^0.22.0
-        version: 0.22.0(rollup@4.18.1)(vite@5.3.3(@types/node@18.19.39)(terser@5.31.2))
+        version: 0.22.0(rollup@4.18.1)(vite@5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2))
       vite-plugin-vuetify:
         specifier: ^2.0.3
-        version: 2.0.3(vite@5.3.3(@types/node@18.19.39)(terser@5.31.2))(vue@3.4.31(typescript@5.2.2))(vuetify@3.6.12)
+        version: 2.0.3(vite@5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2))(vue@3.4.31(typescript@5.2.2))(vuetify@3.6.12)
       vitest:
         specifier: 2.0.3
-        version: 2.0.3(@types/node@18.19.39)(happy-dom@14.12.3)(terser@5.31.2)
+        version: 2.0.3(@types/node@18.19.39)(happy-dom@14.12.3)(sass@1.78.0)(terser@5.31.2)
       vue-tsc:
         specifier: 2.0.26
         version: 2.0.26(typescript@5.2.2)
@@ -1249,6 +1261,10 @@ packages:
     resolution: {integrity: sha512-QradleJx78hHJBtI1wRsus1L1jxQB3v4h6k8c3CERI9fssm+NSSppuofmsOei7uq7iQEYq3oK9tJNAyEsRoNng==}
     engines: {node: '>=12.16.1'}
 
+  '@fortawesome/fontawesome-free@6.6.0':
+    resolution: {integrity: sha512-60G28ke/sXdtS9KZCpZSHHkCbdsOGEhIUGlwq6yhY74UpTiToIh8np7A8yphhM4BWsvNFtIvLpi4co+h9Mr9Ow==}
+    engines: {node: '>=6'}
+
   '@hapi/hoek@9.3.0':
     resolution: {integrity: sha512-/c6rf4UJlmHlC9b5BaNvzAcFv7HZ2QHaV0D4/HNlBdvFnvQq8RI4kYdhyPCl7Xj+oWvTWQ8ujhqS53LIgAe6KQ==}
 
@@ -1449,6 +1465,7 @@ packages:
 
   '@libp2p/mplex@10.1.2':
     resolution: {integrity: sha512-RJPbfD8Pgu2ye/akTo9ESAae6ZefwuzEuPjMgg4adVKNfcU0C7HXXrmXQ1B4DfHfVlWW7k+M3u31jZtyXodh3w==}
+    deprecated: Mplex has no flow control - please use @chainsafe/libp2p-yamux instead
 
   '@libp2p/multistream-select@5.1.14':
     resolution: {integrity: sha512-988KYk6eVexNncbofTx2a3eIYYJZbQPw8DDR0l79gTfTks/S64kk4aDjBs76pc5xClPczsqW+9LsSpuAbDxkjg==}
@@ -3825,6 +3842,9 @@ packages:
   immediate@3.0.6:
     resolution: {integrity: sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==}
 
+  immutable@4.3.7:
+    resolution: {integrity: sha512-1hqclzwYwjRDFLjcFxOM5AYkkG0rpFPpr1RLPMEuGczoS7YA8gLhy8SWXYRAA/XwfEHpfo3cw5JGioS32fnMRw==}
+
   import-fresh@2.0.0:
     resolution: {integrity: sha512-eZ5H8rcgYazHbKC3PG4ClHNykCSxtAhxSSEM+2mb+7evD2CKF5V7c0dNum7AdpDh0ZdICwZY9sRSn8f+KH96sg==}
     engines: {node: '>=4'}
@@ -4000,6 +4020,10 @@ packages:
     resolution: {integrity: sha512-FCsGHdlrOnZQcp0+XT5a+pYowf33itBalCl+7ovNXC/7o5BhIpG14M3OrpPPdBSIQJCm+0M5+9mO7S9VVTTCFw==}
     engines: {node: '>=14.16'}
 
+  is-ipfs@8.0.4:
+    resolution: {integrity: sha512-upkO6a8WgBSZMMmuPzmF2NQLWXtiJtHxdEfEiMWrOzCKoZ+XEiM0XlK4fFMfo/PyiRmPMJ4PsNrXyvJeqMrJXA==}
+    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
+
   is-loopback-addr@2.0.2:
     resolution: {integrity: sha512-26POf2KRCno/KTNL5Q0b/9TYnL00xEsSaLfiFRmjM7m7Lw7ZMmFybzzuX4CcsLAluZGd+niLUiMRxEooVE3aqg==}
 
@@ -4134,6 +4158,10 @@ packages:
     resolution: {tarball: https://codeload.github.com/inverted-capital/iso-constants/tar.gz/2af6fdfb2cacaa03ebd58543703918783e62649f}
     version: 0.1.2
     engines: {node: '>=10'}
+
+  iso-url@1.2.1:
+    resolution: {integrity: sha512-9JPDgCN4B7QPkLtYAAOrEuAWvP9rWvR5offAr0/SeF046wIkglqH3VXgYYP6NcsKslH80UIVgmPqNe3j7tG2ng==}
+    engines: {node: '>=12'}
 
   isobject@3.0.1:
     resolution: {integrity: sha512-WhB9zCku7EGTj/HQQRz5aUQEUeoQZH2bWcltRErOpymJ4boYE6wL9Tbr23krRPSZ+C5zqNSrSw+Cc7sZZ4b7vg==}
@@ -5632,6 +5660,32 @@ packages:
 
   sanitize-filename@1.6.3:
     resolution: {integrity: sha512-y/52Mcy7aw3gRm7IrcGDFx/bCk4AhRh2eI9luHOQM86nZsqwiRkkq2GekHXBBD+SmPidc8i2PqtYZl+pWJ8Oeg==}
+
+  sass-loader@16.0.1:
+    resolution: {integrity: sha512-xACl1ToTsKnL9Ce5yYpRxrLj9QUDCnwZNhzpC7tKiFyA8zXsd3Ap+HGVnbCgkdQcm43E+i6oKAWBsvGA6ZoiMw==}
+    engines: {node: '>= 18.12.0'}
+    peerDependencies:
+      '@rspack/core': 0.x || 1.x
+      node-sass: ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0 || ^9.0.0
+      sass: ^1.3.0
+      sass-embedded: '*'
+      webpack: ^5.0.0
+    peerDependenciesMeta:
+      '@rspack/core':
+        optional: true
+      node-sass:
+        optional: true
+      sass:
+        optional: true
+      sass-embedded:
+        optional: true
+      webpack:
+        optional: true
+
+  sass@1.78.0:
+    resolution: {integrity: sha512-AaIqGSrjo5lA2Yg7RvFZrlXDBCp3nV4XP73GrLGvdRWWwk+8H3l0SDvq/5bA4eF+0RFPLuWUk3E+P1U/YqnpsQ==}
+    engines: {node: '>=14.0.0'}
+    hasBin: true
 
   sax@1.4.1:
     resolution: {integrity: sha512-+aWOz7yVScEGoKNd4PA10LZ8sk0A/z5+nXQG5giUO5rprX9jgYsTdov9qCchZiPIZezbZH+jRut8nPodFAX4Jg==}
@@ -7614,7 +7668,7 @@ snapshots:
       it-length-prefixed: 9.0.4
       it-pipe: 3.0.1
       it-pushable: 3.2.3
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       protobufjs: 7.3.2
       uint8arraylist: 2.4.8
       uint8arrays: 5.1.0
@@ -8051,6 +8105,8 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
+  '@fortawesome/fontawesome-free@6.6.0': {}
+
   '@hapi/hoek@9.3.0': {}
 
   '@hapi/topo@5.1.0':
@@ -8075,7 +8131,7 @@ snapshots:
       it-map: 3.1.1
       it-pipe: 3.0.1
       it-take: 3.0.6
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       p-defer: 4.0.1
       progress-events: 1.0.1
       protons-runtime: 5.4.0
@@ -8114,7 +8170,7 @@ snapshots:
       '@multiformats/multiaddr-to-uri': 10.1.0
       interface-blockstore: 5.2.10
       interface-store: 5.1.8
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       progress-events: 1.0.1
     transitivePeerDependencies:
       - supports-color
@@ -8150,7 +8206,7 @@ snapshots:
       it-first: 3.0.6
       it-map: 3.1.1
       it-ndjson: 1.0.7
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       p-defer: 4.0.1
       p-queue: 8.0.1
       uint8arrays: 5.1.0
@@ -8176,7 +8232,7 @@ snapshots:
       interface-blockstore: 5.2.10
       interface-datastore: 8.2.11
       interface-store: 5.1.8
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       progress-events: 1.0.1
 
   '@helia/routers@1.1.0':
@@ -8188,7 +8244,7 @@ snapshots:
       ipns: 9.1.0
       it-first: 3.0.6
       it-map: 3.1.1
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       uint8arrays: 5.1.0
     transitivePeerDependencies:
       - supports-color
@@ -8210,7 +8266,7 @@ snapshots:
       it-last: 3.0.6
       it-pipe: 3.0.1
       merge-options: 3.0.4
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       progress-events: 1.0.1
       sparse-array: 1.3.2
       uint8arrays: 5.1.0
@@ -8241,7 +8297,7 @@ snapshots:
       it-foreach: 2.1.1
       it-merge: 3.0.5
       mortice: 3.0.4
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       murmurhash3js-revisited: 3.0.0
       p-defer: 4.0.1
       progress-events: 1.0.1
@@ -8259,7 +8315,7 @@ snapshots:
   '@ipld/dag-cbor@9.2.1':
     dependencies:
       cborg: 4.2.3
-      multiformats: 13.1.0
+      multiformats: 13.1.3
 
   '@ipld/dag-json@10.2.2':
     dependencies:
@@ -8406,7 +8462,7 @@ snapshots:
       any-signal: 4.1.1
       it-protobuf-stream: 1.1.4
       it-stream-types: 2.0.1
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       p-defer: 4.0.1
       progress-events: 1.0.1
       protons-runtime: 5.4.0
@@ -8432,7 +8488,7 @@ snapshots:
       '@libp2p/interface': 1.6.1
       '@noble/curves': 1.4.2
       '@noble/hashes': 1.4.0
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       node-forge: 1.3.1
       protons-runtime: 5.4.0
       uint8arraylist: 2.4.8
@@ -8586,7 +8642,7 @@ snapshots:
       it-pipe: 3.0.1
       it-protobuf-stream: 1.1.4
       it-take: 3.0.6
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       p-defer: 4.0.1
       p-event: 6.0.1
       p-queue: 8.0.1
@@ -8773,7 +8829,7 @@ snapshots:
       it-length-prefixed: 9.0.4
       it-pipe: 3.0.1
       it-pushable: 3.2.3
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       p-queue: 8.0.1
       uint8arraylist: 2.4.8
       uint8arrays: 5.1.0
@@ -8850,7 +8906,7 @@ snapshots:
       it-protobuf-stream: 1.1.4
       it-pushable: 3.2.3
       it-stream-types: 2.0.1
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       node-datachannel: 0.9.2
       p-defer: 4.0.1
       p-event: 6.0.1
@@ -8893,7 +8949,7 @@ snapshots:
       '@multiformats/multiaddr': 12.3.0
       '@multiformats/multiaddr-matcher': 1.2.4
       it-stream-types: 2.0.1
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       progress-events: 1.0.1
       race-signal: 1.0.2
       uint8arraylist: 2.4.8
@@ -9016,7 +9072,7 @@ snapshots:
 
   '@multiformats/murmur3@2.1.8':
     dependencies:
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       murmurhash3js-revisited: 3.0.0
 
   '@multiformats/uri-to-multiaddr@8.0.0':
@@ -9800,9 +9856,9 @@ snapshots:
 
   '@vascosantos/moving-average@1.1.0': {}
 
-  '@vitejs/plugin-vue@5.0.5(vite@5.3.3(@types/node@18.19.39)(terser@5.31.2))(vue@3.4.31(typescript@5.2.2))':
+  '@vitejs/plugin-vue@5.0.5(vite@5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2))(vue@3.4.31(typescript@5.2.2))':
     dependencies:
-      vite: 5.3.3(@types/node@18.19.39)(terser@5.31.2)
+      vite: 5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2)
       vue: 3.4.31(typescript@5.2.2)
 
   '@vitest/expect@2.0.3':
@@ -11851,7 +11907,7 @@ snapshots:
       interface-datastore: 8.2.11
       ipns: 9.1.0
       libp2p: 1.8.1
-      multiformats: 13.1.0
+      multiformats: 13.1.3
     transitivePeerDependencies:
       - bufferutil
       - react-native
@@ -11962,6 +12018,8 @@ snapshots:
 
   immediate@3.0.6: {}
 
+  immutable@4.3.7: {}
+
   import-fresh@2.0.0:
     dependencies:
       caller-path: 2.0.0
@@ -12060,7 +12118,7 @@ snapshots:
       it-parallel: 3.0.8
       it-pipe: 3.0.1
       it-pushable: 3.2.3
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       p-queue: 8.0.1
       progress-events: 1.0.1
 
@@ -12077,7 +12135,7 @@ snapshots:
       it-batch: 3.0.6
       it-first: 3.0.6
       it-parallel-batch: 3.0.6
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       progress-events: 1.0.1
       rabin-wasm: 0.1.5
       uint8arraylist: 2.4.8
@@ -12135,7 +12193,7 @@ snapshots:
       cborg: 4.2.3
       err-code: 3.0.1
       interface-datastore: 8.2.11
-      multiformats: 13.1.0
+      multiformats: 13.1.3
       protons-runtime: 5.4.0
       timestamp-nano: 1.0.1
       uint8arraylist: 2.4.8
@@ -12224,6 +12282,14 @@ snapshots:
     dependencies:
       ip-regex: 5.0.0
       super-regex: 0.2.0
+
+  is-ipfs@8.0.4:
+    dependencies:
+      '@multiformats/mafmt': 12.1.6
+      '@multiformats/multiaddr': 12.3.0
+      iso-url: 1.2.1
+      multiformats: 13.1.3
+      uint8arrays: 5.1.0
 
   is-loopback-addr@2.0.2: {}
 
@@ -12319,6 +12385,8 @@ snapshots:
   isexe@2.0.0: {}
 
   iso-constants@https://codeload.github.com/inverted-capital/iso-constants/tar.gz/2af6fdfb2cacaa03ebd58543703918783e62649f: {}
+
+  iso-url@1.2.1: {}
 
   isobject@3.0.1: {}
 
@@ -14155,6 +14223,18 @@ snapshots:
     dependencies:
       truncate-utf8-bytes: 1.0.2
 
+  sass-loader@16.0.1(sass@1.78.0):
+    dependencies:
+      neo-async: 2.6.2
+    optionalDependencies:
+      sass: 1.78.0
+
+  sass@1.78.0:
+    dependencies:
+      chokidar: 3.6.0
+      immutable: 4.3.7
+      source-map-js: 1.2.0
+
   sax@1.4.1: {}
 
   scheduler@0.24.0-canary-efb381bbf-20230505:
@@ -14790,13 +14870,13 @@ snapshots:
       extsprintf: 1.4.1
     optional: true
 
-  vite-node@2.0.3(@types/node@18.19.39)(terser@5.31.2):
+  vite-node@2.0.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2):
     dependencies:
       cac: 6.7.14
       debug: 4.3.5
       pathe: 1.1.2
       tinyrainbow: 1.2.0
-      vite: 5.3.3(@types/node@18.19.39)(terser@5.31.2)
+      vite: 5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -14807,26 +14887,26 @@ snapshots:
       - supports-color
       - terser
 
-  vite-plugin-node-polyfills@0.22.0(rollup@4.18.1)(vite@5.3.3(@types/node@18.19.39)(terser@5.31.2)):
+  vite-plugin-node-polyfills@0.22.0(rollup@4.18.1)(vite@5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2)):
     dependencies:
       '@rollup/plugin-inject': 5.0.5(rollup@4.18.1)
       node-stdlib-browser: 1.2.0
-      vite: 5.3.3(@types/node@18.19.39)(terser@5.31.2)
+      vite: 5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2)
     transitivePeerDependencies:
       - rollup
 
-  vite-plugin-vuetify@2.0.3(vite@5.3.3(@types/node@18.19.39)(terser@5.31.2))(vue@3.4.31(typescript@5.2.2))(vuetify@3.6.12):
+  vite-plugin-vuetify@2.0.3(vite@5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2))(vue@3.4.31(typescript@5.2.2))(vuetify@3.6.12):
     dependencies:
       '@vuetify/loader-shared': 2.0.3(vue@3.4.31(typescript@5.2.2))(vuetify@3.6.12(typescript@5.2.2)(vite-plugin-vuetify@2.0.3)(vue@3.4.31(typescript@5.2.2)))
       debug: 4.3.5
       upath: 2.0.1
-      vite: 5.3.3(@types/node@18.19.39)(terser@5.31.2)
+      vite: 5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2)
       vue: 3.4.31(typescript@5.2.2)
       vuetify: 3.6.12(typescript@5.2.2)(vite-plugin-vuetify@2.0.3)(vue@3.4.31(typescript@5.2.2))
     transitivePeerDependencies:
       - supports-color
 
-  vite@5.3.3(@types/node@18.19.39)(terser@5.31.2):
+  vite@5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2):
     dependencies:
       esbuild: 0.21.5
       postcss: 8.4.39
@@ -14834,9 +14914,10 @@ snapshots:
     optionalDependencies:
       '@types/node': 18.19.39
       fsevents: 2.3.3
+      sass: 1.78.0
       terser: 5.31.2
 
-  vitest@2.0.3(@types/node@18.19.39)(happy-dom@14.12.3)(terser@5.31.2):
+  vitest@2.0.3(@types/node@18.19.39)(happy-dom@14.12.3)(sass@1.78.0)(terser@5.31.2):
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@vitest/expect': 2.0.3
@@ -14854,8 +14935,8 @@ snapshots:
       tinybench: 2.8.0
       tinypool: 1.0.0
       tinyrainbow: 1.2.0
-      vite: 5.3.3(@types/node@18.19.39)(terser@5.31.2)
-      vite-node: 2.0.3(@types/node@18.19.39)(terser@5.31.2)
+      vite: 5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2)
+      vite-node: 2.0.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 18.19.39
@@ -14924,7 +15005,7 @@ snapshots:
       vue: 3.4.31(typescript@5.2.2)
     optionalDependencies:
       typescript: 5.2.2
-      vite-plugin-vuetify: 2.0.3(vite@5.3.3(@types/node@18.19.39)(terser@5.31.2))(vue@3.4.31(typescript@5.2.2))(vuetify@3.6.12)
+      vite-plugin-vuetify: 2.0.3(vite@5.3.3(@types/node@18.19.39)(sass@1.78.0)(terser@5.31.2))(vue@3.4.31(typescript@5.2.2))(vuetify@3.6.12)
 
   walker@1.0.8:
     dependencies:
