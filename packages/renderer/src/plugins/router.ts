@@ -5,7 +5,7 @@ import UploadPage from '/@/views/uploadPage.vue';
 import HomePage from '/@/views/homePage.vue';
 import BuildingPage from '/@/views/buildingPage.vue';
 
-import InitScreen from '/@/views/initScreen.vue';
+import InitPage from '/@/views/initPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -25,7 +25,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/init',
     name: 'Create Website',
-    component: InitScreen,
+    component: InitPage,
   },
   {
     path: '/admin',
