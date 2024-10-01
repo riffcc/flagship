@@ -23,11 +23,11 @@
       </v-card-item>
       <v-card-text>
         <audio-viewer
-          v-if="release.release.type === 'audio'"
+          v-if="release.release.category === 'audio'"
           :file="release.release.file"
         />
         <video-viewer
-          v-else-if="release.release.type === 'movie'"
+          v-else-if="release.release.category === 'movie'"
           :file="release.release.file"
         />
       </v-card-text>

@@ -103,13 +103,11 @@ const envFileText = computed(() => {
     'VITE_TRUSTED_SITES_SITE_ID_VAR_ID=' + generatedVariableIds.value?.trustedSitesSiteIdVariableId;
   const trustedSitesNameVar =
     'VITE_TRUSTED_SITES_NAME_VAR_ID=' + generatedVariableIds.value?.trustedSitesNameVariableId;
-  const blockedCidsVar =
-    'VITE_BLOCKED_CIDS_VAR_ID=' + generatedVariableIds.value?.blockedCidsVariableId;
 
   const releasesFileVar =
     'VITE_RELEASES_FILE_VAR_ID=' + generatedVariableIds.value?.releasesFileVar;
-  const releasesTypeVar =
-    'VITE_RELEASES_TYPE_VAR_ID=' + generatedVariableIds.value?.releasesTypeVar;
+  const releasesCategoryVar =
+    'VITE_RELEASES_CATEGORY_VAR_ID=' + generatedVariableIds.value?.releasesCategoryVar;
   const releasesAuthorVar =
     'VITE_RELEASES_AUTHOR_VAR_ID=' + generatedVariableIds.value?.releasesAuthorVar;
   const releasesContentNameVar =
@@ -129,8 +127,16 @@ const envFileText = computed(() => {
     'VITE_COLLECTIONS_RELEASES_VAR_ID=' + generatedVariableIds.value?.collectionsReleasesVar;
   const collectionsThumbnailVar =
     'VITE_COLLECTIONS_THUMBNAIL_VAR_ID=' + generatedVariableIds.value?.collectionsThumbnailVar;
-  const collectionsTypeVar =
-    'VITE_COLLECTIONS_TYPE_VAR_ID=' + generatedVariableIds.value?.collectionsTypeVar;
+  const collectionsCategoryVar =
+    'VITE_COLLECTIONS_CATEGORY_VAR_ID=' + generatedVariableIds.value?.collectionsCategoryVar;
+
+
+  const featuredReleasesReleaseIdVar =
+  'VITE_FEATURED_RELEASES_RELEASE_ID_VAR_ID=' + generatedVariableIds.value?.featuredReleasesReleaseIdVar;
+  const featuredReleasesStartTimeVar =
+  'VITE_FEATURED_RELEASES_START_TIME_VAR_ID=' + generatedVariableIds.value?.featuredReleasesStartTimeVar;
+  const featuredReleasesEndTimeVar =
+  'VITE_FEATURED_RELEASES_END_TIME_VAR_ID=' + generatedVariableIds.value?.featuredReleasesEndTimeVar;
 
   const siteId = 'VITE_SITE_ID=' + generatedSiteId.value;
 
@@ -144,11 +150,9 @@ const envFileText = computed(() => {
     '\n' +
     trustedSitesNameVar +
     '\n' +
-    blockedCidsVar +
-    '\n' +
     releasesFileVar +
     '\n' +
-    releasesTypeVar +
+    releasesCategoryVar +
     '\n' +
     releasesAuthorVar +
     '\n' +
@@ -168,7 +172,14 @@ const envFileText = computed(() => {
     '\n' +
     collectionsThumbnailVar +
     '\n' +
-    collectionsTypeVar
+    collectionsCategoryVar +
+    '\n' +
+    featuredReleasesReleaseIdVar +
+    '\n' +
+    featuredReleasesStartTimeVar +
+    '\n' +
+    featuredReleasesEndTimeVar +
+    '\n'
   );
 });
 

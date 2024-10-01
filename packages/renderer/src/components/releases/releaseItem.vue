@@ -45,14 +45,14 @@
           >
             <v-icon color="error">mdi-delete</v-icon>
           </v-btn>
-          <v-btn
+          <!-- <v-btn
             icon
             class="mx-2"
             @click.stop
             @click="blockRelease"
           >
             <v-icon color="error">mdi-flag</v-icon>
-          </v-btn>
+          </v-btn> -->
         </template>
       </v-list-item>
     </template>
@@ -117,7 +117,7 @@ async function downloadRelease() {
   }
 }
 
-async function blockRelease() {
-  await orbiter.blockRelease({cid: props.release.release.file});
-}
+// async function blockRelease() {
+//   await orbiter.blockRelease({cid: props.release.release.file});
+// }
 </script>
