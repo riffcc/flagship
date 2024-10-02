@@ -44,10 +44,10 @@
             >
               <p class="mb-4 text-h5 text-lg-h4">{{ featured.name }}</p>
               <div class="d-flex align-center">
-                <p class="ml-4 bg-background.lighten-2 pa-1 mr-2">{{ featured.classification }}</p>
+                <p class="bg-background.lighten-2 pa-1 mr-2">{{ featured.classification }}</p>
                 <p class="text-subtitle-2 text-medium-emphasis mr-2">{{ featured.duration }}</p>
                 <v-icon
-                  style="font-size: 8px;"
+                  style="font-size: 0.2em;"
                   icon="fas fa-circle"
                 ></v-icon>
                 <p class="text-subtitle-2 text-medium-emphasis ml-2">{{ featured.date }}</p>
@@ -86,7 +86,7 @@
                   size="small"
                 ></v-icon>
               </template>
-              Watch Trailer
+              Preview
             </v-btn>
           </v-col>
         </v-row>

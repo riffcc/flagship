@@ -69,6 +69,16 @@ const featuredReleases: Array<FeaturedItem> = [
     name: 'RiP!: A Remix Manifesto',
     rating: 4.5,
   },
+  {
+    id: '3',
+    classification: 'Unrated',
+    cover: '/mock/featured-tpbafk-fanart.png',
+    date: '2012',
+    duration: '1h 26m',
+    description: 'The Pirate Bay Away From Keyboard is a documentary film about the file sharing website The Pirate Bay.',
+    name: 'TPB AFK: The Pirate Bay Away From Keyboard',
+    rating: 4.5,
+  },
 ];
 const staticData: {[key: string]: Array<ItemContent>} = {
   'tv-popular-shows': [
