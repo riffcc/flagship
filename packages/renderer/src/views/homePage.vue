@@ -154,7 +154,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       id: '8',
       title: 'Cosmos Laundromat',
       subtitle: '(2015)',
-      thumbnail: '/mock/movie-cosmoslaundromat.jpg',
+      thumbnail: '/mock/movie-cosmoslaundromat.webp',
     },
     {
       id: '9',
