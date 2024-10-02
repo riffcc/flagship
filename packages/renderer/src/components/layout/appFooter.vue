@@ -162,7 +162,14 @@
     height="64px"
     class="d-flex align-center justify-center"
   >
-    <p class="text-subtitle-2">Copyright 2023 Company All Rights Reserved.</p>
+    <p class="text-subtitle-2">
+      <img
+        src="https://mirrors.creativecommons.org/presskit/icons/cc.svg"
+        alt="Creative Commons License"
+        width="17em"
+        style="margin-bottom: -0.25em;"
+      /> e cinere surgemus.
+    </p>
   </v-sheet>
 </template>
 
