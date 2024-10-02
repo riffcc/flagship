@@ -66,6 +66,7 @@
             </div>
           </v-sheet>
         </v-col>
+<<<<<<< HEAD
         <v-col
           cols="12"
           md="3"
@@ -102,6 +103,8 @@
             </div>
           </v-sheet>
         </v-col>
+=======
+>>>>>>> 80d8f56 (Remove "apps" since we do not have those yet)
       </v-row>
     </v-container>
     <v-btn
