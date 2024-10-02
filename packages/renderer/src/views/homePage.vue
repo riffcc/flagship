@@ -84,27 +84,27 @@ const staticData: {[key: string]: Array<ItemContent>} = {
   'tv-popular-shows': [
     {
       id: '1',
-      title: 'Zombie World',
-      subtitle: '2 Seasons',
-      thumbnail: '/mock/tv-show-1.png',
+      title: 'Pure Pwnage',
+      subtitle: '1 Season^',
+      thumbnail: '/mock/tvshow-purepwnage.png',
     },
     {
       id: '2',
-      title: 'Zombie World',
+      title: 'Pioneer One',
       subtitle: '2 Seasons',
-      thumbnail: '/mock/tv-show-2.png',
+      thumbnail: '/mock/tvshow-pioneerone.png',
     },
     {
       id: '3',
-      title: 'Zombie World',
-      subtitle: '2 Seasons',
-      thumbnail: '/mock/tv-show-3.png',
+      title: 'Flash Gordon',
+      subtitle: '1 Seasons',
+      thumbnail: '/mock/tvshow-flashgordon.png',
     },
     {
       id: '4',
-      title: 'Zombie World',
-      subtitle: '2 Seasons',
-      thumbnail: '/mock/tv-show-4.png',
+      title: 'The Beverley Hillbillies',
+      subtitle: '~1.6 Seasons^',
+      thumbnail: '/mock/tvshow-beverleyhillbillies.png',
     },
   ],
   'featured-various': [
