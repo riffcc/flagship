@@ -1,7 +1,7 @@
 import {createRouter, createWebHashHistory, type RouteRecordRaw} from 'vue-router';
 import AccountPage from '/@/views/accountPage.vue';
 import UploadPage from '/@/views/uploadPage.vue';
-
+import AboutPage from '/@/views/aboutPage.vue';
 import HomePage from '/@/views/homePage.vue';
 import BuildingPage from '/@/views/buildingPage.vue';
 
@@ -16,6 +16,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/account',
     name: 'Account',
     component: AccountPage,
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: AboutPage,
   },
   {
     path: '/upload',
