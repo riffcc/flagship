@@ -1,11 +1,11 @@
 import {createRouter, createWebHashHistory, type RouteRecordRaw} from 'vue-router';
+
+import AboutPage from '/@/views/aboutPage.vue';
 import AccountPage from '/@/views/accountPage.vue';
-import UploadPage from '/@/views/uploadPage.vue';
-
-import HomePage from '/@/views/homePage.vue';
 import BuildingPage from '/@/views/buildingPage.vue';
-
+import HomePage from '/@/views/homePage.vue';
 import InitPage from '/@/views/initPage.vue';
+import UploadPage from '/@/views/uploadPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -43,6 +43,10 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/tv-shows',
     component: BuildingPage,
+  },
+  {
+    path: '/about',
+    component: AboutPage,
   },
 ];
 

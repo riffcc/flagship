@@ -7,15 +7,12 @@
       class="fill-height"
       fluid
     >
-      <v-row class="px-2 px-sm-6 px-md-16">
+      <v-row class="px-2 px-sm-6 px-md-16 py-10 align-center">
         <v-col
           cols="12"
           md="3"
         >
-          <v-sheet
-            height="320px"
-            class="d-flex flex-column justify-space-around py-10"
-          >
+          <v-sheet>
             <v-img
               height="90px"
               inline
@@ -33,62 +30,23 @@
           md="6"
         >
           <v-sheet
-            height="320px"
-            class="d-flex pt-16"
+            class="d-flex flex-wrap justify-space-evenly"
           >
-            <div class="flex-1-0">
-              <p class="text-h5 mb-4">Explore</p>
-              <v-list>
+            <div
+              v-for="(section, key) in navigationMap.appFooter"
+              :key="key"
+            >
+              <p class="text-h5 mb-2">{{ key.charAt(0).toUpperCase() + key.slice(1) }}</p>
+              <v-list max-width="200px">
                 <v-list-item
-                  v-for="item in listItems.explore"
-                  :key="item"
-                  :subtitle="item"
-                  class="pa-0"
-                  min-height="25px"
-                >
-                  <template #prepend>
-                    <div class="pr-2 d-flex pb-1">
-                      <v-icon
-                        icon="fas fa-circle"
-                        size="8px"
-                        color="primary"
-                      ></v-icon>
-                    </div>
-                  </template>
-                </v-list-item>
-              </v-list>
-            </div>
-            <div class="flex-1-0">
-              <p class="text-h5 mb-4">Company</p>
-              <v-list>
-                <v-list-item
-                  v-for="item in listItems.company"
-                  :key="item"
-                  :subtitle="item"
-                  class="pa-0"
-                  min-height="25px"
-                >
-                  <template #prepend>
-                    <div class="pr-2 d-flex pb-1">
-                      <v-icon
-                        icon="fas fa-circle"
-                        size="8px"
-                        color="primary"
-                      ></v-icon>
-                    </div>
-                  </template>
-                </v-list-item>
-              </v-list>
-            </div>
-            <div class="flex-1-0">
-              <p class="text-h5 mb-4">Help</p>
-              <v-list>
-                <v-list-item
-                  v-for="item in listItems.help"
-                  :key="item"
-                  :subtitle="item"
-                  class="pa-0"
-                  min-height="25px"
+                  v-for="item in section"
+                  :key="item.label"
+                  :subtitle="item.label"
+                  :ripple="false"
+                  class="mb-2 px-0"
+                  min-height="12px"
+                  height="24px"
+                  @click="() => $router.push(item.path)"
                 >
                   <template #prepend>
                     <div class="pr-2 d-flex pb-1">
@@ -108,10 +66,7 @@
           cols="12"
           md="3"
         >
-          <v-sheet
-            height="320px"
-            class="pt-16"
-          >
+          <v-sheet>
             <p class="text-h5 mb-4">Download App</p>
             <v-list-item
               subtitle="lorem ispusa asdmasd msmd lsdk ls askwe"
@@ -174,25 +129,8 @@
 </template>
 
 <script setup lang="ts">
-const listItems = {
-  explore: [
-    'Home',
-    'Movie',
-    'Tv',
-    'Music',
-    'AudioBooks',
-  ],
-  company: [
-    'Terms Of Use',
-    'Contact Us',
-    'Our Team',
-  ],
-  help: [
-    'Privacy Policy',
-    'About the Riff.CC Project',
-    'Contact Us',
-  ],
-};
+import { navigationMap } from '/@/constants/navigation';
+
 const scrollToTop = () => {
   window.scrollTo({
     top: 0,
