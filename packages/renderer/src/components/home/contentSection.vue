@@ -39,7 +39,11 @@
         v-for="item in items"
         :key="item.id"
       >
-        <v-hover v-slot="{ props, isHovering }">
+        <v-hover
+          v-slot="{ props, isHovering }"
+          open-delay="150"
+          close-delay="150"
+        >
           <v-card
             v-bind="props"
             position="relative"
@@ -145,32 +149,40 @@
         v-for="item in items"
         :key="item.id"
       >
-        <v-sheet
-          color="transparent"
-          class="pa-1"
-          position="relative"
+        <v-hover
+          v-slot="{ props, isHovering }"
+          open-delay="150"
+          close-delay="150"
         >
-          <v-img
-            :src="item.thumbnail"
-            width="240px"
-            class="mx-auto"
-            cover
-            :aspect-ratio="3 / 3.5"
-          ></v-img>
-          <v-btn
-            position="absolute"
-            size="x-large"
-            location="center"
-            icon
-            variant="solo"
+          <v-sheet
+            v-bind="props"
+            color="transparent"
+            class="pa-1"
+            position="relative"
           >
-            <v-icon
-              icon="fas fa-play"
+            <v-img
+              :src="item.thumbnail"
+              width="240px"
+              class="mx-auto"
+              cover
+              :aspect-ratio="3 / 3.5"
+            ></v-img>
+            <v-btn
+              v-if="isHovering"
+              position="absolute"
               size="x-large"
-              color="primary"
-            ></v-icon>
-          </v-btn>
-        </v-sheet>
+              location="center"
+              icon
+              variant="solo"
+            >
+              <v-icon
+                icon="fas fa-play"
+                size="x-large"
+                color="primary"
+              ></v-icon>
+            </v-btn>
+          </v-sheet>
+        </v-hover>
         <p class="text-body-2 text-center">{{ item.title }}</p>
         <p class="text-caption text-center text-medium-emphasis">{{ item.subtitle }}</p>
       </v-col>
