@@ -85,7 +85,8 @@
               <v-list>
                 <v-list-item
                   v-for="item in listItems.help"
-                  :key="item.text"
+                  :key="item"
+                  :subtitle="item"
                   class="pa-0"
                   min-height="25px"
                 >
@@ -98,23 +99,6 @@
                       ></v-icon>
                     </div>
                   </template>
-                  <v-list-item-title>
-                    <router-link
-                      v-if="item.route"
-                      :to="item.route"
-                      class="text-decoration-none"
-                    >
-                      {{ item.text }}
-                    </router-link>
-                    <a
-                      v-else-if="item.href"
-                      :href="item.href"
-                      class="text-decoration-none"
-                    >
-                      {{ item.text }}
-                    </a>
-                    <span v-else>{{ item.text }}</span>
-                  </v-list-item-title>
                 </v-list-item>
               </v-list>
             </div>
@@ -204,9 +188,9 @@ const listItems = {
     'Our Team',
   ],
   help: [
-    { text: 'Privacy Policy', href: '/privacy-policy' },
-    { text: 'About the Riff.CC Project', route: { name: 'about' } },
-    { text: 'Contact Us', href: '/contact' },
+    'Privacy Policy',
+    'About the Riff.CC Project',
+    'Contact Us',
   ],
 };
 const scrollToTop = () => {
