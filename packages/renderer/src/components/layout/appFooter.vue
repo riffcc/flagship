@@ -20,7 +20,11 @@
               src="src/assets/logo.svg"
             ></v-img>
             <v-list-item
-              subtitle="Riff.CC is a dynamic platform for music, videos, and creative content. Discover, share, and enjoy a wide variety of multimedia in one place, with personalized recommendations and a vibrant community of creators."
+              subtitle="Riff.CC is a dynamic platform for music, videos, and creative content. Discover, share, and enjoy a wide variety of multimedia in one place."
+              class="pa-0"
+            ></v-list-item>
+            <v-list-item
+              subtitle="The Riff.CC project is a collaborative effort to create a free and open-source platform for music, videos, and creative content. We believe in the power of community and the importance of sharing knowledge and experiences. So Riff.CC's software allows you to build whatever you want, and link it with other sites that share your interests, allowing you to cooperatively build up a content library while each retains sovereignty over their library's specific content."
               class="pa-0"
             ></v-list-item>
           </v-sheet>
@@ -129,8 +133,30 @@
 </template>
 
 <script setup lang="ts">
+<<<<<<< HEAD
 import { navigationMap } from '/@/constants/navigation';
 
+=======
+const listItems = {
+  about: [
+    'GitHub',
+    'Movie',
+    'Tv',
+    'Music',
+    'AudioBooks',
+  ],
+  project: [
+    'Terms Of Use',
+    'Contact Us',
+    'Our Team',
+  ],
+  help: [
+    'Privacy Policy',
+    'About the Riff.CC Project',
+    'Contact Us',
+  ],
+};
+>>>>>>> 77fd247 (Experimental text guff, cleaning up language and links)
 const scrollToTop = () => {
   window.scrollTo({
     top: 0,
