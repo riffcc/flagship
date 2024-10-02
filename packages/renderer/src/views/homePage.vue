@@ -102,7 +102,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       id: '1',
       title: 'RiP!: A Remix Manifesto',
       subtitle: '(2008)',
-      thumbnail: '/mock/featured-music-5.png',
+      thumbnail: '/mock/movie-rip-poster.png',
     },
     {
       id: '2',

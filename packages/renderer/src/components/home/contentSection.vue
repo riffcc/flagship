@@ -106,7 +106,7 @@
                   prepend-icon="fas fa-play"
                   size="small"
                   class="mt-3 mb-1 text-none"
-                  text="Play Now"
+                  text="Play now"
                 ></v-btn>
               </v-card-actions>
             </v-img>

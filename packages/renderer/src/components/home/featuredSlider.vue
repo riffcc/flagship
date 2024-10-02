@@ -64,7 +64,7 @@
                   rounded="0"
                   prepend-icon="fas fa-play"
                   class="text-none mr-4"
-                  text="Play Now"
+                  text="Play now"
                 ></v-btn>
               </div>
             </v-sheet>
