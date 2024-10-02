@@ -165,7 +165,7 @@
               width="240px"
               class="mx-auto"
               cover
-              :aspect-ratio="3 / 3.5"
+              :aspect-ratio="1"
             ></v-img>
             <v-btn
               v-if="isHovering"
