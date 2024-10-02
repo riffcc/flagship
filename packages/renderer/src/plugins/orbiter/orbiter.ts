@@ -27,14 +27,18 @@ import {
   TRUSTED_SITES_TABLE_KEY,
   RELEASES_STATUS_COLUMN,
   COLLECTIONS_STATUS_COLUMN,
-  FEATURED_RELEASES_END_TIME,
-  FEATURED_RELEASES_RELEASE_ID,
-  FEATURED_RELEASES_STAR_TIME,
+  FEATURED_RELEASES_END_TIME_COLUMN,
+  FEATURED_RELEASES_RELEASE_ID_COLUMN,
+  FEATURED_RELEASES_START_TIME_COLUMN,
   FEATURED_RELEASES_TABLE_KEY,
+  BLOCKED_RELEASES_TABLE_KEY,
+  BLOCKED_RELEASES_RELEASE_ID_COLUMN,
 } from './consts.js';
 import type {
+  BlockedRelease,
   Collection,
   CollectionWithId,
+  FeaturedRelease,
   Release,
   ReleaseWithId,
   TrustedSite,
@@ -138,6 +142,9 @@ export default class Orbiter {
       (await this.constellation.variables.créerVariable({
         catégorie: 'horoDatage',
       }));
+    const blockedReleasesReleaseIdVar =
+      this.initialVariableIds.blockedReleasesReleaseIdVar ||
+      (await this.constellation.variables.créerVariable({catégorie: 'chaîneNonTraductible'}));
     console.log('ici 1');
     // Variables for releases table
     const releasesFileVar =
@@ -335,18 +342,27 @@ export default class Orbiter {
             cols: [
               {
                 idVariable: featuredReleasesReleaseIdVar,
-                idColonne: FEATURED_RELEASES_RELEASE_ID,
+                idColonne: FEATURED_RELEASES_RELEASE_ID_COLUMN,
               },
               {
                 idVariable: featuredReleasesStartTimeVar,
-                idColonne: FEATURED_RELEASES_STAR_TIME,
+                idColonne: FEATURED_RELEASES_START_TIME_COLUMN,
               },
               {
                 idVariable: featuredReleasesEndTimeVar,
-                idColonne: FEATURED_RELEASES_END_TIME,
+                idColonne: FEATURED_RELEASES_END_TIME_COLUMN,
               },
             ],
             clef: FEATURED_RELEASES_TABLE_KEY,
+          },
+          {
+            cols: [
+              {
+                idVariable: blockedReleasesReleaseIdVar,
+                idColonne: BLOCKED_RELEASES_RELEASE_ID_COLUMN,
+              },
+            ],
+            clef: BLOCKED_RELEASES_TABLE_KEY,
           },
         ],
       },
@@ -357,10 +373,13 @@ export default class Orbiter {
       trustedSitesSiteIdVariableId,
       trustedSitesNameVariableId,
 
-      // featured relases
+      // featured releases
       featuredReleasesReleaseIdVar,
       featuredReleasesStartTimeVar,
       featuredReleasesEndTimeVar,
+
+      // blocked releases
+      blockedReleasesReleaseIdVar,
 
       // releases
       releasesFileVar,
@@ -661,50 +680,50 @@ export default class Orbiter {
     });
   }
 
-  // async listenForSiteBlockedReleases({
-  //   f,
-  //   siteId,
-  // }: {
-  //   f: (releases?: {cid: string; id: string}[]) => void;
-  //   siteId?: string;
-  // }): Promise<forgetFunction> {
-  //   return await suivreBdDeFonction({
-  //     fRacine: async ({
-  //       fSuivreRacine,
-  //     }: {
-  //       fSuivreRacine: (nouvelIdBdCible?: string) => Promise<void>;
-  //     }): Promise<forgetFunction> => {
-  //       return await this.followSiteModDbId({
-  //         f: fSuivreRacine,
-  //         siteId,
-  //       });
-  //     },
-  //     f: ignorerNonDéfinis(f),
-  //     fSuivre: async ({
-  //       id,
-  //       fSuivreBd,
-  //     }: {
-  //       id: string;
-  //       fSuivreBd: types.schémaFonctionSuivi<{cid: string; id: string}[] | undefined>;
-  //     }): Promise<forgetFunction> => {
-  //       return await this.constellation.bds.suivreDonnéesDeTableauParClef<BlockedCid>({
-  //         idBd: id,
-  //         clefTableau: BLOCKED_RELEASES_TABLE_KEY,
-  //         f: async blocked => {
-  //           if (blocked)
-  //             await fSuivreBd(
-  //               blocked.map(b => {
-  //                 return {
-  //                   cid: b.données[BLOCKED_RELEASE_CID_COL],
-  //                   id: b.id,
-  //                 };
-  //               }),
-  //             );
-  //         },
-  //       });
-  //     },
-  //   });
-  // }
+  async listenForSiteBlockedReleases({
+    f,
+    siteId,
+  }: {
+    f: (releases?: {cid: string; id: string}[]) => void;
+    siteId?: string;
+  }): Promise<forgetFunction> {
+    return await suivreBdDeFonction({
+      fRacine: async ({
+        fSuivreRacine,
+      }: {
+        fSuivreRacine: (nouvelIdBdCible?: string) => Promise<void>;
+      }): Promise<forgetFunction> => {
+        return await this.followSiteModDbId({
+          f: fSuivreRacine,
+          siteId,
+        });
+      },
+      f: ignorerNonDéfinis(f),
+      fSuivre: async ({
+        id,
+        fSuivreBd,
+      }: {
+        id: string;
+        fSuivreBd: types.schémaFonctionSuivi<{cid: string; id: string}[] | undefined>;
+      }): Promise<forgetFunction> => {
+        return await this.constellation.bds.suivreDonnéesDeTableauParClef<BlockedRelease>({
+          idBd: id,
+          clefTableau: BLOCKED_RELEASES_TABLE_KEY,
+          f: async blocked => {
+            if (blocked)
+              await fSuivreBd(
+                blocked.map(b => {
+                  return {
+                    cid: b.données[BLOCKED_RELEASES_RELEASE_ID_COLUMN],
+                    id: b.id,
+                  };
+                }),
+              );
+          },
+        });
+      },
+    });
+  }
 
   async listenForSiteReleases({
     f,
@@ -804,6 +823,46 @@ export default class Orbiter {
     });
   }
 
+  async listenForSiteFeaturedReleases({
+    f,
+    siteId,
+  }: {
+    f: types.schémaFonctionSuivi<{id: string, featured: FeaturedRelease}[]>;
+    siteId?: string;
+  }): Promise<types.schémaFonctionOublier> {
+    return await suivreBdDeFonction({
+      fRacine: async ({
+        fSuivreRacine,
+      }: {
+        fSuivreRacine: (nouvelIdBdCible?: string) => Promise<void>;
+      }): Promise<forgetFunction> => {
+        return await this.followSiteSwarmId({
+          f: fSuivreRacine,
+          siteId,
+        });
+      },
+      f: ignorerNonDéfinis(f),
+      fSuivre: async ({
+        id,
+        fSuivreBd,
+      }: {
+        id: string;
+        fSuivreBd: types.schémaFonctionSuivi<{id: string, featured: FeaturedRelease}[]>;
+      }): Promise<forgetFunction> => {
+        const {fOublier} = await this.constellation.nuées.suivreDonnéesTableauNuée<FeaturedRelease>({
+          idNuée: id,
+          clefTableau: FEATURED_RELEASES_TABLE_KEY,
+          f: featured =>
+            fSuivreBd(
+              featured.map(x =>({id: x.élément.id, featured: x.élément.données})),
+            ),
+          clefsSelonVariables: false,
+        });
+        return fOublier;
+      },
+    });
+  }
+
   async listenForReleases({
     f,
   }: {
@@ -852,13 +911,13 @@ export default class Orbiter {
 
         const {siteName} = site;
         siteInfos[siteName] = {};
-        // this.listenForSiteBlockedReleases({
-        //   f: async cids => {
-        //     siteInfos[siteName].blockedCids = cids?.map(c => c.cid);
-        //     await fFinal();
-        //   },
-        //   siteId: site.siteId,
-        // }).then(fForget => fsForgetSite.push(fForget));
+        this.listenForSiteBlockedReleases({
+          f: async cids => {
+            siteInfos[siteName].blockedCids = cids?.map(c => c.cid);
+            await fFinal();
+          },
+          siteId: site.siteId,
+        }).then(fForget => fsForgetSite.push(fForget));
 
         this.listenForSiteReleases({
           f: async entries => {
@@ -903,6 +962,7 @@ export default class Orbiter {
     return fForget;
   }
 
+  // Todo: refactor listenForReleases, listenForCollections, and listenForFeaturedReleases to remove duplicated code
   async listenForCollections({
     f,
   }: {
@@ -952,6 +1012,94 @@ export default class Orbiter {
         this.listenForSiteCollections({
           f: async entries => {
             siteInfos[siteName].entries = entries;
+            await fFinal();
+          },
+          siteId: site.siteId,
+        }).then(fOublier => fsForgetSite.push(fOublier));
+
+        siteInfos[siteName].fForget = async () => {
+          await Promise.all(fsForgetSite.map(f => f()));
+        };
+        await fFinal();
+      }
+      for (const site of obsoleteSites) {
+        const {fForget} = siteInfos[site];
+        if (fForget) await fForget();
+        delete siteInfos[site];
+      }
+
+      await fFinal();
+      lock.release();
+    };
+
+    // Need to call once manually to get the user's own entries to show even if user is offline or
+    // the site's master databases are unreachable.
+    await fFollowTrustedSites();
+
+    let forgetTrustedSites: types.schémaFonctionOublier;
+    this.followTrustedSites({f: fFollowTrustedSites}).then(
+      fForget => (forgetTrustedSites = fForget),
+    );
+
+    const fForget = async () => {
+      cancelled = true;
+      if (forgetTrustedSites) await forgetTrustedSites();
+      await Promise.all(
+        Object.values(siteInfos).map(s => (s.fForget ? s.fForget() : Promise.resolve())),
+      );
+    };
+
+    return fForget;
+  }
+
+  async listenForFeaturedReleases({
+    f,
+  }: {
+    f: types.schémaFonctionSuivi<FeaturedRelease[]>;
+  }): Promise<types.schémaFonctionOublier> {
+    const {siteId} = await this.siteConfigured();
+
+    // Todo: implement filtering of other sites' features according to our blocked CID list?
+    type SiteInfo = {
+      featuredReleases?: FeaturedRelease[];
+      fForget?: forgetFunction;
+    };
+    const siteInfos: {[site: string]: SiteInfo} = {};
+
+    let cancelled = false;
+    const lock = new Lock();
+
+    const fFinal = async () => {
+      const releases = Object.entries(siteInfos)
+        .map(s => (s[1].featuredReleases || []).map(r => ({...r, site: s[0]})))
+        .flat();
+      await f(releases);
+    };
+
+    const fFollowTrustedSites = async (sites?: tableaux.élémentDonnées<TrustedSite>[]) => {
+      const sitesList = (sites || []).map(s => s.données);
+      sitesList.push({
+        [TRUSTED_SITES_SITE_ID_COL]: siteId,
+        [TRUSTED_SITES_NAME_COL]: 'Me !',
+      });
+
+      await lock.acquire();
+      if (cancelled) return;
+
+      const newSites = sitesList.filter(s => !Object.keys(siteInfos).includes(s.siteName));
+      const obsoleteSites = Object.keys(siteInfos).filter(
+        s => !sitesList.some(x => x.siteName === s),
+      );
+
+      for (const site of newSites) {
+        const fsForgetSite: types.schémaFonctionOublier[] = [];
+
+        const {siteName} = site;
+        siteInfos[siteName] = {};
+
+        this.listenForSiteFeaturedReleases({
+          f: async entries => {
+            siteInfos[siteName].featuredReleases = entries.map(x=>x.featured);
             await fFinal();
           },
           siteId: site.siteId,
@@ -1193,6 +1341,30 @@ export default class Orbiter {
   // Site moderator functions. Moderators can moderate content and exclude/invite other useres.
   // Admins can do all that and also invite other admins and moderators.
 
+  async featureRelease({
+    cid,
+    startTime,
+    endTime,
+  }: {
+    cid: string;
+    startTime: number;
+    endTime: number;
+  }) {
+    const {modDbId} = await this.orbiterConfig();
+
+    return (
+      await this.constellation.bds.ajouterÉlémentÀTableauParClef({
+        idBd: modDbId,
+        clefTableau: FEATURED_RELEASES_TABLE_KEY,
+        vals: {
+          [FEATURED_RELEASES_RELEASE_ID_COLUMN]: cid,
+          [FEATURED_RELEASES_START_TIME_COLUMN]: startTime,
+          [FEATURED_RELEASES_END_TIME_COLUMN]: endTime,
+        },
+      })
+    )[0];
+  }
+
   async listenToIsModerator({
     f,
     userId,
@@ -1235,27 +1407,27 @@ export default class Orbiter {
     }
   }
 
-  // async blockRelease({cid}: {cid: string}): Promise<string> {
-  //   const {modDbId} = await this.orbiterConfig();
+  async blockRelease({cid}: {cid: string}): Promise<string> {
+    const {modDbId} = await this.orbiterConfig();
 
-  //   return (
-  //     await this.constellation.bds.ajouterÉlémentÀTableauParClef({
-  //       idBd: modDbId,
-  //       clefTableau: BLOCKED_RELEASES_TABLE_KEY,
-  //       vals: {[BLOCKED_RELEASE_CID_COL]: cid},
-  //     })
-  //   )[0];
-  // }
+    return (
+      await this.constellation.bds.ajouterÉlémentÀTableauParClef({
+        idBd: modDbId,
+        clefTableau: BLOCKED_RELEASES_TABLE_KEY,
+        vals: {[BLOCKED_RELEASES_RELEASE_ID_COLUMN]: cid},
+      })
+    )[0];
+  }
 
-  // async unblockRelease({id}: {id: string}): Promise<void> {
-  //   const {modDbId} = await this.orbiterConfig();
+  async unblockRelease({id}: {id: string}): Promise<void> {
+    const {modDbId} = await this.orbiterConfig();
 
-  //   await this.constellation.bds.effacerÉlémentDeTableauParClef({
-  //     idBd: modDbId,
-  //     clefTableau: BLOCKED_RELEASES_TABLE_KEY,
-  //     idÉlément: id,
-  //   });
-  // }
+    await this.constellation.bds.effacerÉlémentDeTableauParClef({
+      idBd: modDbId,
+      clefTableau: BLOCKED_RELEASES_TABLE_KEY,
+      idÉlément: id,
+    });
+  }
 
   async makeSitePrivate(): Promise<void> {
     const {swarmId} = await this.orbiterConfig();

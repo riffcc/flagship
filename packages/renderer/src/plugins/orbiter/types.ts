@@ -15,9 +15,10 @@ import type {
   RELEASES_CATEGORY_COLUMN,
   TRUSTED_SITES_NAME_COL,
   TRUSTED_SITES_SITE_ID_COL,
-  FEATURED_RELEASES_END_TIME,
-  FEATURED_RELEASES_RELEASE_ID,
-  FEATURED_RELEASES_STAR_TIME,
+  FEATURED_RELEASES_END_TIME_COLUMN,
+  FEATURED_RELEASES_RELEASE_ID_COLUMN,
+  FEATURED_RELEASES_START_TIME_COLUMN,
+  BLOCKED_RELEASES_RELEASE_ID_COLUMN,
 } from './consts';
 
 export const variableIdKeys = [
@@ -40,6 +41,7 @@ export const variableIdKeys = [
   'featuredReleasesReleaseIdVar',
   'featuredReleasesStartTimeVar',
   'featuredReleasesEndTimeVar',
+  'blockedReleasesReleaseIdVar',
 ] as const;
 
 export type VariableIds = Record<(typeof variableIdKeys)[number], string>;
@@ -72,10 +74,14 @@ export type Collection = {
 };
 
 export type FeaturedRelease = {
-  [FEATURED_RELEASES_RELEASE_ID]: string;
-  [FEATURED_RELEASES_STAR_TIME]: string;
-  [FEATURED_RELEASES_END_TIME]: string;
+  [FEATURED_RELEASES_RELEASE_ID_COLUMN]: string;
+  [FEATURED_RELEASES_START_TIME_COLUMN]: string;
+  [FEATURED_RELEASES_END_TIME_COLUMN]: string;
 };
+
+export type BlockedRelease = {
+  [BLOCKED_RELEASES_RELEASE_ID_COLUMN]: string;
+}
 
 export type CollectionWithId = {
   collection: Collection;
