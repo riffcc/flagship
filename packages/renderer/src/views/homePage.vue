@@ -81,7 +81,7 @@ const featuredReleases: Array<FeaturedItem> = [
     id: '3',
     classification: 'Unrated',
     category: 'video',
-    contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
+    contentCID: 'QmabExd2NYTdDb2kX9tVAdf1LwzgJnyivknbCnF3nuG289',
     cover: '/mock/featured-tpbafk-fanart.png',
     date: '2012',
     duration: '1h 26m',
