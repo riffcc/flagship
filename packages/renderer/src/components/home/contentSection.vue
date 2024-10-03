@@ -111,7 +111,7 @@
                   size="small"
                   class="mt-3 mb-1 text-none"
                   text="Play now"
-                  @click="item.category && item.contentCID ? $router.push(`/release/${item.category}/${item.contentCID}`) : console.log('no category or content cid :-)')"
+                  @click="item.category && item.contentCID && $router.push(`/release/${item.category}/${item.contentCID}`)"
                 ></v-btn>
               </v-card-actions>
             </v-img>
@@ -130,6 +130,7 @@
         <v-sheet
           class="mx-auto"
           width="170px"
+          @click="item.category === 'video' && item.contentCID && $router.push(`/release/${item.category}/${item.contentCID}`)"
         >
           <v-img
             :src="item.thumbnail"
