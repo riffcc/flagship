@@ -33,6 +33,8 @@ import ContentSection from '/@/components/home/contentSection.vue';
 export interface FeaturedItem {
   id: string;
   classification: string;
+  category?: 'audio' | 'video';
+  contentCID?: string;
   cover: string;
   date: string;
   description: string;
@@ -43,6 +45,8 @@ export interface FeaturedItem {
 
 export interface ItemContent {
   id: string;
+  category?: 'audio' | 'video';
+  contentCID?: string;
   title: string;
   subtitle: string;
   thumbnail?: string;
@@ -84,6 +88,8 @@ const staticData: {[key: string]: Array<ItemContent>} = {
   'tv-popular-shows': [
     {
       id: '1',
+      category: 'video',
+      contentCID: 'QmdpiAHAYcawWrYQaHnuDQ8LRRR3nzohniX2UEQWuZyf9d',
       title: 'Pure Pwnage',
       subtitle: '1 Season^',
       thumbnail: '/mock/tvshow-purepwnage.png',

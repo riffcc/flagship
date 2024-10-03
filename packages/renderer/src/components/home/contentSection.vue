@@ -111,6 +111,7 @@
                   size="small"
                   class="mt-3 mb-1 text-none"
                   text="Play now"
+                  @click="item.category && item.contentCID ? $router.push(`/release/${item.category}/${item.contentCID}`) : console.log('no category or content cid :-)')"
                 ></v-btn>
               </v-card-actions>
             </v-img>

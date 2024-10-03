@@ -6,6 +6,7 @@ import BuildingPage from '/@/views/buildingPage.vue';
 import HomePage from '/@/views/homePage.vue';
 import InitPage from '/@/views/initPage.vue';
 import UploadPage from '/@/views/uploadPage.vue';
+import ReleasePage from '/@/views/releasePage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -47,6 +48,12 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/about',
     component: AboutPage,
+  },
+  {
+    path: '/release/:category/:contentCID',
+    name: 'Release',
+    component: ReleasePage,
+    props: true,
   },
 ];
 
