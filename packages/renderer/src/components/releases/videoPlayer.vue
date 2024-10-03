@@ -17,16 +17,15 @@
             size="small"
             icon="fa:fas fa-arrow-left"
             class="position-absolute top-0 left-0 mt-2 ml-2"
+            :style="{ zIndex: 1000 }"
             @click="$router.back()"
           ></v-btn>
 
           <video
             ref="videoPlayerRef"
             autoplay
-            class="w-100"
+            class="w-100 h-100"
             :src="propsComponent.videoSource"
-            width="100%"
-            height="100%"
             :controls="false"
             crossorigin="anonymous"
             @loadeddata="onLoad"
