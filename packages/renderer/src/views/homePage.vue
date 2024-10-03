@@ -72,7 +72,6 @@ const featuredReleases: Array<FeaturedItem> = [
     duration: '1h 26m',
     description: 'Join filmmaker Brett Gaylor and mashup artist Girl Talk as they explore copyright and content creation in the digital age. In the process they dissect the media landscape of the 21st century and shatter the wall between users and producers.',
     name: 'RiP!: A Remix Manifesto',
-    contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
     rating: 4.5,
   },
   {
@@ -91,7 +90,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
     {
       id: '1',
       category: 'video',
-      contentCID: 'QmdpiAHAYcawWrYQaHnuDQ8LRRR3nzohniX2UEQWuZyf9d',
+      contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
       title: 'Pure Pwnage',
       subtitle: '1 Season^',
       thumbnail: '/mock/tvshow-purepwnage.png',
