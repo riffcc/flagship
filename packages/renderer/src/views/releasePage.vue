@@ -10,7 +10,7 @@
         height="100%"
       >
         <source
-          :src="`http://${IPFS_GATEWAY}/ipfs/${props.contentCID}`"
+          :src="`https://${IPFS_GATEWAY}/ipfs/${props.contentCID}`"
           type="video/mp4"
         />
         Your browser does not support the video tag.
