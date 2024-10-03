@@ -9,7 +9,7 @@
           cover
           max-width="48px"
           aspect-ratio="1"
-          src="src/assets/logo.svg"
+          src="/logo.svg"
         ></v-img>
       </router-link>
     </v-app-bar-title>

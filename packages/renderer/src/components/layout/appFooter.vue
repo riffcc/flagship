@@ -17,7 +17,7 @@
               height="90px"
               inline
               width="90px"
-              src="src/assets/logo.svg"
+              src="/logo.svg"
             ></v-img>
             <v-list-item
               subtitle="Riff.CC is a dynamic platform for music, videos, and creative content. Discover, share, and enjoy a wide variety of multimedia in one place."
