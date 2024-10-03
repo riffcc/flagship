@@ -194,8 +194,8 @@ watch(
 );
 
 const canPlay = () => {
+  isLoading.value = false;
   if (videoPlayerRef.value && videoPlayerRef.value.currentTime > 0) {
-    isLoading.value = false;
     videoPlayerRef.value?.play();
     isPlaying.value = true;
   }
