@@ -1,5 +1,8 @@
 name: Web app
-on: [ workflow_call ]
+on:
+  push:
+    branches:
+      - ui-update
 
 concurrency:
   group: web-app-publish-${{ github.ref }}
