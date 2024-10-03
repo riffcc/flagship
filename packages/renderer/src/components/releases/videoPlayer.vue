@@ -17,7 +17,7 @@
             size="small"
             icon="fa:fas fa-arrow-left"
             class="position-absolute top-0 left-0 mt-2 ml-2"
-            @click="$router.push('/')"
+            @click="$router.back()"
           ></v-btn>
 
           <video
