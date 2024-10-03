@@ -3,23 +3,15 @@
     <v-sheet
       min-height="75vh"
     >
-      <video
-        v-if="props.category === 'video'"
-        controls
-        width="100%"
-        height="100%"
-      >
-        <source
-          :src="`https://${IPFS_GATEWAY}/ipfs/${props.contentCID}`"
-          type="video/mp4"
-        />
-        Your browser does not support the video tag.
-      </video>
+      <video-player
+        :video-source="`https://${IPFS_GATEWAY}/ipfs/${props.contentCID}`"
+      />
     </v-sheet>
   </v-container>
 </template>
 
 <script setup lang="ts">
+import videoPlayer from '/@/components/releases/videoPlayer.vue';
 
 const props = defineProps({
   contentCID: {
