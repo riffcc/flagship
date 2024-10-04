@@ -130,6 +130,7 @@
         <v-sheet
           class="mx-auto"
           width="170px"
+          color="transparent"
           @click="item.category === 'video' && item.contentCID && $router.push(`/release/${item.category}/${item.contentCID}`)"
         >
           <v-img
