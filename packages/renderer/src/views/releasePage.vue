@@ -11,6 +11,7 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
 
 const props = defineProps({
@@ -23,8 +24,11 @@ const props = defineProps({
     type: String,
   },
 });
-
 const IPFS_GATEWAY = 'cdn.riff.cc';
+
+onMounted(() => {
+  window.scrollTo(0,0);
+})
 
 </script>
 
