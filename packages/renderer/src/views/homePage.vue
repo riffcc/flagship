@@ -57,7 +57,7 @@ const featuredReleases: Array<FeaturedItem> = [
     id: '1',
     classification: 'PG',
     category: 'video',
-    contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
+    contentCID: 'Qmcw6w7pE4J5cxD9ygsp7kgnUyxMYc2UHxsnTj6sTxUuX3',
     cover: '/mock/movie-aaronsw.jpg',
     date: '2014',
     duration: '1h 45m',
