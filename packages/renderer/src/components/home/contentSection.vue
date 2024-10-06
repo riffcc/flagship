@@ -111,7 +111,7 @@
                   size="small"
                   class="mt-3 mb-1 text-none"
                   text="Play now"
-                  @click="item.category && item.contentCID && $router.push(`/release/${item.category}/${item.contentCID}`)"
+                  @click="item.category && item.contentCID && router.push(`/release/${item.category}/${item.contentCID}`)"
                 ></v-btn>
               </v-card-actions>
             </v-img>
@@ -131,7 +131,7 @@
           class="mx-auto"
           width="170px"
           color="transparent"
-          @click="item.category === 'video' && item.contentCID && $router.push(`/release/${item.category}/${item.contentCID}`)"
+          @click="item.category === 'video' && item.contentCID && router.push(`/release/${item.category}/${item.contentCID}`)"
         >
           <v-img
             :src="item.thumbnail"
@@ -195,6 +195,8 @@
 
 <script setup lang="ts">
 import type { ItemContent } from '/@/views/homePage.vue';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 
 
 interface Props {

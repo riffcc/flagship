@@ -65,7 +65,7 @@
                   prepend-icon="fas fa-play"
                   class="text-none mr-4"
                   text="Play now"
-                  @click="featured.category && featured.contentCID && $router.push(`/release/${featured.category}/${featured.contentCID}`)"
+                  @click="featured.category && featured.contentCID && router.push(`/release/${featured.category}/${featured.contentCID}`)"
                 ></v-btn>
               </div>
             </v-sheet>
@@ -99,6 +99,8 @@
 
 <script setup lang="ts">
 import type { FeaturedItem } from '/@/views/homePage.vue';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 
 interface Props {
   featuredList: Array<FeaturedItem>

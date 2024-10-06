@@ -18,7 +18,7 @@
             icon="fa:fas fa-arrow-left"
             class="position-absolute top-0 left-0 mt-2 ml-2"
             :style="{ zIndex: 1000 }"
-            @click="$router.back()"
+            @click="router.back()"
           ></v-btn>
 
           <video
@@ -106,6 +106,8 @@
 <script setup lang="ts">
 import type { Ref } from 'vue';
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 
 const propsComponent = defineProps<{
   videoSource: string;

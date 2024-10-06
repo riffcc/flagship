@@ -21,12 +21,12 @@
             ></v-img>
             <v-list-item
               subtitle="Riff.CC is a dynamic platform for music, videos, and creative content. Discover, share, and enjoy a wide variety of multimedia in one place."
-              class="pa-0 mb-2"
+              class="pa-0"
             ></v-list-item>
             <br />
             <v-list-item
               subtitle="This is an early tech demo, work in progress. It is intended only as a proof of concept but may be interesting and enjoyable. No warranties are given, here be dragons, but enjoy."
-              class="pa-0 mb-2"
+              class="pa-0"
             ></v-list-item>
             <br />
             <v-list-item
@@ -56,7 +56,7 @@
                   class="mb-2 pl-1"
                   min-height="12px"
                   height="24px"
-                  @click="() => $router.push(item.path)"
+                  @click="router.push(item.path)"
                 ></v-list-item>
               </v-list>
             </div>
@@ -93,7 +93,10 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router';
 import { navigationMap } from '/@/constants/navigation';
+
+const router = useRouter();
 
 const scrollToTop = () => {
   window.scrollTo({
