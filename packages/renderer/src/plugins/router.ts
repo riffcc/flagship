@@ -6,7 +6,9 @@ import BuildingPage from '/@/views/buildingPage.vue';
 import HomePage from '/@/views/homePage.vue';
 import InitPage from '/@/views/initPage.vue';
 import UploadPage from '/@/views/uploadPage.vue';
+import PrivacyPolicyPage from '/@/views/privacyPolicyPage.vue';
 import ReleasePage from '/@/views/releasePage.vue';
+import TermsPage from '/@/views/termsPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -48,6 +50,14 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/about',
     component: AboutPage,
+  },
+  {
+    path: '/privacy-policy',
+    component: PrivacyPolicyPage,
+  },
+  {
+    path: '/terms',
+    component: TermsPage,
   },
   {
     path: '/release/:category/:contentCID',

@@ -38,12 +38,10 @@ export const navigationMap: NavigationMap = {
     ],
     company: [
       { label: 'Terms of Use', path: '/terms' },
-      { label: 'Contact Us', path: '/contact' },
-      { label: 'Our Team', path: '/team' },
+      { label: 'About the Riff.CC Project', path: '/about' },
     ],
     help: [
-      { label: 'Privacy Policy', path: '/privacy' },
-      { label: 'About the Riff.CC Project', path: '/about' },
+      { label: 'Privacy Policy', path: '/privacy-policy' },
       { label: 'Contact Us', path: '/contact' },
     ],
   },
