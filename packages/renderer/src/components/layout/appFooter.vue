@@ -56,7 +56,7 @@
                   class="mb-2 pl-1"
                   min-height="12px"
                   height="24px"
-                  @click="router.push(item.path)"
+                  @click="item.path === '/contact' ? openEmailClient() : router.push(item.path)"
                 ></v-list-item>
               </v-list>
             </div>
@@ -103,5 +103,9 @@ const scrollToTop = () => {
     top: 0,
     behavior: 'smooth',
   });
+};
+
+const openEmailClient = () => {
+  window.location.href = 'mailto:wings@riff.cc';
 };
 </script>
