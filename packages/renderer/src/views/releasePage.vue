@@ -25,10 +25,5 @@ const props = defineProps({
   },
 });
 const IPFS_GATEWAY = 'cdn.riff.cc';
-
-onMounted(() => {
-  window.scrollTo(0,0);
-})
-
 </script>
 
