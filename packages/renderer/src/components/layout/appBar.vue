@@ -14,25 +14,29 @@
       </router-link>
     </v-app-bar-title>
 
-    <div class="d-none d-md-flex flex-1-0">
-      <v-btn
+    <div class="d-none d-md-flex flex-1-0 align-center">
+      <router-link
         v-for="item in navigationMap.appBar.normal"
         :key="item.label"
-        :text="item.label"
-        :class="$router.currentRoute.value.path === item.path ? 'text-primary-lighten-1 text-none' : 'text-none'"
-        @click="() => $router.push(`${item.path}`)"
-      ></v-btn>
+        :to="item.path"
+        class="text-decoration-none mx-2 text-subtitle-1 text-white"
+        active-class="text-primary-lighten-1"
+      >
+        {{ item.label }}
+      </router-link>
       <v-divider
         vertical
         class="mx-4"
       ></v-divider>
-      <v-btn
+      <router-link
         v-for="item in navigationMap.appBar.authenticated"
         :key="item.label"
-        :text="item.label"
-        :class="$router.currentRoute.value.path === item.path ? 'text-primary-lighten-1 text-none' : 'text-none'"
-        @click="() => $router.push(`${item.path}`)"
-      ></v-btn>
+        :to="item.path"
+        class="text-decoration-none mx-2 text-subtitle-1 text-white"
+        active-class="text-primary-lighten-1"
+      >
+        {{ item.label }}
+      </router-link>
     </div>
   </v-app-bar>
 </template>
