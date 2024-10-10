@@ -11,7 +11,6 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
 
 const props = defineProps({
