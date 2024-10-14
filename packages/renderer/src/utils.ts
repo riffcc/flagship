@@ -34,3 +34,14 @@ export async function copyText(text: string | undefined) {
 }
 
 export const RIFFCC_PROTOCOL = 'Riff.CC';
+
+export const formatTime = (ms: number): string => {
+  if (ms === 0 || isNaN(ms)) {
+    return '00:00';
+  }
+  let [min, sec] = (ms / 60).toFixed(2).split('.');
+  sec = ((parseInt(sec) / 100) * 60).toFixed();
+  min = parseInt(min) < 10 ? `0${min}` : min;
+  sec = parseInt(sec) < 10 ? `0${sec}` : sec;
+  return `${min}:${sec}`;
+};
