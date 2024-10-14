@@ -30,6 +30,15 @@
             ></v-list-item>
             <br />
             <v-list-item
+              class="pa-0"
+            >
+              <template v-slot:subtitle>
+                <p>Items marked with <strong>%</strong> have broken audio or other playback issues which will be resolved soon.</p>
+                <p>Items marked with <strong>^</strong> are <i>only partially available</i>, whether due to licencing or lost content. All content made available under legally free licences - specific credits will soon be available.</p>
+              </template>
+            </v-list-item>
+            <br />
+            <v-list-item
               subtitle="The Riff.CC project is a collaborative effort to create a free and open-source platform for music, videos, and creative content. We believe in the power of community and the importance of sharing knowledge and experiences. So Riff.CC's software allows you to build whatever you want, and link it with other sites that share your interests, allowing you to cooperatively build up a content library while each retains sovereignty over their library's specific content."
               class="pa-0"
             ></v-list-item>

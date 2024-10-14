@@ -219,7 +219,7 @@ async function extractIPFSFilesFromFolder(url: string): Promise<IPFSFile[]> {
         const fileName = encodedName ? decodeURIComponent(encodedName) : null;
 
         if (cid && fileName) {
-          if (['flac', 'mp3'].includes(fileName.split('.')[1])) {
+          if (['flac', 'mp3', 'ogg'].includes(fileName.split('.')[1])) {
             ipfsFiles.push({ cid, name: fileName.split('.')[0] });
           }
         }

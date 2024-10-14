@@ -14,6 +14,9 @@
       layout="grid"
       :show-view-all="true"
     />
+    <v-alert type="info" class="mt-4" color="black" text-color="white">
+      Riff.CC: We're still adding UI support for TV shows, but below you can see what TV will look like on this platform.
+    </v-alert>
     <content-section
       title="TV Shows"
       :items="staticData['tv-popular-shows']"
@@ -62,18 +65,6 @@ const featuredReleases: Array<FeaturedItem> = [
     id: '1',
     classification: 'PG',
     category: 'video',
-    contentCID: 'Qmcw6w7pE4J5cxD9ygsp7kgnUyxMYc2UHxsnTj6sTxUuX3',
-    cover: '/mock/movie-aaronsw.jpg',
-    date: '2014',
-    duration: '1h 45m',
-    description: 'The Internet\'s Own Boy follows the story of programming prodigy and information activist Aaron Swartz.',
-    name: 'The Internet\'s Own Boy: The Story of Aaron Swartz',
-    rating: 4,
-  },
-  {
-    id: '2',
-    classification: 'PG',
-    category: 'video',
     contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
     cover: '/mock/movie-rip.png',
     date: '2008',
@@ -83,6 +74,18 @@ const featuredReleases: Array<FeaturedItem> = [
     rating: 4.5,
   },
   {
+    id: '2',
+    classification: 'PG',
+    category: 'video',
+    contentCID: 'Qmcw6w7pE4J5cxD9ygsp7kgnUyxMYc2UHxsnTj6sTxUuX3',
+    cover: '/mock/movie-aaronsw.jpg',
+    date: '2014',
+    duration: '1h 45m',
+    description: 'The Internet\'s Own Boy follows the story of programming prodigy and information activist Aaron Swartz. [Audio currently needs fixing, which will be resolved soon.]',
+    name: 'The Internet\'s Own Boy: The Story of Aaron Swartz',
+    rating: 4,
+  },
+  {
     id: '3',
     classification: 'Unrated',
     category: 'video',
@@ -90,10 +93,26 @@ const featuredReleases: Array<FeaturedItem> = [
     cover: '/mock/featured-tpbafk-fanart.png',
     date: '2012',
     duration: '1h 26m',
-    description: 'The Pirate Bay Away From Keyboard is a documentary film about the file sharing website The Pirate Bay.',
+    description: 'The Pirate Bay Away From Keyboard is a documentary film about the file sharing website The Pirate Bay. [Audio currently needs fixing, which will be resolved soon.]',
     name: 'TPB AFK: The Pirate Bay Away From Keyboard',
     rating: 4.5,
   },
+  {
+    id: '4',
+    classification: 'PG',
+    category: 'audio',
+    title: 'Maple Ridge',
+    metadata: {
+      author: 'Swear and Shake',
+    },
+    contentCID: 'QmU6WhM6h3uvnicXcCQPgYpwrg9Moz68nVGWBeaYca2bMv',
+    cover: '/mock/music-mapleridge.webp',
+    date: '2015',
+    duration: '1h 26m',
+    description: 'One of our favourite folk albums, and an early inspiration for the Riff.CC project.',
+    name: 'Swear and Shake - Maple Ridge',
+    rating: 4.5,
+  }
 ];
 const staticData: {[key: string]: Array<ItemContent>} = {
   'tv-popular-shows': [
@@ -148,12 +167,14 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       metadata: {
         author: 'Adam McHeffey',
       },
+      contentCID: 'QmQ5mZFnruyqA4tzwguKJ9e4wLigokE2pQE3e99u3YK8vg',
       thumbnail: '/mock/music-letskickfire.jpg',
     },
     {
       id: '3',
       category: 'audio',
       title: 'Maple Ridge',
+      contentCID: 'QmU6WhM6h3uvnicXcCQPgYpwrg9Moz68nVGWBeaYca2bMv',
       metadata: {
         author: 'Swear and Shake',
       },
@@ -163,6 +184,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       id: '4',
       category: 'audio',
       title: 'The Slip',
+      contentCID: 'QmR9hcaUqC7saAj8jjpkCwqa9bChmMJ3Mca17sRn6oiR2F',
       metadata: {
         author: 'Nine Inch Nails',
       },
@@ -172,6 +194,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       id: '5',
       category: 'audio',
       title: 'IN RAINBOWS',
+      contentCID: 'QmWnDNcn7WCcuemYzRTBdJRMzSMgR8Hf6xtPiWLShtqucv',
       metadata: {
         author: 'Radiohead',
       },
@@ -180,7 +203,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
     {
       id: '6',
       category: 'video',
-      contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
+      contentCID: 'Qmcw6w7pE4J5cxD9ygsp7kgnUyxMYc2UHxsnTj6sTxUuX3 ',
       title: 'The Internet\'s Own Boy: The Story of Aaron Swartz',
       metadata: {
         releaseYear: '(2014)',
@@ -190,7 +213,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
     {
       id: '7',
       category: 'video',
-      contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
+      contentCID: 'QmabExd2NYTdDb2kX9tVAdf1LwzgJnyivknbCnF3nuG289',
       title: 'TPB AFK: The Pirate Bay Away from Keyboard',
       metadata: {
         releaseYear: '(2012)',
@@ -210,6 +233,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
     {
       id: '9',
       category: 'audio',
+      contentCID: 'Qmb9XpBQnw1vataDeWTh4jAnPMgNfKGyV7KWFz7uCvYHNd',
       title: 'Ghosts I-IV',
       metadata: {
         author: 'Nine Inch Nails',
@@ -225,6 +249,8 @@ const staticData: {[key: string]: Array<ItemContent>} = {
           author: 'Swear and Shake',
         },
         title: 'Maple Ridge',
+        contentCID: 'QmU6WhM6h3uvnicXcCQPgYpwrg9Moz68nVGWBeaYca2bMv',
+        subtitle: 'Maple Ridge',
         thumbnail: '/mock/music-mapleridge.webp',
       },
       {
@@ -234,6 +260,8 @@ const staticData: {[key: string]: Array<ItemContent>} = {
           author: 'Adam McHeffey',
         },
         title: "Let's Kick Fire",
+        contentCID: 'QmQ5mZFnruyqA4tzwguKJ9e4wLigokE2pQE3e99u3YK8vg',
+        subtitle: "Let's Kick Fire",
         thumbnail: '/mock/music-letskickfire.jpg',
       },
       {
@@ -243,6 +271,8 @@ const staticData: {[key: string]: Array<ItemContent>} = {
           author: 'Nine Inch Nails',
         },
         title: 'The Slip',
+        contentCID: 'QmR9hcaUqC7saAj8jjpkCwqa9bChmMJ3Mca17sRn6oiR2F',
+        subtitle: 'The Slip',
         thumbnail: '/mock/music-theslip.jpg',
       },
       {
@@ -263,6 +293,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
           author: 'Nine Inch Nails',
         },
         title: 'Ghosts I-IV',
+        contentCID: 'Qmb9XpBQnw1vataDeWTh4jAnPMgNfKGyV7KWFz7uCvYHNd',
         thumbnail: '/mock/music-ghosts-i-iv.png',
       },
       {
@@ -272,6 +303,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
           author: 'paniq',
         },
         title: 'Beyond Good and Evil',
+        contentCID: 'QmSPWyFztzp3wntTyBLR5P3xc35wYekaUZ9YyzHtYRu7Ky',
         thumbnail: '/mock/music-paniq-bgae.jpg',
       },
       {
@@ -281,17 +313,18 @@ const staticData: {[key: string]: Array<ItemContent>} = {
           author: 'Brad Sucks',
         },
         title: 'Guess Who\'s A Mess',
+        contentCID: 'QmNXPf83zcKpqp3nDFtjYuAcTWLqsLZkANbNmcH3YZSs34',
         thumbnail: '/mock/music-guesswhosamess.webp',
       },
-
       {
         id: '8',
         category: 'audio',
         metadata: {
-          author: 'Hello Madness',
+          author: 'Swear and Shake',
         },
-        title: 'Life and light after dusk',
-        thumbnail: '/mock/music-lightandlightafterdusk.webp',
+        title: "Extended Play^",
+        contentCID: 'Qme72tWtGJfQnUnWoadTb3PxkfQGAYziiAjf4hvqraokF9',
+        thumbnail: '/mock/music-swearandshake-extendedplay.webp',
       },
       {
         id: '9',
@@ -300,6 +333,8 @@ const staticData: {[key: string]: Array<ItemContent>} = {
           author: 'OK! Crazy Fiction Lady',
         },
         title: 'OK! Crazy Fiction Lady',
+        contentCID: 'QmUD6WSCQcyyBGdwEqUiQBivU8QXR8psx5eiuqv3BqK76M',
+        subtitle: 'OK! Crazy Fiction Lady',
         thumbnail: '/mock/music-okcfl.png',
       },
       {
@@ -309,6 +344,9 @@ const staticData: {[key: string]: Array<ItemContent>} = {
           author: 'OK! Crazy Fiction Lady',
         },
         title: 'Bye Bye Fishies',
+        title: 'OK! Crazy Fiction Lady',
+        contentCID: 'QmZE5FLsfNDLvXpruXFehoGL3H1EUpbRpszcoFvSXx1iKd',
+        subtitle: 'Bye Bye Fishies',
         thumbnail: '/mock/music-byebyefishies.png',
       },
       {
@@ -317,7 +355,8 @@ const staticData: {[key: string]: Array<ItemContent>} = {
         metadata: {
           author: 'paniq',
         },
-        title: 'Story of Ohm',
+        title: 'Story of Ohm^',
+        contentCID: 'QmcvUHaHp7bpnvs31Nka7rSQ2KEuWcgDSwK3V1wsRqMqns',
         thumbnail: '/mock/music-storyofohm.png',
       },
       {
@@ -327,6 +366,8 @@ const staticData: {[key: string]: Array<ItemContent>} = {
           author: 'Girl Talk',
         },
         title: 'All Day',
+        contentCID: 'QmZAYJ1eQtTgMCcM2xxXiLjERqnbaseX1wMvuRbddqhaMj',
+        subtitle: 'All Day',
         thumbnail: '/mock/music-allday.png',
       },
   ],
@@ -335,4 +376,14 @@ const staticData: {[key: string]: Array<ItemContent>} = {
 
 // const releases = follow(orbiter.listenForReleases.bind(orbiter));
 </script>
-
+<!--
+      {
+        id: '8',
+        category: 'audio',
+        metadata: {
+          author: 'Hello Madness',
+        },
+        title: 'Life and light after dusk',
+        thumbnail: '/mock/music-lightandlightafterdusk.webp',
+      },
+-->
