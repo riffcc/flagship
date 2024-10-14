@@ -1,9 +1,9 @@
 <template>
   <v-sheet
     position="sticky"
-    color="secondary-lighten-1"
+    color="secondary-darken-1"
     location="bottom right"
-    class="w-100 border"
+    class="w-100 border rounded-t-xl"
     :elevation="24"
     height="100px"
   >
@@ -15,6 +15,19 @@
       @loadeddata="play"
       @ended="handleNext"
     ></audio>
+    <v-btn
+      class="border position-absolute top-0 right-0 mt-n3 mr-n3"
+      position="absolute"
+      icon
+      size="x-small"
+      @click="props.onCloseCallback"
+    >
+      <v-icon
+        icon="fas fa-close"
+
+        size="x-small"
+      ></v-icon>
+    </v-btn>
     <v-container class="fill-height">
       <v-sheet
         color="transparent"
@@ -33,7 +46,7 @@
             variant="plain"
             size="large"
             :icon="isPlaying ? 'fas fa-circle-pause' : 'fas fa-circle-play'"
-            color="primary"
+            color="primary-lighten-1"
             @click="togglePlay"
           >
           </v-btn>
@@ -104,7 +117,7 @@
           <v-btn
             class="mx-1"
             icon
-            :class="props.repeat ? 'bg-primary' : 'bg-transparent border'"
+            :class="props.repeat ? 'bg-primary-darken-1' : 'bg-transparent border'"
             size="small"
             @click="props.toggleRepeat"
           >
@@ -116,7 +129,7 @@
           <v-btn
             class="mx-1"
             icon
-            :class="props.shuffle ? 'bg-primary' : 'bg-transparent border'"
+            :class="props.shuffle ? 'bg-primary-darken-1' : 'bg-transparent border'"
             size="small"
             @click="props.toggleShuffle"
           >
