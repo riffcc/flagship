@@ -28,7 +28,6 @@
             :src="`https://${IPFS_GATEWAY}/ipfs/${props.contentCid}`"
             :controls="false"
             crossorigin="anonymous"
-            @loadeddata="onLoad"
             @click="togglePlay"
           ></video>
 
@@ -105,7 +104,7 @@
 
 <script setup lang="ts">
 import type { Ref } from 'vue';
-import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
+import { onMounted, onBeforeUnmount, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { IPFS_GATEWAY } from '/@/constants/ipfs';
 
@@ -117,7 +116,6 @@ const router = useRouter();
 const videoPlayerRef: Ref<HTMLVideoElement | null> = ref(null);
 const isPlaying = ref(false);
 const isLoading = ref(true);
-const videoDuration = ref(0);
 const progress = ref(0);
 
 
@@ -126,8 +124,6 @@ const seekingTrack = (e: number): void => {
   if (!videoPlayerRef.value) return;
   isLoading.value = true;
   pause();
-  // const targetPercent = parseFloat((e.offsetX / (e.target as HTMLElement).parentElement!.offsetWidth).toFixed(4));
-  // const targetCurrentTime = videoPlayerRef.value.duration * targetPercent;
   videoPlayerRef.value.currentTime = e;
 };
 
@@ -138,11 +134,6 @@ const togglePlay = (): void => {
 
 const toggleVolume = (): void => {
   videoPlayerRef.value && !(videoPlayerRef.value.volume > 0) ? unmute() : mute();
-};
-
-const onLoad = (e: Event): void => {
-  console.log(e);
-  // play();
 };
 
 const pause = (): void => {
@@ -183,17 +174,6 @@ const toggleFullscreen = (): void => {
   videoPlayerRef.value.requestFullscreen();
 };
 
-watch(
-  () => propsComponent.videoSource,
-  () => {
-    if (videoPlayerRef.value) {
-      videoPlayerRef.value.load();
-      videoPlayerRef.value.addEventListener('loadedmetadata', () => {
-        videoDuration.value = videoPlayerRef.value!.duration;
-      });
-    }
-  },
-);
 
 const canPlay = () => {
   isLoading.value = false;
