@@ -80,6 +80,7 @@
             cols="12"
             md="2"
           >
+          <!-- TODO: Add preview button
             <v-btn
               variant="plain"
               class="text-none text-h6"
@@ -95,6 +96,7 @@
               </template>
               Preview
             </v-btn>
+          -->
           </v-col>
         </v-row>
       </v-container>
