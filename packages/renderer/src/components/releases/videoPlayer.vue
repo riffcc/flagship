@@ -6,9 +6,9 @@
       :open-delay="150"
       :close-delay="150"
     >
-      <template #default="{ isHovering, props }">
+      <template #default="{ isHovering, props: propsTemplate }">
         <v-container
-          v-bind="props"
+          v-bind="propsTemplate"
           id="video-player"
           class="position-relative"
         >
@@ -25,7 +25,7 @@
             ref="videoPlayerRef"
             autoplay
             class="w-100 h-100"
-            :src="propsComponent.videoSource"
+            :src="`https://${IPFS_GATEWAY}/ipfs/${props.contentCid}`"
             :controls="false"
             crossorigin="anonymous"
             @loadeddata="onLoad"
@@ -107,12 +107,13 @@
 import type { Ref } from 'vue';
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-const router = useRouter();
+import { IPFS_GATEWAY } from '/@/constants/ipfs';
 
-const propsComponent = defineProps<{
-  videoSource: string;
+const props = defineProps<{
+  contentCid: string;
 }>();
 
+const router = useRouter();
 const videoPlayerRef: Ref<HTMLVideoElement | null> = ref(null);
 const isPlaying = ref(false);
 const isLoading = ref(true);

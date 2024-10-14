@@ -111,7 +111,13 @@
                   size="small"
                   class="mt-3 mb-1 text-none"
                   text="Play now"
-                  @click="item.category && item.contentCID && router.push(`/release/${item.category}/${item.contentCID}`)"
+                  @click="router.push({
+                    path: '/release',
+                    query: {
+                      category: item.category,
+                      contentCID: item.contentCID
+                    }}
+                  )"
                 ></v-btn>
               </v-card-actions>
             </v-img>
@@ -131,7 +137,18 @@
           class="mx-auto"
           width="170px"
           color="transparent"
-          @click="item.category === 'video' && item.contentCID && router.push(`/release/${item.category}/${item.contentCID}`)"
+          @click="router.push({
+            path: '/release',
+            query: {
+              category: item.category,
+              contentCID: item.contentCID,
+              title: item.title,
+              thumbnail: item.thumbnail,
+              author: item.metadata?.author,
+              description: item.metadata?.description,
+              releaseYear: item.metadata?.releaseYear
+            }}
+          )"
         >
           <v-img
             :src="item.thumbnail"
@@ -177,6 +194,18 @@
               location="center"
               icon
               variant="solo"
+              @click="router.push({
+                path: '/release',
+                query: {
+                  category: item.category,
+                  contentCID: item.contentCID,
+                  title: item.title,
+                  thumbnail: item.thumbnail,
+                  author: item.metadata?.author,
+                  description: item.metadata?.description,
+                  releaseYear: item.metadata?.releaseYear
+                }}
+              )"
             >
               <v-icon
                 icon="fas fa-play"

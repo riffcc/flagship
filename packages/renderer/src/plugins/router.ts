@@ -60,7 +60,7 @@ const routes: Array<RouteRecordRaw> = [
     component: TermsPage,
   },
   {
-    path: '/release/:category/:contentCID',
+    path: '/release',
     name: 'Release',
     component: ReleasePage,
     props: true,

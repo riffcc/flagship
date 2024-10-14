@@ -65,7 +65,13 @@
                   prepend-icon="fas fa-play"
                   class="text-none mr-4"
                   text="Play now"
-                  @click="featured.category && featured.contentCID && router.push(`/release/${featured.category}/${featured.contentCID}`)"
+                  @click="router.push({
+                    path: '/release',
+                    query: {
+                      category: featured.category,
+                      contentCID: featured.contentCID,
+                    }}
+                  )"
                 ></v-btn>
               </div>
             </v-sheet>
