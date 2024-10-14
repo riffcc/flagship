@@ -156,8 +156,8 @@
             cover
             aspect-ratio="1"
           ></v-img>
-          <p class="text-body-2 text-center">{{ item.title }}</p>
-          <p class="text-caption text-center text-medium-emphasis">{{ item.subtitle }}</p>
+          <p class="text-body-2 text-center">{{ item.category === 'video' ? item.title : item.metadata?.author }}</p>
+          <p class="text-caption text-center text-medium-emphasis">{{ item.category === 'video' ? item.metadata?.releaseYear : item.title }}</p>
         </v-sheet>
       </v-col>
     </v-row>
@@ -215,8 +215,8 @@
             </v-btn>
           </v-sheet>
         </v-hover>
-        <p class="text-body-2 text-center">{{ item.title }}</p>
-        <p class="text-caption text-center text-medium-emphasis">{{ item.subtitle }}</p>
+        <p class="text-body-2 text-center">{{ item.metadata?.author }}</p>
+        <p class="text-caption text-center text-medium-emphasis">{{ item.title }}</p>
       </v-col>
     </v-row>
   </v-container>

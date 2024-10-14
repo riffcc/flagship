@@ -48,8 +48,13 @@ export interface ItemContent {
   category?: 'audio' | 'video';
   contentCID?: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   thumbnail?: string;
+  metadata?: {
+    author?: string;
+    description?: string;
+    releaseYear?: number | string;
+  }
 }
 
 const featuredReleases: Array<FeaturedItem> = [
@@ -131,31 +136,45 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       category: 'video',
       contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
       title: 'RiP!: A Remix Manifesto',
-      subtitle: '(2008)',
+      metadata: {
+        releaseYear: '(2008)',
+      },
       thumbnail: '/mock/movie-rip-poster.png',
     },
     {
       id: '2',
-      title: 'Adam McHeffey',
-      subtitle: "Let's Kick Fire",
+      category: 'audio',
+      title: "Let's Kick Fire",
+      metadata: {
+        author: 'Adam McHeffey',
+      },
       thumbnail: '/mock/music-letskickfire.jpg',
     },
     {
       id: '3',
-      title: 'Swear and Shake',
-      subtitle: 'Maple Ridge',
+      category: 'audio',
+      title: 'Maple Ridge',
+      metadata: {
+        author: 'Swear and Shake',
+      },
       thumbnail: '/mock/music-mapleridge.webp',
     },
     {
       id: '4',
-      title: 'Nine Inch Nails',
-      subtitle: 'The Slip',
+      category: 'audio',
+      title: 'The Slip',
+      metadata: {
+        author: 'Nine Inch Nails',
+      },
       thumbnail: '/mock/music-theslip.jpg',
     },
     {
       id: '5',
-      title: 'Radiohead',
-      subtitle: 'IN RAINBOWS',
+      category: 'audio',
+      title: 'IN RAINBOWS',
+      metadata: {
+        author: 'Radiohead',
+      },
       thumbnail: '/mock/music-inrainbows.jpg',
     },
     {
@@ -163,7 +182,9 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       category: 'video',
       contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
       title: 'The Internet\'s Own Boy: The Story of Aaron Swartz',
-      subtitle: '(2014)',
+      metadata: {
+        releaseYear: '(2014)',
+      },
       thumbnail: '/mock/movie-aaronsw.jpg',
     },
     {
@@ -171,7 +192,9 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       category: 'video',
       contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
       title: 'TPB AFK: The Pirate Bay Away from Keyboard',
-      subtitle: '(2012)',
+      metadata: {
+        releaseYear: '(2012)',
+      },
       thumbnail: '/mock/movie-tbpafk.webp',
     },
     {
@@ -179,88 +202,131 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       category: 'video',
       contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
       title: 'Cosmos Laundromat',
-      subtitle: '(2015)',
+      metadata: {
+        releaseYear: '(2015)',
+      },
       thumbnail: '/mock/movie-cosmoslaundromat.webp',
     },
     {
       id: '9',
-      title: 'Nine Inch Nails',
-      subtitle: 'Ghosts I-IV',
+      category: 'audio',
+      title: 'Ghosts I-IV',
+      metadata: {
+        author: 'Nine Inch Nails',
+      },
       thumbnail: '/mock/music-ghosts-i-iv.png',
     },
   ],
   'featured-music': [
       {
         id: '1',
-        title: 'Swear and Shake',
-        subtitle: 'Maple Ridge',
+        category: 'audio',
+        metadata: {
+          author: 'Swear and Shake',
+        },
+        title: 'Maple Ridge',
         thumbnail: '/mock/music-mapleridge.webp',
       },
       {
         id: '2',
-        title: 'Adam McHeffey',
-        subtitle: "Let's Kick Fire",
+        category: 'audio',
+        metadata: {
+          author: 'Adam McHeffey',
+        },
+        title: "Let's Kick Fire",
         thumbnail: '/mock/music-letskickfire.jpg',
       },
       {
         id: '3',
-        title: 'Nine Inch Nails',
-        subtitle: 'The Slip',
+        category: 'audio',
+        metadata: {
+          author: 'Nine Inch Nails',
+        },
+        title: 'The Slip',
         thumbnail: '/mock/music-theslip.jpg',
       },
       {
         id: '4',
-        title: 'Silence is Sexy',
-        subtitle: 'Everything You Should Know',
+        category: 'audio',
+        title: 'Everything You Should Know',
         thumbnail: '/mock/music-everythingyoushouldknow.jpg',
+        contentCID: 'QmbQ6JUzJPXaMdh5HBBZsczGLzhgz5DaFmUbRFZByZggRq',
+        metadata: {
+          author: 'Silence is Sexy',
+          releaseYear: 2006,
+        },
       },
       {
         id: '5',
-        title: 'Nine Inch Nails',
-        subtitle: 'Ghosts I-IV',
+        category: 'audio',
+        metadata: {
+          author: 'Nine Inch Nails',
+        },
+        title: 'Ghosts I-IV',
         thumbnail: '/mock/music-ghosts-i-iv.png',
       },
       {
         id: '6',
-        title: 'paniq',
-        subtitle: 'Beyond Good and Evil',
+        category: 'audio',
+        metadata: {
+          author: 'paniq',
+        },
+        title: 'Beyond Good and Evil',
         thumbnail: '/mock/music-paniq-bgae.jpg',
       },
       {
         id: '7',
-        title: 'Brad Sucks',
-        subtitle: 'Guess Who\'s A Mess',
+        category: 'audio',
+        metadata: {
+          author: 'Brad Sucks',
+        },
+        title: 'Guess Who\'s A Mess',
         thumbnail: '/mock/music-guesswhosamess.webp',
       },
 
       {
         id: '8',
-        title: 'Hello Madness',
-        subtitle: 'Life and light after dusk',
+        category: 'audio',
+        metadata: {
+          author: 'Hello Madness',
+        },
+        title: 'Life and light after dusk',
         thumbnail: '/mock/music-lightandlightafterdusk.webp',
       },
       {
         id: '9',
+        category: 'audio',
+        metadata: {
+          author: 'OK! Crazy Fiction Lady',
+        },
         title: 'OK! Crazy Fiction Lady',
-        subtitle: 'OK! Crazy Fiction Lady',
         thumbnail: '/mock/music-okcfl.png',
       },
       {
         id: '10',
-        title: 'OK! Crazy Fiction Lady',
-        subtitle: 'Bye Bye Fishies',
+        category: 'audio',
+        metadata: {
+          author: 'OK! Crazy Fiction Lady',
+        },
+        title: 'Bye Bye Fishies',
         thumbnail: '/mock/music-byebyefishies.png',
       },
       {
         id: '11',
-        title: 'paniq',
-        subtitle: 'Story of Ohm',
+        category: 'audio',
+        metadata: {
+          author: 'paniq',
+        },
+        title: 'Story of Ohm',
         thumbnail: '/mock/music-storyofohm.png',
       },
       {
         id: '12',
-        title: 'Girl Talk',
-        subtitle: 'All Day',
+        category: 'audio',
+        metadata: {
+          author: 'Girl Talk',
+        },
+        title: 'All Day',
         thumbnail: '/mock/music-allday.png',
       },
   ],
