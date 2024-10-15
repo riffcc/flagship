@@ -11,7 +11,7 @@
   </v-sheet>
   <v-sheet
     v-else
-    class="text-body-2 mx-auto"
+    class="text-body-2 mx-auto my-4"
     max-width="960px"
   >
     <v-container
@@ -20,7 +20,7 @@
       <v-btn
         size="small"
         icon="fa:fas fa-arrow-left"
-        class="mb-4"
+        class="mb-md-4"
         :style="{ zIndex: 1000 }"
         @click="canBack ? router.back() : router.push('/')"
       ></v-btn>
@@ -30,7 +30,7 @@
           md="3"
         >
           <v-img
-            height="128"
+            :height="xs ? '148px' : '160px'"
             aspect-ratio="1/1"
             :src="cid(props.thumbnail ?? '') ? `https://${IPFS_GATEWAY}/ipfs/${props.thumbnail}` : props.thumbnail"
           ></v-img>
@@ -41,7 +41,7 @@
           md="9"
           class="text-center text-md-start"
         >
-          <h1>{{ props.title }}</h1>
+          <p class="text-h5 text-md-h4 font-weight-medium">{{ props.title }}</p>
           <p>{{ props.description }}</p>
           <p>{{ albumFiles.length }} Songs</p>
           <p>{{ props.author }} - {{ props.releaseYear }}</p>
@@ -52,25 +52,20 @@
           <v-list-item
             v-for="(file, i) in albumFiles"
             :key="i"
-            min-height="64px"
-            class="my-2"
+            :min-height="xs ? '48px' :'64px'"
+            class="my-1"
           >
             <template #prepend>
-              <v-sheet width="48px">
+              <v-sheet :width="xs ? '24px' : '48px'">
                 <p class="text-h5 text-md-h4 text-center">{{ i + 1 }}</p>
               </v-sheet>
-              <v-divider
-                class="ml-2"
-                color="primary"
-                vertical
-              ></v-divider>
             </template>
             <template #default>
-              <v-sheet class="ml-2 d-flex">
+              <v-sheet class="ml-2 d-flex align-center">
                 <v-sheet
                   position="relative"
-                  width="60px"
-                  height="60px"
+                  :width="xs ? '48px' : '60px'"
+                  :height="xs ? '48px' : '60px'"
                   border
                 >
                   <!-- <v-img
@@ -83,18 +78,18 @@
                   <v-btn
                     position="absolute"
                     location="center"
-                    variant="plain"
+                    variant="tonal"
                     icon="fas fa-play"
-                    size="small"
+                    :size="xs ? 'x-small' : 'small'"
                     @click="() => handlePlay(i)"
                   ></v-btn>
                 </v-sheet>
                 <div class="ml-4">
-                  <p>{{ file.name }}</p>
-                  <p class="text-caption text-medium-emphasis">{{ props.author }}</p>
+                  <p class="text-subtitle-2 text-md-subtitle-1">{{ file.name }}</p>
+                  <p class="text-caption text-md-subtitle-2 text-medium-emphasis">{{ props.author }}</p>
                 </div>
               </v-sheet>
-              <v-divider class="mt-1"></v-divider>
+              <v-divider class="mt-2"></v-divider>
             </template>
             <template #append>
               <p class="text-subtitle-2 text-medium-emphasis">{{ file.duration }}</p>
@@ -123,6 +118,7 @@ import { IPFS_GATEWAY } from '/@/constants/ipfs';
 import { useRouter } from 'vue-router';
 // import { formatTime } from '/@/utils';
 import {cid} from 'is-ipfs';
+import { useDisplay } from 'vuetify';
 
 type Props = {
   contentCid: string;
@@ -146,6 +142,7 @@ const albumFiles = ref<albumFile[]>([]);
 
 const router = useRouter();
 const canBack = computed(() => Boolean(window.history.state.back));
+const { xs } = useDisplay();
 
 const isLoading = ref(true);
 const selectedAudio = ref<{ index: number, cid: string; name: string}>();

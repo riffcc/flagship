@@ -36,7 +36,7 @@
 
         <div
           v-if="isHovering"
-          class="position-absolute bottom-0 mb-2 py-2 w-100 bg-secondary-darken-1"
+          class="position-absolute bottom-0 mb-2 py-2 w-100 bg-background-darken-1"
         >
           <v-slider
             v-model="progress"

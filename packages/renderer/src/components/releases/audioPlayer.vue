@@ -1,9 +1,8 @@
 <template>
   <v-sheet
     position="sticky"
-    color="secondary-darken-1"
     location="bottom right"
-    class="w-100 border rounded-t-xl"
+    class="w-auto border rounded-t-xl mx-3"
     :elevation="24"
     height="100px"
   >
@@ -24,7 +23,6 @@
     >
       <v-icon
         icon="fas fa-close"
-
         size="x-small"
       ></v-icon>
     </v-btn>
@@ -37,22 +35,18 @@
       >
         <div class="d-flex align-center">
           <v-btn
-            variant="plain"
-            size="small"
+            :size="xs ? 'x-small' : 'small'"
             icon="fas fa-backward-step"
             @click="props.handlePrevious"
           ></v-btn>
           <v-btn
-            variant="plain"
-            size="large"
-            :icon="isPlaying ? 'fas fa-circle-pause' : 'fas fa-circle-play'"
-            color="primary-lighten-1"
+            :size="xs ? 'small' : 'medium'"
+            :icon="isPlaying ? 'fa fa-pause' : 'fas fa-play'"
             @click="togglePlay"
           >
           </v-btn>
           <v-btn
-            variant="plain"
-            size="small"
+            :size="xs ? 'x-small' : 'small'"
             icon="fas fa-forward-step"
             @click="props.handleNext"
           ></v-btn>
@@ -65,10 +59,10 @@
           <v-slider
             v-model="progress"
             :max="audioPlayerRef?.duration"
-            track-color="primary"
-            track-fill-color="primary"
-            thumb-color="primary"
-            :thumb-size="18"
+            track-fill-color="primary-darken-1"
+            track-color="grey"
+            thumb-color="white"
+            :thumb-size="xs ? 14 : 18"
             color="background"
             class="mx-0"
             hide-details
@@ -79,65 +73,64 @@
             <span class="text-subtitle-2 float-right">{{ duration }}</span>
           </div>
         </v-sheet>
-        <div class="d-flex ml-6">
-          <v-menu
-            open-on-hover
-            class="mb-4"
-          >
-            <template #activator="{props: propsTemplate}">
-              <v-btn
-                v-bind="propsTemplate"
-                class="border bg-transparent"
-                icon
-                size="small"
-                @click="toggleVolume"
-              >
-                <v-icon
-                  :icon="audioPlayerRef?.volume === 0 ? 'fas fa-volume-off' : 'fas fa-volume-high'"
-                  size="x-small"
-                ></v-icon>
-              </v-btn>
-            </template>
-            <v-sheet
-              color="background"
-              class="overflow-hidden"
-            >
-              <v-slider
-                v-model="volume"
-                min="0"
-                max="1"
-                step="0.1"
-                hide-details
-                density="compact"
-                color="primary"
-                direction="vertical"
-              ></v-slider>
-            </v-sheet>
-          </v-menu>
+        <v-speed-dial
+          v-if="xs"
+          location="top center"
+        >
+          <template #activator="{ props: speedDialProps }">
+            <v-btn
+              class="mx-2"
+              icon="fas fa-bars"
+              size="x-small"
+              v-bind="speedDialProps"
+            ></v-btn>
+          </template>
           <v-btn
-            class="mx-1"
-            icon
-            :class="props.repeat ? 'bg-primary-darken-1' : 'bg-transparent border'"
-            size="small"
+            :icon="volume === 0 ? 'fas fa-volume-off' : 'fas fa-volume-high'"
+            :variant="volume !== 0 ? 'tonal': 'plain'"
+            size="x-small"
+            color="#F2F2F2"
+            @click="toggleVolume"
+          ></v-btn>
+          <v-btn
+            icon="fas fa-rotate-left"
+            :variant="props.repeat ? 'plain': 'tonal'"
+            size="x-small"
+            color="#F2F2F2"
             @click="props.toggleRepeat"
-          >
-            <v-icon
-              icon="fas fa-rotate-left"
-              size="x-small"
-            ></v-icon>
-          </v-btn>
+          ></v-btn>
+          <v-btn
+            icon="fas fa-shuffle"
+            :variant="props.shuffle ? 'plain': 'tonal'"
+            size="x-small"
+            color="#F2F2F2"
+            @click="props.toggleShuffle"
+          ></v-btn>
+        </v-speed-dial>
+        <div
+          v-else
+          class="d-flex ml-6"
+        >
+          <v-btn
+            :icon="volume === 0 ? 'fas fa-volume-off' : 'fas fa-volume-high'"
+            :variant="volume !== 0 ? 'tonal' : 'flat'"
+            size="x-small"
+            @click="toggleVolume"
+          ></v-btn>
           <v-btn
             class="mx-1"
-            icon
-            :class="props.shuffle ? 'bg-primary-darken-1' : 'bg-transparent border'"
-            size="small"
+            icon="fas fa-rotate-left"
+            :variant="props.repeat ? 'tonal' : 'flat'"
+            size="x-small"
+            @click="props.toggleRepeat"
+          ></v-btn>
+          <v-btn
+            class="mx-1"
+            icon="fas fa-shuffle"
+            :variant="props.shuffle ? 'tonal' : 'flat'"
+            size="x-small"
             @click="props.toggleShuffle"
-          >
-            <v-icon
-              icon="fas fa-shuffle"
-              size="x-small"
-            ></v-icon>
-          </v-btn>
+          ></v-btn>
         </div>
       </v-sheet>
     </v-container>
@@ -149,6 +142,7 @@
 import { onUnmounted, ref, watch, onMounted } from 'vue';
 import { IPFS_GATEWAY } from '/@/constants/ipfs';
 import { formatTime } from '/@/utils';
+import { useDisplay } from 'vuetify';
 
 const props = defineProps<{
   selectedAudio: {
@@ -174,6 +168,7 @@ const duration = ref('00:00');
 
 
 
+const { xs } = useDisplay();
 
 watch(volume, (v) => {
   if (audioPlayerRef.value) {
