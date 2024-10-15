@@ -14,7 +14,7 @@
           icon="fa:fas fa-arrow-left"
           class="position-absolute top-0 left-0 mt-2 ml-2"
           :style="{ zIndex: 1000 }"
-          @click="router.back()"
+          @click="canBack ? router.back() : router.push('/')"
         ></v-btn>
 
         <video
@@ -79,10 +79,11 @@
 
 <script setup lang="ts">
 import type { Ref } from 'vue';
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { IPFS_GATEWAY } from '/@/constants/ipfs';
 import { useDisplay } from 'vuetify';
+
 const props = defineProps<{
   contentCid: string;
 }>();
@@ -103,6 +104,7 @@ const seekingTrack = (e: number): void => {
   videoPlayerRef.value.currentTime = e;
 };
 
+const canBack = computed(() => Boolean(window.history.state.back));
 
 const togglePlay = (): void => {
   isPlaying.value ? pause() : play();

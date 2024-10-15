@@ -22,7 +22,7 @@
         icon="fa:fas fa-arrow-left"
         class="mb-4"
         :style="{ zIndex: 1000 }"
-        @click="router.back()"
+        @click="canBack ? router.back() : router.push('/')"
       ></v-btn>
       <v-row>
         <v-col
@@ -117,7 +117,7 @@
   </v-sheet>
 </template>
 <script setup lang="ts">
-import {onMounted, ref} from 'vue';
+import {computed, onMounted, ref} from 'vue';
 import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import { IPFS_GATEWAY } from '/@/constants/ipfs';
 import { useRouter } from 'vue-router';
@@ -145,6 +145,8 @@ const props = defineProps<Props>();
 const albumFiles = ref<albumFile[]>([]);
 
 const router = useRouter();
+const canBack = computed(() => Boolean(window.history.state.back));
+
 const isLoading = ref(true);
 const selectedAudio = ref<{ index: number, cid: string; name: string}>();
 const repeat = ref(false);
