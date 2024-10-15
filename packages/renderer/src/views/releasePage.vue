@@ -1,5 +1,8 @@
 <template>
-  <v-container>
+  <v-container
+    fluid
+    class="pa-0"
+  >
     <video-player
       v-if="route.query.category === 'video'"
       :content-cid="(route.query.contentCID as string)"
