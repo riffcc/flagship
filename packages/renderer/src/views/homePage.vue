@@ -14,7 +14,12 @@
       layout="grid"
       :show-view-all="true"
     />
-    <v-alert type="info" class="mt-4" color="black" text-color="white">
+    <v-alert
+      type="info"
+      class="mt-4"
+      color="black"
+      text-color="white"
+    >
       Riff.CC: We're still adding UI support for TV shows, but below you can see what TV will look like on this platform.
     </v-alert>
     <content-section
@@ -112,7 +117,7 @@ const featuredReleases: Array<FeaturedItem> = [
     description: 'One of our favourite folk albums, and an early inspiration for the Riff.CC project.',
     name: 'Swear and Shake - Maple Ridge',
     rating: 4.5,
-  }
+  },
 ];
 const staticData: {[key: string]: Array<ItemContent>} = {
   'tv-popular-shows': [
@@ -223,8 +228,8 @@ const staticData: {[key: string]: Array<ItemContent>} = {
     {
       id: '8',
       category: 'video',
-      contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
-      title: 'Cosmos Laundromat',
+      contentCID: 'QmYVCbux1BK5Z2eJjwr5pJayZiQhp2TAUdCNUostkFkwee',
+      title: 'Cosmos Laundromat: First Cycle',
       metadata: {
         releaseYear: '(2015)',
       },
@@ -322,7 +327,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
         metadata: {
           author: 'Swear and Shake',
         },
-        title: "Extended Play^",
+        title: 'Extended Play^',
         contentCID: 'Qme72tWtGJfQnUnWoadTb3PxkfQGAYziiAjf4hvqraokF9',
         thumbnail: '/mock/music-swearandshake-extendedplay.webp',
       },
