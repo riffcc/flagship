@@ -259,8 +259,24 @@ onMounted(
       audioPlayerRef.value.addEventListener('progress', updateProgress);
       audioPlayerRef.value.addEventListener('canplay', canPlay);
     }
+    if ('mediaSession' in window.navigator) {
+      window.navigator.mediaSession.setActionHandler('play', () => {
+        play();
+      });
+      window.navigator.mediaSession.setActionHandler('pause', () => {
+        pause();
+      });
+      window.navigator.mediaSession.setActionHandler('previoustrack', () => {
+        props.handlePrevious();
+      });
+      window.navigator.mediaSession.setActionHandler('nexttrack', () => {
+        props.handleNext();
+      });
+    }
+
   },
 );
+
 onUnmounted(() => {
   if (audioPlayerRef.value) {
     audioPlayerRef.value.removeEventListener('progress', updateProgress);

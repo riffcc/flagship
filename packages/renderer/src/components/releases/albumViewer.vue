@@ -154,7 +154,13 @@ const toggleShuffle = () => shuffle.value ? shuffle.value = false : shuffle.valu
 
 const handleOnSelectAndPlay = (index: number) => {
   selectedAudio.value = { index, name: albumFiles.value[index].name, cid: albumFiles.value[index].cid };
-
+  if ('mediaSession' in window.navigator) {
+    window.navigator.mediaSession.metadata = new MediaMetadata({
+      title: selectedAudio.value.name,
+      album: props.title,
+      artist: props.author,
+    });
+  }
 };
 const handlePlay = (index: number) => {
   handleOnSelectAndPlay(index);
