@@ -19,7 +19,7 @@
     </template>
     <v-carousel-item
       v-for="featured in featuredList"
-      :key="featured.name"
+      :key="featured.id"
       :src="featured.cover"
       cover
       gradient="to right, rgba(0,0,0,.80), rgba(0,0,0,.01)"
@@ -42,21 +42,21 @@
               color="transparent"
               class="my-10"
             >
-              <p class="mb-4 text-h5 text-lg-h4">{{ featured.name }}</p>
+              <p class="mb-4 text-h5 text-lg-h4">{{ featured.category === 'audio' ? `${featured.title} - ${featured.metadata?.author}` : featured.title }}</p>
               <div class="d-flex align-center">
                 <p class="bg-background.lighten-2 pa-1 mr-2">{{ featured.classification }}</p>
-                <p class="text-subtitle-2 text-medium-emphasis mr-2">{{ featured.duration }}</p>
+                <p class="text-subtitle-2 text-medium-emphasis mr-2">{{ featured.metadata?.duration }}</p>
                 <v-icon
                   style="font-size: 0.2em;"
                   icon="fas fa-circle"
                 ></v-icon>
-                <p class="text-subtitle-2 text-medium-emphasis ml-2">{{ featured.date }}</p>
+                <p class="text-subtitle-2 text-medium-emphasis ml-2">{{ featured.metadata?.releaseYear }}</p>
               </div>
               <p
                 class="text-subtitle-2 text-medium-emphasis mb-4"
                 style="line-height: 1.1em;"
               >
-                {{ featured.description }}
+                {{ featured.metadata?.description }}
               </p>
               <div class="d-flex mt-8">
                 <v-btn

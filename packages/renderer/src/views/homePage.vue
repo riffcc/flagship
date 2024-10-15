@@ -38,18 +38,6 @@ import ContentSection from '/@/components/home/contentSection.vue';
 // import {suivre as follow} from '@constl/vue';
 // import {useOrbiter} from '/@/plugins/orbiter/utils';
 
-export interface FeaturedItem {
-  id: string;
-  classification: string;
-  category?: 'audio' | 'video';
-  contentCID?: string;
-  cover: string;
-  date: string;
-  description: string;
-  duration: string;
-  name: string;
-  rating: number;
-}
 
 export interface ItemContent {
   id: string;
@@ -61,8 +49,15 @@ export interface ItemContent {
   metadata?: {
     author?: string;
     description?: string;
+    duration?: string;
     releaseYear?: number | string;
   }
+}
+
+export interface FeaturedItem extends ItemContent {
+  classification: string;
+  cover: string;
+  rating: number;
 }
 
 const featuredReleases: Array<FeaturedItem> = [
@@ -72,10 +67,12 @@ const featuredReleases: Array<FeaturedItem> = [
     category: 'video',
     contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
     cover: '/mock/movie-rip.png',
-    date: '2008',
-    duration: '1h 26m',
-    description: 'Join filmmaker Brett Gaylor and mashup artist Girl Talk as they explore copyright and content creation in the digital age. In the process they dissect the media landscape of the 21st century and shatter the wall between users and producers.',
-    name: 'RiP!: A Remix Manifesto',
+    metadata: {
+      description: 'Join filmmaker Brett Gaylor and mashup artist Girl Talk as they explore copyright and content creation in the digital age. In the process they dissect the media landscape of the 21st century and shatter the wall between users and producers.',
+      duration: '1h 26m',
+      releaseYear: '2008',
+    },
+    title: 'RiP!: A Remix Manifesto',
     rating: 4.5,
   },
   {
@@ -84,10 +81,12 @@ const featuredReleases: Array<FeaturedItem> = [
     category: 'video',
     contentCID: 'Qmcw6w7pE4J5cxD9ygsp7kgnUyxMYc2UHxsnTj6sTxUuX3',
     cover: '/mock/movie-aaronsw.jpg',
-    date: '2014',
-    duration: '1h 45m',
-    description: 'The Internet\'s Own Boy follows the story of programming prodigy and information activist Aaron Swartz. [Audio currently needs fixing, which will be resolved soon.]',
-    name: 'The Internet\'s Own Boy: The Story of Aaron Swartz',
+    metadata: {
+      description: 'The Internet\'s Own Boy follows the story of programming prodigy and information activist Aaron Swartz. [Audio currently needs fixing, which will be resolved soon.]',
+      duration: '1h 45m',
+      releaseYear: '2014',
+    },
+    title: 'The Internet\'s Own Boy: The Story of Aaron Swartz',
     rating: 4,
   },
   {
@@ -96,26 +95,27 @@ const featuredReleases: Array<FeaturedItem> = [
     category: 'video',
     contentCID: 'QmabExd2NYTdDb2kX9tVAdf1LwzgJnyivknbCnF3nuG289',
     cover: '/mock/featured-tpbafk-fanart.png',
-    date: '2012',
-    duration: '1h 26m',
-    description: 'The Pirate Bay Away From Keyboard is a documentary film about the file sharing website The Pirate Bay. [Audio currently needs fixing, which will be resolved soon.]',
-    name: 'TPB AFK: The Pirate Bay Away From Keyboard',
+    metadata: {
+      description: 'The Pirate Bay Away From Keyboard is a documentary film about the file sharing website The Pirate Bay. [Audio currently needs fixing, which will be resolved soon.]',
+      duration: '1h 26m',
+      releaseYear: '2012',
+    },
+    title: 'TPB AFK: The Pirate Bay Away From Keyboard',
     rating: 4.5,
   },
   {
     id: '4',
     classification: 'PG',
     category: 'audio',
-    title: 'Maple Ridge',
-    metadata: {
-      author: 'Swear and Shake',
-    },
     contentCID: 'QmU6WhM6h3uvnicXcCQPgYpwrg9Moz68nVGWBeaYca2bMv',
     cover: '/mock/music-mapleridge.webp',
-    date: '2015',
-    duration: '1h 26m',
-    description: 'One of our favourite folk albums, and an early inspiration for the Riff.CC project.',
-    name: 'Swear and Shake - Maple Ridge',
+    metadata: {
+      author: 'Swear and Shake',
+      description: 'One of our favourite folk albums, and an early inspiration for the Riff.CC project.',
+      duration: '1h 26m',
+      releaseYear: '2015',
+    },
+    title: 'Maple Ridge',
     rating: 4.5,
   },
 ];
@@ -349,7 +349,6 @@ const staticData: {[key: string]: Array<ItemContent>} = {
           author: 'OK! Crazy Fiction Lady',
         },
         title: 'Bye Bye Fishies',
-        title: 'OK! Crazy Fiction Lady',
         contentCID: 'QmZE5FLsfNDLvXpruXFehoGL3H1EUpbRpszcoFvSXx1iKd',
         subtitle: 'Bye Bye Fishies',
         thumbnail: '/mock/music-byebyefishies.png',
