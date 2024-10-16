@@ -245,6 +245,16 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       },
       thumbnail: '/mock/music-ghosts-i-iv.png',
     },
+    {
+      id: '10',
+      category: 'video',
+      contentCID: 'QmWeLCFA27vv91r6Jxu1C4PZTXj4mXpam6GGQzM6cS8FYD',
+      title: 'Night of the Living Dead',
+      metadata: {
+        releaseYear: '(1968)',
+      },
+      thumbnail: '/mock/movie-nightofthelivingdead.webp',
+    },
   ],
   'featured-music': [
       {
