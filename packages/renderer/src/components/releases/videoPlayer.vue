@@ -3,7 +3,7 @@
     :open-delay="150"
     :close-delay="150"
   >
-    <template #default="{ isHovering, props: propsTemplate }">
+    <template #default="{isHovering, props: propsTemplate}">
       <div
         v-bind="propsTemplate"
         class="position-relative w-100"
@@ -13,14 +13,19 @@
           size="small"
           icon="fa:fas fa-arrow-left"
           class="position-absolute top-0 left-0 mt-2 ml-2"
-          :style="{ zIndex: 1000 }"
+          :style="{zIndex: 1000}"
           @click="canBack ? router.back() : router.push('/')"
         ></v-btn>
 
         <video
           ref="videoPlayerRef"
           autoplay
-          :style="{maxHeight: `${displayHeight - 64}px`, width: '100%', height: '100%', objectFit: 'contain'}"
+          :style="{
+            maxHeight: `${displayHeight - 64}px`,
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+          }"
           :src="`https://${IPFS_GATEWAY}/ipfs/${props.contentCid}`"
           :controls="false"
           crossorigin="anonymous"
@@ -58,7 +63,11 @@
             <template #append>
               <v-btn
                 size="small"
-                :icon="videoPlayerRef && !(videoPlayerRef.volume > 0) ? 'fa:fas fa-volume-off' : 'fa:fas fa-volume-high'"
+                :icon="
+                  videoPlayerRef && !(videoPlayerRef.volume > 0)
+                    ? 'fa:fas fa-volume-off'
+                    : 'fa:fas fa-volume-high'
+                "
                 @click="toggleVolume"
               ></v-btn>
 
@@ -78,11 +87,11 @@
 </template>
 
 <script setup lang="ts">
-import type { Ref } from 'vue';
-import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { IPFS_GATEWAY } from '/@/constants/ipfs';
-import { useDisplay } from 'vuetify';
+import type {Ref} from 'vue';
+import {onMounted, onBeforeUnmount, ref, computed} from 'vue';
+import {useRouter} from 'vue-router';
+import {IPFS_GATEWAY} from '/@/constants/ipfs';
+import {useDisplay} from 'vuetify';
 
 const props = defineProps<{
   contentCid: string;
@@ -94,7 +103,7 @@ const isPlaying = ref(false);
 const isLoading = ref(true);
 const progress = ref(0);
 
-const { height: displayHeight } = useDisplay();
+const {height: displayHeight} = useDisplay();
 
 const seekingTrack = (e: number): void => {
   console.log('seeking', e);
@@ -119,7 +128,6 @@ const pause = (): void => {
   videoPlayerRef.value.pause();
   isPlaying.value = false;
 };
-
 
 const mute = (): void => {
   if (!videoPlayerRef.value) return;
@@ -152,7 +160,6 @@ const toggleFullscreen = (): void => {
   videoPlayerRef.value.requestFullscreen();
 };
 
-
 const canPlay = () => {
   isLoading.value = false;
   if (videoPlayerRef.value && videoPlayerRef.value.currentTime > 0) {
@@ -164,7 +171,6 @@ onMounted((): void => {
   if (videoPlayerRef.value) {
     videoPlayerRef.value.addEventListener('progress', updateProgress);
     videoPlayerRef.value.addEventListener('canplay', canPlay);
-
   }
 });
 
@@ -172,6 +178,5 @@ onBeforeUnmount((): void => {
   if (!videoPlayerRef.value) return;
   videoPlayerRef.value.removeEventListener('progress', updateProgress);
   videoPlayerRef.value.removeEventListener('canplay', canPlay);
-
 });
 </script>

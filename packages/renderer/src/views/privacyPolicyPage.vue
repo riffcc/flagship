@@ -16,6 +16,5 @@
 </template>
 
 <script setup lang="ts">
-import { privacyPolicy } from '../constants/privacy-policty';
-
+import {privacyPolicy} from '../constants/privacy-policty';
 </script>

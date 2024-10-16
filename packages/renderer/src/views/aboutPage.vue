@@ -34,5 +34,5 @@
 </template>
 
 <script setup lang="ts">
-import { aboutRiffCC } from '../constants/about';
+import {aboutRiffCC} from '../constants/about';
 </script>

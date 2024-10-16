@@ -8,31 +8,31 @@ import {ignorerNonDéfinis, suivreBdDeFonction, uneFois} from '@constl/utils-ipa
 import type {JSONSchemaType} from 'ajv';
 
 import {
+  BLOCKED_RELEASES_RELEASE_ID_COLUMN,
+  BLOCKED_RELEASES_TABLE_KEY,
   COLLECTIONS_AUTHOR_COLUMN,
+  COLLECTIONS_CATEGORY_COLUMN,
   COLLECTIONS_DB_TABLE_KEY,
   COLLECTIONS_METADATA_COLUMN,
   COLLECTIONS_NAME_COLUMN,
   COLLECTIONS_RELEASES_COLUMN,
-  COLLECTIONS_THUMBNAIL_COLUMN,
-  COLLECTIONS_CATEGORY_COLUMN,
-  RELEASES_AUTHOR_COLUMN,
-  RELEASES_DB_TABLE_KEY,
-  RELEASES_FILE_COLUMN,
-  RELEASES_METADATA_COLUMN,
-  RELEASES_NAME_COLUMN,
-  RELEASES_THUMBNAIL_COLUMN,
-  RELEASES_CATEGORY_COLUMN,
-  TRUSTED_SITES_NAME_COL,
-  TRUSTED_SITES_SITE_ID_COL,
-  TRUSTED_SITES_TABLE_KEY,
-  RELEASES_STATUS_COLUMN,
   COLLECTIONS_STATUS_COLUMN,
+  COLLECTIONS_THUMBNAIL_COLUMN,
   FEATURED_RELEASES_END_TIME_COLUMN,
   FEATURED_RELEASES_RELEASE_ID_COLUMN,
   FEATURED_RELEASES_START_TIME_COLUMN,
   FEATURED_RELEASES_TABLE_KEY,
-  BLOCKED_RELEASES_TABLE_KEY,
-  BLOCKED_RELEASES_RELEASE_ID_COLUMN,
+  RELEASES_AUTHOR_COLUMN,
+  RELEASES_CATEGORY_COLUMN,
+  RELEASES_DB_TABLE_KEY,
+  RELEASES_FILE_COLUMN,
+  RELEASES_METADATA_COLUMN,
+  RELEASES_NAME_COLUMN,
+  RELEASES_STATUS_COLUMN,
+  RELEASES_THUMBNAIL_COLUMN,
+  TRUSTED_SITES_NAME_COL,
+  TRUSTED_SITES_SITE_ID_COL,
+  TRUSTED_SITES_TABLE_KEY,
 } from './consts.js';
 import type {
   BlockedRelease,
@@ -132,8 +132,8 @@ export default class Orbiter {
       this.initialVariableIds.trustedSitesNameVariableId ||
       (await this.constellation.variables.créerVariable({catégorie: 'chaîneNonTraductible'}));
     const featuredReleasesReleaseIdVar =
-    this.initialVariableIds.featuredReleasesReleaseIdVar ||
-    (await this.constellation.variables.créerVariable({catégorie: 'chaîneNonTraductible'}));
+      this.initialVariableIds.featuredReleasesReleaseIdVar ||
+      (await this.constellation.variables.créerVariable({catégorie: 'chaîneNonTraductible'}));
     const featuredReleasesStartTimeVar =
       this.initialVariableIds.featuredReleasesStartTimeVar ||
       (await this.constellation.variables.créerVariable({catégorie: 'horoDatage'}));
@@ -827,7 +827,7 @@ export default class Orbiter {
     f,
     siteId,
   }: {
-    f: types.schémaFonctionSuivi<{id: string, featured: FeaturedRelease}[]>;
+    f: types.schémaFonctionSuivi<{id: string; featured: FeaturedRelease}[]>;
     siteId?: string;
   }): Promise<types.schémaFonctionOublier> {
     return await suivreBdDeFonction({
@@ -847,17 +847,17 @@ export default class Orbiter {
         fSuivreBd,
       }: {
         id: string;
-        fSuivreBd: types.schémaFonctionSuivi<{id: string, featured: FeaturedRelease}[]>;
+        fSuivreBd: types.schémaFonctionSuivi<{id: string; featured: FeaturedRelease}[]>;
       }): Promise<forgetFunction> => {
-        const {fOublier} = await this.constellation.nuées.suivreDonnéesTableauNuée<FeaturedRelease>({
-          idNuée: id,
-          clefTableau: FEATURED_RELEASES_TABLE_KEY,
-          f: featured =>
-            fSuivreBd(
-              featured.map(x =>({id: x.élément.id, featured: x.élément.données})),
-            ),
-          clefsSelonVariables: false,
-        });
+        const {fOublier} = await this.constellation.nuées.suivreDonnéesTableauNuée<FeaturedRelease>(
+          {
+            idNuée: id,
+            clefTableau: FEATURED_RELEASES_TABLE_KEY,
+            f: featured =>
+              fSuivreBd(featured.map(x => ({id: x.élément.id, featured: x.élément.données}))),
+            clefsSelonVariables: false,
+          },
+        );
         return fOublier;
       },
     });
@@ -1099,7 +1099,7 @@ export default class Orbiter {
 
         this.listenForSiteFeaturedReleases({
           f: async entries => {
-            siteInfos[siteName].featuredReleases = entries.map(x=>x.featured);
+            siteInfos[siteName].featuredReleases = entries.map(x => x.featured);
             await fFinal();
           },
           siteId: site.siteId,

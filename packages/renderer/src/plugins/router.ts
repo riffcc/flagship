@@ -5,10 +5,10 @@ import AccountPage from '/@/views/accountPage.vue';
 import BuildingPage from '/@/views/buildingPage.vue';
 import HomePage from '/@/views/homePage.vue';
 import InitPage from '/@/views/initPage.vue';
-import UploadPage from '/@/views/uploadPage.vue';
 import PrivacyPolicyPage from '/@/views/privacyPolicyPage.vue';
 import ReleasePage from '/@/views/releasePage.vue';
 import TermsPage from '/@/views/termsPage.vue';
+import UploadPage from '/@/views/uploadPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -71,7 +71,7 @@ const routeur = createRouter({
   history: createWebHashHistory(),
   routes,
   scrollBehavior() {
-    return { top: 0 };
+    return {top: 0};
   },
 });
 

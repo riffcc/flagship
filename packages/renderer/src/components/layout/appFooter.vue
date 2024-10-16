@@ -29,12 +29,17 @@
               class="pa-0"
             ></v-list-item>
             <br />
-            <v-list-item
-              class="pa-0"
-            >
-              <template v-slot:subtitle>
-                <p>Items marked with <strong>%</strong> have broken audio or other playback issues which will be resolved soon.</p>
-                <p>Items marked with <strong>^</strong> are <i>only partially available</i>, whether due to licencing or lost content. All content made available under legally free licences - specific credits will soon be available.</p>
+            <v-list-item class="pa-0">
+              <template #subtitle>
+                <p>
+                  Items marked with <strong>%</strong> have broken audio or other playback issues
+                  which will be resolved soon.
+                </p>
+                <p>
+                  Items marked with <strong>^</strong> are <i>only partially available</i>, whether
+                  due to licencing or lost content. All content made available under legally free
+                  licences - specific credits will soon be available.
+                </p>
               </template>
             </v-list-item>
             <br />
@@ -48,9 +53,7 @@
           cols="12"
           md="9"
         >
-          <v-sheet
-            class="d-flex flex-wrap justify-space-evenly"
-          >
+          <v-sheet class="d-flex flex-wrap justify-space-evenly">
             <div
               v-for="(section, key) in navigationMap.appFooter"
               :key="key"
@@ -95,15 +98,16 @@
         src="https://mirrors.creativecommons.org/presskit/icons/cc.svg"
         alt="Creative Commons License"
         width="17em"
-        style="margin-bottom: -0.25em;"
-      /> e cinere surgemus.
+        style="margin-bottom: -0.25em"
+      />
+      e cinere surgemus.
     </p>
   </v-sheet>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-import { navigationMap } from '/@/constants/navigation';
+import {useRouter} from 'vue-router';
+import {navigationMap} from '/@/constants/navigation';
 
 const router = useRouter();
 

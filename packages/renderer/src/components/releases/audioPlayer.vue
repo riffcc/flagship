@@ -77,7 +77,7 @@
           v-if="xs"
           location="top center"
         >
-          <template #activator="{ props: speedDialProps }">
+          <template #activator="{props: speedDialProps}">
             <v-btn
               class="mx-2"
               icon="fas fa-bars"
@@ -87,21 +87,21 @@
           </template>
           <v-btn
             :icon="volume === 0 ? 'fas fa-volume-off' : 'fas fa-volume-high'"
-            :variant="volume !== 0 ? 'tonal': 'plain'"
+            :variant="volume !== 0 ? 'tonal' : 'plain'"
             size="x-small"
             color="#F2F2F2"
             @click="toggleVolume"
           ></v-btn>
           <v-btn
             icon="fas fa-rotate-left"
-            :variant="props.repeat ? 'plain': 'tonal'"
+            :variant="props.repeat ? 'plain' : 'tonal'"
             size="x-small"
             color="#F2F2F2"
             @click="props.toggleRepeat"
           ></v-btn>
           <v-btn
             icon="fas fa-shuffle"
-            :variant="props.shuffle ? 'plain': 'tonal'"
+            :variant="props.shuffle ? 'plain' : 'tonal'"
             size="x-small"
             color="#F2F2F2"
             @click="props.toggleShuffle"
@@ -137,12 +137,11 @@
   </v-sheet>
 </template>
 
-
 <script setup lang="ts">
-import { onUnmounted, ref, watch, onMounted } from 'vue';
-import { IPFS_GATEWAY } from '/@/constants/ipfs';
-import { formatTime } from '/@/utils';
-import { useDisplay } from 'vuetify';
+import {onUnmounted, ref, watch, onMounted} from 'vue';
+import {IPFS_GATEWAY} from '/@/constants/ipfs';
+import {formatTime} from '/@/utils';
+import {useDisplay} from 'vuetify';
 
 const props = defineProps<{
   selectedAudio: {
@@ -166,11 +165,9 @@ const volume = ref(1);
 const currentTime = ref('00:00');
 const duration = ref('00:00');
 
+const {xs} = useDisplay();
 
-
-const { xs } = useDisplay();
-
-watch(volume, (v) => {
+watch(volume, v => {
   if (audioPlayerRef.value) {
     audioPlayerRef.value.volume = v;
   }
@@ -184,8 +181,7 @@ const seekingTrack = (v: number) => {
   }
 };
 
-const togglePlay = () => isPlaying.value ? pause() : play();
-
+const togglePlay = () => (isPlaying.value ? pause() : play());
 
 const toggleVolume = (): void => {
   if (audioPlayerRef.value) {
@@ -213,7 +209,6 @@ const pause = () => {
     isPlaying.value = false;
   }
 };
-
 
 const play = () => {
   if (audioPlayerRef.value) {
@@ -248,29 +243,26 @@ const canPlay = () => {
 //   props.onCloseCallback()
 // }
 
-onMounted(
-  () => {
-    if (audioPlayerRef.value) {
-      audioPlayerRef.value.addEventListener('progress', updateProgress);
-      audioPlayerRef.value.addEventListener('canplay', canPlay);
-    }
-    if ('mediaSession' in window.navigator) {
-      window.navigator.mediaSession.setActionHandler('play', () => {
-        play();
-      });
-      window.navigator.mediaSession.setActionHandler('pause', () => {
-        pause();
-      });
-      window.navigator.mediaSession.setActionHandler('previoustrack', () => {
-        props.handlePrevious();
-      });
-      window.navigator.mediaSession.setActionHandler('nexttrack', () => {
-        props.handleNext();
-      });
-    }
-
-  },
-);
+onMounted(() => {
+  if (audioPlayerRef.value) {
+    audioPlayerRef.value.addEventListener('progress', updateProgress);
+    audioPlayerRef.value.addEventListener('canplay', canPlay);
+  }
+  if ('mediaSession' in window.navigator) {
+    window.navigator.mediaSession.setActionHandler('play', () => {
+      play();
+    });
+    window.navigator.mediaSession.setActionHandler('pause', () => {
+      pause();
+    });
+    window.navigator.mediaSession.setActionHandler('previoustrack', () => {
+      props.handlePrevious();
+    });
+    window.navigator.mediaSession.setActionHandler('nexttrack', () => {
+      props.handleNext();
+    });
+  }
+});
 
 onUnmounted(() => {
   if (audioPlayerRef.value) {

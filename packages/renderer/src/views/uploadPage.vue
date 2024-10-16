@@ -12,4 +12,3 @@
 <script setup lang="ts">
 import NewReleaseForm from '/@/components/releases/newReleaseForm.vue';
 </script>
-

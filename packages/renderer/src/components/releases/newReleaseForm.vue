@@ -34,7 +34,7 @@
       v-model="openAdvanced"
       width="auto"
     >
-      <template #activator="{ props: activatorProps }">
+      <template #activator="{props: activatorProps}">
         <v-btn
           v-bind="activatorProps"
           rounded="0"
@@ -50,8 +50,7 @@
         class="pa-8 ma-auto"
       >
         <p class="text-subtitle mb-6 text-center">
-          Please fill out any extra information about the content that might be
-          useful.
+          Please fill out any extra information about the content that might be useful.
         </p>
         <v-text-field
           v-model="releaseMetadata.description"
@@ -155,11 +154,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import {computed, ref} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import {cid} from 'is-ipfs';
-import type { MovieReleaseMetadata, MusicReleaseMetadata, ReleaseMetadata } from '/@/plugins/orbiter/types';
-import { RELEASES_AUTHOR_COLUMN, RELEASES_CATEGORY_COLUMN, RELEASES_FILE_COLUMN, RELEASES_METADATA_COLUMN, RELEASES_NAME_COLUMN, RELEASES_THUMBNAIL_COLUMN, RELEASES_STATUS_COLUMN } from '/@/plugins/orbiter/consts';
+import type {
+  MovieReleaseMetadata,
+  MusicReleaseMetadata,
+  ReleaseMetadata,
+} from '/@/plugins/orbiter/types';
+import {
+  RELEASES_AUTHOR_COLUMN,
+  RELEASES_CATEGORY_COLUMN,
+  RELEASES_FILE_COLUMN,
+  RELEASES_METADATA_COLUMN,
+  RELEASES_NAME_COLUMN,
+  RELEASES_THUMBNAIL_COLUMN,
+  RELEASES_STATUS_COLUMN,
+} from '/@/plugins/orbiter/consts';
 
 const {orbiter} = useOrbiter();
 const formRef = ref();
@@ -181,7 +192,13 @@ const rules = {
 };
 const loading = ref(false);
 const readyToSave = computed(() => {
-  if (contentCID.value && author.value && releaseName.value && releaseCategory.value && formRef.value.isValid) {
+  if (
+    contentCID.value &&
+    author.value &&
+    releaseName.value &&
+    releaseCategory.value &&
+    formRef.value.isValid
+  ) {
     let metadataValue = releaseMetadata.value;
     if (releaseCategory.value == 'movie') {
       metadataValue = {
@@ -209,13 +226,8 @@ const handleOnSubmit = () => {
   if (!readyToSave.value) return;
   loading.value = true;
   console.log('ON SUBMIT');
-  const {
-    contentCIDValue,
-    authorValue,
-    metadataValue,
-    releaseNameValue,
-    releaseCategoryValue,
-  } = readyToSave.value;
+  const {contentCIDValue, authorValue, metadataValue, releaseNameValue, releaseCategoryValue} =
+    readyToSave.value;
   orbiter.addRelease({
     [RELEASES_AUTHOR_COLUMN]: authorValue,
     [RELEASES_CATEGORY_COLUMN]: releaseCategoryValue,
@@ -248,24 +260,9 @@ const musicReleaseTypes = [
   'Unknown',
 ];
 
-const musicFileFormats = [
-  'MP3',
-  'FLAC',
-  'AAC',
-  'AC3',
-  'DTS',
-];
+const musicFileFormats = ['MP3', 'FLAC', 'AAC', 'AC3', 'DTS'];
 
-const musicMediaFormats = [
-  'CD',
-  'DVD',
-  'Vinyl',
-  'Soundboard',
-  'SACD',
-  'DAT',
-  'WEB',
-  'Blu-Ray',
-];
+const musicMediaFormats = ['CD', 'DVD', 'Vinyl', 'Soundboard', 'SACD', 'DAT', 'WEB', 'Blu-Ray'];
 
 const movieReleaseTypes = [
   'Feature Film',
@@ -275,5 +272,4 @@ const movieReleaseTypes = [
   'Live Performance',
   'Movie Collection',
 ];
-
 </script>

@@ -3,17 +3,17 @@
     hide-delimiters
     height="400px"
   >
-    <template #prev="{ props }">
+    <template #prev="{props}">
       <v-btn
         v-bind="props"
-        variant="solo"
+        variant="plain"
       >
       </v-btn>
     </template>
-    <template #next="{ props }">
+    <template #next="{props}">
       <v-btn
         v-bind="props"
-        variant="solo"
+        variant="plain"
       >
       </v-btn>
     </template>
@@ -42,19 +42,33 @@
               color="transparent"
               class="my-10"
             >
-              <p class="mb-4 text-h5 text-lg-h4">{{ featured.category === 'audio' ? `${featured.title} - ${featured.metadata?.author}` : featured.title }}</p>
+              <p class="mb-4 text-h5 text-lg-h4">
+                {{
+                  featured.category === 'audio'
+                    ? `${featured.title} - ${featured.metadata?.author}`
+                    : featured.title
+                }}
+              </p>
               <div class="d-flex align-center">
                 <p class="bg-background.lighten-2 pa-1 mr-2">{{ featured.classification }}</p>
-                <p class="text-subtitle-2 text-medium-emphasis mr-2">{{ featured.metadata?.duration }}</p>
+                <p class="text-subtitle-2 text-medium-emphasis mr-2">
+                  {{
+                    featured.metadata?.duration
+                  }}
+                </p>
                 <v-icon
-                  style="font-size: 0.2em;"
+                  style="font-size: 0.2em"
                   icon="fas fa-circle"
                 ></v-icon>
-                <p class="text-subtitle-2 text-medium-emphasis ml-2">{{ featured.metadata?.releaseYear }}</p>
+                <p class="text-subtitle-2 text-medium-emphasis ml-2">
+                  {{
+                    featured.metadata?.releaseYear
+                  }}
+                </p>
               </div>
               <p
                 class="text-subtitle-2 text-medium-emphasis mb-4"
-                style="line-height: 1.1em;"
+                style="line-height: 1.1em"
               >
                 {{ featured.metadata?.description }}
               </p>
@@ -65,13 +79,15 @@
                   prepend-icon="fas fa-play"
                   class="text-none mr-4"
                   text="Play now"
-                  @click="router.push({
-                    path: '/release',
-                    query: {
-                      category: featured.category,
-                      contentCID: featured.contentCID,
-                    }}
-                  )"
+                  @click="
+                    router.push({
+                      path: '/release',
+                      query: {
+                        category: featured.category,
+                        contentCID: featured.contentCID,
+                      },
+                    })
+                  "
                 ></v-btn>
               </div>
             </v-sheet>
@@ -80,7 +96,7 @@
             cols="12"
             md="2"
           >
-          <!-- TODO: Add preview button
+            <!-- TODO: Add preview button
             <v-btn
               variant="plain"
               class="text-none text-h6"
@@ -100,19 +116,18 @@
           </v-col>
         </v-row>
       </v-container>
-    <!-- </v-div> -->
+      <!-- </v-div> -->
     </v-carousel-item>
   </v-carousel>
 </template>
 
 <script setup lang="ts">
-import type { FeaturedItem } from '/@/views/homePage.vue';
-import { useRouter } from 'vue-router';
+import type {FeaturedItem} from '/@/views/homePage.vue';
+import {useRouter} from 'vue-router';
 const router = useRouter();
 
 interface Props {
-  featuredList: Array<FeaturedItem>
+  featuredList: Array<FeaturedItem>;
 }
 defineProps<Props>();
-
 </script>

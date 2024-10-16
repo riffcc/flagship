@@ -10,7 +10,6 @@
       <v-list-item
         title="Manage account"
         prepend-icon="mdi-account"
-        @click="$router.push('/account')"
       />
       <v-list-item
         title="Site info"

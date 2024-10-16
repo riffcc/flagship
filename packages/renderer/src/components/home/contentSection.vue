@@ -40,7 +40,7 @@
         :key="item.id"
       >
         <v-hover
-          v-slot="{ props, isHovering }"
+          v-slot="{props, isHovering}"
           open-delay="150"
           close-delay="150"
         >
@@ -111,13 +111,15 @@
                   size="small"
                   class="mt-3 mb-1 text-none"
                   text="Play now"
-                  @click="router.push({
-                    path: '/release',
-                    query: {
-                      category: item.category,
-                      contentCID: item.contentCID
-                    }}
-                  )"
+                  @click="
+                    router.push({
+                      path: '/release',
+                      query: {
+                        category: item.category,
+                        contentCID: item.contentCID,
+                      },
+                    })
+                  "
                 ></v-btn>
               </v-card-actions>
             </v-img>
@@ -137,18 +139,20 @@
           class="mx-auto"
           width="170px"
           color="transparent"
-          @click="router.push({
-            path: '/release',
-            query: {
-              category: item.category,
-              contentCID: item.contentCID,
-              title: item.title,
-              thumbnail: item.thumbnail,
-              author: item.metadata?.author,
-              description: item.metadata?.description,
-              releaseYear: item.metadata?.releaseYear
-            }}
-          )"
+          @click="
+            router.push({
+              path: '/release',
+              query: {
+                category: item.category,
+                contentCID: item.contentCID,
+                title: item.title,
+                thumbnail: item.thumbnail,
+                author: item.metadata?.author,
+                description: item.metadata?.description,
+                releaseYear: item.metadata?.releaseYear,
+              },
+            })
+          "
         >
           <v-img
             :src="item.thumbnail"
@@ -156,8 +160,16 @@
             cover
             aspect-ratio="1"
           ></v-img>
-          <p class="text-body-2 text-center">{{ item.category === 'video' ? item.title : item.metadata?.author }}</p>
-          <p class="text-caption text-center text-medium-emphasis">{{ item.category === 'video' ? item.metadata?.releaseYear : item.title }}</p>
+          <p class="text-body-2 text-center">
+            {{
+              item.category === 'video' ? item.title : item.metadata?.author
+            }}
+          </p>
+          <p class="text-caption text-center text-medium-emphasis">
+            {{
+              item.category === 'video' ? item.metadata?.releaseYear : item.title
+            }}
+          </p>
         </v-sheet>
       </v-col>
     </v-row>
@@ -170,7 +182,7 @@
         :key="item.id"
       >
         <v-hover
-          v-slot="{ props, isHovering }"
+          v-slot="{props, isHovering}"
           open-delay="150"
           close-delay="150"
         >
@@ -193,19 +205,21 @@
               size="x-large"
               location="center"
               icon
-              variant="solo"
-              @click="router.push({
-                path: '/release',
-                query: {
-                  category: item.category,
-                  contentCID: item.contentCID,
-                  title: item.title,
-                  thumbnail: item.thumbnail,
-                  author: item.metadata?.author,
-                  description: item.metadata?.description,
-                  releaseYear: item.metadata?.releaseYear
-                }}
-              )"
+              variant="plain"
+              @click="
+                router.push({
+                  path: '/release',
+                  query: {
+                    category: item.category,
+                    contentCID: item.contentCID,
+                    title: item.title,
+                    thumbnail: item.thumbnail,
+                    author: item.metadata?.author,
+                    description: item.metadata?.description,
+                    releaseYear: item.metadata?.releaseYear,
+                  },
+                })
+              "
             >
               <v-icon
                 icon="fas fa-play"
@@ -223,10 +237,9 @@
 </template>
 
 <script setup lang="ts">
-import type { ItemContent } from '/@/views/homePage.vue';
-import { useRouter } from 'vue-router';
+import type {ItemContent} from '/@/views/homePage.vue';
+import {useRouter} from 'vue-router';
 const router = useRouter();
-
 
 interface Props {
   title: string;

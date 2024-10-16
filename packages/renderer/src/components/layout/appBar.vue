@@ -42,6 +42,5 @@
 </template>
 
 <script setup lang="ts">
-import { navigationMap } from '/@/constants/navigation';
-
+import {navigationMap} from '/@/constants/navigation';
 </script>

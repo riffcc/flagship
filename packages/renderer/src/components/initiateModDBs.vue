@@ -130,13 +130,15 @@ const envFileText = computed(() => {
   const collectionsCategoryVar =
     'VITE_COLLECTIONS_CATEGORY_VAR_ID=' + generatedVariableIds.value?.collectionsCategoryVar;
 
-
   const featuredReleasesReleaseIdVar =
-  'VITE_FEATURED_RELEASES_RELEASE_ID_VAR_ID=' + generatedVariableIds.value?.featuredReleasesReleaseIdVar;
+    'VITE_FEATURED_RELEASES_RELEASE_ID_VAR_ID=' +
+    generatedVariableIds.value?.featuredReleasesReleaseIdVar;
   const featuredReleasesStartTimeVar =
-  'VITE_FEATURED_RELEASES_START_TIME_VAR_ID=' + generatedVariableIds.value?.featuredReleasesStartTimeVar;
+    'VITE_FEATURED_RELEASES_START_TIME_VAR_ID=' +
+    generatedVariableIds.value?.featuredReleasesStartTimeVar;
   const featuredReleasesEndTimeVar =
-  'VITE_FEATURED_RELEASES_END_TIME_VAR_ID=' + generatedVariableIds.value?.featuredReleasesEndTimeVar;
+    'VITE_FEATURED_RELEASES_END_TIME_VAR_ID=' +
+    generatedVariableIds.value?.featuredReleasesEndTimeVar;
 
   const siteId = 'VITE_SITE_ID=' + generatedSiteId.value;
 

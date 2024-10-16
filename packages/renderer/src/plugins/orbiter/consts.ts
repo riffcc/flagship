@@ -28,4 +28,3 @@ export const COLLECTIONS_STATUS_COLUMN = 'status';
 
 export const RELEASES_DB_TABLE_KEY = 'releases';
 export const COLLECTIONS_DB_TABLE_KEY = 'collections';
-

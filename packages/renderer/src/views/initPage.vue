@@ -15,7 +15,7 @@
     <div class="py-14" />
 
     <initiateModDBs />
-  <!-- <v-row>
+    <!-- <v-row>
     <v-col cols="auto">
       <initiate-account>
         <template #activator="{props}">
