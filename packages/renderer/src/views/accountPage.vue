@@ -8,7 +8,7 @@
     {{ displayName }}
     <v-switch
       v-model="staticModeSwitch"
-      label="Static mode"
+      :label="`Static mode ${staticModeSwitch ? 'on' : 'off'}`"
       :color="staticModeSwitch ? 'primary' : 'secondary'"
     />
   </v-container>
@@ -37,8 +37,8 @@ const displayName = computed(() => {
 const userAvatar = useUserProfilePhoto(props.accountId);
 
 // Dev static mode
-const staticModeSwitch = ref();
 const {status} = useDevStatus();
+const staticModeSwitch = ref(status.value === 'static');
 watchEffect(()=>{
   status.value = staticModeSwitch.value ? 'static': 'live';
 });
