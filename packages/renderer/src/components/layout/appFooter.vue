@@ -20,12 +20,12 @@
               src="/logo.svg"
             ></v-img>
             <v-list-item
-              subtitle="Riff.CC is a dynamic platform for music, videos, and creative content. Discover, share, and enjoy a wide variety of multimedia in one place."
+              subtitle="Riff.CC is a collaborative effort to create a free and open-source platform for music, videos, and creative content."
               class="pa-0"
             ></v-list-item>
             <br />
             <v-list-item
-              subtitle="early tech demo, work in progress. No warranties are given, here be dragons, but enjoy."
+              subtitle="Early tech demo, work in progress. No warranties, here be dragons, but enjoy."
               class="pa-0"
             ></v-list-item>
             <br />
@@ -37,10 +37,6 @@
               </template>
             </v-list-item>
             <br />
-            <v-list-item
-              subtitle="The Riff.CC project is a collaborative effort to create a free and open-source platform for music, videos, and creative content. We believe in the power of community and the importance of sharing knowledge and experiences. So Riff.CC's software allows you to build whatever you want, and link it with other sites that share your interests, allowing you to cooperatively build up a content library while each retains sovereignty over their library's specific content."
-              class="pa-0"
-            ></v-list-item>
           </v-sheet>
         </v-col>
         <v-col
