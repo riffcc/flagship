@@ -400,6 +400,8 @@ const staticData: {[key: string]: Array<ItemContent>} = {
 const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
 
 const featuredReleases = computed<Array<FeaturedItem>>(()=>{
+  // Note : this is a quick hack. We are using all releases from Orbiter as "featured releases".
+  // TODO: Add option for featuring releases, and then modify below to show only these
   if (status.value === 'static') return staticFeaturedReleases;
   else {
     return (orbiterReleases.value || []).map(
