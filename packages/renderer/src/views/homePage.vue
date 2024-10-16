@@ -79,7 +79,7 @@ const featuredReleases: Array<FeaturedItem> = [
     id: '2',
     classification: 'PG',
     category: 'video',
-    contentCID: 'QmPjxGcAYBv1fbwWSA2Zu4rHFN21DpFTKpQivXk9Kozqqe',
+    contentCID: 'QmdKduym5pEXkJrpL36UhCVmxqsrotnMnzE8gZopSY5WkR',
     cover: '/mock/movie-aaronsw.jpg',
     metadata: {
       description:
@@ -211,7 +211,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
     {
       id: '6',
       category: 'video',
-      contentCID: 'QmPjxGcAYBv1fbwWSA2Zu4rHFN21DpFTKpQivXk9Kozqqe',
+      contentCID: 'QmdKduym5pEXkJrpL36UhCVmxqsrotnMnzE8gZopSY5WkR',
       title: "The Internet's Own Boy: The Story of Aaron Swartz",
       metadata: {
         releaseYear: '(2014)',
