@@ -17,6 +17,7 @@ export const RELEASES_METADATA_COLUMN = 'metadata';
 export const RELEASES_THUMBNAIL_COLUMN = 'thumbnail';
 export const RELEASES_CATEGORY_COLUMN = 'category';
 export const RELEASES_STATUS_COLUMN = 'status';
+export const RELEASES_COVER_COLUMN = 'cover';
 
 export const COLLECTIONS_RELEASES_COLUMN = 'releases';
 export const COLLECTIONS_AUTHOR_COLUMN = 'author';

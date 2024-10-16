@@ -35,12 +35,18 @@
 <script setup lang="ts">
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import ContentSection from '/@/components/home/contentSection.vue';
-// import {suivre as follow} from '@constl/vue';
-// import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useDevStatus} from '/@/composables/devStatus';
+
+import {suivre as follow} from '@constl/vue';
+import {useOrbiter} from '/@/plugins/orbiter/utils';
+import { computed } from 'vue';
+
+const {orbiter} = useOrbiter();
+const {status} = useDevStatus();
 
 export interface ItemContent {
   id: string;
-  category?: 'audio' | 'video';
+  category?: string;
   contentCID?: string;
   title: string;
   subtitle?: string;
@@ -59,7 +65,7 @@ export interface FeaturedItem extends ItemContent {
   rating: number;
 }
 
-const featuredReleases: Array<FeaturedItem> = [
+const staticFeaturedReleases: Array<FeaturedItem> = [
   {
     id: '1',
     classification: 'PG',
@@ -122,6 +128,7 @@ const featuredReleases: Array<FeaturedItem> = [
     rating: 4.5,
   },
 ];
+
 const staticData: {[key: string]: Array<ItemContent>} = {
   'tv-popular-shows': [
     {
@@ -389,9 +396,29 @@ const staticData: {[key: string]: Array<ItemContent>} = {
     },
   ],
 };
-// const {orbiter} = useOrbiter();
 
-// const releases = follow(orbiter.listenForReleases.bind(orbiter));
+const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
+
+const featuredReleases = computed<Array<FeaturedItem>>(()=>{
+  if (status.value === 'static') return staticFeaturedReleases;
+  else {
+    return (orbiterReleases.value || []).map(
+      (r): FeaturedItem => {
+        return {
+          id: r.release.id,
+          category: r.release.release.category,
+          contentCID: r.release.release.file,
+          title: r.release.release.contentName,
+          thumbnail: r.release.release.thumbnail,
+          classification: 'Unknown',  // TODO
+          cover: r.release.release.cover,
+          rating: 1, // TODO,
+        };
+      },
+    );
+  }
+});
+
 </script>
 <!--
       {

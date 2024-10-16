@@ -30,6 +30,10 @@
       v-model="thumbnailCID"
       label="Thumbnail CID (Optional)"
     />
+    <v-text-field
+      v-model="coverCID"
+      label="Cover image CID"
+    />
     <v-dialog
       v-model="openAdvanced"
       width="auto"
@@ -170,7 +174,9 @@ import {
   RELEASES_NAME_COLUMN,
   RELEASES_THUMBNAIL_COLUMN,
   RELEASES_STATUS_COLUMN,
+  RELEASES_COVER_COLUMN,
 } from '/@/plugins/orbiter/consts';
+// import convert from 'image-file-resize';
 
 const {orbiter} = useOrbiter();
 const formRef = ref();
@@ -181,6 +187,7 @@ const contentCID = ref<string>();
 const releaseCategory = ref<string>();
 const releaseName = ref<string>();
 const thumbnailCID = ref<string>();
+const coverCID = ref<string>();  // TODO - option to autogenerate this from movie files
 
 const releaseMetadata = ref<ReleaseMetadata>({});
 const musicReleaseMetadata = ref<MusicReleaseMetadata>({});
@@ -197,6 +204,7 @@ const readyToSave = computed(() => {
     author.value &&
     releaseName.value &&
     releaseCategory.value &&
+    coverCID.value &&
     formRef.value.isValid
   ) {
     let metadataValue = releaseMetadata.value;
@@ -218,6 +226,7 @@ const readyToSave = computed(() => {
       metadataValue,
       releaseNameValue: releaseName.value,
       releaseCategoryValue: releaseCategory.value,
+      coverCIDValue: coverCID.value,
     };
   } else return undefined;
 });
@@ -226,7 +235,7 @@ const handleOnSubmit = () => {
   if (!readyToSave.value) return;
   loading.value = true;
   console.log('ON SUBMIT');
-  const {contentCIDValue, authorValue, metadataValue, releaseNameValue, releaseCategoryValue} =
+  const {contentCIDValue, authorValue, metadataValue, releaseNameValue, releaseCategoryValue, coverCIDValue} =
     readyToSave.value;
   orbiter.addRelease({
     [RELEASES_AUTHOR_COLUMN]: authorValue,
@@ -236,6 +245,7 @@ const handleOnSubmit = () => {
     [RELEASES_NAME_COLUMN]: releaseNameValue,
     [RELEASES_THUMBNAIL_COLUMN]: thumbnailCID.value,
     [RELEASES_STATUS_COLUMN]: 'pending',
+    [RELEASES_COVER_COLUMN]: coverCIDValue,
   });
   loading.value = false;
 };

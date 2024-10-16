@@ -5,6 +5,7 @@ import {
   RELEASES_METADATA_COLUMN,
   RELEASES_NAME_COLUMN,
   RELEASES_STATUS_COLUMN,
+  RELEASES_COVER_COLUMN,
   RELEASES_THUMBNAIL_COLUMN,
 } from '../consts';
 import type Orbiter from '../orbiter';
@@ -48,5 +49,6 @@ export const loadStubData = async (app: Orbiter) => {
     [RELEASES_METADATA_COLUMN]: 'With an open-access licence, of course.',
     [RELEASES_CATEGORY_COLUMN]: 'audio',
     [RELEASES_STATUS_COLUMN]: 'pending',
+    [RELEASES_COVER_COLUMN]: 'todo',
   });
 };

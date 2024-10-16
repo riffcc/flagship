@@ -1,14 +1,26 @@
 <template>
-  <v-img :src="userAvatar" />
-  {{ displayName }}
+  <v-container class="text-center">
+    <v-img
+      :src="userAvatar"
+      class="mx-auto"
+      width="150"
+    />
+    {{ displayName }}
+    <v-switch
+      v-model="staticModeSwitch"
+      label="Static mode"
+      :color="staticModeSwitch ? 'primary' : 'secondary'"
+    />
+  </v-container>
 </template>
 <script setup lang="ts">
-import {computed} from 'vue';
+import {computed, ref, watchEffect} from 'vue';
 import {selectTranslation} from '/@/utils';
 
 import {suivre as follow} from '@constl/vue';
 import {useUserProfilePhoto} from '/@/components/users/utils';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useDevStatus} from '/@/composables/devStatus';
 
 const {orbiter} = useOrbiter();
 
@@ -23,4 +35,14 @@ const displayName = computed(() => {
 
 // User avatar
 const userAvatar = useUserProfilePhoto(props.accountId);
+
+// Dev static mode
+const staticModeSwitch = ref();
+const {status} = useDevStatus();
+watchEffect(()=>{
+  status.value = staticModeSwitch.value ? 'static': 'live';
+});
+watchEffect(()=>{
+  staticModeSwitch.value = status.value === 'static';
+});
 </script>

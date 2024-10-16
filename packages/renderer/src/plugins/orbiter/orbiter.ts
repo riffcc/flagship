@@ -29,6 +29,7 @@ import {
   RELEASES_METADATA_COLUMN,
   RELEASES_NAME_COLUMN,
   RELEASES_STATUS_COLUMN,
+  RELEASES_COVER_COLUMN,
   RELEASES_THUMBNAIL_COLUMN,
   TRUSTED_SITES_NAME_COL,
   TRUSTED_SITES_SITE_ID_COL,
@@ -156,6 +157,11 @@ export default class Orbiter {
       this.initialVariableIds.releasesThumbnailVar ||
       (await this.constellation.variables.créerVariable({
         catégorie: 'fichier',
+      }));
+    const releasesCoverVar =
+      this.initialVariableIds.releasesCoverVar ||
+      (await this.constellation.variables.créerVariable({
+        catégorie: 'chaîneNonTraductible',
       }));
     const releasesAuthorVar =
       this.initialVariableIds.releasesAuthorVar ||
@@ -292,6 +298,7 @@ export default class Orbiter {
         releasesFileVar,
         releasesCategoryVar,
         releasesThumbnailVar,
+        releasesCoverVar,
         releasesAuthorVar,
         releasesContentNameVar,
         releasesMetadataVar,
@@ -386,6 +393,7 @@ export default class Orbiter {
       releasesAuthorVar,
       releasesContentNameVar,
       releasesThumbnailVar,
+      releasesCoverVar,
       releasesMetadataVar,
       releasesCategoryVar,
       releasesStatusVar,
@@ -436,6 +444,7 @@ export default class Orbiter {
     releasesFileVar,
     releasesCategoryVar,
     releasesThumbnailVar,
+    releasesCoverVar,
     releasesAuthorVar,
     releasesContentNameVar,
     releasesMetadataVar,
@@ -452,6 +461,7 @@ export default class Orbiter {
     releasesFileVar: string;
     releasesCategoryVar: string;
     releasesThumbnailVar: string;
+    releasesCoverVar: string;
     releasesAuthorVar: string;
     releasesContentNameVar: string;
     releasesMetadataVar: string;
@@ -484,6 +494,10 @@ export default class Orbiter {
               idColonne: RELEASES_THUMBNAIL_COLUMN,
             },
             {
+              idVariable: releasesCoverVar,
+              idColonne: RELEASES_COVER_COLUMN,
+            },
+            {
               idVariable: releasesAuthorVar,
               idColonne: RELEASES_AUTHOR_COLUMN,
             },
@@ -498,6 +512,10 @@ export default class Orbiter {
             {
               idVariable: releasesStatusVar,
               idColonne: RELEASES_STATUS_COLUMN,
+            },
+            {
+              idVariable: releasesCoverVar,
+              idColonne: RELEASES_COVER_COLUMN,
             },
           ],
           clef: RELEASES_DB_TABLE_KEY,

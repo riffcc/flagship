@@ -16,6 +16,7 @@ import type {
   RELEASES_METADATA_COLUMN,
   RELEASES_NAME_COLUMN,
   RELEASES_STATUS_COLUMN,
+  RELEASES_COVER_COLUMN,
   RELEASES_THUMBNAIL_COLUMN,
   TRUSTED_SITES_NAME_COL,
   TRUSTED_SITES_SITE_ID_COL,
@@ -27,6 +28,7 @@ export const variableIdKeys = [
   'releasesContentNameVar',
   'releasesFileVar',
   'releasesThumbnailVar',
+  'releasesCoverVar',
   'releasesAuthorVar',
   'releasesMetadataVar',
   'releasesCategoryVar',
@@ -56,6 +58,7 @@ export type Release = {
   [RELEASES_METADATA_COLUMN]?: string;
   [RELEASES_CATEGORY_COLUMN]: string;
   [RELEASES_STATUS_COLUMN]: string;
+  [RELEASES_COVER_COLUMN]: string;
 };
 
 export type ReleaseWithId = {
