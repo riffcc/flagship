@@ -93,7 +93,7 @@ const featuredReleases: Array<FeaturedItem> = [
     id: '3',
     classification: 'Unrated',
     category: 'video',
-    contentCID: 'QmabExd2NYTdDb2kX9tVAdf1LwzgJnyivknbCnF3nuG289',
+    contentCID: 'QmPSGARS6emPSEf8umwmjdG8AS7z7o8Nd36258B3BMi291',
     cover: '/mock/featured-tpbafk-fanart.png',
     metadata: {
       description: 'The Pirate Bay Away From Keyboard is a documentary film about the file sharing website The Pirate Bay. [Audio currently needs fixing, which will be resolved soon.]',
@@ -218,7 +218,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
     {
       id: '7',
       category: 'video',
-      contentCID: 'QmabExd2NYTdDb2kX9tVAdf1LwzgJnyivknbCnF3nuG289',
+      contentCID: 'QmPSGARS6emPSEf8umwmjdG8AS7z7o8Nd36258B3BMi291',
       title: 'TPB AFK: The Pirate Bay Away from Keyboard',
       metadata: {
         releaseYear: '(2012)',
