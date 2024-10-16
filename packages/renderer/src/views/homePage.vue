@@ -79,7 +79,7 @@ const featuredReleases: Array<FeaturedItem> = [
     id: '2',
     classification: 'PG',
     category: 'video',
-    contentCID: 'Qmcw6w7pE4J5cxD9ygsp7kgnUyxMYc2UHxsnTj6sTxUuX3',
+    contentCID: 'QmPjxGcAYBv1fbwWSA2Zu4rHFN21DpFTKpQivXk9Kozqqe',
     cover: '/mock/movie-aaronsw.jpg',
     metadata: {
       description: 'The Internet\'s Own Boy follows the story of programming prodigy and information activist Aaron Swartz. [Audio currently needs fixing, which will be resolved soon.]',
@@ -208,7 +208,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
     {
       id: '6',
       category: 'video',
-      contentCID: 'Qmcw6w7pE4J5cxD9ygsp7kgnUyxMYc2UHxsnTj6sTxUuX3 ',
+      contentCID: 'QmPjxGcAYBv1fbwWSA2Zu4rHFN21DpFTKpQivXk9Kozqqe',
       title: 'The Internet\'s Own Boy: The Story of Aaron Swartz',
       metadata: {
         releaseYear: '(2014)',
