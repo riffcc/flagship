@@ -25,21 +25,15 @@
             ></v-list-item>
             <br />
             <v-list-item
-              subtitle="This is an early tech demo, work in progress. It is intended only as a proof of concept but may be interesting and enjoyable. No warranties are given, here be dragons, but enjoy."
+              subtitle="early tech demo, work in progress. No warranties are given, here be dragons, but enjoy."
               class="pa-0"
             ></v-list-item>
             <br />
-            <v-list-item class="pa-0">
-              <template #subtitle>
-                <p>
-                  Items marked with <strong>%</strong> have broken audio or other playback issues
-                  which will be resolved soon.
-                </p>
-                <p>
-                  Items marked with <strong>^</strong> are <i>only partially available</i>, whether
-                  due to licencing or lost content. All content made available under legally free
-                  licences - specific credits will soon be available.
-                </p>
+            <v-list-item
+              class="pa-0"
+            >
+              <template v-slot:subtitle>
+                <p>Items marked with <strong>^</strong> are <i>only partially available</i>, whether due to licencing or lost content. All content made available under legally free licences - specific credits will soon be available.</p>
               </template>
             </v-list-item>
             <br />

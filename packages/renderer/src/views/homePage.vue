@@ -83,7 +83,7 @@ const featuredReleases: Array<FeaturedItem> = [
     cover: '/mock/movie-aaronsw.jpg',
     metadata: {
       description:
-        "The Internet's Own Boy follows the story of programming prodigy and information activist Aaron Swartz. [Audio currently needs fixing, which will be resolved soon.]",
+        "The Internet's Own Boy follows the story of programming prodigy and information activist Aaron Swartz.",
       duration: '1h 45m',
       releaseYear: '2014',
     },
@@ -98,7 +98,7 @@ const featuredReleases: Array<FeaturedItem> = [
     cover: '/mock/featured-tpbafk-fanart.png',
     metadata: {
       description:
-        'The Pirate Bay Away From Keyboard is a documentary film about the file sharing website The Pirate Bay. [Audio currently needs fixing, which will be resolved soon.]',
+        'The Pirate Bay Away From Keyboard is a documentary film about the file sharing website The Pirate Bay.',
       duration: '1h 26m',
       releaseYear: '2012',
     },
