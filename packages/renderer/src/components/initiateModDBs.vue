@@ -103,6 +103,9 @@ const generateDb = async () => {
   generatingDb.value = true;
 
   const {siteId, variableIds} = await orbiter.setUpSite();
+  
+  // For now, only admins can add content.
+  await orbiter.makeSitePrivate();
 
   generatedSiteId.value = siteId;
   generatedVariableIds.value = variableIds;

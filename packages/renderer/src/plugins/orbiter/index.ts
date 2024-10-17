@@ -14,8 +14,6 @@ export default {
       swarmId: variableIds ? import.meta.env.VITE_SWARM_ID : undefined,
       variableIds,
     });
-    // For now, only admins can add content.
-    orbiterApp.makeSitePrivate();
 
     app.config.globalProperties.$orbiter = orbiterApp;
 

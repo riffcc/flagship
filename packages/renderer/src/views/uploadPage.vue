@@ -6,7 +6,7 @@
     >
       <new-release-form v-if="canUpload" />
       <v-alert
-        v-else
+        v-else-if="canUpload === false"
         type="info"
         class="mt-4"
         color="black"
@@ -14,6 +14,10 @@
       >
         You aren't currently authorised to add releases to this instance of Riff.CC.
       </v-alert>
+      <v-skeleton-loader
+        v-else
+        type="list-item"
+      />
     </v-sheet>
   </v-container>
 </template>

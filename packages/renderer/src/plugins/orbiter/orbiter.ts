@@ -292,6 +292,7 @@ export default class Orbiter {
       swarmId = this.swarmId;
     } else {
       swarmId = await this.constellation.nuées.créerNuée({});
+
       // Now we can specify the format for individual release dbs and collections
       const releasesDbFormat = this.getSwarmDbSchema({
         releasesFileVar,
@@ -427,6 +428,9 @@ export default class Orbiter {
       siteId,
       variableIds,
     });
+
+    this.siteId = siteId;
+    this.variableIds = variableIds;
 
     return {
       siteId,
@@ -568,6 +572,7 @@ export default class Orbiter {
   }
 
   async siteConfigured(): Promise<{siteId: string; variableIds: VariableIds}> {
+    console.log(this.siteId, this.checkVariableIdsComplete(this.variableIds));
     if (this.siteId && this.checkVariableIdsComplete(this.variableIds)) {
       return {siteId: this.siteId, variableIds: this.variableIds};
     }
@@ -1365,23 +1370,25 @@ export default class Orbiter {
     const {swarmId} = await this.orbiterConfig();
     userId = userId || await this.constellation.obtIdCompte();
 
-    const info: {philosophy?: 'IUPG' | 'GUPI', memberStatus?: 'excluded' | 'accepted' | undefined} = {};
+    // TODO: this should be refactored into Constellation
+    const info: {philosophy?: 'IUPG' | 'GUPI', memberStatus?: 'exclus' | 'accepté' | undefined} = {};
     const fFinal = () => {
-      if (info.philosophy === 'IUPG') f(info.memberStatus !== 'excluded');
-      else f(info.memberStatus === 'accepted');
+      if (info.philosophy === 'IUPG') f(info.memberStatus !== 'exclus');
+      else f(info.memberStatus === 'accepté');
     };
     const forgetPhilosophy = await this.constellation.nuées.suivrePhilosophieAutorisation({
       idNuée: swarmId,
       f: philosophy => {
         // Guilty until proven innocent (invitation-only) or innocent until proven guilty (open by default)
-        info.philosophy = philosophy === 'CJPI' ? 'GUPI' : 'IUPG';
+        info.philosophy = (philosophy === 'CJPI' ? 'GUPI' : 'IUPG');
         fFinal();
       },
     });
     const forgetAuthorisations = await this.constellation.nuées.suivreAutorisationsMembresDeNuée({
       idNuée: swarmId,
       f: members => {
-        info.memberStatus === members.find(m=>m.idCompte === userId)?.statut;
+        info.memberStatus = members.find(m=>m.idCompte === userId)?.statut;
+        fFinal();
       },
     });
     return async () => {
@@ -1483,7 +1490,8 @@ export default class Orbiter {
 
   async makeSitePrivate(): Promise<void> {
     const {swarmId} = await this.orbiterConfig();
-
+    const userId = await this.constellation.obtIdCompte();
+    
     // Both releases and collections swarms share the same swarm and authorisation rules, so changing one will update both
     const authId = await this.constellation.nuées.obtGestionnaireAutorisationsDeNuée({
       idNuée: swarmId,
@@ -1491,6 +1499,10 @@ export default class Orbiter {
     await this.constellation.nuées.changerPhisolophieAutorisation({
       idAutorisation: authId,
       philosophie: 'CJPI',
+    });
+    await this.constellation.nuées.accepterMembreNuée({
+      idNuée: swarmId,
+      idCompte: userId,
     });
   }
 
