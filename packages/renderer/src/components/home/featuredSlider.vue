@@ -1,24 +1,27 @@
 <template>
   <v-carousel
+    v-model="slide"
     hide-delimiters
     height="400px"
   >
-    <template #prev="{props}">
+    <template #prev="{props: prevProps}">
       <v-btn
-        v-bind="props"
+        v-if="reactiveFeaturedList.length > 0"
+        v-bind="prevProps"
         variant="plain"
       >
       </v-btn>
     </template>
-    <template #next="{props}">
+    <template #next="{props: nextProps}">
       <v-btn
-        v-bind="props"
+        v-if="reactiveFeaturedList.length > 0"
+        v-bind="nextProps"
         variant="plain"
       >
       </v-btn>
     </template>
     <v-carousel-item
-      v-for="featured in featuredList"
+      v-for="featured in reactiveFeaturedList"
       :key="featured.id"
       :src="featured.cover"
       cover
@@ -122,6 +125,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import type {FeaturedItem} from '/@/views/homePage.vue';
 import {useRouter} from 'vue-router';
 const router = useRouter();
@@ -129,5 +133,8 @@ const router = useRouter();
 interface Props {
   featuredList: Array<FeaturedItem>;
 }
-defineProps<Props>();
+const props = defineProps<Props>();
+
+const reactiveFeaturedList = computed(()=>props.featuredList);
+const slide = ref(0);
 </script>
