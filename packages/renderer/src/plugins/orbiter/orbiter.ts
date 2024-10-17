@@ -572,7 +572,6 @@ export default class Orbiter {
   }
 
   async siteConfigured(): Promise<{siteId: string; variableIds: VariableIds}> {
-    console.log(this.siteId, this.checkVariableIdsComplete(this.variableIds));
     if (this.siteId && this.checkVariableIdsComplete(this.variableIds)) {
       return {siteId: this.siteId, variableIds: this.variableIds};
     }
