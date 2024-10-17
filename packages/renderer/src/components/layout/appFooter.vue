@@ -29,11 +29,13 @@
               class="pa-0"
             ></v-list-item>
             <br />
-            <v-list-item
-              class="pa-0"
-            >
-              <template v-slot:subtitle>
-                <p>Items marked with <strong>^</strong> are <i>only partially available</i>, whether due to licencing or lost content. All content made available under legally free licences - specific credits will soon be available.</p>
+            <v-list-item class="pa-0">
+              <template #subtitle>
+                <p>
+                  Items marked with <strong>^</strong> are <i>only partially available</i>, whether
+                  due to licencing or lost content. All content made available under legally free
+                  licences - specific credits will soon be available.
+                </p>
               </template>
             </v-list-item>
             <br />

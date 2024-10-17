@@ -57,18 +57,14 @@
               <div class="d-flex align-center">
                 <p class="bg-background.lighten-2 pa-1 mr-2">{{ featured.classification }}</p>
                 <p class="text-subtitle-2 text-medium-emphasis mr-2">
-                  {{
-                    featured.metadata?.duration
-                  }}
+                  {{ featured.metadata?.duration }}
                 </p>
                 <v-icon
                   style="font-size: 0.2em"
                   icon="fas fa-circle"
                 ></v-icon>
                 <p class="text-subtitle-2 text-medium-emphasis ml-2">
-                  {{
-                    featured.metadata?.releaseYear
-                  }}
+                  {{ featured.metadata?.releaseYear }}
                 </p>
               </div>
               <p
@@ -127,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import {computed, ref} from 'vue';
 import type {FeaturedItem} from '/@/views/homePage.vue';
 import {useRouter} from 'vue-router';
 const router = useRouter();
@@ -137,6 +133,6 @@ interface Props {
 }
 const props = defineProps<Props>();
 
-const reactiveFeaturedList = computed(()=>props.featuredList);
+const reactiveFeaturedList = computed(() => props.featuredList);
 const slide = ref(0);
 </script>

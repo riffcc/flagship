@@ -26,7 +26,7 @@ export const navigationMap: NavigationMap = {
     authenticated: [
       {label: 'Upload', path: '/upload'},
       {label: 'Account', path: '/account'},
-      { label: 'Admin', path: '/admin' },
+      {label: 'Admin', path: '/admin'},
     ],
   },
   appFooter: {

@@ -1,5 +1,7 @@
 import {createRouter, createWebHashHistory, type RouteRecordRaw} from 'vue-router';
 
+import {useDevStatus} from '../composables/devStatus';
+import AdminPage from '../views/adminPage.vue';
 import AboutPage from '/@/views/aboutPage.vue';
 import AccountPage from '/@/views/accountPage.vue';
 import BuildingPage from '/@/views/buildingPage.vue';
@@ -9,8 +11,6 @@ import PrivacyPolicyPage from '/@/views/privacyPolicyPage.vue';
 import ReleasePage from '/@/views/releasePage.vue';
 import TermsPage from '/@/views/termsPage.vue';
 import UploadPage from '/@/views/uploadPage.vue';
-import { useDevStatus } from '../composables/devStatus';
-import AdminPage from '../views/adminPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -78,10 +78,9 @@ const routeur = createRouter({
 });
 
 routeur.afterEach(to => {
-  const { stub } = to.query;
-  const { status } = useDevStatus();
+  const {stub} = to.query;
+  const {status} = useDevStatus();
   status.value = stub !== undefined ? 'static' : 'live';
 });
-
 
 export default routeur;

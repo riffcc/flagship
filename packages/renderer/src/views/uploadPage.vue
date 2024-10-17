@@ -23,12 +23,11 @@
 </template>
 
 <script setup lang="ts">
-import { suivre as follow} from '@constl/vue';
+import {suivre as follow} from '@constl/vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 
 import NewReleaseForm from '/@/components/releases/newReleaseForm.vue';
 
 const {orbiter} = useOrbiter();
 const canUpload = follow(orbiter.followCanUpload.bind(orbiter));
-
 </script>

@@ -40,7 +40,7 @@ import {useDevStatus} from '/@/composables/devStatus';
 
 import {suivre as follow} from '@constl/vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
-import { computed } from 'vue';
+import {computed} from 'vue';
 import InitiateModDBs from '../components/initiateModDBs.vue';
 
 const {orbiter} = useOrbiter();
@@ -401,28 +401,25 @@ const staticData: {[key: string]: Array<ItemContent>} = {
 
 const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
 
-const featuredReleases = computed<Array<FeaturedItem>>(()=>{
+const featuredReleases = computed<Array<FeaturedItem>>(() => {
   // Note : this is a quick hack. We are using all releases from Orbiter as "featured releases".
   // TODO: Add option for featuring releases, and then modify below to show only these
   if (status.value === 'static') return staticFeaturedReleases;
   else {
-    return (orbiterReleases.value || []).map(
-      (r): FeaturedItem => {
-        return {
-          id: r.release.id,
-          category: r.release.release.category,
-          contentCID: r.release.release.file,
-          title: r.release.release.contentName,
-          thumbnail: r.release.release.thumbnail,
-          classification: 'Unknown',  // TODO
-          cover: r.release.release.cover,
-          rating: 1, // TODO,
-        };
-      },
-    );
+    return (orbiterReleases.value || []).map((r): FeaturedItem => {
+      return {
+        id: r.release.id,
+        category: r.release.release.category,
+        contentCID: r.release.release.file,
+        title: r.release.release.contentName,
+        thumbnail: r.release.release.thumbnail,
+        classification: 'Unknown', // TODO
+        cover: r.release.release.cover,
+        rating: 1, // TODO,
+      };
+    });
   }
 });
-
 </script>
 <!--
       {

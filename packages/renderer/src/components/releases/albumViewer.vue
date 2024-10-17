@@ -87,9 +87,7 @@
                 <div class="ml-4">
                   <p class="text-subtitle-2 text-md-subtitle-1">{{ file.name }}</p>
                   <p class="text-caption text-md-subtitle-2 text-medium-emphasis">
-                    {{
-                      props.author
-                    }}
+                    {{ props.author }}
                   </p>
                 </div>
               </v-sheet>

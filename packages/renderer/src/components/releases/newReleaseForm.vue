@@ -187,7 +187,7 @@ const contentCID = ref<string>();
 const releaseCategory = ref<string>();
 const releaseName = ref<string>();
 const thumbnailCID = ref<string>();
-const coverCID = ref<string>();  // TODO - option to autogenerate this from movie files
+const coverCID = ref<string>(); // TODO - option to autogenerate this from movie files
 
 const releaseMetadata = ref<ReleaseMetadata>({});
 const musicReleaseMetadata = ref<MusicReleaseMetadata>({});
@@ -235,8 +235,14 @@ const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
   loading.value = true;
   console.log('ON SUBMIT');
-  const {contentCIDValue, authorValue, metadataValue, releaseNameValue, releaseCategoryValue, coverCIDValue} =
-    readyToSave.value;
+  const {
+    contentCIDValue,
+    authorValue,
+    metadataValue,
+    releaseNameValue,
+    releaseCategoryValue,
+    coverCIDValue,
+  } = readyToSave.value;
   await orbiter.addRelease({
     [RELEASES_AUTHOR_COLUMN]: authorValue,
     [RELEASES_CATEGORY_COLUMN]: releaseCategoryValue,

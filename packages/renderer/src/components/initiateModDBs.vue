@@ -9,8 +9,8 @@
         {{ generatedSiteId ? 'Site is now configured' : 'Site not configured' }}
       </v-card-title>
       <v-card-text v-if="!generatedSiteId">
-        Each instance of Orbiter must be compiled with a unique site configuration. Click below
-        to configure the site. (This can take a while.)
+        Each instance of Orbiter must be compiled with a unique site configuration. Click below to
+        configure the site. (This can take a while.)
         <v-alert
           v-if="development"
           class="mt-4"
@@ -46,7 +46,7 @@
           color="primary mx-auto"
           variant="outlined"
           prepend-icon="mdi-exit"
-          @click="()=>status = 'static'"
+          @click="() => (status = 'static')"
         >
           View in dev (static data) mode
         </v-btn>
@@ -81,8 +81,8 @@ import {computed, ref} from 'vue';
 import {suivre as follow} from '@constl/vue';
 import {saveAs} from 'file-saver';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
-import { useDevStatus } from '../composables/devStatus';
-import { constantCase } from 'change-case';
+import {useDevStatus} from '../composables/devStatus';
+import {constantCase} from 'change-case';
 
 const {orbiter} = useOrbiter();
 const {status} = useDevStatus();
@@ -90,8 +90,8 @@ const {status} = useDevStatus();
 const siteConfigured = follow(({f}) => orbiter.listenForSiteConfigured({f}));
 const siteNotConfigured = computed(() => siteConfigured.value === false);
 
-const staticDevMode = computed(()=>status.value === 'static');
-const dialog = computed(()=>siteNotConfigured.value && !staticDevMode.value);
+const staticDevMode = computed(() => status.value === 'static');
+const dialog = computed(() => siteNotConfigured.value && !staticDevMode.value);
 
 const generatingDb = ref<boolean>(false);
 const generatedSiteId = ref<string>();
@@ -103,7 +103,7 @@ const generateDb = async () => {
   generatingDb.value = true;
 
   const {siteId, variableIds} = await orbiter.setUpSite();
-  
+
   // For now, only admins can add content.
   await orbiter.makeSitePrivate();
 
@@ -117,9 +117,9 @@ const development = import.meta.env.DEV;
 
 const envFileText = computed(() => {
   const generatedVariableIdsValue = generatedVariableIds.value;
-  if (!generatedVariableIdsValue) throw new Error('This shouldn\'t happen...'); 
+  if (!generatedVariableIdsValue) throw new Error("This shouldn't happen...");
   const variableIdsList = (Object.keys(generatedVariableIdsValue) as (keyof VariableIds)[]).map(
-    (k) => `VITE_${constantCase(k)}_ID=${generatedVariableIdsValue[k]}`,
+    k => `VITE_${constantCase(k)}_ID=${generatedVariableIdsValue[k]}`,
   );
   const siteId = 'VITE_SITE_ID=' + generatedSiteId.value;
 

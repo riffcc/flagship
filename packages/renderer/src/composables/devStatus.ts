@@ -6,7 +6,6 @@ const status = ref<StatusTypes>('static');
 export const useDevStatus = function (): {
   status: Ref<StatusTypes>;
 } {
-
   return {
     status,
   };

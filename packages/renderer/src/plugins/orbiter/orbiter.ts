@@ -24,12 +24,12 @@ import {
   FEATURED_RELEASES_TABLE_KEY,
   RELEASES_AUTHOR_COLUMN,
   RELEASES_CATEGORY_COLUMN,
+  RELEASES_COVER_COLUMN,
   RELEASES_DB_TABLE_KEY,
   RELEASES_FILE_COLUMN,
   RELEASES_METADATA_COLUMN,
   RELEASES_NAME_COLUMN,
   RELEASES_STATUS_COLUMN,
-  RELEASES_COVER_COLUMN,
   RELEASES_THUMBNAIL_COLUMN,
   TRUSTED_SITES_NAME_COL,
   TRUSTED_SITES_SITE_ID_COL,
@@ -1358,19 +1358,13 @@ export default class Orbiter {
     return await this.constellation.profil.suivreImage({f, idCompte: accountId});
   }
 
-
-  async followCanUpload({
-    f,
-    userId,
-  }: {
-    f: (canUpload: boolean) =>void;
-    userId?: string
-  }) {
+  async followCanUpload({f, userId}: {f: (canUpload: boolean) => void; userId?: string}) {
     const {swarmId} = await this.orbiterConfig();
-    userId = userId || await this.constellation.obtIdCompte();
+    userId = userId || (await this.constellation.obtIdCompte());
 
     // TODO: this should be refactored into Constellation
-    const info: {philosophy?: 'IUPG' | 'GUPI', memberStatus?: 'exclus' | 'accepté' | undefined} = {};
+    const info: {philosophy?: 'IUPG' | 'GUPI'; memberStatus?: 'exclus' | 'accepté' | undefined} =
+      {};
     const fFinal = () => {
       if (info.philosophy === 'IUPG') f(info.memberStatus !== 'exclus');
       else f(info.memberStatus === 'accepté');
@@ -1379,14 +1373,14 @@ export default class Orbiter {
       idNuée: swarmId,
       f: philosophy => {
         // Guilty until proven innocent (invitation-only) or innocent until proven guilty (open by default)
-        info.philosophy = (philosophy === 'CJPI' ? 'GUPI' : 'IUPG');
+        info.philosophy = philosophy === 'CJPI' ? 'GUPI' : 'IUPG';
         fFinal();
       },
     });
     const forgetAuthorisations = await this.constellation.nuées.suivreAutorisationsMembresDeNuée({
       idNuée: swarmId,
       f: members => {
-        info.memberStatus = members.find(m=>m.idCompte === userId)?.statut;
+        info.memberStatus = members.find(m => m.idCompte === userId)?.statut;
         fFinal();
       },
     });
@@ -1490,7 +1484,7 @@ export default class Orbiter {
   async makeSitePrivate(): Promise<void> {
     const {swarmId} = await this.orbiterConfig();
     const userId = await this.constellation.obtIdCompte();
-    
+
     // Both releases and collections swarms share the same swarm and authorisation rules, so changing one will update both
     const authId = await this.constellation.nuées.obtGestionnaireAutorisationsDeNuée({
       idNuée: swarmId,

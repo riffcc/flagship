@@ -39,10 +39,10 @@ const userAvatar = useUserProfilePhoto(props.accountId);
 // Dev static mode
 const {status} = useDevStatus();
 const staticModeSwitch = ref(status.value === 'static');
-watchEffect(()=>{
-  status.value = staticModeSwitch.value ? 'static': 'live';
+watchEffect(() => {
+  status.value = staticModeSwitch.value ? 'static' : 'live';
 });
-watchEffect(()=>{
+watchEffect(() => {
   staticModeSwitch.value = status.value === 'static';
 });
 </script>
