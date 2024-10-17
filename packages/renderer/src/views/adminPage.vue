@@ -37,7 +37,14 @@
         :key="s.id"
         :title="s.données.siteId"
         :subtitle="s.données.siteName"
-      />
+      >
+        <template #append>
+          <v-btn
+            icon="mdi-delete"
+            @click="() => untrustSite({elementId: s.id})"
+          ></v-btn>
+        </template>
+      </v-list-item>
       <v-list-item
         v-if="!trustedSites?.length"
         :title="`No other Orbiter sites are currently being followed by ${siteDomainName}.`"
@@ -47,10 +54,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useOrbiter } from '../plugins/orbiter/utils';
-import { adresseOrbiteValide } from '@constl/utils-ipa';
-import { obt, suivre as follow } from '@constl/vue';
+import {computed, ref} from 'vue';
+import {useOrbiter} from '../plugins/orbiter/utils';
+import {adresseOrbiteValide} from '@constl/utils-ipa';
+import {obt, suivre as follow} from '@constl/vue';
 
 const {orbiter} = useOrbiter();
 const formRef = ref();
@@ -60,16 +67,12 @@ const trustedSiteName = ref<string>();
 
 const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
-  isValidSiteAddress: (v: string) => adresseOrbiteValide(v) || 'Please enter a valid site address (`/orbitdb/...`).',
+  isValidSiteAddress: (v: string) =>
+    adresseOrbiteValide(v) || 'Please enter a valid site address (`/orbitdb/...`).',
 };
 
 const readyToSave = computed(() => {
-  if (
-    trustedSiteId.value &&
-    trustedSiteName.value &&
-    formRef.value.isValid
-  ) {
-
+  if (trustedSiteId.value && trustedSiteName.value && formRef.value.isValid) {
     return {
       trustedSiteIdValue: trustedSiteId.value,
       trustedSiteNameValue: trustedSiteName.value,
@@ -93,11 +96,11 @@ const handleOnSubmit = async () => {
 
 const clearForm = () => {
   trustedSiteId.value = undefined;
-trustedSiteName.value = undefined;
+  trustedSiteName.value = undefined;
 };
 
 const siteConfig = obt(orbiter.siteConfigured.bind(orbiter));
-const siteId = computed(()=>siteConfig.value?.siteId);
+const siteId = computed(() => siteConfig.value?.siteId);
 
 const trustedSites = follow(orbiter.followTrustedSites.bind(orbiter));
 
@@ -105,4 +108,7 @@ const siteDomainName = computed(() => {
   return document.location.hostname;
 });
 
+const untrustSite = async ({elementId}: {elementId: string}) => {
+  await orbiter.untrustSite({elementId});
+};
 </script>
