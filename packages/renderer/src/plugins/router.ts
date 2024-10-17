@@ -9,6 +9,7 @@ import PrivacyPolicyPage from '/@/views/privacyPolicyPage.vue';
 import ReleasePage from '/@/views/releasePage.vue';
 import TermsPage from '/@/views/termsPage.vue';
 import UploadPage from '/@/views/uploadPage.vue';
+import { useDevStatus } from '../composables/devStatus';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -74,5 +75,12 @@ const routeur = createRouter({
     return {top: 0};
   },
 });
+
+routeur.afterEach(to => {
+  const { stub } = to.query;
+  const { status } = useDevStatus();
+  status.value = stub !== undefined ? 'static' : 'live';
+});
+
 
 export default routeur;
