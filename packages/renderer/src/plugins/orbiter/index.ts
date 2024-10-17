@@ -32,6 +32,7 @@ const getVariableIds = (): possiblyIncompleteVariableIds => {
     VITE_RELEASES_CATEGORY_VAR_ID,
     VITE_RELEASES_AUTHOR_VAR_ID,
     VITE_RELEASES_CONTENT_NAME_VAR_ID,
+    VITE_RELEASES_COVER_VAR_ID,
     VITE_RELEASES_METADATA_VAR_ID,
     VITE_RELEASES_THUMBNAIL_VAR_ID,
     VITE_RELEASES_STATUS_VAR_ID,
@@ -45,16 +46,18 @@ const getVariableIds = (): possiblyIncompleteVariableIds => {
     VITE_FEATURED_RELEASES_RELEASE_ID_VAR_ID,
     VITE_FEATURED_RELEASES_START_TIME_VAR_ID,
     VITE_FEATURED_RELEASES_END_TIME_VAR_ID,
+    VITE_BLOCKED_RELEASES_RELEASE_ID_VAR_ID,
   } = import.meta.env;
 
   const variableIds: possiblyIncompleteVariableIds = {
-    trustedSitesSiteIdVariableId: VITE_TRUSTED_SITES_SITE_ID_VAR_ID,
-    trustedSitesNameVariableId: VITE_TRUSTED_SITES_NAME_VAR_ID,
+    trustedSitesSiteIdVar: VITE_TRUSTED_SITES_SITE_ID_VAR_ID,
+    trustedSitesNameVar: VITE_TRUSTED_SITES_NAME_VAR_ID,
 
     releasesFileVar: VITE_RELEASES_FILE_VAR_ID,
     releasesCategoryVar: VITE_RELEASES_CATEGORY_VAR_ID,
     releasesAuthorVar: VITE_RELEASES_AUTHOR_VAR_ID,
     releasesContentNameVar: VITE_RELEASES_CONTENT_NAME_VAR_ID,
+    releasesCoverVar: VITE_RELEASES_COVER_VAR_ID,
     releasesMetadataVar: VITE_RELEASES_METADATA_VAR_ID,
     releasesThumbnailVar: VITE_RELEASES_THUMBNAIL_VAR_ID,
     releasesStatusVar: VITE_RELEASES_STATUS_VAR_ID,
@@ -70,6 +73,8 @@ const getVariableIds = (): possiblyIncompleteVariableIds => {
     featuredReleasesReleaseIdVar: VITE_FEATURED_RELEASES_RELEASE_ID_VAR_ID,
     featuredReleasesStartTimeVar: VITE_FEATURED_RELEASES_START_TIME_VAR_ID,
     featuredReleasesEndTimeVar: VITE_FEATURED_RELEASES_END_TIME_VAR_ID,
+
+    blockedReleasesReleaseIdVar: VITE_BLOCKED_RELEASES_RELEASE_ID_VAR_ID,
   };
 
   return variableIds;

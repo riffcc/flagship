@@ -23,8 +23,8 @@ import type {
 } from './consts';
 
 export const variableIdKeys = [
-  'trustedSitesSiteIdVariableId',
-  'trustedSitesNameVariableId',
+  'trustedSitesSiteIdVar',
+  'trustedSitesNameVar',
   'releasesContentNameVar',
   'releasesFileVar',
   'releasesThumbnailVar',

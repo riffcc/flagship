@@ -45,6 +45,7 @@
         <v-btn
           color="primary mx-auto"
           variant="outlined"
+          prepend-icon="mdi-exit"
           @click="()=>status = 'static'"
         >
           View in dev (static data) mode
@@ -54,7 +55,7 @@
         <v-spacer />
         <v-btn
           color="primary"
-          prepend-icon="mdi-download"
+          append-icon="mdi-download"
           :loading="generatingEnvFile"
           @click="downloadEnvFile"
         >
@@ -62,7 +63,7 @@
         </v-btn>
         <v-btn
           color="primary"
-          prepend-icon="mdi-export"
+          append-icon="mdi-export"
           @click="acceptNewModDb"
         >
           Close and enter site
@@ -81,6 +82,7 @@ import {suivre as follow} from '@constl/vue';
 import {saveAs} from 'file-saver';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { useDevStatus } from '../composables/devStatus';
+import { constantCase } from 'change-case';
 
 const {orbiter} = useOrbiter();
 const {status} = useDevStatus();
@@ -111,47 +113,11 @@ const generateDb = async () => {
 const development = import.meta.env.DEV;
 
 const envFileText = computed(() => {
-  const trustedSitesSiteIdVar =
-    'VITE_TRUSTED_SITES_SITE_ID_VAR_ID=' + generatedVariableIds.value?.trustedSitesSiteIdVariableId;
-  const trustedSitesNameVar =
-    'VITE_TRUSTED_SITES_NAME_VAR_ID=' + generatedVariableIds.value?.trustedSitesNameVariableId;
-
-  const releasesFileVar =
-    'VITE_RELEASES_FILE_VAR_ID=' + generatedVariableIds.value?.releasesFileVar;
-  const releasesCategoryVar =
-    'VITE_RELEASES_CATEGORY_VAR_ID=' + generatedVariableIds.value?.releasesCategoryVar;
-  const releasesAuthorVar =
-    'VITE_RELEASES_AUTHOR_VAR_ID=' + generatedVariableIds.value?.releasesAuthorVar;
-  const releasesContentNameVar =
-    'VITE_RELEASES_CONTENT_NAME_VAR_ID=' + generatedVariableIds.value?.releasesContentNameVar;
-  const releasesMetadataVar =
-    'VITE_RELEASES_METADATA_VAR_ID=' + generatedVariableIds.value?.releasesMetadataVar;
-  const releasesThumbnailVar =
-    'VITE_RELEASES_THUMBNAIL_VAR_ID=' + generatedVariableIds.value?.releasesThumbnailVar;
-
-  const collectionsAuthorVar =
-    'VITE_COLLECTIONS_AUTHOR_VAR_ID=' + generatedVariableIds.value?.collectionsAuthorVar;
-  const collectionsMetadataVar =
-    'VITE_COLLECTIONS_METADATA_VAR_ID=' + generatedVariableIds.value?.collectionsMetadataVar;
-  const collectionsNameVar =
-    'VITE_COLLECTIONS_NAME_VAR_ID=' + generatedVariableIds.value?.collectionsNameVar;
-  const collectionsReleasesVar =
-    'VITE_COLLECTIONS_RELEASES_VAR_ID=' + generatedVariableIds.value?.collectionsReleasesVar;
-  const collectionsThumbnailVar =
-    'VITE_COLLECTIONS_THUMBNAIL_VAR_ID=' + generatedVariableIds.value?.collectionsThumbnailVar;
-  const collectionsCategoryVar =
-    'VITE_COLLECTIONS_CATEGORY_VAR_ID=' + generatedVariableIds.value?.collectionsCategoryVar;
-
-  const featuredReleasesReleaseIdVar =
-    'VITE_FEATURED_RELEASES_RELEASE_ID_VAR_ID=' +
-    generatedVariableIds.value?.featuredReleasesReleaseIdVar;
-  const featuredReleasesStartTimeVar =
-    'VITE_FEATURED_RELEASES_START_TIME_VAR_ID=' +
-    generatedVariableIds.value?.featuredReleasesStartTimeVar;
-  const featuredReleasesEndTimeVar =
-    'VITE_FEATURED_RELEASES_END_TIME_VAR_ID=' +
-    generatedVariableIds.value?.featuredReleasesEndTimeVar;
-
+  const generatedVariableIdsValue = generatedVariableIds.value;
+  if (!generatedVariableIdsValue) throw new Error('This shouldn\'t happen...'); 
+  const variableIdsList = (Object.keys(generatedVariableIdsValue) as (keyof VariableIds)[]).map(
+    (k) => `VITE_${constantCase(k)}_ID=${generatedVariableIdsValue[k]}`,
+  );
   const siteId = 'VITE_SITE_ID=' + generatedSiteId.value;
 
   return (
@@ -160,39 +126,7 @@ const envFileText = computed(() => {
     '\n' +
     '\n' +
     '# These should ideally stay the same for all Orbiter.CC sites for optimal performance. Only change if you know what you are doing.\n' +
-    trustedSitesSiteIdVar +
-    '\n' +
-    trustedSitesNameVar +
-    '\n' +
-    releasesFileVar +
-    '\n' +
-    releasesCategoryVar +
-    '\n' +
-    releasesAuthorVar +
-    '\n' +
-    releasesContentNameVar +
-    '\n' +
-    releasesMetadataVar +
-    '\n' +
-    releasesThumbnailVar +
-    '\n' +
-    collectionsAuthorVar +
-    '\n' +
-    collectionsMetadataVar +
-    '\n' +
-    collectionsNameVar +
-    '\n' +
-    collectionsReleasesVar +
-    '\n' +
-    collectionsThumbnailVar +
-    '\n' +
-    collectionsCategoryVar +
-    '\n' +
-    featuredReleasesReleaseIdVar +
-    '\n' +
-    featuredReleasesStartTimeVar +
-    '\n' +
-    featuredReleasesEndTimeVar +
+    variableIdsList.join('\n') +
     '\n'
   );
 });
@@ -201,7 +135,7 @@ const downloadEnvFile = async () => {
   if (!generatedSiteId.value) return;
   generatingEnvFile.value = true;
 
-  saveAs(envFileText.value, '[erase this bit].env');
+  saveAs(new Blob([envFileText.value], {type: 'text/plain;charset=utf-8'}), '[erase this bit].env');
 
   generatingEnvFile.value = false;
 };

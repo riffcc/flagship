@@ -124,13 +124,12 @@ export default class Orbiter {
     siteId: string;
     variableIds: VariableIds;
   }> {
-    console.log('ici');
     // Variables for moderation database
-    const trustedSitesSiteIdVariableId =
-      this.initialVariableIds.trustedSitesSiteIdVariableId ||
+    const trustedSitesSiteIdVar =
+      this.initialVariableIds.trustedSitesSiteIdVar ||
       (await this.constellation.variables.créerVariable({catégorie: 'chaîneNonTraductible'}));
-    const trustedSitesNameVariableId =
-      this.initialVariableIds.trustedSitesNameVariableId ||
+    const trustedSitesNameVar =
+      this.initialVariableIds.trustedSitesNameVar ||
       (await this.constellation.variables.créerVariable({catégorie: 'chaîneNonTraductible'}));
     const featuredReleasesReleaseIdVar =
       this.initialVariableIds.featuredReleasesReleaseIdVar ||
@@ -146,7 +145,7 @@ export default class Orbiter {
     const blockedReleasesReleaseIdVar =
       this.initialVariableIds.blockedReleasesReleaseIdVar ||
       (await this.constellation.variables.créerVariable({catégorie: 'chaîneNonTraductible'}));
-    console.log('ici 1');
+
     // Variables for releases table
     const releasesFileVar =
       this.initialVariableIds.releasesFileVar ||
@@ -178,7 +177,7 @@ export default class Orbiter {
       (await this.constellation.variables.créerVariable({
         catégorie: 'chaîneNonTraductible',
       }));
-    console.log('ici 2');
+
     // The release type variable is a bit more complicated, because we need to specify
     // allowed categories to enforce.
     let releasesCategoryVar: string;
@@ -219,7 +218,7 @@ export default class Orbiter {
         },
       });
     }
-    console.log('ici 3');
+
     // Variables for collections table
     const collectionsNameVar =
       this.initialVariableIds.collectionsNameVar ||
@@ -246,7 +245,7 @@ export default class Orbiter {
       (await this.constellation.variables.créerVariable({
         catégorie: 'fichier',
       }));
-    console.log('ici 4');
+
     // Same thing for collections type variable.
     let collectionsCategoryVar: string;
     if (this.initialVariableIds.collectionsCategoryVar) {
@@ -286,7 +285,7 @@ export default class Orbiter {
         },
       });
     }
-    console.log('ici 5');
+
     // Swarm ID for site
     let swarmId: string;
     if (this.swarmId) {
@@ -327,7 +326,7 @@ export default class Orbiter {
         }
       }
     }
-    console.log('ici 6');
+
     const modDbId = await this.constellation.bds.créerBdDeSchéma({
       schéma: {
         licence: 'ODbl-1_0',
@@ -335,11 +334,11 @@ export default class Orbiter {
           {
             cols: [
               {
-                idVariable: trustedSitesSiteIdVariableId,
+                idVariable: trustedSitesSiteIdVar,
                 idColonne: TRUSTED_SITES_SITE_ID_COL,
               },
               {
-                idVariable: trustedSitesNameVariableId,
+                idVariable: trustedSitesNameVar,
                 idColonne: TRUSTED_SITES_NAME_COL,
               },
             ],
@@ -374,11 +373,11 @@ export default class Orbiter {
         ],
       },
     });
-    console.log('ici 7');
+
     const variableIds: VariableIds = {
       // Federation stuff
-      trustedSitesSiteIdVariableId,
-      trustedSitesNameVariableId,
+      trustedSitesSiteIdVar,
+      trustedSitesNameVar,
 
       // featured releases
       featuredReleasesReleaseIdVar,
@@ -411,25 +410,24 @@ export default class Orbiter {
     const siteId = await this.constellation.créerBdIndépendante({
       type: 'keyvalue',
     });
-    console.log('ici 8', {modDbId});
+
     await this.constellation.orbite.appliquerFonctionBdOrbite({
       idBd: siteId,
       fonction: 'put',
       args: ['modDb', modDbId],
     });
-    console.log('ici 9');
+
     await this.constellation.orbite.appliquerFonctionBdOrbite({
       idBd: siteId,
       fonction: 'put',
       args: ['swarmId', swarmId],
     });
-    console.log('ici 10');
 
     this.events.emit('site configured', {
       siteId,
       variableIds,
     });
-    console.log('ici 11');
+
     return {
       siteId,
       variableIds,

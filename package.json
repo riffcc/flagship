@@ -91,6 +91,7 @@
     "@mdi/font": "^7.4.47",
     "ajv": "^8.17.1",
     "assert": "^2.1.0",
+    "change-case": "^5.4.4",
     "core-js": "^3.37.1",
     "crypto-browserify": "^3.12.0",
     "electron-updater": "6.2.1",
