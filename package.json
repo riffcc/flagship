@@ -25,7 +25,7 @@
     "test:webkit": "pnpm run compile:web && ENVIRONNEMENT_TESTS=webkit vitest run",
     "test:chrome": "pnpm run compile:web && ENVIRONNEMENT_TESTS=chromium vitest run",
     "watch": "node scripts/watch.mjs",
-    "watch:web": "cross-env WEB=true vite packages/renderer --port 5174",
+    "watch:web": "cross-env WEB=true vite packages/renderer --port 5175",
     "watch:web:stub": "cross-env VITE_STUB_DATA=true pnpm watch:web",
     "preview:web": "pnpm compile:web && cross-env WEB=true vite preview packages/renderer",
     "lint": "eslint .",

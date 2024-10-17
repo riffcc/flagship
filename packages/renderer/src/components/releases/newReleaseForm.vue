@@ -72,7 +72,7 @@
             placeholder="Values sepatared by comma"
           >
             <template #append-inner>
-              <IconTooltip
+              <v-tooltip
                 icon="fas fa-circle-question"
                 content="Any tags you feel are appropriate for the media - such as rock, country, or pop."
               />
@@ -83,7 +83,7 @@
             label="MusicBrainz ID"
           >
             <template #append-inner>
-              <IconTooltip
+              <v-tooltip
                 icon="fas fa-circle-question"
                 content="If the content has an entry on MusicBrainz, enter it here to pre-fill the rest of this form."
               />
@@ -231,13 +231,13 @@ const readyToSave = computed(() => {
   } else return undefined;
 });
 
-const handleOnSubmit = () => {
+const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
   loading.value = true;
   console.log('ON SUBMIT');
   const {contentCIDValue, authorValue, metadataValue, releaseNameValue, releaseCategoryValue, coverCIDValue} =
     readyToSave.value;
-  orbiter.addRelease({
+  await orbiter.addRelease({
     [RELEASES_AUTHOR_COLUMN]: authorValue,
     [RELEASES_CATEGORY_COLUMN]: releaseCategoryValue,
     [RELEASES_FILE_COLUMN]: contentCIDValue,

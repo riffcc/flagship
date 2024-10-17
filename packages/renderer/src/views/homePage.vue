@@ -1,5 +1,6 @@
 <template>
   <v-container class="fill-height">
+    <InitiateModDBs />
     <featured-slider :featured-list="featuredReleases" />
     <content-section
       title="Featured"
@@ -40,6 +41,7 @@ import {useDevStatus} from '/@/composables/devStatus';
 import {suivre as follow} from '@constl/vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { computed } from 'vue';
+import InitiateModDBs from '../components/initiateModDBs.vue';
 
 const {orbiter} = useOrbiter();
 const {status} = useDevStatus();

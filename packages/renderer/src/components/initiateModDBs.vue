@@ -1,6 +1,6 @@
 <template>
   <v-dialog
-    v-model="siteNotConfigured"
+    v-model="dialog"
     persistent
     max-width="800"
   >
@@ -42,6 +42,13 @@
         >
           Configure site
         </v-btn>
+        <v-btn
+          color="primary mx-auto"
+          variant="outlined"
+          @click="()=>status = 'static'"
+        >
+          View in dev (static data) mode
+        </v-btn>
       </v-card-actions>
       <v-card-actions v-else>
         <v-spacer />
@@ -73,11 +80,16 @@ import {computed, ref} from 'vue';
 import {suivre as follow} from '@constl/vue';
 import {saveAs} from 'file-saver';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
+import { useDevStatus } from '../composables/devStatus';
 
 const {orbiter} = useOrbiter();
+const {status} = useDevStatus();
 
 const siteConfigured = follow(({f}) => orbiter.listenForSiteConfigured({f}));
 const siteNotConfigured = computed(() => siteConfigured.value === false);
+
+const staticDevMode = computed(()=>status.value === 'static');
+const dialog = computed(()=>siteNotConfigured.value && !staticDevMode.value);
 
 const generatingDb = ref<boolean>(false);
 const generatedSiteId = ref<string>();
