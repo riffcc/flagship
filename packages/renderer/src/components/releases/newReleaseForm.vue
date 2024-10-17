@@ -247,7 +247,21 @@ const handleOnSubmit = async () => {
     [RELEASES_STATUS_COLUMN]: 'pending',
     [RELEASES_COVER_COLUMN]: coverCIDValue,
   });
+  clearForm();
   loading.value = false;
+};
+
+const clearForm = () => {
+  author.value = undefined;
+  contentCID.value = undefined;
+  releaseCategory.value = undefined;
+  releaseName.value = undefined;
+  thumbnailCID.value = undefined;
+  coverCID.value = undefined;
+
+  releaseMetadata.value = {};
+  musicReleaseMetadata.value = {};
+  movieReleaseMetadata.value = {};
 };
 
 const licenseTypes = ['CC BY', 'CC BY-NC', 'CC BY-NC-ND'];
