@@ -8,7 +8,7 @@
 
     <div class="text-body-2 font-weight-light mb-n1">Welcome to</div>
 
-    <h1 class="text-h2 font-weight-bold">Orbiter.CC</h1>
+    <h1 class="text-h2 font-weight-bold">Orbiter</h1>
 
     <div class="text-body-2 italic">E cinere surgemus</div>
 

@@ -24,7 +24,7 @@
     <v-divider class="my-4" />
     <h2>Advanced</h2>
     <p>
-      You are on the site <code>{{ siteDomainName }}</code>. If you are the moderator of another Orbiter.CC site and wish to add this site to your list
+      You are on the site <code>{{ siteDomainName }}</code>. If you are the moderator of another Orbiter site and wish to add this site to your list
       of trusted sites, copy the information below:
       <v-text-field
         class="my-2"
