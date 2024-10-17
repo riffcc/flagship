@@ -9,7 +9,7 @@
         {{ generatedSiteId ? 'Site is now configured' : 'Site not configured' }}
       </v-card-title>
       <v-card-text v-if="!generatedSiteId">
-        Each instance of Orbiter.CC must be compiled with a unique site configuration. Click below
+        Each instance of Orbiter must be compiled with a unique site configuration. Click below
         to configure the site. (This can take a while.)
         <v-alert
           v-if="development"
@@ -22,7 +22,7 @@
       </v-card-text>
       <v-card-text v-else>
         Site configured! Be sure to copy the code below into a <code>.env</code> file and place it
-        at the root of your Orbiter.CC project.
+        at the root of your Orbiter project.
         <v-textarea
           class="mt-4"
           :value="envFileText"
@@ -124,11 +124,11 @@ const envFileText = computed(() => {
   const siteId = 'VITE_SITE_ID=' + generatedSiteId.value;
 
   return (
-    '# The address below should be regenerated for each Orbiter.CC site. If you are setting up an independent site, erase the value below and run the site in development mode (`pnpm dev`) to automatically regenerate. \n' +
+    '# The address below should be regenerated for each Orbiter site. If you are setting up an independent site, erase the value below and run the site in development mode (`pnpm dev`) to automatically regenerate. \n' +
     siteId +
     '\n' +
     '\n' +
-    '# These should ideally stay the same for all Orbiter.CC sites for optimal performance. Only change if you know what you are doing.\n' +
+    '# These should ideally stay the same for all Orbiter sites for optimal performance. Only change if you know what you are doing.\n' +
     variableIdsList.join('\n') +
     '\n'
   );
