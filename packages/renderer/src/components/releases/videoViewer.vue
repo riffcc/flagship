@@ -43,7 +43,6 @@ onMounted(async () => {
     hls.loadSource(videoURL.value);
     hls.attachMedia(video.value!);
     hls.on(Hls.Events.MANIFEST_PARSED, function () {
-      console.log('ici');
       const node = document.createTextNode('Video ready...');
       status.value?.appendChild(node);
 
@@ -69,7 +68,6 @@ onMounted(async () => {
 
     hls.attachMedia(video.value);
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      console.log('ici');
       const node = document.createTextNode('Video ready...');
       status.value?.appendChild(node);
 
