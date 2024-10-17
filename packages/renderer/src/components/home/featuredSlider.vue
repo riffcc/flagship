@@ -9,6 +9,7 @@
         v-if="reactiveFeaturedList.length > 0"
         v-bind="prevProps"
         variant="plain"
+        :disabled="reactiveFeaturedList.length <= 1"
       >
       </v-btn>
     </template>
@@ -17,6 +18,7 @@
         v-if="reactiveFeaturedList.length > 0"
         v-bind="nextProps"
         variant="plain"
+        :disabled="reactiveFeaturedList.length <= 1"
       >
       </v-btn>
     </template>
