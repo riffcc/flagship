@@ -1,9 +1,9 @@
 <template>
   <v-container class="text-center">
     <h1>Admin</h1>
-    <h2>My site id</h2>
+    <h2 class="mt-6">My site id</h2>
     <h3>{{ siteId }} </h3>
-    <h2>Trusted sites</h2>
+    <h2 class="mt-6">Add trusted site</h2>
     <v-form
       ref="formRef"
       validate-on="input lazy"
@@ -30,6 +30,19 @@
         :loading="loading"
       />
     </v-form>
+    <h2 class="mt-6">Trusted sites</h2>
+    <v-list>
+      <v-list-item
+        v-for="s in trustedSites"
+        :key="s.id"
+        :title="s.données.siteId"
+        :subtitle="s.données.siteName"
+      />
+      <v-list-item
+        v-if="!trustedSites?.length"
+        :title="`No other Orbiter sites are currently being followed by ${siteDomainName}.`"
+      />
+    </v-list>
   </v-container>
 </template>
 
@@ -37,7 +50,7 @@
 import { computed, ref } from 'vue';
 import { useOrbiter } from '../plugins/orbiter/utils';
 import { adresseOrbiteValide } from '@constl/utils-ipa';
-import { obt } from '@constl/vue';
+import { obt, suivre as follow } from '@constl/vue';
 
 const {orbiter} = useOrbiter();
 const formRef = ref();
@@ -85,4 +98,11 @@ trustedSiteName.value = undefined;
 
 const siteConfig = obt(orbiter.siteConfigured.bind(orbiter));
 const siteId = computed(()=>siteConfig.value?.siteId);
+
+const trustedSites = follow(orbiter.followTrustedSites.bind(orbiter));
+
+const siteDomainName = computed(() => {
+  return document.location.hostname;
+});
+
 </script>
