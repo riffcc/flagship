@@ -4,7 +4,7 @@
     class="pa-0"
   >
     <video-player
-      v-if="route.query.category === 'video'"
+      v-if="route.query.category === 'video' || route.query.category === 'movie'"
       :content-cid="route.query.contentCID as string"
     />
     <album-viewer
