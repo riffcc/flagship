@@ -10,6 +10,7 @@ import ReleasePage from '/@/views/releasePage.vue';
 import TermsPage from '/@/views/termsPage.vue';
 import UploadPage from '/@/views/uploadPage.vue';
 import { useDevStatus } from '../composables/devStatus';
+import AdminPage from '../views/adminPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -34,7 +35,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/admin',
     name: 'Admin Website',
-    component: BuildingPage,
+    component: AdminPage,
   },
   {
     path: '/music',
