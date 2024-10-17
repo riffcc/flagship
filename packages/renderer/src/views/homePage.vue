@@ -53,6 +53,7 @@ export interface ItemContent {
   title: string;
   subtitle?: string;
   thumbnail?: string;
+  sourceSite: string;
   metadata?: {
     author?: string;
     description?: string;
@@ -74,6 +75,7 @@ const staticFeaturedReleases: Array<FeaturedItem> = [
     category: 'video',
     contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
     cover: '/mock/movie-rip.png',
+    sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     metadata: {
       description:
         'Join filmmaker Brett Gaylor and mashup artist Girl Talk as they explore copyright and content creation in the digital age. In the process they dissect the media landscape of the 21st century and shatter the wall between users and producers.',
@@ -89,6 +91,7 @@ const staticFeaturedReleases: Array<FeaturedItem> = [
     category: 'video',
     contentCID: 'QmPjxGcAYBv1fbwWSA2Zu4rHFN21DpFTKpQivXk9Kozqqe',
     cover: '/mock/movie-aaronsw.jpg',
+    sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     metadata: {
       description:
         "The Internet's Own Boy follows the story of programming prodigy and information activist Aaron Swartz. [Audio currently needs fixing, which will be resolved soon.]",
@@ -104,6 +107,7 @@ const staticFeaturedReleases: Array<FeaturedItem> = [
     category: 'video',
     contentCID: 'QmPSGARS6emPSEf8umwmjdG8AS7z7o8Nd36258B3BMi291',
     cover: '/mock/featured-tpbafk-fanart.png',
+    sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     metadata: {
       description:
         'The Pirate Bay Away From Keyboard is a documentary film about the file sharing website The Pirate Bay. [Audio currently needs fixing, which will be resolved soon.]',
@@ -119,6 +123,7 @@ const staticFeaturedReleases: Array<FeaturedItem> = [
     category: 'audio',
     contentCID: 'QmU6WhM6h3uvnicXcCQPgYpwrg9Moz68nVGWBeaYca2bMv',
     cover: '/mock/music-mapleridge.webp',
+    sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     metadata: {
       author: 'Swear and Shake',
       description:
@@ -140,6 +145,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       title: 'Pure Pwnage',
       subtitle: '1 Season^',
       thumbnail: '/mock/tvshow-purepwnage.png',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '2',
@@ -148,6 +154,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       title: 'Pioneer One',
       subtitle: '2 Seasons',
       thumbnail: '/mock/tvshow-pioneerone.png',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '3',
@@ -156,6 +163,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       title: 'Flash Gordon',
       subtitle: '1 Seasons',
       thumbnail: '/mock/tvshow-flashgordon.png',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '4',
@@ -164,6 +172,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       title: 'The Beverley Hillbillies',
       subtitle: '~1.6 Seasons^',
       thumbnail: '/mock/tvshow-beverleyhillbillies.png',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
   ],
   'featured-various': [
@@ -176,6 +185,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
         releaseYear: '(2008)',
       },
       thumbnail: '/mock/movie-rip-poster.png',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '2',
@@ -186,6 +196,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       },
       contentCID: 'QmQ5mZFnruyqA4tzwguKJ9e4wLigokE2pQE3e99u3YK8vg',
       thumbnail: '/mock/music-letskickfire.jpg',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '3',
@@ -196,6 +207,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
         author: 'Swear and Shake',
       },
       thumbnail: '/mock/music-mapleridge.webp',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '4',
@@ -206,6 +218,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
         author: 'Nine Inch Nails',
       },
       thumbnail: '/mock/music-theslip.jpg',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '5',
@@ -216,6 +229,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
         author: 'Radiohead',
       },
       thumbnail: '/mock/music-inrainbows.jpg',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '6',
@@ -226,6 +240,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
         releaseYear: '(2014)',
       },
       thumbnail: '/mock/movie-aaronsw.jpg',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '7',
@@ -236,6 +251,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
         releaseYear: '(2012)',
       },
       thumbnail: '/mock/movie-tbpafk.webp',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '8',
@@ -246,6 +262,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
         releaseYear: '(2015)',
       },
       thumbnail: '/mock/movie-cosmoslaundromat.webp',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '9',
@@ -256,6 +273,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
         author: 'Nine Inch Nails',
       },
       thumbnail: '/mock/music-ghosts-i-iv.png',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '10',
@@ -266,6 +284,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
         releaseYear: '(1968)',
       },
       thumbnail: '/mock/movie-nightofthelivingdead.webp',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
   ],
   'featured-music': [
@@ -279,6 +298,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       contentCID: 'QmU6WhM6h3uvnicXcCQPgYpwrg9Moz68nVGWBeaYca2bMv',
       subtitle: 'Maple Ridge',
       thumbnail: '/mock/music-mapleridge.webp',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '2',
@@ -290,6 +310,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       contentCID: 'QmQ5mZFnruyqA4tzwguKJ9e4wLigokE2pQE3e99u3YK8vg',
       subtitle: "Let's Kick Fire",
       thumbnail: '/mock/music-letskickfire.jpg',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '3',
@@ -301,6 +322,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       contentCID: 'QmR9hcaUqC7saAj8jjpkCwqa9bChmMJ3Mca17sRn6oiR2F',
       subtitle: 'The Slip',
       thumbnail: '/mock/music-theslip.jpg',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '4',
@@ -308,6 +330,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       title: 'Everything You Should Know',
       thumbnail: '/mock/music-everythingyoushouldknow.jpg',
       contentCID: 'QmbQ6JUzJPXaMdh5HBBZsczGLzhgz5DaFmUbRFZByZggRq',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
       metadata: {
         author: 'Silence is Sexy',
         releaseYear: 2006,
@@ -322,6 +345,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       title: 'Ghosts I-IV',
       contentCID: 'Qmb9XpBQnw1vataDeWTh4jAnPMgNfKGyV7KWFz7uCvYHNd',
       thumbnail: '/mock/music-ghosts-i-iv.png',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '6',
@@ -332,6 +356,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       title: 'Beyond Good and Evil',
       contentCID: 'QmSPWyFztzp3wntTyBLR5P3xc35wYekaUZ9YyzHtYRu7Ky',
       thumbnail: '/mock/music-paniq-bgae.jpg',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '7',
@@ -342,6 +367,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       title: "Guess Who's A Mess",
       contentCID: 'QmNXPf83zcKpqp3nDFtjYuAcTWLqsLZkANbNmcH3YZSs34',
       thumbnail: '/mock/music-guesswhosamess.webp',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '8',
@@ -352,6 +378,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       title: 'Extended Play^',
       contentCID: 'Qme72tWtGJfQnUnWoadTb3PxkfQGAYziiAjf4hvqraokF9',
       thumbnail: '/mock/music-swearandshake-extendedplay.webp',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '9',
@@ -363,6 +390,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       contentCID: 'QmUD6WSCQcyyBGdwEqUiQBivU8QXR8psx5eiuqv3BqK76M',
       subtitle: 'OK! Crazy Fiction Lady',
       thumbnail: '/mock/music-okcfl.png',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '10',
@@ -374,6 +402,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       contentCID: 'QmZE5FLsfNDLvXpruXFehoGL3H1EUpbRpszcoFvSXx1iKd',
       subtitle: 'Bye Bye Fishies',
       thumbnail: '/mock/music-byebyefishies.png',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '11',
@@ -384,6 +413,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       title: 'Story of Ohm^',
       contentCID: 'QmcvUHaHp7bpnvs31Nka7rSQ2KEuWcgDSwK3V1wsRqMqns',
       thumbnail: '/mock/music-storyofohm.png',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
     {
       id: '12',
@@ -395,6 +425,7 @@ const staticData: {[key: string]: Array<ItemContent>} = {
       contentCID: 'QmZAYJ1eQtTgMCcM2xxXiLjERqnbaseX1wMvuRbddqhaMj',
       subtitle: 'All Day',
       thumbnail: '/mock/music-allday.png',
+      sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     },
   ],
 };
@@ -413,6 +444,7 @@ const featuredReleases = computed<Array<FeaturedItem>>(() => {
         contentCID: r.release.release.file,
         title: r.release.release.contentName,
         thumbnail: r.release.release.thumbnail,
+        sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
         classification: 'Unknown', // TODO
         cover: r.release.release.cover,
         rating: 1, // TODO,

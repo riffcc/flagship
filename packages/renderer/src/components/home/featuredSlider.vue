@@ -30,7 +30,10 @@
       gradient="to right, rgba(0,0,0,.80), rgba(0,0,0,.01)"
     >
       <!-- <v-div class="d-flex align-center justify-center justify-md-start h-100"> -->
-      <v-container class="fill-height">
+      <v-container
+        class="fill-height"
+        :style="showDefederation ? `border: 1px solid ${lensColorHash(featured)};` : ''"
+      >
         <v-row
           justify="center"
           align="center"
@@ -126,13 +129,24 @@
 import {computed, ref} from 'vue';
 import type {FeaturedItem} from '/@/views/homePage.vue';
 import {useRouter} from 'vue-router';
+import {useShowDefederation} from '/@/composables/showDefed';
+import {base16} from 'multiformats/bases/base16';
+import {CID} from 'multiformats/cid';
+
 const router = useRouter();
+const {showDefederation} = useShowDefederation();
 
 interface Props {
   featuredList: Array<FeaturedItem>;
 }
 const props = defineProps<Props>();
 
-const reactiveFeaturedList = computed(() => props.featuredList);
+const reactiveFeaturedList = computed(() => props.featuredList);  // Unclear why this is necessary...
 const slide = ref(0);
+
+// Colors
+const lensColorHash = (featured: FeaturedItem): string =>{
+  const idSite = featured.sourceSite.replace('/orbitdb/', '');
+  return '#' + (CID.parse(idSite)).toString(base16.encoder).slice(-6);
+};
 </script>
