@@ -1354,6 +1354,42 @@ export default class Orbiter {
     return await this.constellation.profil.suivreImage({f, idCompte: accountId});
   }
 
+
+  async followCanUpload({
+    f,
+    userId,
+  }: {
+    f: (canUpload: boolean) =>void;
+    userId?: string
+  }) {
+    const {swarmId} = await this.orbiterConfig();
+    userId = userId || await this.constellation.obtIdCompte();
+
+    const info: {philosophy?: 'IUPG' | 'GUPI', memberStatus?: 'excluded' | 'accepted' | undefined} = {};
+    const fFinal = () => {
+      if (info.philosophy === 'IUPG') f(info.memberStatus !== 'excluded');
+      else f(info.memberStatus === 'accepted');
+    };
+    const forgetPhilosophy = await this.constellation.nuées.suivrePhilosophieAutorisation({
+      idNuée: swarmId,
+      f: philosophy => {
+        // Guilty until proven innocent (invitation-only) or innocent until proven guilty (open by default)
+        info.philosophy = philosophy === 'CJPI' ? 'GUPI' : 'IUPG';
+        fFinal();
+      },
+    });
+    const forgetAuthorisations = await this.constellation.nuées.suivreAutorisationsMembresDeNuée({
+      idNuée: swarmId,
+      f: members => {
+        info.memberStatus === members.find(m=>m.idCompte === userId)?.statut;
+      },
+    });
+    return async () => {
+      await forgetPhilosophy();
+      await forgetAuthorisations();
+    };
+  }
+
   // Site moderator functions. Moderators can moderate content and exclude/invite other useres.
   // Admins can do all that and also invite other admins and moderators.
 
