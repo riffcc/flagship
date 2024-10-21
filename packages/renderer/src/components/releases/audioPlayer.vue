@@ -186,14 +186,12 @@ const togglePlay = () => isPlaying.value ? pause() : play();
 const pause = () => {
   if (audioPlayerRef.value) {
     audioPlayerRef.value.pause();
-    isPlaying.value = false;
   }
 };
 
 const play = () => {
   if (audioPlayerRef.value) {
     audioPlayerRef.value.play();
-    isPlaying.value = true;
   }
 };
 
@@ -218,13 +216,11 @@ const updateProgress = () => {
 const canPlay = () => {
   isLoading.value = false;
   if (audioPlayerRef.value && audioPlayerRef.value.currentTime > 0) {
-    audioPlayerRef.value?.play();
-    isPlaying.value = true;
+    audioPlayerRef.value.play();
   }
 };
 const close = () => {
   pause();
-  isPlaying.value = false;
   progress.value = 0;
   handleOnClose();
 };
