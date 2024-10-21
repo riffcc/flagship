@@ -88,10 +88,11 @@
 
 <script setup lang="ts">
 import type {Ref} from 'vue';
-import {onMounted, onBeforeUnmount, ref, computed} from 'vue';
+import {onMounted, onBeforeUnmount, ref, computed, watch} from 'vue';
 import {useRouter} from 'vue-router';
 import {IPFS_GATEWAY} from '/@/constants/ipfs';
 import {useDisplay} from 'vuetify';
+import { usePlayerVolume } from '/@/composables/playerVolume';
 
 const props = defineProps<{
   contentCid: string;
@@ -102,6 +103,14 @@ const videoPlayerRef: Ref<HTMLVideoElement | null> = ref(null);
 const isPlaying = ref(false);
 const isLoading = ref(true);
 const progress = ref(0);
+
+const { volume, toggleVolume } = usePlayerVolume();
+
+watch(volume, v => {
+  if (videoPlayerRef.value) {
+    videoPlayerRef.value.volume = v;
+  }
+});
 
 const {height: displayHeight} = useDisplay();
 
@@ -119,26 +128,10 @@ const togglePlay = (): void => {
   isPlaying.value ? pause() : play();
 };
 
-const toggleVolume = (): void => {
-  videoPlayerRef.value && !(videoPlayerRef.value.volume > 0) ? unmute() : mute();
-};
-
 const pause = (): void => {
   if (!videoPlayerRef.value) return;
   videoPlayerRef.value.pause();
   isPlaying.value = false;
-};
-
-const mute = (): void => {
-  if (!videoPlayerRef.value) return;
-  console.log('mute');
-  videoPlayerRef.value.volume = 0;
-};
-
-const unmute = (): void => {
-  if (!videoPlayerRef.value) return;
-  console.log('unmute');
-  videoPlayerRef.value.volume = 1;
 };
 
 const play = (): void => {

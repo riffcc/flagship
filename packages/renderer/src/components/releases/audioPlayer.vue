@@ -142,7 +142,7 @@ import {onUnmounted, ref, watch, onMounted} from 'vue';
 import {IPFS_GATEWAY} from '/@/constants/ipfs';
 import {formatTime} from '/@/utils';
 import {useDisplay} from 'vuetify';
-
+import { usePlayerVolume } from '/@/composables/playerVolume';
 const props = defineProps<{
   selectedAudio: {
     cid: string;
@@ -161,10 +161,9 @@ const audioPlayerRef = ref<HTMLAudioElement>();
 const isPlaying = ref(false);
 const progress = ref(0);
 const isLoading = ref(true);
-const volume = ref(1);
 const currentTime = ref('00:00');
 const duration = ref('00:00');
-
+const { volume, toggleVolume } = usePlayerVolume();
 const {xs} = useDisplay();
 
 watch(volume, v => {
@@ -181,27 +180,8 @@ const seekingTrack = (v: number) => {
   }
 };
 
-const togglePlay = () => (isPlaying.value ? pause() : play());
+const togglePlay = () => isPlaying.value ? pause() : play();
 
-const toggleVolume = (): void => {
-  if (audioPlayerRef.value) {
-    audioPlayerRef.value.volume > 0 ? mute() : unmute();
-  }
-};
-
-const mute = (): void => {
-  if (audioPlayerRef.value) {
-    audioPlayerRef.value.volume = 0;
-    volume.value = 0;
-  }
-};
-
-const unmute = (): void => {
-  if (audioPlayerRef.value) {
-    audioPlayerRef.value.volume = 1;
-    volume.value = 1;
-  }
-};
 
 const pause = () => {
   if (audioPlayerRef.value) {
