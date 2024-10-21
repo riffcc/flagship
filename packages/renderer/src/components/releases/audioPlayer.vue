@@ -2,7 +2,7 @@
   <v-sheet
     position="sticky"
     location="bottom right"
-    class="w-auto border rounded-t-xl mx-auto"
+    class="w-100 border rounded-t-xl mx-auto"
     :elevation="24"
     height="100px"
     max-width="960px"
@@ -11,7 +11,7 @@
       ref="audioPlayerRef"
       class="d-none"
       crossorigin="anonymous"
-      :src="`https://${IPFS_GATEWAY}/ipfs/${selectedAudio.cid}`"
+      :src="`https://${IPFS_GATEWAY}/ipfs/${activeTrack?.cid}`"
       @loadeddata="play"
       @ended="handleNext"
     ></audio>
@@ -20,7 +20,7 @@
       density="comfortable"
       icon="mdi-close"
       size="x-small"
-      @click="props.onCloseCallback"
+      @click="close"
     >
     </v-btn>
     <v-container class="fill-height">
@@ -35,12 +35,13 @@
             :size="xs ? 'small' : 'default'"
             density="comfortable"
             icon="mdi-skip-previous"
-            @click="props.handlePrevious"
+            @click="handlePrevious"
           ></v-btn>
           <v-btn
             :size="xs ? 'default' : 'large'"
             density="comfortable"
             :icon="isPlaying ? 'mdi-pause-circle' : 'mdi-play-circle'"
+            :loading="isLoading"
             @click="togglePlay"
           >
           </v-btn>
@@ -48,14 +49,14 @@
             :size="xs ? 'small' : 'default'"
             density="comfortable"
             icon="mdi-skip-next"
-            @click="props.handleNext"
+            @click="handleNext"
           ></v-btn>
         </div>
         <v-sheet
           color="transparent"
           class="flex-1-0 d-flex flex-column px-2 px-md-4"
         >
-          <p class="text-subtitle-2">{{ selectedAudio.name }}</p>
+          <p class="text-subtitle-2">{{ activeTrack?.title }}</p>
           <v-slider
             v-model="progress"
             :max="audioPlayerRef?.duration"
@@ -69,7 +70,7 @@
             @update:model-value="seekingTrack"
           ></v-slider>
           <div>
-            <span class="text-subtitle-2">{{ currentTime }}</span>
+            <span class="text-subtitle-2 float-left">{{ currentTime }}</span>
             <span class="text-subtitle-2 float-right">{{ duration }}</span>
           </div>
         </v-sheet>
@@ -95,41 +96,44 @@
           ></v-btn>
           <v-btn
             icon="mdi-rotate-left"
-            :variant="props.repeat ? 'elevated' : 'outlined'"
+            :variant="repeat ? 'elevated' : 'outlined'"
             size="small"
             density="comfortable"
             color="#F2F2F2"
-            @click="props.toggleRepeat"
+            @click="toggleRepeat"
           ></v-btn>
           <v-btn
             icon="mdi-shuffle"
-            :variant="props.shuffle ? 'elevated' : 'outlined'"
+            :variant="shuffle ? 'elevated' : 'outlined'"
             size="small"
             density="comfortable"
             color="#F2F2F2"
-            @click="props.toggleShuffle"
+            @click="toggleShuffle"
           ></v-btn>
         </v-speed-dial>
         <div
           v-else
-          class="d-flex"
+          class="d-flex ga-1"
         >
           <v-btn
             :icon="volume === 0 ? 'mdi-volume-off' : 'mdi-volume-high'"
             size="small"
+            density="comfortable"
             @click="toggleVolume"
           ></v-btn>
           <v-btn
             icon="mdi-rotate-left"
-            :variant="props.repeat ? 'tonal' : 'flat'"
+            :variant="repeat ? 'flat' : 'outlined'"
+            density="comfortable"
             size="small"
-            @click="props.toggleRepeat"
+            @click="toggleRepeat"
           ></v-btn>
           <v-btn
             icon="mdi-shuffle"
-            :variant="props.shuffle ? 'tonal' : 'flat'"
+            :variant="shuffle ? 'flat' : 'outlined'"
+            density="comfortable"
             size="small"
-            @click="props.toggleShuffle"
+            @click="toggleShuffle"
           ></v-btn>
         </div>
       </v-sheet>
@@ -143,19 +147,8 @@ import {IPFS_GATEWAY} from '/@/constants/ipfs';
 import {formatTime} from '/@/utils';
 import {useDisplay} from 'vuetify';
 import { usePlayerVolume } from '/@/composables/playerVolume';
-const props = defineProps<{
-  selectedAudio: {
-    cid: string;
-    name: string;
-  };
-  onCloseCallback: () => void;
-  handleNext: () => void;
-  handlePrevious: () => void;
-  repeat: boolean;
-  toggleRepeat: () => void;
-  shuffle: boolean;
-  toggleShuffle: () => void;
-}>();
+import { useAudioPlayback } from '/@/composables/audioPlayback';
+
 
 const audioPlayerRef = ref<HTMLAudioElement>();
 const isPlaying = ref(false);
@@ -164,6 +157,16 @@ const isLoading = ref(true);
 const currentTime = ref('00:00');
 const duration = ref('00:00');
 const { volume, toggleVolume } = usePlayerVolume();
+const {
+  activeTrack,
+  repeat,
+  shuffle,
+  handlePrevious,
+  handleNext,
+  handleOnClose,
+  toggleRepeat,
+  toggleShuffle,
+} = useAudioPlayback();
 const {xs} = useDisplay();
 
 watch(volume, v => {
@@ -215,12 +218,12 @@ const canPlay = () => {
     isPlaying.value = true;
   }
 };
-// const onClosePlayer = () => {
-//   pause()
-//   isPlaying.value = false;
-//   progress.value = 0
-//   props.onCloseCallback()
-// }
+const close = () => {
+  pause();
+  isPlaying.value = false;
+  progress.value = 0;
+  handleOnClose();
+};
 
 onMounted(() => {
   if (audioPlayerRef.value) {
@@ -235,10 +238,10 @@ onMounted(() => {
       pause();
     });
     window.navigator.mediaSession.setActionHandler('previoustrack', () => {
-      props.handlePrevious();
+      handlePrevious();
     });
     window.navigator.mediaSession.setActionHandler('nexttrack', () => {
-      props.handleNext();
+      handleNext();
     });
   }
 });

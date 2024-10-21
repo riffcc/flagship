@@ -85,7 +85,7 @@
                   ></v-btn>
                 </v-sheet>
                 <div class="ml-4">
-                  <p class="text-subtitle-2 text-md-subtitle-1">{{ file.name }}</p>
+                  <p class="text-subtitle-2 text-md-subtitle-1">{{ file.title }}</p>
                   <p class="text-caption text-md-subtitle-2 text-medium-emphasis">
                     {{ props.author }}
                   </p>
@@ -101,26 +101,15 @@
       </v-row>
     </v-container>
   </v-sheet>
-  <audio-player
-    v-if="selectedAudio"
-    :selected-audio="selectedAudio"
-    :on-close-callback="onCloseCallback"
-    :handle-next="handleNext"
-    :handle-previous="handlePrevious"
-    :repeat="repeat"
-    :toggle-repeat="toggleRepeat"
-    :shuffle="shuffle"
-    :toggle-shuffle="toggleShuffle"
-  />
 </template>
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue';
-import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import {IPFS_GATEWAY} from '/@/constants/ipfs';
 import {useRouter} from 'vue-router';
-// import { formatTime } from '/@/utils';
 import {cid} from 'is-ipfs';
 import {useDisplay} from 'vuetify';
+import type { AudioTrack} from '/@/composables/audioPlayback';
+import { useAudioPlayback } from '/@/composables/audioPlayback';
 
 type Props = {
   contentCid: string;
@@ -131,78 +120,16 @@ type Props = {
   releaseYear?: number | string;
 };
 
-interface IPFSFile {
-  cid: string;
-  name: string;
-}
-
-interface albumFile extends IPFSFile {
-  duration?: string;
-}
 const props = defineProps<Props>();
-const albumFiles = ref<albumFile[]>([]);
 
 const router = useRouter();
 const canBack = computed(() => Boolean(window.history.state.back));
 const {xs} = useDisplay();
-
 const isLoading = ref(true);
-const selectedAudio = ref<{index: number; cid: string; name: string}>();
-const repeat = ref(false);
-const shuffle = ref(false);
-const toggleRepeat = () => (repeat.value ? (repeat.value = false) : (repeat.value = true));
-const toggleShuffle = () => (shuffle.value ? (shuffle.value = false) : (shuffle.value = true));
 
-const handleOnSelectAndPlay = (index: number) => {
-  selectedAudio.value = {
-    index,
-    name: albumFiles.value[index].name,
-    cid: albumFiles.value[index].cid,
-  };
-  if ('mediaSession' in window.navigator) {
-    window.navigator.mediaSession.metadata = new MediaMetadata({
-      title: selectedAudio.value.name,
-      album: props.title,
-      artist: props.author,
-    });
-  }
-};
-const handlePlay = (index: number) => {
-  handleOnSelectAndPlay(index);
-};
+const { albumFiles, handlePlay } = useAudioPlayback();
 
-const handlePrevious = () => {
-  if (selectedAudio.value && selectedAudio.value.index > 0) {
-    handlePlay(selectedAudio.value.index - 1);
-  }
-};
-
-const handleNext = () => {
-  if (selectedAudio.value) {
-    if (shuffle.value) {
-      const randomIndex = Math.floor(Math.random() * albumFiles.value.length);
-      handlePlay(randomIndex !== selectedAudio.value.index ? randomIndex : randomIndex + 1);
-    } else {
-      if (selectedAudio.value.index !== albumFiles.value.length - 1) {
-        handlePlay(selectedAudio.value.index + 1);
-      } else {
-        if (repeat.value) {
-          handlePlay(0);
-        } else {
-          selectedAudio.value = undefined;
-        }
-      }
-    }
-  }
-};
-
-const onCloseCallback = () => {
-  if (selectedAudio.value) {
-    selectedAudio.value = undefined;
-  }
-};
-
-async function extractIPFSFilesFromFolder(url: string): Promise<IPFSFile[]> {
+async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
   try {
     const response = await fetch(url);
 
@@ -216,9 +143,9 @@ async function extractIPFSFilesFromFolder(url: string): Promise<IPFSFile[]> {
 
     const ipfsLinks = doc.querySelectorAll<HTMLAnchorElement>('a.ipfs-hash');
 
-    const ipfsFiles: IPFSFile[] = [];
+    const ipfsFiles: AudioTrack[] = [];
 
-    ipfsLinks.forEach(link => {
+    ipfsLinks.forEach((link, key) => {
       const href = link.getAttribute('href');
       if (href) {
         const cidMatch = href.match(/\/ipfs\/([^?]+)/);
@@ -230,7 +157,7 @@ async function extractIPFSFilesFromFolder(url: string): Promise<IPFSFile[]> {
 
         if (cid && fileName) {
           if (['flac', 'mp3', 'ogg'].includes(fileName.split('.')[1])) {
-            ipfsFiles.push({cid, name: fileName.split('.')[0]});
+            ipfsFiles.push({index: key, cid, title: fileName.split('.')[0]});
           }
         }
       }

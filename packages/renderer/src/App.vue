@@ -4,6 +4,7 @@
     <v-main min-height="100vh">
       <router-view />
     </v-main>
+    <audio-player v-if="activeTrack"></audio-player>
     <app-footer />
   </v-app>
 </template>
@@ -11,13 +12,15 @@
 <script setup lang="ts">
 import { onKeyStroke } from '@vueuse/core';
 import { ref, watchEffect } from 'vue';
-
+import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import appBar from '/@/components/layout/appBar.vue';
 import appFooter from '/@/components/layout/appFooter.vue';
 
 import {useShowDefederation} from '/@/composables/showDefed';
+import { useAudioPlayback } from '/@/composables/audioPlayback';
 
 const {showDefederation} = useShowDefederation();
+const { activeTrack } = useAudioPlayback();
 
 const MAGIC_KEY = 'magicmagic';
 
