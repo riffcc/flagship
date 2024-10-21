@@ -19,7 +19,7 @@
       :class=" smAndDown ? 'border position-absolute top-0 right-0 left-0 mx-auto mt-n6' : 'border position-absolute top-0 right-0 mt-n2 mr-n2'"
       density="comfortable"
       icon="mdi-close"
-      size="x-small"
+      size="small"
       @click="close"
     >
     </v-btn>

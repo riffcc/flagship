@@ -103,6 +103,7 @@
       >
         <v-sheet
           class="mx-auto cursor-pointer"
+          color="transparent"
           width="170px"
           @click="
             router.push({
