@@ -73,9 +73,18 @@
           >
             <template #append-inner>
               <v-tooltip
-                icon="fas fa-circle-question"
-                content="Any tags you feel are appropriate for the media - such as rock, country, or pop."
-              />
+                location="top"
+              >
+                <template #activator="{ props }">
+                  <v-icon
+                    size="small"
+                    v-bind="props"
+                    color="grey-lighten-1"
+                    icon="mdi-help-circle-outline"
+                  ></v-icon>
+                </template>
+                <span>Any tags you feel are appropriate for the media - such as rock, country, or pop.</span>
+              </v-tooltip>
             </template>
           </v-text-field>
           <v-text-field
@@ -84,9 +93,18 @@
           >
             <template #append-inner>
               <v-tooltip
-                icon="fas fa-circle-question"
-                content="If the content has an entry on MusicBrainz, enter it here to pre-fill the rest of this form."
-              />
+                location="top"
+              >
+                <template #activator="{ props }">
+                  <v-icon
+                    size="small"
+                    v-bind="props"
+                    color="grey-lighten-1"
+                    icon="mdi-help-circle-outline"
+                  ></v-icon>
+                </template>
+                <span>If the content has an entry on MusicBrainz, enter it here to pre-fill the rest of this form.</span>
+              </v-tooltip>
             </template>
           </v-text-field>
           <v-text-field

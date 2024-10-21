@@ -63,8 +63,8 @@
                   {{ featured.metadata?.duration }}
                 </p>
                 <v-icon
-                  style="font-size: 0.2em"
-                  icon="fas fa-circle"
+                  style="font-size: 0.3em"
+                  icon="mdi-circle"
                 ></v-icon>
                 <p class="text-subtitle-2 text-medium-emphasis ml-2">
                   {{ featured.metadata?.releaseYear }}
@@ -80,7 +80,7 @@
                 <v-btn
                   color="primary"
                   rounded="0"
-                  prepend-icon="fas fa-play"
+                  prepend-icon="mdi-play"
                   class="text-none mr-4"
                   text="Play now"
                   @click="

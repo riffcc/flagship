@@ -14,9 +14,9 @@
   >
     <v-container fluid>
       <v-btn
-        size="small"
-        icon="fa:fas fa-arrow-left"
+        icon="mdi-arrow-left"
         class="mb-md-4"
+        :size="xs ? 'small' : 'default'"
         :style="{zIndex: 1000}"
         @click="canBack ? router.back() : router.push('/')"
       ></v-btn>
@@ -76,11 +76,11 @@
                     src="https://cdn.vuetifyjs.com/images/cards/sunshine.jpg"
                   ></v-img> -->
                   <v-btn
-                    position="absolute"
                     location="center"
                     variant="tonal"
-                    icon="fas fa-play"
-                    :size="xs ? 'x-small' : 'small'"
+                    icon="mdi-play"
+                    density="comfortable"
+                    :size="xs ? 'small' : 'default'"
                     @click="() => handlePlay(i)"
                   ></v-btn>
                 </v-sheet>

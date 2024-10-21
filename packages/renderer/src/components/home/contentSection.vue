@@ -4,24 +4,15 @@
       <p class="text-h5 font-weight-bold mb-6 mr-auto">{{ title }}</p>
       <template v-if="showNavigation">
         <v-btn
-          icon
-          class="justify-self-end"
-        >
-          <v-icon
-            icon="fas fa-caret-left"
-            size="x-small"
-          ></v-icon>
-        </v-btn>
+          icon="mdi-menu-left"
+          density="compact"
+          variant="tonal"
+        ></v-btn>
         <v-btn
-          icon
-          class="justify-self-end"
-        >
-          <v-icon
-            icon="fas fa-caret-right"
-            size="x-small"
-            color="primary"
-          ></v-icon>
-        </v-btn>
+          icon="mdi-menu-right"
+          density="compact"
+          variant="tonal"
+        ></v-btn>
       </template>
       <v-btn
         v-if="showViewAll"
@@ -64,41 +55,26 @@
                     v-if="isHovering"
                     position="absolute"
                     location="right"
-                    class="d-flex mr-2 flex-column w-auto bg-transparent"
+                    class="d-flex mr-2 flex-column w-auto bg-transparent ga-1"
                   >
                     <v-btn
-                      size="x-small"
-                      class="my-1"
-                      color="white"
-                      icon
-                    >
-                      <v-icon
-                        icon="fas fa-share-nodes"
-                        size="small"
-                      ></v-icon>
-                    </v-btn>
+                      size="small"
+                      density="comfortable"
+                      variant="outlined"
+                      icon="mdi-share-variant"
+                    ></v-btn>
                     <v-btn
-                      size="x-small"
-                      class="my-1"
-                      color="white"
-                      icon
-                    >
-                      <v-icon
-                        icon="fas fa-heart"
-                        size="small"
-                      ></v-icon>
-                    </v-btn>
+                      size="small"
+                      density="comfortable"
+                      variant="outlined"
+                      icon="mdi-heart"
+                    ></v-btn>
                     <v-btn
-                      size="x-small"
-                      class="my-1"
-                      color="white"
-                      icon
-                    >
-                      <v-icon
-                        icon="fas fa-plus"
-                        size="small"
-                      ></v-icon>
-                    </v-btn>
+                      size="small"
+                      density="comfortable"
+                      variant="outlined"
+                      icon="mdi-plus"
+                    ></v-btn>
                   </v-sheet>
                 </v-sheet>
               </v-card-item>
@@ -107,7 +83,7 @@
                   color="primary"
                   variant="flat"
                   rounded="0"
-                  prepend-icon="fas fa-play"
+                  prepend-icon="mdi-play"
                   size="small"
                   class="mt-3 mb-1 text-none"
                   text="Play now"
@@ -194,14 +170,6 @@
               class="mx-auto"
               cover
               :aspect-ratio="1"
-            ></v-img>
-            <v-btn
-              v-if="isHovering"
-              position="absolute"
-              size="x-large"
-              location="center"
-              icon
-              variant="plain"
               @click="
                 router.push({
                   path: '/release',
@@ -216,13 +184,14 @@
                   },
                 })
               "
-            >
-              <v-icon
-                icon="fas fa-play"
-                size="x-large"
-                color="primary"
-              ></v-icon>
-            </v-btn>
+            ></v-img>
+            <v-icon
+              v-if="isHovering"
+              :size="72"
+              icon="mdi-play"
+              color="primary"
+              class="position-absolute top-0 left-0 right-0 bottom-0 ma-auto"
+            ></v-icon>
           </v-sheet>
         </v-hover>
         <p class="text-body-2 text-center">{{ item.metadata?.author }}</p>

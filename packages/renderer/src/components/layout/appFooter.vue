@@ -69,15 +69,14 @@
       </v-row>
     </v-container>
     <v-btn
-      position="absolute"
-      icon
+      icon="mdi-chevron-up"
+      density="comfortable"
       color="primary"
       rounded="0"
-      location="bottom right"
-      class="mb-2 mr-4"
+      class="position-absolute bottom-0 right-0 mb-2 mr-2"
       @click="scrollToTop"
     >
-      <v-icon icon="fas fa-chevron-up" />
+      <v-icon />
     </v-btn>
   </v-footer>
   <v-sheet

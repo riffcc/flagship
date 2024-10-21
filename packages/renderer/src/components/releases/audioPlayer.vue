@@ -15,16 +15,12 @@
       @ended="handleNext"
     ></audio>
     <v-btn
-      class="border position-absolute top-0 right-0 mt-n3 mr-n3"
-      position="absolute"
-      icon
+      class="border position-absolute top-0 right-0 mt-n1 mr-n1"
+      density="comfortable"
+      icon="mdi-close"
       size="x-small"
       @click="props.onCloseCallback"
     >
-      <v-icon
-        icon="fas fa-close"
-        size="x-small"
-      ></v-icon>
     </v-btn>
     <v-container class="fill-height">
       <v-sheet
@@ -35,25 +31,28 @@
       >
         <div class="d-flex align-center">
           <v-btn
-            :size="xs ? 'x-small' : 'small'"
-            icon="fas fa-backward-step"
+            :size="xs ? 'small' : 'default'"
+            density="comfortable"
+            icon="mdi-skip-previous"
             @click="props.handlePrevious"
           ></v-btn>
           <v-btn
-            :size="xs ? 'small' : 'medium'"
-            :icon="isPlaying ? 'fa fa-pause' : 'fas fa-play'"
+            :size="xs ? 'default' : 'large'"
+            density="comfortable"
+            :icon="isPlaying ? 'mdi-pause-circle' : 'mdi-play-circle'"
             @click="togglePlay"
           >
           </v-btn>
           <v-btn
-            :size="xs ? 'x-small' : 'small'"
-            icon="fas fa-forward-step"
+            :size="xs ? 'small' : 'default'"
+            density="comfortable"
+            icon="mdi-skip-next"
             @click="props.handleNext"
           ></v-btn>
         </div>
         <v-sheet
           color="transparent"
-          class="flex-1-0 d-flex flex-column ml-4"
+          class="flex-1-0 d-flex flex-column px-2 px-md-4"
         >
           <p class="text-subtitle-2">{{ selectedAudio.name }}</p>
           <v-slider
@@ -62,7 +61,7 @@
             track-fill-color="primary-darken-1"
             track-color="grey"
             thumb-color="white"
-            :thumb-size="xs ? 14 : 18"
+            :thumb-size="xs ? 14 : 16"
             color="background"
             class="mx-0"
             hide-details
@@ -80,55 +79,55 @@
           <template #activator="{props: speedDialProps}">
             <v-btn
               class="mx-2"
-              icon="fas fa-bars"
-              size="x-small"
+              icon="mdi-dots-vertical"
+              density="comfortable"
+              size="small"
               v-bind="speedDialProps"
             ></v-btn>
           </template>
           <v-btn
-            :icon="volume === 0 ? 'fas fa-volume-off' : 'fas fa-volume-high'"
-            :variant="volume !== 0 ? 'tonal' : 'plain'"
-            size="x-small"
+            :icon="volume === 0 ? 'mdi-volume-off' : 'mdi-volume-high'"
+            size="small"
+            density="comfortable"
             color="#F2F2F2"
             @click="toggleVolume"
           ></v-btn>
           <v-btn
-            icon="fas fa-rotate-left"
-            :variant="props.repeat ? 'plain' : 'tonal'"
-            size="x-small"
+            icon="mdi-rotate-left"
+            :variant="props.repeat ? 'elevated' : 'outlined'"
+            size="small"
+            density="comfortable"
             color="#F2F2F2"
             @click="props.toggleRepeat"
           ></v-btn>
           <v-btn
-            icon="fas fa-shuffle"
-            :variant="props.shuffle ? 'plain' : 'tonal'"
-            size="x-small"
+            icon="mdi-shuffle"
+            :variant="props.shuffle ? 'elevated' : 'outlined'"
+            size="small"
+            density="comfortable"
             color="#F2F2F2"
             @click="props.toggleShuffle"
           ></v-btn>
         </v-speed-dial>
         <div
           v-else
-          class="d-flex ml-6"
+          class="d-flex"
         >
           <v-btn
-            :icon="volume === 0 ? 'fas fa-volume-off' : 'fas fa-volume-high'"
-            :variant="volume !== 0 ? 'tonal' : 'flat'"
-            size="x-small"
+            :icon="volume === 0 ? 'mdi-volume-off' : 'mdi-volume-high'"
+            size="small"
             @click="toggleVolume"
           ></v-btn>
           <v-btn
-            class="mx-1"
-            icon="fas fa-rotate-left"
+            icon="mdi-rotate-left"
             :variant="props.repeat ? 'tonal' : 'flat'"
-            size="x-small"
+            size="small"
             @click="props.toggleRepeat"
           ></v-btn>
           <v-btn
-            class="mx-1"
-            icon="fas fa-shuffle"
+            icon="mdi-shuffle"
             :variant="props.shuffle ? 'tonal' : 'flat'"
-            size="x-small"
+            size="small"
             @click="props.toggleShuffle"
           ></v-btn>
         </div>
@@ -203,9 +202,8 @@ const updateProgress = () => {
     duration.value = formatTime(audioPlayerRef.value.duration);
 
     progress.value = audioPlayerRef.value.currentTime;
-    if (isPlaying.value) {
-      requestAnimationFrame(updateProgress);
-    }
+    requestAnimationFrame(updateProgress);
+
   }
 };
 

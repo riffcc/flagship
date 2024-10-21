@@ -10,13 +10,11 @@
       >
         <v-btn
           v-if="isHovering"
-          size="small"
-          icon="fa:fas fa-arrow-left"
-          class="position-absolute top-0 left-0 mt-2 ml-2"
+          icon="mdi-arrow-left"
+          class="position-absolute top-0 left-0 mt-3 ml-3"
           :style="{zIndex: 1000}"
           @click="canBack ? router.back() : router.push('/')"
         ></v-btn>
-
         <video
           ref="videoPlayerRef"
           autoplay
@@ -54,30 +52,23 @@
           >
             <template #prepend>
               <v-btn
-                size="small"
-                :icon="isPlaying ? 'fa:fas fa-pause' : 'fa:fas fa-play'"
+                :icon="isPlaying ? 'mdi-pause' : 'mdi-play'"
+                density="comfortable"
                 @click="togglePlay"
               ></v-btn>
             </template>
 
             <template #append>
               <v-btn
-                size="small"
-                :icon="
-                  videoPlayerRef && !(videoPlayerRef.volume > 0)
-                    ? 'fa:fas fa-volume-off'
-                    : 'fa:fas fa-volume-high'
-                "
+                :icon="volume === 0 ? 'mdi-volume-off' : 'mdi-volume-high'"
+                density="comfortable"
                 @click="toggleVolume"
               ></v-btn>
-
               <v-btn
-                icon
-                size="small"
+                icon="mdi-fullscreen"
+                density="comfortable"
                 @click="toggleFullscreen"
-              >
-                <v-icon icon="fa:fas fa-expand"></v-icon>
-              </v-btn>
+              ></v-btn>
             </template>
           </v-slider>
         </div>
