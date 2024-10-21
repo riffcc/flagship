@@ -16,7 +16,7 @@
       @ended="handleNext"
     ></audio>
     <v-btn
-      class="border position-absolute top-0 right-0 mt-n1 mr-n1"
+      :class=" smAndDown ? 'border position-absolute top-0 right-0 left-0 mx-auto mt-n6' : 'border position-absolute top-0 right-0 mt-n2 mr-n2'"
       density="comfortable"
       icon="mdi-close"
       size="x-small"
@@ -91,23 +91,20 @@
             :icon="volume === 0 ? 'mdi-volume-off' : 'mdi-volume-high'"
             size="small"
             density="comfortable"
-            color="#F2F2F2"
             @click="toggleVolume"
           ></v-btn>
           <v-btn
             icon="mdi-rotate-left"
-            :variant="repeat ? 'elevated' : 'outlined'"
+            :color="repeat ? 'grey-lighten-3' : 'default'"
             size="small"
             density="comfortable"
-            color="#F2F2F2"
             @click="toggleRepeat"
           ></v-btn>
           <v-btn
             icon="mdi-shuffle"
-            :variant="shuffle ? 'elevated' : 'outlined'"
+            :color="shuffle ? 'grey-lighten-3' : 'default'"
             size="small"
             density="comfortable"
-            color="#F2F2F2"
             @click="toggleShuffle"
           ></v-btn>
         </v-speed-dial>
@@ -123,14 +120,14 @@
           ></v-btn>
           <v-btn
             icon="mdi-rotate-left"
-            :variant="repeat ? 'flat' : 'outlined'"
+            :color="repeat ? 'grey-lighten-3' : 'default'"
             density="comfortable"
             size="small"
             @click="toggleRepeat"
           ></v-btn>
           <v-btn
             icon="mdi-shuffle"
-            :variant="shuffle ? 'flat' : 'outlined'"
+            :color="shuffle ? 'grey-lighten-3' : 'default'"
             density="comfortable"
             size="small"
             @click="toggleShuffle"
@@ -167,7 +164,7 @@ const {
   toggleRepeat,
   toggleShuffle,
 } = useAudioPlayback();
-const {xs} = useDisplay();
+const {xs, smAndDown } = useDisplay();
 
 watch(volume, v => {
   if (audioPlayerRef.value) {
