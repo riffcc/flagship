@@ -234,7 +234,7 @@ const onPlayCallback = () => {
   navigator.mediaSession.playbackState = 'playing';
 };
 const onPauseCallback = () => {
-  isPlaying.value = true;
+  isPlaying.value = false;
   navigator.mediaSession.playbackState = 'paused';
 };
 
