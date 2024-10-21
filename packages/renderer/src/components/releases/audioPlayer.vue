@@ -203,6 +203,13 @@ const updateProgress = () => {
     duration.value = formatTime(audioPlayerRef.value.duration);
 
     progress.value = audioPlayerRef.value.currentTime;
+    if ('setPositionState' in navigator.mediaSession) {
+      navigator.mediaSession.setPositionState({
+        duration: audioPlayerRef.value.duration,
+        playbackRate: audioPlayerRef.value.playbackRate,
+        position: audioPlayerRef.value.currentTime,
+      });
+  }
     requestAnimationFrame(updateProgress);
 
   }
@@ -222,29 +229,84 @@ const close = () => {
   handleOnClose();
 };
 
+const onPlayCallback = () => {
+  isPlaying.value = true;
+  navigator.mediaSession.playbackState = 'playing';
+};
+const onPauseCallback = () => {
+  isPlaying.value = true;
+  navigator.mediaSession.playbackState = 'paused';
+};
+
+const defaultSkipTime = 10;
+
 onMounted(() => {
   if (audioPlayerRef.value) {
+    audioPlayerRef.value.addEventListener('play', onPlayCallback);
+    audioPlayerRef.value.addEventListener('pause', onPauseCallback);
     audioPlayerRef.value.addEventListener('progress', updateProgress);
     audioPlayerRef.value.addEventListener('canplay', canPlay);
   }
-  if ('mediaSession' in window.navigator) {
-    window.navigator.mediaSession.setActionHandler('play', () => {
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('play', () => {
       play();
     });
-    window.navigator.mediaSession.setActionHandler('pause', () => {
+    navigator.mediaSession.setActionHandler('pause', () => {
       pause();
     });
-    window.navigator.mediaSession.setActionHandler('previoustrack', () => {
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
       handlePrevious();
     });
-    window.navigator.mediaSession.setActionHandler('nexttrack', () => {
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
       handleNext();
     });
+
+    navigator.mediaSession.setActionHandler('seekbackward', function(event) {
+      const skipTime = event.seekOffset || defaultSkipTime;
+      if (audioPlayerRef.value) {
+        audioPlayerRef.value.currentTime = Math.max(audioPlayerRef.value.currentTime - skipTime, 0);
+      }
+    });
+
+    navigator.mediaSession.setActionHandler('seekforward', function(event) {
+      const skipTime = event.seekOffset || defaultSkipTime;
+      if (audioPlayerRef.value) {
+        audioPlayerRef.value.currentTime = Math.min(audioPlayerRef.value.currentTime + skipTime, audioPlayerRef.value.duration);
+      }
+    });
+
+    try {
+      navigator.mediaSession.setActionHandler('seekto', function(event) {
+        if (audioPlayerRef.value && event.seekTime) {
+          if (event.fastSeek && ('fastSeek' in audioPlayerRef.value)) {
+            audioPlayerRef.value.fastSeek(event.seekTime);
+            return;
+          }
+          audioPlayerRef.value.currentTime = event.seekTime;
+        }
+
+      });
+    } catch(error) {
+      console.log('Warning! The "seekto" media session action is not supported.');
+    }
+    try {
+      navigator.mediaSession.setActionHandler('stop', function() {
+        if (audioPlayerRef.value) {
+          pause();
+          audioPlayerRef.value.currentTime = 0;
+        }
+      });
+    } catch(error) {
+      console.log('Warning! The "stop" media session action is not supported.');
+    }
   }
+
 });
 
 onUnmounted(() => {
   if (audioPlayerRef.value) {
+    audioPlayerRef.value.removeEventListener('play', onPlayCallback);
+    audioPlayerRef.value.removeEventListener('pause', onPauseCallback);
     audioPlayerRef.value.removeEventListener('progress', updateProgress);
     audioPlayerRef.value.removeEventListener('canplay', canPlay);
   }
