@@ -100,18 +100,18 @@
         </v-list>
       </v-row>
     </v-container>
-    <audio-player
-      v-if="selectedAudio"
-      :selected-audio="selectedAudio"
-      :on-close-callback="onCloseCallback"
-      :handle-next="handleNext"
-      :handle-previous="handlePrevious"
-      :repeat="repeat"
-      :toggle-repeat="toggleRepeat"
-      :shuffle="shuffle"
-      :toggle-shuffle="toggleShuffle"
-    />
   </v-sheet>
+  <audio-player
+    v-if="selectedAudio"
+    :selected-audio="selectedAudio"
+    :on-close-callback="onCloseCallback"
+    :handle-next="handleNext"
+    :handle-previous="handlePrevious"
+    :repeat="repeat"
+    :toggle-repeat="toggleRepeat"
+    :shuffle="shuffle"
+    :toggle-shuffle="toggleShuffle"
+  />
 </template>
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue';

@@ -2,9 +2,10 @@
   <v-sheet
     position="sticky"
     location="bottom right"
-    class="w-auto border rounded-t-xl mx-3"
+    class="w-auto border rounded-t-xl mx-auto"
     :elevation="24"
     height="100px"
+    max-width="960px"
   >
     <audio
       ref="audioPlayerRef"
@@ -58,7 +59,7 @@
           <v-slider
             v-model="progress"
             :max="audioPlayerRef?.duration"
-            track-fill-color="primary-darken-1"
+            track-fill-color="primary"
             track-color="grey"
             thumb-color="white"
             :thumb-size="xs ? 14 : 16"

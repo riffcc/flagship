@@ -37,46 +37,36 @@
         >
           <v-card
             v-bind="props"
-            position="relative"
           >
             <v-img
               :src="item.thumbnail"
-              height="100%"
+              height="160px"
               cover
               gradient="to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)"
             >
               <v-card-item>
-                <v-sheet class="d-flex bg-transparent">
-                  <div>
-                    <p class="text-subtitle-1">{{ item.title }}</p>
-                    <p class="text-subtitle-2">{{ item.subtitle }}</p>
-                  </div>
-                  <v-sheet
-                    v-if="isHovering"
-                    position="absolute"
-                    location="right"
-                    class="d-flex mr-2 flex-column w-auto bg-transparent ga-1"
-                  >
-                    <v-btn
-                      size="small"
-                      density="comfortable"
-                      variant="outlined"
-                      icon="mdi-share-variant"
-                    ></v-btn>
-                    <v-btn
-                      size="small"
-                      density="comfortable"
-                      variant="outlined"
-                      icon="mdi-heart"
-                    ></v-btn>
-                    <v-btn
-                      size="small"
-                      density="comfortable"
-                      variant="outlined"
-                      icon="mdi-plus"
-                    ></v-btn>
-                  </v-sheet>
-                </v-sheet>
+                <p class="text-subtitle-1">{{ item.title }}</p>
+                <p class="text-subtitle-2">{{ item.subtitle }}</p>
+                <div
+                  v-if="isHovering"
+                  class="position-absolute top-0 bottom-0 right-0 d-flex flex-column justify-center mr-2 ga-1"
+                >
+                  <v-btn
+                    size="small"
+                    density="comfortable"
+                    icon="mdi-share-variant"
+                  ></v-btn>
+                  <v-btn
+                    size="small"
+                    density="comfortable"
+                    icon="mdi-heart"
+                  ></v-btn>
+                  <v-btn
+                    size="small"
+                    density="comfortable"
+                    icon="mdi-plus"
+                  ></v-btn>
+                </div>
               </v-card-item>
               <v-card-actions>
                 <v-btn
@@ -112,9 +102,8 @@
         :key="item.id"
       >
         <v-sheet
-          class="mx-auto"
+          class="mx-auto cursor-pointer"
           width="170px"
-          color="transparent"
           @click="
             router.push({
               path: '/release',
@@ -136,7 +125,7 @@
             cover
             aspect-ratio="1"
           ></v-img>
-          <p class="text-body-2 text-center">
+          <p class="text-body-2 text-center mt-1">
             {{ item.category === 'video' ? item.title : item.metadata?.author }}
           </p>
           <p class="text-caption text-center text-medium-emphasis">
@@ -190,7 +179,7 @@
               :size="72"
               icon="mdi-play"
               color="primary"
-              class="position-absolute top-0 left-0 right-0 bottom-0 ma-auto"
+              class="position-absolute top-0 left-0 right-0 bottom-0 ma-auto cursor-pointer"
             ></v-icon>
           </v-sheet>
         </v-hover>

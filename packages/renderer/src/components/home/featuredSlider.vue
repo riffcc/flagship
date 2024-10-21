@@ -57,21 +57,21 @@
                     : featured.title
                 }}
               </p>
-              <div class="d-flex align-center">
-                <p class="bg-background.lighten-2 pa-1 mr-2">{{ featured.classification }}</p>
-                <p class="text-subtitle-2 text-medium-emphasis mr-2">
-                  {{ featured.metadata?.duration }}
-                </p>
-                <v-icon
-                  style="font-size: 0.3em"
-                  icon="mdi-circle"
-                ></v-icon>
-                <p class="text-subtitle-2 text-medium-emphasis ml-2">
-                  {{ featured.metadata?.releaseYear }}
-                </p>
+              <div class="d-flex align-center ga-2">
+                <v-chip
+                  label
+                >
+                  {{ featured.classification }}
+                </v-chip>
+                <v-chip
+                  variant="text"
+                  class="text-medium-emphasis"
+                >
+                  {{ featured.metadata?.duration }} • {{ featured.metadata?.releaseYear }}
+                </v-chip>
               </div>
               <p
-                class="text-subtitle-2 text-medium-emphasis mb-4"
+                class="text-subtitle-2 text-medium-emphasis mt-2 mb-4"
                 style="line-height: 1.1em"
               >
                 {{ featured.metadata?.description }}

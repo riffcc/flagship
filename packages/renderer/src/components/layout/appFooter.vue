@@ -1,6 +1,5 @@
 <template>
   <v-footer
-    class="bg-background-darken-2"
     position="relative"
   >
     <v-container
@@ -71,7 +70,7 @@
     <v-btn
       icon="mdi-chevron-up"
       density="comfortable"
-      color="primary"
+      color="primary-darken-1"
       rounded="0"
       class="position-absolute bottom-0 right-0 mb-2 mr-2"
       @click="scrollToTop"
@@ -80,19 +79,23 @@
     </v-btn>
   </v-footer>
   <v-sheet
-    color="primary"
+    color="primary-darken-1"
     height="64px"
-    class="d-flex align-center justify-center"
+    class="d-flex align-center items-center justify-center"
   >
-    <p class="text-subtitle-2">
-      <img
-        src="https://mirrors.creativecommons.org/presskit/icons/cc.svg"
-        alt="Creative Commons License"
-        width="17em"
-        style="margin-bottom: -0.25em"
-      />
+    <v-chip
+      variant="text"
+    >
+      <template #prepend>
+        <img
+          src="https://mirrors.creativecommons.org/presskit/icons/cc.svg"
+          alt="Creative Commons License"
+          width="17em"
+          class="mr-2"
+        />
+      </template>
       e cinere surgemus.
-    </p>
+    </v-chip>
   </v-sheet>
 </template>
 

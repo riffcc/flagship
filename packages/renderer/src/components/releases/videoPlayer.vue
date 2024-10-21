@@ -37,9 +37,9 @@
           class="position-absolute top-0 right-0 bottom-0 left-0 ma-auto"
         ></v-progress-circular>
 
-        <div
+        <v-sheet
           v-if="isHovering"
-          class="position-absolute bottom-0 mb-2 py-2 w-100 bg-background-darken-1"
+          class="position-absolute bottom-0 mb-2 py-md-2 w-100"
         >
           <v-slider
             v-model="progress"
@@ -71,7 +71,7 @@
               ></v-btn>
             </template>
           </v-slider>
-        </div>
+        </v-sheet>
       </div>
     </template>
   </v-hover>
