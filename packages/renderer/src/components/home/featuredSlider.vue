@@ -6,30 +6,29 @@
   >
     <template #prev="{props: prevProps}">
       <v-btn
-        v-if="reactiveFeaturedList.length > 0"
+        v-if="props.featuredList.length > 0"
         v-bind="prevProps"
         variant="plain"
-        :disabled="reactiveFeaturedList.length <= 1"
+        :disabled="props.featuredList.length <= 1"
       >
       </v-btn>
     </template>
     <template #next="{props: nextProps}">
       <v-btn
-        v-if="reactiveFeaturedList.length > 0"
+        v-if="props.featuredList.length > 0"
         v-bind="nextProps"
         variant="plain"
-        :disabled="reactiveFeaturedList.length <= 1"
+        :disabled="props.featuredList.length <= 1"
       >
       </v-btn>
     </template>
     <v-carousel-item
-      v-for="featured in reactiveFeaturedList"
+      v-for="featured in props.featuredList"
       :key="featured.id"
       :src="featured.cover"
       cover
       gradient="to right, rgba(0,0,0,.80), rgba(0,0,0,.01)"
     >
-      <!-- <v-div class="d-flex align-center justify-center justify-md-start h-100"> -->
       <v-container
         class="fill-height"
         :style="showDefederation ? `border: 1px solid ${lensColorHash(featured)};` : ''"
@@ -120,13 +119,12 @@
           </v-col>
         </v-row>
       </v-container>
-      <!-- </v-div> -->
     </v-carousel-item>
   </v-carousel>
 </template>
 
 <script setup lang="ts">
-import {computed, ref} from 'vue';
+import {ref} from 'vue';
 import type {FeaturedItem} from '/@/views/homePage.vue';
 import {useRouter} from 'vue-router';
 import {useShowDefederation} from '/@/composables/showDefed';
@@ -141,7 +139,6 @@ interface Props {
 }
 const props = defineProps<Props>();
 
-const reactiveFeaturedList = computed(() => props.featuredList);  // Unclear why this is necessary...
 const slide = ref(0);
 
 // Colors
