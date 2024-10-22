@@ -50,6 +50,7 @@ const vuetify = createVuetify({
           primary: colors.purple.base,
           'primary-lighten-1': colors.purple.lighten1,
           'primary-darken-1': colors.purple.darken1,
+          'primary-accent': colors.purple.accent2,
         },
       },
     },

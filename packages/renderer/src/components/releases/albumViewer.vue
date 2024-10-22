@@ -52,8 +52,12 @@
           <v-list-item
             v-for="(file, i) in albumFiles"
             :key="i"
+            v-ripple="{class: 'text-primary-accent'}"
             :min-height="xs ? '48px' : '64px'"
-            class="my-1"
+            :class="i === 0 ? 'cursor-pointer border-t border-b' : 'cursor-pointer border-b'"
+            :active="i === activeTrack?.index"
+            active-color="primary-accent"
+            @click="async () => await selectTrack(i)"
           >
             <template #prepend>
               <v-sheet :width="xs ? '24px' : '48px'">
@@ -61,27 +65,20 @@
               </v-sheet>
             </template>
             <template #default>
-              <v-sheet class="ml-2 d-flex align-center">
+              <div class="ml-2 my-1 d-flex align-center">
                 <v-sheet
                   position="relative"
                   :width="xs ? '48px' : '60px'"
                   :height="xs ? '48px' : '60px'"
                   border
                 >
-                  <!-- <v-img
-                    cover
-                    inline
-                    width="60px"
-                    aspect-ratio="1"
-                    src="https://cdn.vuetifyjs.com/images/cards/sunshine.jpg"
-                  ></v-img> -->
                   <v-btn
                     location="center"
                     variant="tonal"
                     icon="mdi-play"
                     density="comfortable"
+                    readonly
                     :size="xs ? 'small' : 'default'"
-                    @click="() => handlePlay(i)"
                   ></v-btn>
                 </v-sheet>
                 <div class="ml-4">
@@ -90,8 +87,8 @@
                     {{ props.author }}
                   </p>
                 </div>
-              </v-sheet>
-              <v-divider class="mt-2"></v-divider>
+              </div>
+              <!-- <v-divider class="mt-2"></v-divider> -->
             </template>
             <template #append>
               <p class="text-subtitle-2 text-medium-emphasis">{{ file.duration }}</p>
@@ -127,8 +124,12 @@ const canBack = computed(() => Boolean(window.history.state.back));
 const {xs} = useDisplay();
 const isLoading = ref(true);
 
-const { albumFiles, handlePlay } = useAudioPlayback();
+const { albumFiles, handlePlay, activeTrack } = useAudioPlayback();
 
+const selectTrack = async (i: number) => {
+  await new Promise((r) => setTimeout(r, 200));
+  handlePlay(i);
+};
 async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
   try {
     const response = await fetch(url);
