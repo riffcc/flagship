@@ -1,5 +1,5 @@
 <template>
-  <v-container class="fill-height">
+  <v-container class="fill-height pb-12">
     <InitiateModDBs />
     <featured-slider :featured-list="featuredReleases" />
     <content-section
@@ -17,7 +17,7 @@
     />
     <v-alert
       type="info"
-      class="mt-4"
+      class="mt-8 mb-n8"
       color="black"
       text-color="white"
     >
