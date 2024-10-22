@@ -158,7 +158,7 @@ async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
 
         if (cid && fileName) {
           if (['flac', 'mp3', 'ogg'].includes(fileName.split('.')[1])) {
-            ipfsFiles.push({index: key, cid, title: fileName.split('.')[0]});
+            ipfsFiles.push({index: key, album: props.title ,cid, title: fileName.split('.')[0]});
           }
         }
       }
@@ -172,6 +172,11 @@ async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
 }
 
 onMounted(async () => {
+  if (activeTrack.value?.album !== props.title) {
+    albumFiles.value = [];
+    activeTrack.value = undefined;
+  }
+
   const ipfsFiles = await extractIPFSFilesFromFolder(
     `https://${IPFS_GATEWAY}/ipfs/${props.contentCid}`,
   );

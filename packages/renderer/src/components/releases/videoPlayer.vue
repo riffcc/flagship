@@ -84,6 +84,7 @@ import {useRouter} from 'vue-router';
 import {IPFS_GATEWAY} from '/@/constants/ipfs';
 import {useDisplay} from 'vuetify';
 import { usePlayerVolume } from '/@/composables/playerVolume';
+import { useAudioPlayback } from '/@/composables/audioPlayback';
 
 const props = defineProps<{
   contentCid: string;
@@ -96,7 +97,7 @@ const isLoading = ref(true);
 const progress = ref(0);
 
 const { volume, toggleVolume } = usePlayerVolume();
-
+const {albumFiles, activeTrack} = useAudioPlayback();
 watch(volume, v => {
   if (videoPlayerRef.value) {
     videoPlayerRef.value.volume = v;
@@ -152,6 +153,8 @@ const canPlay = () => {
   }
 };
 onMounted((): void => {
+  albumFiles.value = [];
+  activeTrack.value = undefined;
   if (videoPlayerRef.value) {
     videoPlayerRef.value.addEventListener('progress', updateProgress);
     videoPlayerRef.value.addEventListener('canplay', canPlay);
