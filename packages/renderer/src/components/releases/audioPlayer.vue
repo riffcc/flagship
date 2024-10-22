@@ -201,13 +201,13 @@ const updateProgress = () => {
     duration.value = formatTime(audioPlayerRef.value.duration);
 
     progress.value = audioPlayerRef.value.currentTime;
-    if ('setPositionState' in navigator.mediaSession) {
-      navigator.mediaSession.setPositionState({
-        duration: audioPlayerRef.value.duration,
-        playbackRate: audioPlayerRef.value.playbackRate,
-        position: audioPlayerRef.value.currentTime,
-      });
-  }
+    // if ('setPositionState' in navigator.mediaSession) {
+    //   navigator.mediaSession.setPositionState({
+    //     duration: audioPlayerRef.value.duration,
+    //     playbackRate: audioPlayerRef.value.playbackRate,
+    //     position: audioPlayerRef.value.currentTime,
+    //   });
+    // }
     requestAnimationFrame(updateProgress);
 
   }
@@ -219,6 +219,7 @@ const canPlay = () => {
     audioPlayerRef.value.play();
   }
 };
+
 const close = () => {
   pause();
   progress.value = 0;
