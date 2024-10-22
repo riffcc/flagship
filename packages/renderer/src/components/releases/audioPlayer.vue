@@ -32,13 +32,13 @@
       >
         <div class="d-flex align-center">
           <v-btn
-            :size="xs ? 'small' : 'default'"
+            :size="xs ? 'small' : 'large'"
             density="comfortable"
             icon="mdi-skip-previous"
             @click="handlePrevious"
           ></v-btn>
           <v-btn
-            :size="xs ? 'default' : 'large'"
+            :size="xs ? 'default' : 'x-large'"
             density="comfortable"
             :icon="isPlaying ? 'mdi-pause-circle' : 'mdi-play-circle'"
             :loading="isLoading"
@@ -46,7 +46,7 @@
           >
           </v-btn>
           <v-btn
-            :size="xs ? 'small' : 'default'"
+            :size="xs ? 'small' : 'large'"
             density="comfortable"
             icon="mdi-skip-next"
             @click="handleNext"
