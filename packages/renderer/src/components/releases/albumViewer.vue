@@ -172,14 +172,16 @@ async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
 }
 
 onMounted(async () => {
-  if (activeTrack.value?.album !== props.title) {
+  // Only load the audio tracks if they are not currently playing or if the active track's album is different from the browsed album.
+  if (!activeTrack.value || (activeTrack.value && activeTrack.value.album !== props.title)) {
     albumFiles.value = [];
     activeTrack.value = undefined;
+    const ipfsFiles = await extractIPFSFilesFromFolder(`https://${IPFS_GATEWAY}/ipfs/${props.contentCid}`);
+    albumFiles.value = ipfsFiles;
   }
+  isLoading.value = false;
 
-  const ipfsFiles = await extractIPFSFilesFromFolder(
-    `https://${IPFS_GATEWAY}/ipfs/${props.contentCid}`,
-  );
+
   // let _albumFiles: albumFile[] = [];
   // ipfsFiles.forEach((ipfsFile) => {
   //   const audio = new Audio();
@@ -189,7 +191,5 @@ onMounted(async () => {
   //     _albumFiles.push({ name: ipfsFile.name, cid: ipfsFile.cid, duration: formatTime(audio.duration)});
   //   });
   // });
-  albumFiles.value = ipfsFiles;
-  isLoading.value = false;
 });
 </script>
