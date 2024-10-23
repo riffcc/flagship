@@ -92,6 +92,34 @@
             </template>
             <template #append>
               <p class="text-subtitle-2 text-medium-emphasis">{{ file.duration }}</p>
+
+              <v-menu>
+                <template v-slot:activator="{ props }">
+                  <v-btn
+                    variant="text"
+                    icon class="ml-3"
+                    v-bind="props"
+                  >
+                    <v-icon
+                      size="25px"
+                      icon="mdi-dots-vertical"
+                    />
+                  </v-btn>
+                </template>
+
+                <v-list>
+                  <v-list-item @click="">
+                    <template #title>
+                      <v-icon icon="mdi-download"/>
+                      Download track
+                    </template>
+
+                    <template #append>
+                    </template>
+                  </v-list-item>
+                </v-list>
+
+              </v-menu>
             </template>
           </v-list-item>
         </v-list>
