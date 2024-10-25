@@ -7,6 +7,7 @@ export type AudioTrack = {
   album?: string;
   artist?: string;
   duration?: string;
+  size?: string;
 };
 
 const albumFiles = ref<AudioTrack[]>([]);
