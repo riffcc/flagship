@@ -108,7 +108,7 @@
                 </template>
 
                 <v-list>
-                  <v-list-item @click="">
+                  <v-list-item @click="setTrackToDownload(file)">
                     <template #title>
                       <v-icon icon="mdi-download"/>
                       Download track
@@ -125,6 +125,9 @@
         </v-list>
       </v-row>
     </v-container>
+
+    <downloader ref="trackDownloader"/>
+
   </v-sheet>
 </template>
 <script setup lang="ts">
@@ -135,6 +138,7 @@ import {cid} from 'is-ipfs';
 import {useDisplay} from 'vuetify';
 import type { AudioTrack} from '/@/composables/audioPlayback';
 import { useAudioPlayback } from '/@/composables/audioPlayback';
+import downloader from './downloader.vue';
 
 type Props = {
   contentCid: string;
@@ -151,6 +155,7 @@ const router = useRouter();
 const canBack = computed(() => Boolean(window.history.state.back));
 const {xs} = useDisplay();
 const isLoading = ref(true);
+const trackDownloader = ref();
 
 const { albumFiles, handlePlay, activeTrack } = useAudioPlayback();
 
@@ -171,6 +176,7 @@ async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
     const doc = parser.parseFromString(htmlText, 'text/html');
 
     const ipfsLinks = doc.querySelectorAll<HTMLAnchorElement>('a.ipfs-hash');
+    const ipfsSizesData = doc.querySelectorAll<HTMLAnchorElement>('[title="Cumulative size of IPFS DAG (data + metadata)"]');
 
     const ipfsFiles: AudioTrack[] = [];
 
@@ -183,20 +189,30 @@ async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
         const urlParams = new URLSearchParams(href.split('?')[1]);
         const encodedName = urlParams.get('filename');
         const fileName = encodedName ? decodeURIComponent(encodedName) : null;
+        const fileSize = ipfsSizesData[key + 1].innerText
 
         if (cid && fileName) {
           if (['flac', 'mp3', 'ogg'].includes(fileName.split('.')[1])) {
-            ipfsFiles.push({index: key, album: props.title ,cid, title: fileName.split('.')[0]});
+            ipfsFiles.push({
+              index: key,
+              album: props.title,
+              cid,
+              title: fileName.split('.')[0],
+              size: fileSize,
+            });
           }
         }
       }
     });
-
     return ipfsFiles;
   } catch (error) {
     console.error('An error has occurred:', error);
     return [];
   }
+}
+
+function setTrackToDownload(track: AudioTrack) {
+  trackDownloader.value.setTrack(track)
 }
 
 onMounted(async () => {
