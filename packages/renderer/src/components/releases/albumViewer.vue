@@ -94,10 +94,11 @@
               <p class="text-subtitle-2 text-medium-emphasis">{{ file.duration }}</p>
 
               <v-menu>
-                <template v-slot:activator="{ props }">
+                <template #activator="{ props }">
                   <v-btn
                     variant="text"
-                    icon class="ml-3"
+                    icon
+                    class="ml-3"
                     v-bind="props"
                   >
                     <v-icon
@@ -110,7 +111,7 @@
                 <v-list>
                   <v-list-item @click="setTrackToDownload(file)">
                     <template #title>
-                      <v-icon icon="mdi-download"/>
+                      <v-icon icon="mdi-download" />
                       Download track
                     </template>
 
@@ -118,7 +119,6 @@
                     </template>
                   </v-list-item>
                 </v-list>
-
               </v-menu>
             </template>
           </v-list-item>
@@ -126,8 +126,7 @@
       </v-row>
     </v-container>
 
-    <downloader ref="trackDownloader"/>
-
+    <trackDownloaderDialog ref="trackDownloader" />
   </v-sheet>
 </template>
 <script setup lang="ts">
@@ -138,7 +137,7 @@ import {cid} from 'is-ipfs';
 import {useDisplay} from 'vuetify';
 import type { AudioTrack} from '/@/composables/audioPlayback';
 import { useAudioPlayback } from '/@/composables/audioPlayback';
-import downloader from './downloader.vue';
+import trackDownloaderDialog from './trackDownloader.vue';
 
 type Props = {
   contentCid: string;
@@ -189,7 +188,7 @@ async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
         const urlParams = new URLSearchParams(href.split('?')[1]);
         const encodedName = urlParams.get('filename');
         const fileName = encodedName ? decodeURIComponent(encodedName) : null;
-        const fileSize = ipfsSizesData[key + 1].innerText
+        const fileSize = ipfsSizesData[key + 1].innerText;
 
         if (cid && fileName) {
           if (['flac', 'mp3', 'ogg'].includes(fileName.split('.')[1])) {
@@ -212,7 +211,7 @@ async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
 }
 
 function setTrackToDownload(track: AudioTrack) {
-  trackDownloader.value.setTrack(track)
+  trackDownloader.value.setTrack(track);
 }
 
 onMounted(async () => {

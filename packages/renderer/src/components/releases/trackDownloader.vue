@@ -25,7 +25,8 @@
               {{ track?.size }}
               <v-btn
                 variant="text"
-                icon class="ml-3"
+                icon
+                class="ml-3"
                 @click="downloadTrack()"
               >
                 <v-icon
@@ -42,8 +43,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from 'vue';
-import { AudioTrack } from '/@/composables/audioPlayback';
+import { defineComponent } from 'vue';
+import type { AudioTrack } from '/@/composables/audioPlayback';
 import { IPFS_GATEWAY } from '/@/constants/ipfs';
 
 export default defineComponent({
@@ -52,12 +53,12 @@ export default defineComponent({
       dialog: false,
       loading: false,
       track: undefined as AudioTrack | undefined,
-    }
+    };
   },
   methods: {
     setTrack(track: AudioTrack) {
-      this.track = track
-      this.dialog = true
+      this.track = track;
+      this.dialog = true;
     },
 
     //TODO: Move this into a generic utils file
@@ -80,11 +81,11 @@ export default defineComponent({
 
         URL.revokeObjectURL(link.href);
       } catch(e) {
-        console.log(e)
+        console.log(e);
       } finally {
         this.loading = false;
       }
-    }
+    },
   },
-})
+});
 </script>
