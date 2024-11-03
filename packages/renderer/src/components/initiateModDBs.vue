@@ -95,6 +95,7 @@ const dialog = computed(() => siteNotConfigured.value && !staticDevMode.value);
 
 const generatingDb = ref<boolean>(false);
 const generatedSiteId = ref<string>();
+const generatedSwarmId = ref<string>();
 const generatedVariableIds = ref<orbiterTypes.VariableIds>();
 
 const generatingEnvFile = ref<boolean>(false);
@@ -107,8 +108,11 @@ const generateDb = async () => {
   // For now, only admins can add content.
   await orbiter.makeSitePrivate();
 
+  const { swarmId } = await orbiter.orbiterConfig();
+
   generatedSiteId.value = siteId;
   generatedVariableIds.value = variableIds;
+  generatedSwarmId.value = swarmId;
 
   generatingDb.value = false;
 };
@@ -122,6 +126,7 @@ const envFileText = computed(() => {
     k => `VITE_${constantCase(k)}_ID=${generatedVariableIdsValue[k]}`,
   );
   const siteId = 'VITE_SITE_ID=' + generatedSiteId.value;
+  const swarmId = 'VITE_SWARM_ID=' + generatedSwarmId.value;
 
   return (
     '# The address below should be regenerated for each Orbiter site. If you are setting up an independent site, erase the value below and run the site in development mode (`pnpm dev`) to automatically regenerate. \n' +
@@ -129,6 +134,8 @@ const envFileText = computed(() => {
     '\n' +
     '\n' +
     '# These should ideally stay the same for all Orbiter sites for optimal performance. Only change if you know what you are doing.\n' +
+    swarmId +
+    '\n' +
     variableIdsList.join('\n') +
     '\n'
   );

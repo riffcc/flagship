@@ -1,3 +1,6 @@
+import {writeFileSync} from 'fs';
+import {constantCase} from 'change-case';
+
 import { créerConstellation } from '@constl/ipa';
 import {Orbiter} from '@riffcc/orbiter';
 
@@ -55,17 +58,52 @@ const getVariableIds = () => {
   
       blockedReleasesReleaseIdVar: VITE_BLOCKED_RELEASES_RELEASE_ID_VAR_ID,
     };
-  
+
     return variableIds;
-  };
+};
+
 
 const setUpSite = async () => {
+    const siteId = process.env.VITE_SITE_ID;
+    let swarmId = process.env.VITE_SWARM_ID;
+
     const  orbiter = new Orbiter({
+        siteId,
+        swarmId,
         variableIds: getVariableIds(),
         constellation: créerConstellation({ dossier: './.config'}),
     });
     const vars = await orbiter.setUpSite();
-    console.log(vars);
+    ({ swarmId } = await orbiter.orbiterConfig());
+
     await orbiter.constellation.fermer();
+
+    generateLocalEnvFile({siteId: vars.siteId});
+    generateEnvFile({swarmId, variableIds: vars.variableIds});
 };
+
+const generateLocalEnvFile = ({siteId}) => {
+  const fileContent = 
+    '# The address below should be regenerated for each Orbiter site. If you are setting up an independent site, erase the value below and run the site in development mode (`pnpm dev`) to automatically regenerate. \n' +
+    'VITE_SITE_ID=' + siteId +
+    '\n';
+  writeFileSync('.env.local', fileContent);
+};
+
+const generateEnvFile = ({swarmId, variableIds}) => {
+    const variableIdsList = Object.keys(variableIds).map(
+      k => `VITE_${constantCase(k)}_ID=${variableIds[k]}`,
+    );
+  
+    const fileContent =
+      '# These should ideally stay the same for all Orbiter sites for optimal performance. Only change if you know what you are doing.\n' +
+      'VITE_SWARM_ID=' + swarmId +
+      '\n' + 
+      '\n' +
+      variableIdsList.join('\n') +
+      '\n'
+    ;
+  writeFileSync('.env', fileContent);
+};
+
 (setUpSite().then(()=>process.exit(0)));

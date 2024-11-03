@@ -16,7 +16,7 @@
     "build:renderer": "cd ./packages/renderer && vite build",
     "compile": "pnpm configure-site && cross-env MODE=production pnpm run build && electron-builder build --config .electron-builder.config.cjs --dir --config.asar=false",
     "compile:web": "pnpm configure-site && cross-env MODE=production WEB=true NODE_OPTIONS='--max-old-space-size=8192' pnpm vite build packages/renderer",
-    "configure-site": "node scripts/configure.mjs",
+    "configure-site": "export $(cat .env | grep \"^[^#;]\" |xargs) && export $(cat .env.local | grep \"^[^#;]\" |xargs) && node scripts/configure.mjs",
     "test": "pnpm run test:main && pnpm run test:preload && pnpm run test:renderer && pnpm run test:e2e",
     "test:e2e": "pnpm run build && vitest run",
     "test:main": "vitest run -r packages/main --passWithNoTests",
