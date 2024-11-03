@@ -31,10 +31,10 @@
 import TrustSiteDialog from './AddTrustedSite.vue';
 
 import type {tableaux} from '@constl/ipa';
-import type {TrustedSite} from '/@/plugins/orbiter/types';
+import type {types as orbiterTypes} from '@riffcc/orbiter';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 
-const props = defineProps<{site: tableaux.élémentDonnées<TrustedSite>}>();
+const props = defineProps<{site: tableaux.élémentDonnées<orbiterTypes.TrustedSite>}>();
 
 const {orbiter} = useOrbiter();
 

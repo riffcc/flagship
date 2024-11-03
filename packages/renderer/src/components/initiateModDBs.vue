@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import type {VariableIds} from '/@/plugins/orbiter/types';
+import type {types as orbiterTypes} from '@riffcc/orbiter';
 
 import {computed, ref} from 'vue';
 
@@ -95,7 +95,7 @@ const dialog = computed(() => siteNotConfigured.value && !staticDevMode.value);
 
 const generatingDb = ref<boolean>(false);
 const generatedSiteId = ref<string>();
-const generatedVariableIds = ref<VariableIds>();
+const generatedVariableIds = ref<orbiterTypes.VariableIds>();
 
 const generatingEnvFile = ref<boolean>(false);
 
@@ -118,7 +118,7 @@ const development = import.meta.env.DEV;
 const envFileText = computed(() => {
   const generatedVariableIdsValue = generatedVariableIds.value;
   if (!generatedVariableIdsValue) throw new Error("This shouldn't happen...");
-  const variableIdsList = (Object.keys(generatedVariableIdsValue) as (keyof VariableIds)[]).map(
+  const variableIdsList = (Object.keys(generatedVariableIdsValue) as (keyof orbiterTypes.VariableIds)[]).map(
     k => `VITE_${constantCase(k)}_ID=${generatedVariableIdsValue[k]}`,
   );
   const siteId = 'VITE_SITE_ID=' + generatedSiteId.value;

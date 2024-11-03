@@ -1,4 +1,3 @@
-import Orbiter from '../packages/renderer/src/plugins/orbiter/orbiter.ts';
+import {Orbiter} from '@riffcc/orbiter';
 
-console.log('ici');
-(new Orbiter()).setUpSite().then(x=>console.log(x));
+(new Orbiter({})).setUpSite().then(x=>console.log(x));

@@ -36,13 +36,13 @@
 </template>
 <script setup lang="ts">
 import {ref} from 'vue';
-import type {ReleaseWithId} from '/@/plugins/orbiter/types';
+import type {types as orbiterTypes} from '@riffcc/orbiter';
 
 import AudioViewer from './audioViewer.vue';
 import VideoViewer from './videoViewer.vue';
 
 export interface ReleaseProps {
-  release: ReleaseWithId;
+  release: orbiterTypes.ReleaseWithId;
 }
 
 defineProps<ReleaseProps>();

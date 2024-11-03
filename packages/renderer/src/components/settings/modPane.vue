@@ -61,7 +61,7 @@
 import {onMounted, onUnmounted, ref} from 'vue';
 
 import type {tableaux} from '@constl/ipa';
-import type {TrustedSite} from '/@/plugins/orbiter/types';
+import type {types as orbiterTypes} from '@riffcc/orbiter';
 
 import TrustSiteDialog from './trustedSites/AddTrustedSite.vue';
 import TrustedSiteListItem from './trustedSites/TrustedSiteItem.vue';
@@ -72,7 +72,7 @@ const {orbiter} = useOrbiter();
 // const blockedCIDs = ref<{cid: string; id: string}[]>();
 // const toBlock = ref<string>();
 
-const trustedSites = ref<tableaux.élémentDonnées<TrustedSite>[]>();
+const trustedSites = ref<tableaux.élémentDonnées<orbiterTypes.TrustedSite>[]>();
 
 // const blockRelease = async (cid: string) => {
 //   await orbiter.blockRelease({cid});

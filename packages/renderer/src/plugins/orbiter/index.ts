@@ -1,14 +1,14 @@
 import type {App} from 'vue';
 import {loadStubData} from './dev/index.js';
-import OrbiterApp from './orbiter';
-import type {possiblyIncompleteVariableIds} from './types';
+import {Orbiter} from '@riffcc/orbiter';
+import type {types as orbiterTypes } from '@riffcc/orbiter';;
 
 export default {
   install: (app: App) => {
     const variableIds = getVariableIds();
     const constellation = app.config.globalProperties.$constl;
 
-    const orbiterApp = new OrbiterApp({
+    const orbiterApp = new Orbiter({
       constellation,
       siteId: variableIds ? import.meta.env.VITE_SITE_ID : undefined,
       swarmId: variableIds ? import.meta.env.VITE_SWARM_ID : undefined,
@@ -25,7 +25,7 @@ export default {
   },
 };
 
-const getVariableIds = (): possiblyIncompleteVariableIds => {
+const getVariableIds = (): orbiterTypes.possiblyIncompleteVariableIds => {
   const {
     VITE_TRUSTED_SITES_SITE_ID_VAR_ID,
     VITE_TRUSTED_SITES_NAME_VAR_ID,
@@ -50,7 +50,7 @@ const getVariableIds = (): possiblyIncompleteVariableIds => {
     VITE_BLOCKED_RELEASES_RELEASE_ID_VAR_ID,
   } = import.meta.env;
 
-  const variableIds: possiblyIncompleteVariableIds = {
+  const variableIds: orbiterTypes.possiblyIncompleteVariableIds = {
     trustedSitesSiteIdVar: VITE_TRUSTED_SITES_SITE_ID_VAR_ID,
     trustedSitesNameVar: VITE_TRUSTED_SITES_NAME_VAR_ID,
 

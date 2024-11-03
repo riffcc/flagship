@@ -179,21 +179,9 @@
 import {computed, ref} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import {cid} from 'is-ipfs';
-import type {
-  MovieReleaseMetadata,
-  MusicReleaseMetadata,
-  ReleaseMetadata,
-} from '/@/plugins/orbiter/types';
 import {
-  RELEASES_AUTHOR_COLUMN,
-  RELEASES_CATEGORY_COLUMN,
-  RELEASES_FILE_COLUMN,
-  RELEASES_METADATA_COLUMN,
-  RELEASES_NAME_COLUMN,
-  RELEASES_THUMBNAIL_COLUMN,
-  RELEASES_STATUS_COLUMN,
-  RELEASES_COVER_COLUMN,
-} from '/@/plugins/orbiter/consts';
+  consts, type types,
+} from '@riffcc/orbiter';
 // import convert from 'image-file-resize';
 
 const {orbiter} = useOrbiter();
@@ -207,9 +195,9 @@ const releaseName = ref<string>();
 const thumbnailCID = ref<string>();
 const coverCID = ref<string>(); // TODO - option to autogenerate this from movie files
 
-const releaseMetadata = ref<ReleaseMetadata>({});
-const musicReleaseMetadata = ref<MusicReleaseMetadata>({});
-const movieReleaseMetadata = ref<MovieReleaseMetadata>({});
+const releaseMetadata = ref<types.ReleaseMetadata>({});
+const musicReleaseMetadata = ref<types.MusicReleaseMetadata>({});
+const movieReleaseMetadata = ref<types.MovieReleaseMetadata>({});
 
 const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
@@ -262,14 +250,14 @@ const handleOnSubmit = async () => {
     coverCIDValue,
   } = readyToSave.value;
   await orbiter.addRelease({
-    [RELEASES_AUTHOR_COLUMN]: authorValue,
-    [RELEASES_CATEGORY_COLUMN]: releaseCategoryValue,
-    [RELEASES_FILE_COLUMN]: contentCIDValue,
-    [RELEASES_METADATA_COLUMN]: JSON.stringify(metadataValue),
-    [RELEASES_NAME_COLUMN]: releaseNameValue,
-    [RELEASES_THUMBNAIL_COLUMN]: thumbnailCID.value,
-    [RELEASES_STATUS_COLUMN]: 'pending',
-    [RELEASES_COVER_COLUMN]: coverCIDValue,
+    [consts.RELEASES_AUTHOR_COLUMN]: authorValue,
+    [consts.RELEASES_CATEGORY_COLUMN]: releaseCategoryValue,
+    [consts.RELEASES_FILE_COLUMN]: contentCIDValue,
+    [consts.RELEASES_METADATA_COLUMN]: JSON.stringify(metadataValue),
+    [consts.RELEASES_NAME_COLUMN]: releaseNameValue,
+    [consts.RELEASES_THUMBNAIL_COLUMN]: thumbnailCID.value,
+    [consts.RELEASES_STATUS_COLUMN]: 'pending',
+    [consts.RELEASES_COVER_COLUMN]: coverCIDValue,
   });
   clearForm();
   loading.value = false;
