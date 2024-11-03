@@ -64,6 +64,7 @@ const getVariableIds = () => {
 
 
 const setUpSite = async () => {
+    // Todo: refactor as part of orbiter's API so that we can do this though the command line even when not compiling a site?
     const siteId = process.env.VITE_SITE_ID;
     let swarmId = process.env.VITE_SWARM_ID;
 
