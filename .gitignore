@@ -61,3 +61,7 @@ thumbs.db
 .idea/httpRequests
 /.idea/csv-plugin.xml
 .aider*
+
+
+# Local orbiter config
+.config
