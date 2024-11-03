@@ -59,7 +59,13 @@ const getVariableIds = () => {
     return variableIds;
   };
 
-(new Orbiter({
-    variableIds: getVariableIds(),
-    constellation: créerConstellation({ dossier: './.config'}),
-})).setUpSite().then(x=>console.log(x));
+const setUpSite = async () => {
+    const  orbiter = new Orbiter({
+        variableIds: getVariableIds(),
+        constellation: créerConstellation({ dossier: './.config'}),
+    });
+    const vars = await orbiter.setUpSite();
+    console.log(vars);
+    await orbiter.constellation.fermer();
+};
+(setUpSite().then(()=>process.exit(0)));
