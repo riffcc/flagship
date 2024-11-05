@@ -5,29 +5,63 @@
     height="400px"
   >
     <template #prev="{props: prevProps}">
-      <v-btn
-        v-if="props.featuredList.length > 0"
-        v-bind="prevProps"
-        variant="plain"
-        :disabled="props.featuredList.length <= 1"
+      <v-sheet
+        color="transparent"
+        width="64px"
+        class="position-relative h-100"
       >
-      </v-btn>
+        <v-img
+          v-if="!xs"
+          :src="props.featuredList[slide === 0 ? props.featuredList.length - 1 : slide - 1].cover"
+          height="100%"
+          position="right"
+          gradient="rgba(33,33,33,.6), rgba(33,33,33,.4)"
+          cover
+        ></v-img>
+        <v-btn
+          v-if="props.featuredList.length > 0"
+          v-bind="prevProps"
+          :disabled="props.featuredList.length <= 1"
+          :style="{zIndex: 1000}"
+          position="absolute"
+          location="center"
+          variant="plain"
+        >
+        </v-btn>
+      </v-sheet>
     </template>
     <template #next="{props: nextProps}">
-      <v-btn
-        v-if="props.featuredList.length > 0"
-        v-bind="nextProps"
-        variant="plain"
-        :disabled="props.featuredList.length <= 1"
+      <v-sheet
+        color="transparent"
+        width="64px"
+        class="position-relative h-100"
       >
-      </v-btn>
+        <v-img
+          v-if="!xs"
+          :src="props.featuredList[slide === props.featuredList.length - 1 ? 0 : slide + 1].cover"
+          height="100%"
+          position="left"
+          gradient="rgba(33,33,33,.6), rgba(33,33,33,.4)"
+          cover
+        ></v-img>
+        <v-btn
+          v-if="props.featuredList.length > 0"
+          v-bind="nextProps"
+          :disabled="props.featuredList.length <= 1"
+          :style="{zIndex: 1000}"
+          position="absolute"
+          location="center"
+          variant="plain"
+        >
+        </v-btn>
+      </v-sheet>
     </template>
     <v-carousel-item
       v-for="featured in props.featuredList"
       :key="featured.id"
       :src="featured.cover"
       cover
-      gradient="to right, rgba(0,0,0,.80), rgba(0,0,0,.01)"
+      gradient="to right, rgba(0,0,0,.8), rgba(0,0,0,.01)"
     >
       <v-container
         class="fill-height"
@@ -130,6 +164,7 @@ import {useRouter} from 'vue-router';
 import {useShowDefederation} from '/@/composables/showDefed';
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
+import { useDisplay } from 'vuetify';
 
 const router = useRouter();
 const {showDefederation} = useShowDefederation();
@@ -140,6 +175,7 @@ interface Props {
 const props = defineProps<Props>();
 
 const slide = ref(0);
+const {xs} = useDisplay();
 
 // Colors
 const lensColorHash = (featured: FeaturedItem): string =>{
