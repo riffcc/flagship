@@ -116,9 +116,7 @@ const seekingTrack = (e: number): void => {
 
 const canBack = computed(() => Boolean(window.history.state.back));
 
-const togglePlay = (): void => {
-  isPlaying.value ? pause() : play();
-};
+const togglePlay = (): void => (isPlaying.value ? pause() : play());
 
 const pause = (): void => {
   if (!videoPlayerRef.value) return;

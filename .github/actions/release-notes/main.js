@@ -1,6 +1,6 @@
 // TODO: Refactor this action
 
-const {execSync} = require('child_process');
+import { execSync } from 'child_process';
 
 /**
  * Gets the value of an input.  The value is also trimmed.

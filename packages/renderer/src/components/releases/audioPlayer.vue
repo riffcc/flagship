@@ -283,7 +283,7 @@ onMounted(() => {
         }
 
       });
-    } catch(error) {
+    } catch {
       console.log('Warning! The "seekto" media session action is not supported.');
     }
     try {
@@ -293,7 +293,7 @@ onMounted(() => {
           audioPlayerRef.value.currentTime = 0;
         }
       });
-    } catch(error) {
+    } catch {
       console.log('Warning! The "stop" media session action is not supported.');
     }
   }

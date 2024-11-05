@@ -13,9 +13,7 @@ export const usePlayerVolume = function (): {
   const unmute = () => {
     volume.value = 1;
   };
-  const toggleVolume = () => {
-    volume.value > 0 ? mute() : unmute();
-  };
+  const toggleVolume = () => (volume.value > 0 ? mute() : unmute());
   return {
     mute,
     unmute,
