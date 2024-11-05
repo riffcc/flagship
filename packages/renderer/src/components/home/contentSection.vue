@@ -6,12 +6,12 @@
         <v-btn
           icon="mdi-menu-left"
           density="compact"
-          variant="tonal"
+          variant="text"
         ></v-btn>
         <v-btn
           icon="mdi-menu-right"
           density="compact"
-          variant="tonal"
+          variant="text"
         ></v-btn>
       </div>
     </template>
