@@ -94,12 +94,12 @@
               <p class="text-subtitle-2 text-medium-emphasis">{{ file.duration }}</p>
 
               <v-menu>
-                <template #activator="{ props }">
+                <template #activator="{ props: activatorProps }">
                   <v-btn
                     variant="text"
                     icon
                     class="ml-3"
-                    v-bind="props"
+                    v-bind="activatorProps"
                   >
                     <v-icon
                       size="25px"
