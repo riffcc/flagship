@@ -25,7 +25,7 @@ export default {
   },
 };
 
-const getVariableIds = (): orbiterTypes.possiblyIncompleteVariableIds => {
+const getVariableIds = (): orbiterTypes.PossiblyIncompleteVariableIds => {
   const {
     VITE_TRUSTED_SITES_SITE_ID_VAR_ID,
     VITE_TRUSTED_SITES_NAME_VAR_ID,
@@ -50,7 +50,7 @@ const getVariableIds = (): orbiterTypes.possiblyIncompleteVariableIds => {
     VITE_BLOCKED_RELEASES_RELEASE_ID_VAR_ID,
   } = import.meta.env;
 
-  const variableIds: orbiterTypes.possiblyIncompleteVariableIds = {
+  const variableIds: orbiterTypes.PossiblyIncompleteVariableIds = {
     trustedSitesSiteIdVar: VITE_TRUSTED_SITES_SITE_ID_VAR_ID,
     trustedSitesNameVar: VITE_TRUSTED_SITES_NAME_VAR_ID,
 

@@ -129,7 +129,7 @@ const envFileText = computed(() => {
   const swarmId = 'VITE_SWARM_ID=' + generatedSwarmId.value;
 
   return (
-    '# The address below should be regenerated for each Orbiter site. If you are setting up an independent site, erase the value below and run the site in development mode (`pnpm dev`) to automatically regenerate. \n' +
+    '# The address below should be regenerated for each Orbiter site. Use the orbiter cli (`pnpm install -g @riffcc/orbiter && orb -h`) to regenerate.\n' +
     siteId +
     '\n' +
     '\n' +
