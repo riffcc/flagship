@@ -60,7 +60,7 @@ const générerAliasRésolution = () => {
 };
 
 // Same for Electron or web, since this is for the renderer process GUI
-const dépendsÀExclure = ['chokidar', '@libp2p/tcp', '@libp2p/mdns', 'env-paths'];
+const dépendsÀExclure = ['chokidar', '@libp2p/tcp', '@libp2p/mdns', 'env-paths', 'datastore-fs', 'blockstore-fs'];
 
 /**
  * @type {import('vite').UserConfig}
