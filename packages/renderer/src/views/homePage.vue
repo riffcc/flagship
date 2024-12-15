@@ -1,7 +1,10 @@
 <template>
   <v-container class="fill-height pb-12">
     <InitiateModDBs />
-    <featured-slider :featured-list="featuredReleases" />
+    <featured-slider
+      v-if="featuredReleases.length > 0"
+      :featured-list="featuredReleases"
+    />
     <content-section
       title="Featured"
       :items="staticData['featured-various']"

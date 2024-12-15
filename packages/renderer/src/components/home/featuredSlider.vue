@@ -6,6 +6,7 @@
   >
     <template #prev="{props: prevProps}">
       <v-sheet
+        v-if="props.featuredList.length > 1"
         color="transparent"
         width="64px"
         class="position-relative h-100"
@@ -19,9 +20,7 @@
           cover
         ></v-img>
         <v-btn
-          v-if="props.featuredList.length > 0"
           v-bind="prevProps"
-          :disabled="props.featuredList.length <= 1"
           :style="{zIndex: 1000}"
           position="absolute"
           location="center"
@@ -32,6 +31,7 @@
     </template>
     <template #next="{props: nextProps}">
       <v-sheet
+        v-if="props.featuredList.length > 1"
         color="transparent"
         width="64px"
         class="position-relative h-100"
@@ -45,9 +45,7 @@
           cover
         ></v-img>
         <v-btn
-          v-if="props.featuredList.length > 0"
           v-bind="nextProps"
-          :disabled="props.featuredList.length <= 1"
           :style="{zIndex: 1000}"
           position="absolute"
           location="center"
