@@ -5,6 +5,11 @@
       <router-view />
     </v-main>
     <audio-player v-if="activeTrack"></audio-player>
+    <video-player
+      v-if="floatingVideoSource"
+      floating
+      :content-cid="floatingVideoSource"
+    ></video-player>
     <app-footer />
   </v-app>
 </template>
@@ -13,14 +18,18 @@
 import { onKeyStroke } from '@vueuse/core';
 import { ref, watchEffect } from 'vue';
 import audioPlayer from '/@/components/releases/audioPlayer.vue';
+import videoPlayer from '/@/components/releases/videoPlayer.vue';
+
 import appBar from '/@/components/layout/appBar.vue';
 import appFooter from '/@/components/layout/appFooter.vue';
 
 import {useShowDefederation} from '/@/composables/showDefed';
 import { useAudioAlbum } from '/@/composables/audioAlbum';
+import { useFloatingVideo } from '/@/composables/floatingVideo';
 
 const {showDefederation} = useShowDefederation();
 const { activeTrack } = useAudioAlbum();
+const { floatingVideoSource } = useFloatingVideo();
 
 const MAGIC_KEY = 'magicmagic';
 

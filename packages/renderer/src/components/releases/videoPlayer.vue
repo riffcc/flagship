@@ -6,14 +6,15 @@
     <template #default="{isHovering, props: propsTemplate}">
       <div
         v-bind="propsTemplate"
-        class="position-relative w-100"
+        :class="floating ? 'floating-container' : 'position-relative w-100'"
       >
         <v-btn
           v-if="isHovering"
-          icon="mdi-arrow-left"
+          density="comfortable"
+          :icon="floating ? 'mdi-close' : 'mdi-arrow-left'"
           class="position-absolute top-0 left-0 mt-3 ml-3"
           :style="{zIndex: 1000}"
-          @click="canBack ? router.back() : router.push('/')"
+          @click="floating ? closeFloatingVideo() : canBack ? router.back() : router.push('/')"
         ></v-btn>
         <video
           ref="videoPlayerRef"
@@ -42,10 +43,11 @@
 
         <v-sheet
           v-if="isHovering"
-          class="position-absolute bottom-0 mb-2 py-md-2 w-100"
+          class="position-absolute bottom-0 w-100"
         >
           <v-slider
             v-model="progress"
+            :class="floating ? '' : 'py-md-2'"
             track-fill-color="primary"
             thumb-color="white"
             thumb-size="16px"
@@ -81,16 +83,18 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, computed, watch} from 'vue';
+import {onMounted, onBeforeUnmount, computed, watch} from 'vue';
 import {useRouter} from 'vue-router';
 import {IPFS_GATEWAY} from '/@/constants/ipfs';
 import {useDisplay} from 'vuetify';
 import { usePlayerVolume } from '/@/composables/playerVolume';
 import { useAudioAlbum } from '../../composables/audioAlbum';
 import { usePlaybackController } from '/@/composables/playbackController';
+import { useFloatingVideo } from '/@/composables/floatingVideo';
 
 const props = defineProps<{
   contentCid: string;
+  floating?: boolean;
 }>();
 
 const router = useRouter();
@@ -109,6 +113,7 @@ const {
 
 const { volume, toggleVolume } = usePlayerVolume();
 const {albumFiles, activeTrack} = useAudioAlbum();
+const { floatingVideoSource, floatingVideoInitialTime, closeFloatingVideo} = useFloatingVideo();
 
 watch(volume, v => {
   if (videoPlayerRef.value) {
@@ -120,6 +125,7 @@ const {height: displayHeight} = useDisplay();
 
 const canBack = computed(() => Boolean(window.history.state.back));
 
+
 const toggleFullscreen = (): void => {
   if (!videoPlayerRef.value) return;
   videoPlayerRef.value.requestFullscreen();
@@ -128,6 +134,31 @@ const toggleFullscreen = (): void => {
 onMounted((): void => {
   albumFiles.value = [];
   activeTrack.value = undefined;
+
+  if (props.floating && floatingVideoInitialTime.value) {
+    seekingTrack(floatingVideoInitialTime.value);
+  } else {
+    closeFloatingVideo();
+  }
 });
 
+onBeforeUnmount(() => {
+  if (!props.floating && isPlaying.value && videoPlayerRef.value) {
+    floatingVideoSource.value = props.contentCid;
+    floatingVideoInitialTime.value = videoPlayerRef.value.currentTime;
+  }
+});
 </script>
+
+
+<style>
+.floating-container {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 384px;
+  height: 216px;
+  z-index: 5000;
+  margin: 0px 8px 8px 0px;
+}
+</style>
