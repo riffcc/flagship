@@ -137,6 +137,7 @@ import trackDownloaderDialog from './trackDownloader.vue';
 import type {AudioTrack} from '/@/composables/audioAlbum';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {IPFS_GATEWAY} from '/@/constants/ipfs';
+import {useFloatingVideo} from '/@/composables/floatingVideo';
 
 type Props = {
   contentCid: string;
@@ -156,6 +157,7 @@ const isLoading = ref(true);
 const trackDownloader = ref();
 
 const {albumFiles, handlePlay, activeTrack} = useAudioAlbum();
+const {closeFloatingVideo} = useFloatingVideo();
 
 const selectTrack = async (i: number) => {
   await new Promise(r => setTimeout(r, 200));
@@ -216,6 +218,7 @@ function setTrackToDownload(track: AudioTrack) {
 }
 
 onMounted(async () => {
+  closeFloatingVideo();
   // Only load the audio tracks if they are not currently playing or if the active track's album is different from the browsed album.
   if (!activeTrack.value || (activeTrack.value && activeTrack.value.album !== props.title)) {
     albumFiles.value = [];
