@@ -65,3 +65,6 @@ thumbs.db
 
 # Local orbiter config
 .config
+orbite
+sfip
+stockageLocal
