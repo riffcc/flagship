@@ -94,7 +94,7 @@
               <p class="text-subtitle-2 text-medium-emphasis">{{ file.duration }}</p>
 
               <v-menu>
-                <template #activator="{ props: activatorProps }">
+                <template #activator="{props: activatorProps}">
                   <v-btn
                     variant="text"
                     icon
@@ -115,8 +115,7 @@
                       Download track
                     </template>
 
-                    <template #append>
-                    </template>
+                    <template #append> </template>
                   </v-list-item>
                 </v-list>
               </v-menu>
@@ -130,14 +129,14 @@
   </v-sheet>
 </template>
 <script setup lang="ts">
-import {computed, onMounted, ref} from 'vue';
-import {IPFS_GATEWAY} from '/@/constants/ipfs';
-import {useRouter} from 'vue-router';
 import {cid} from 'is-ipfs';
+import {computed, onMounted, ref} from 'vue';
+import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
-import type { AudioTrack} from '/@/composables/audioAlbum';
-import { useAudioAlbum } from '/@/composables/audioAlbum';
 import trackDownloaderDialog from './trackDownloader.vue';
+import type {AudioTrack} from '/@/composables/audioAlbum';
+import {useAudioAlbum} from '/@/composables/audioAlbum';
+import {IPFS_GATEWAY} from '/@/constants/ipfs';
 
 type Props = {
   contentCid: string;
@@ -156,10 +155,10 @@ const {xs} = useDisplay();
 const isLoading = ref(true);
 const trackDownloader = ref();
 
-const { albumFiles, handlePlay, activeTrack } = useAudioAlbum();
+const {albumFiles, handlePlay, activeTrack} = useAudioAlbum();
 
 const selectTrack = async (i: number) => {
-  await new Promise((r) => setTimeout(r, 200));
+  await new Promise(r => setTimeout(r, 200));
   handlePlay(i);
 };
 async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
@@ -175,7 +174,9 @@ async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
     const doc = parser.parseFromString(htmlText, 'text/html');
 
     const ipfsLinks = doc.querySelectorAll<HTMLAnchorElement>('a.ipfs-hash');
-    const ipfsSizesData = doc.querySelectorAll<HTMLAnchorElement>('[title="Cumulative size of IPFS DAG (data + metadata)"]');
+    const ipfsSizesData = doc.querySelectorAll<HTMLAnchorElement>(
+      '[title="Cumulative size of IPFS DAG (data + metadata)"]',
+    );
 
     const ipfsFiles: AudioTrack[] = [];
 
@@ -219,11 +220,12 @@ onMounted(async () => {
   if (!activeTrack.value || (activeTrack.value && activeTrack.value.album !== props.title)) {
     albumFiles.value = [];
     activeTrack.value = undefined;
-    const ipfsFiles = await extractIPFSFilesFromFolder(`https://${IPFS_GATEWAY}/ipfs/${props.contentCid}`);
+    const ipfsFiles = await extractIPFSFilesFromFolder(
+      `https://${IPFS_GATEWAY}/ipfs/${props.contentCid}`,
+    );
     albumFiles.value = ipfsFiles;
   }
   isLoading.value = false;
-
 
   // let _albumFiles: albumFile[] = [];
   // ipfsFiles.forEach((ipfsFile) => {

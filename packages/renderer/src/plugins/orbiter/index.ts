@@ -1,8 +1,7 @@
+import type {types as orbiterTypes} from '@riffcc/orbiter';
+import {Orbiter} from '@riffcc/orbiter';
 import type {App} from 'vue';
 import {loadStubData} from './dev/index.js';
-import {Orbiter} from '@riffcc/orbiter';
-import type {types as orbiterTypes } from '@riffcc/orbiter';;
-
 export default {
   install: (app: App) => {
     const variableIds = getVariableIds();

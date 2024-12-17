@@ -83,14 +83,14 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, onBeforeUnmount, computed, watch} from 'vue';
+import {computed, onBeforeUnmount, onMounted, watch} from 'vue';
 import {useRouter} from 'vue-router';
 import {IPFS_GATEWAY} from '/@/constants/ipfs';
 import {useDisplay} from 'vuetify';
-import { usePlayerVolume } from '/@/composables/playerVolume';
-import { useAudioAlbum } from '../../composables/audioAlbum';
-import { usePlaybackController } from '/@/composables/playbackController';
-import { useFloatingVideo } from '/@/composables/floatingVideo';
+import {useAudioAlbum} from '../../composables/audioAlbum';
+import {useFloatingVideo} from '/@/composables/floatingVideo';
+import {usePlaybackController} from '/@/composables/playbackController';
+import {usePlayerVolume} from '/@/composables/playerVolume';
 
 const props = defineProps<{
   contentCid: string;
@@ -111,9 +111,9 @@ const {
   play,
 } = usePlaybackController();
 
-const { volume, toggleVolume } = usePlayerVolume();
+const {volume, toggleVolume} = usePlayerVolume();
 const {albumFiles, activeTrack} = useAudioAlbum();
-const { floatingVideoSource, floatingVideoInitialTime, closeFloatingVideo} = useFloatingVideo();
+const {floatingVideoSource, floatingVideoInitialTime, closeFloatingVideo} = useFloatingVideo();
 
 watch(volume, v => {
   if (videoPlayerRef.value) {
@@ -124,7 +124,6 @@ watch(volume, v => {
 const {height: displayHeight} = useDisplay();
 
 const canBack = computed(() => Boolean(window.history.state.back));
-
 
 const toggleFullscreen = (): void => {
   if (!videoPlayerRef.value) return;
@@ -149,7 +148,6 @@ onBeforeUnmount(() => {
   }
 });
 </script>
-
 
 <style>
 .floating-container {

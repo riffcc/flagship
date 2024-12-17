@@ -89,9 +89,7 @@
                 }}
               </p>
               <div class="d-flex align-center ga-2">
-                <v-chip
-                  label
-                >
+                <v-chip label>
                   {{ featured.classification }}
                 </v-chip>
                 <v-chip
@@ -156,13 +154,13 @@
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue';
-import type {FeaturedItem} from '/@/views/homePage.vue';
-import {useRouter} from 'vue-router';
-import {useShowDefederation} from '/@/composables/showDefed';
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
-import { useDisplay } from 'vuetify';
+import {ref} from 'vue';
+import {useRouter} from 'vue-router';
+import {useDisplay} from 'vuetify';
+import {useShowDefederation} from '/@/composables/showDefed';
+import type {FeaturedItem} from '/@/views/homePage.vue';
 
 const router = useRouter();
 const {showDefederation} = useShowDefederation();
@@ -176,8 +174,8 @@ const slide = ref(0);
 const {xs} = useDisplay();
 
 // Colors
-const lensColorHash = (featured: FeaturedItem): string =>{
+const lensColorHash = (featured: FeaturedItem): string => {
   const idSite = featured.sourceSite.replace('/orbitdb/', '');
-  return '#' + (CID.parse(idSite)).toString(base16.encoder).slice(-6);
+  return '#' + CID.parse(idSite).toString(base16.encoder).slice(-6);
 };
 </script>

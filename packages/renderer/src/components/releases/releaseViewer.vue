@@ -35,8 +35,8 @@
   </v-dialog>
 </template>
 <script setup lang="ts">
-import {ref} from 'vue';
 import type {types as orbiterTypes} from '@riffcc/orbiter';
+import {ref} from 'vue';
 
 import AudioViewer from './audioViewer.vue';
 import VideoViewer from './videoViewer.vue';

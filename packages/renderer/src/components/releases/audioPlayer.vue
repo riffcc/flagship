@@ -18,7 +18,11 @@
       @progress="updateProgress"
     ></audio>
     <v-btn
-      :class=" smAndDown ? 'border position-absolute top-0 right-0 left-0 mx-auto mt-n6' : 'border position-absolute top-0 right-0 mt-n2 mr-n2'"
+      :class="
+        smAndDown
+          ? 'border position-absolute top-0 right-0 left-0 mx-auto mt-n6'
+          : 'border position-absolute top-0 right-0 mt-n2 mr-n2'
+      "
       density="comfortable"
       icon="mdi-close"
       size="small"
@@ -141,14 +145,14 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue';
-import { IPFS_GATEWAY } from '/@/constants/ipfs';
-import { useDisplay } from 'vuetify';
-import { usePlayerVolume } from '/@/composables/playerVolume';
-import { useAudioAlbum } from '/@/composables/audioAlbum';
-import { usePlaybackController } from '/@/composables/playbackController';
+import {watch} from 'vue';
+import {useDisplay} from 'vuetify';
+import {useAudioAlbum} from '/@/composables/audioAlbum';
+import {usePlaybackController} from '/@/composables/playbackController';
+import {usePlayerVolume} from '/@/composables/playerVolume';
+import {IPFS_GATEWAY} from '/@/constants/ipfs';
 
-const { xs, smAndDown } = useDisplay();
+const {xs, smAndDown} = useDisplay();
 
 const {
   playerRef: audioPlayerRef,
@@ -176,14 +180,13 @@ const {
   toggleShuffle,
 } = useAudioAlbum();
 
-const { volume, toggleVolume } = usePlayerVolume();
+const {volume, toggleVolume} = usePlayerVolume();
 
 watch(volume, v => {
   if (audioPlayerRef.value) {
     audioPlayerRef.value.volume = v;
   }
 });
-
 
 const close = () => {
   pause();
@@ -249,5 +252,4 @@ const close = () => {
 //   }
 
 // });
-
 </script>

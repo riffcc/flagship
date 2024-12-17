@@ -19,8 +19,8 @@ import {selectTranslation} from '/@/utils';
 
 import {suivre as follow} from '@constl/vue';
 import {useUserProfilePhoto} from '/@/components/users/utils';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
 import {useDevStatus} from '/@/composables/devStatus';
+import {useOrbiter} from '/@/plugins/orbiter/utils';
 
 const {orbiter} = useOrbiter();
 

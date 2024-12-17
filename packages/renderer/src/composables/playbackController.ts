@@ -1,7 +1,6 @@
 import {ref} from 'vue';
 import {formatTime} from '/@/utils';
 
-
 export const usePlaybackController = <T extends HTMLMediaElement>() => {
   const playerRef = ref<T | null>(null);
 
@@ -20,8 +19,7 @@ export const usePlaybackController = <T extends HTMLMediaElement>() => {
     }
   };
 
-  const togglePlay = () => isPlaying.value ? pause() : play();
-
+  const togglePlay = () => (isPlaying.value ? pause() : play());
 
   const pause = () => {
     if (playerRef.value) {
@@ -33,12 +31,15 @@ export const usePlaybackController = <T extends HTMLMediaElement>() => {
 
   const play = () => {
     if (playerRef.value) {
-      playerRef.value.play().then(() => {
-        isPlaying.value = true;
-        navigator.mediaSession.playbackState = 'playing';
-      }).catch((error: unknown) => {
-        console.error('Error al reproducir:', error);
-      });
+      playerRef.value
+        .play()
+        .then(() => {
+          isPlaying.value = true;
+          navigator.mediaSession.playbackState = 'playing';
+        })
+        .catch((error: unknown) => {
+          console.error(error);
+        });
     }
   };
 
@@ -50,7 +51,6 @@ export const usePlaybackController = <T extends HTMLMediaElement>() => {
       progress.value = playerRef.value.currentTime;
 
       requestAnimationFrame(updateProgress);
-
     }
   };
 

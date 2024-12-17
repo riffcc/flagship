@@ -7,20 +7,16 @@
       :loading="loading"
       :disabled="loading"
     >
-      <template #title>
-        Download track
-      </template>
+      <template #title> Download track </template>
 
-      <template #subtitle>
-        {{ track?.title }} - {{ track?.album }}
-      </template>
-  
+      <template #subtitle> {{ track?.title }} - {{ track?.album }} </template>
+
       <template #text>
         <v-list>
           <v-header>Select a quality:</v-header>
           <v-list-item>
             <template #title>Original</template>
-  
+
             <template #append>
               {{ track?.size }}
               <v-btn
@@ -43,9 +39,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
-import type { AudioTrack } from '../../composables/audioAlbum';
-import { IPFS_GATEWAY } from '/@/constants/ipfs';
+import {defineComponent} from 'vue';
+import type {AudioTrack} from '../../composables/audioAlbum';
+import {IPFS_GATEWAY} from '/@/constants/ipfs';
 
 export default defineComponent({
   data() {
@@ -62,7 +58,7 @@ export default defineComponent({
     },
 
     //TODO: Move this into a generic utils file
-    async downloadTrack() { 
+    async downloadTrack() {
       try {
         this.loading = true;
         const url = `https://${IPFS_GATEWAY}/ipfs/${this.track?.cid}`;
@@ -80,7 +76,7 @@ export default defineComponent({
         link.click();
 
         URL.revokeObjectURL(link.href);
-      } catch(e) {
+      } catch (e) {
         console.log(e);
       } finally {
         this.loading = false;

@@ -72,10 +72,8 @@
             placeholder="Values sepatared by comma"
           >
             <template #append-inner>
-              <v-tooltip
-                location="top"
-              >
-                <template #activator="{ props }">
+              <v-tooltip location="top">
+                <template #activator="{props}">
                   <v-icon
                     size="small"
                     v-bind="props"
@@ -83,7 +81,8 @@
                     icon="mdi-help-circle-outline"
                   ></v-icon>
                 </template>
-                <span>Any tags you feel are appropriate for the media - such as rock, country, or pop.</span>
+                <span>Any tags you feel are appropriate for the media - such as rock, country, or
+                  pop.</span>
               </v-tooltip>
             </template>
           </v-text-field>
@@ -92,10 +91,8 @@
             label="MusicBrainz ID"
           >
             <template #append-inner>
-              <v-tooltip
-                location="top"
-              >
-                <template #activator="{ props }">
+              <v-tooltip location="top">
+                <template #activator="{props}">
                   <v-icon
                     size="small"
                     v-bind="props"
@@ -103,7 +100,8 @@
                     icon="mdi-help-circle-outline"
                   ></v-icon>
                 </template>
-                <span>If the content has an entry on MusicBrainz, enter it here to pre-fill the rest of this form.</span>
+                <span>If the content has an entry on MusicBrainz, enter it here to pre-fill the rest of
+                  this form.</span>
               </v-tooltip>
             </template>
           </v-text-field>
@@ -176,12 +174,10 @@
 </template>
 
 <script setup lang="ts">
+import {consts, type types} from '@riffcc/orbiter';
+import {cid} from 'is-ipfs';
 import {computed, ref} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
-import {cid} from 'is-ipfs';
-import {
-  consts, type types,
-} from '@riffcc/orbiter';
 // import convert from 'image-file-resize';
 
 const {orbiter} = useOrbiter();

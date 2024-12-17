@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import {ref} from 'vue';
 
 export type AudioTrack = {
   index: number;
@@ -26,7 +26,6 @@ const handlePlay = (index: number) => {
     album: albumFiles.value[index].album,
     artist: albumFiles.value[index].artist,
     duration: albumFiles.value[index].duration,
-
   };
   if ('mediaSession' in window.navigator) {
     window.navigator.mediaSession.metadata = new MediaMetadata({

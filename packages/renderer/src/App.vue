@@ -15,26 +15,26 @@
 </template>
 
 <script setup lang="ts">
-import { onKeyStroke } from '@vueuse/core';
-import { ref, watchEffect } from 'vue';
+import {onKeyStroke} from '@vueuse/core';
+import {ref, watchEffect} from 'vue';
 import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
 
 import appBar from '/@/components/layout/appBar.vue';
 import appFooter from '/@/components/layout/appFooter.vue';
 
+import {useAudioAlbum} from '/@/composables/audioAlbum';
+import {useFloatingVideo} from '/@/composables/floatingVideo';
 import {useShowDefederation} from '/@/composables/showDefed';
-import { useAudioAlbum } from '/@/composables/audioAlbum';
-import { useFloatingVideo } from '/@/composables/floatingVideo';
 
 const {showDefederation} = useShowDefederation();
-const { activeTrack } = useAudioAlbum();
-const { floatingVideoSource } = useFloatingVideo();
+const {activeTrack} = useAudioAlbum();
+const {floatingVideoSource} = useFloatingVideo();
 
 const MAGIC_KEY = 'magicmagic';
 
 const yetToType = ref(MAGIC_KEY);
-onKeyStroke((e)=>{
+onKeyStroke(e => {
   if (!yetToType.value.length) return;
   if (e.key === yetToType.value[0]) {
     yetToType.value = yetToType.value.slice(1);
@@ -42,8 +42,7 @@ onKeyStroke((e)=>{
     yetToType.value = MAGIC_KEY;
   }
 });
-watchEffect(()=>{
+watchEffect(() => {
   if (!yetToType.value.length) showDefederation.value = true;
 });
-
 </script>

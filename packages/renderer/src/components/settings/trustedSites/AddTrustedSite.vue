@@ -37,8 +37,8 @@
 import {computed, ref} from 'vue';
 
 import type {tableaux} from '@constl/ipa';
-import {watchEffect} from 'vue';
 import type {types as orbiterTypes} from '@riffcc/orbiter';
+import {watchEffect} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 
 const {orbiter} = useOrbiter();

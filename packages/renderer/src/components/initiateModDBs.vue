@@ -79,10 +79,10 @@ import type {types as orbiterTypes} from '@riffcc/orbiter';
 import {computed, ref} from 'vue';
 
 import {suivre as follow} from '@constl/vue';
-import {saveAs} from 'file-saver';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
-import {useDevStatus} from '../composables/devStatus';
 import {constantCase} from 'change-case';
+import {saveAs} from 'file-saver';
+import {useDevStatus} from '../composables/devStatus';
+import {useOrbiter} from '/@/plugins/orbiter/utils';
 
 const {orbiter} = useOrbiter();
 const {status} = useDevStatus();
@@ -108,7 +108,7 @@ const generateDb = async () => {
   // For now, only admins can add content.
   await orbiter.makeSitePrivate();
 
-  const { swarmId } = await orbiter.orbiterConfig();
+  const {swarmId} = await orbiter.orbiterConfig();
 
   generatedSiteId.value = siteId;
   generatedVariableIds.value = variableIds;
@@ -122,9 +122,9 @@ const development = import.meta.env.DEV;
 const envFileText = computed(() => {
   const generatedVariableIdsValue = generatedVariableIds.value;
   if (!generatedVariableIdsValue) throw new Error("This shouldn't happen...");
-  const variableIdsList = (Object.keys(generatedVariableIdsValue) as (keyof orbiterTypes.VariableIds)[]).map(
-    k => `VITE_${constantCase(k)}_ID=${generatedVariableIdsValue[k]}`,
-  );
+  const variableIdsList = (
+    Object.keys(generatedVariableIdsValue) as (keyof orbiterTypes.VariableIds)[]
+  ).map(k => `VITE_${constantCase(k)}_ID=${generatedVariableIdsValue[k]}`);
   const siteId = 'VITE_SITE_ID=' + generatedSiteId.value;
   const swarmId = 'VITE_SWARM_ID=' + generatedSwarmId.value;
 

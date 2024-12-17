@@ -25,9 +25,7 @@
       class="text-none"
     ></v-btn>
   </div>
-  <v-row
-    v-if="layout === 'list'"
-  >
+  <v-row v-if="layout === 'list'">
     <v-col
       v-for="item in items"
       :key="item.id"
@@ -66,9 +64,7 @@
       </v-sheet>
     </v-col>
   </v-row>
-  <v-row
-    v-if="layout === 'grid'"
-  >
+  <v-row v-if="layout === 'grid'">
     <v-col
       v-for="item in items"
       :key="item.id"
@@ -125,9 +121,7 @@
       </v-hover>
     </v-col>
   </v-row>
-  <v-row
-    v-if="layout === 'card'"
-  >
+  <v-row v-if="layout === 'card'">
     <v-col
       v-for="item in items"
       :key="item.id"
@@ -203,9 +197,9 @@
 </template>
 
 <script setup lang="ts">
-import { useDisplay } from 'vuetify';
-import type {ItemContent} from '/@/views/homePage.vue';
 import {useRouter} from 'vue-router';
+import {useDisplay} from 'vuetify';
+import type {ItemContent} from '/@/views/homePage.vue';
 const router = useRouter();
 const {xs} = useDisplay();
 interface Props {

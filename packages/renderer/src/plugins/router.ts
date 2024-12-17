@@ -80,7 +80,11 @@ const routeur = createRouter({
 routeur.afterEach(to => {
   const {stub} = to.query;
   const {status} = useDevStatus();
-  status.value = import.meta.env.VITE_STATIC_MODE ? 'static' : (stub !== undefined ? 'static' : 'live');
+  status.value = import.meta.env.VITE_STATIC_MODE
+    ? 'static'
+    : stub !== undefined
+      ? 'static'
+      : 'live';
 });
 
 export default routeur;

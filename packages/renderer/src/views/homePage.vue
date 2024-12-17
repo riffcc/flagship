@@ -37,14 +37,14 @@
 </template>
 
 <script setup lang="ts">
-import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import ContentSection from '/@/components/home/contentSection.vue';
+import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import {useDevStatus} from '/@/composables/devStatus';
 
 import {suivre as follow} from '@constl/vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
 import {computed} from 'vue';
 import InitiateModDBs from '../components/initiateModDBs.vue';
+import {useOrbiter} from '/@/plugins/orbiter/utils';
 
 const {orbiter} = useOrbiter();
 const {status} = useDevStatus();

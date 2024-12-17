@@ -54,10 +54,10 @@
 </template>
 
 <script setup lang="ts">
+import {adresseOrbiteValide} from '@constl/utils-ipa';
+import {suivre as follow, obt} from '@constl/vue';
 import {computed, ref} from 'vue';
 import {useOrbiter} from '../plugins/orbiter/utils';
-import {adresseOrbiteValide} from '@constl/utils-ipa';
-import {obt, suivre as follow} from '@constl/vue';
 
 const {orbiter} = useOrbiter();
 const formRef = ref();

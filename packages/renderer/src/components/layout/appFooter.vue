@@ -1,7 +1,5 @@
 <template>
-  <v-footer
-    position="relative"
-  >
+  <v-footer position="relative">
     <v-container
       class="fill-height"
       fluid
@@ -83,9 +81,7 @@
     height="64px"
     class="d-flex align-center items-center justify-center"
   >
-    <v-chip
-      variant="text"
-    >
+    <v-chip variant="text">
       <template #prepend>
         <img
           src="https://mirrors.creativecommons.org/presskit/icons/cc.svg"

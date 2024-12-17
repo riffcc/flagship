@@ -20,9 +20,9 @@
 </template>
 
 <script setup lang="ts">
-import videoPlayer from '/@/components/releases/videoPlayer.vue';
-import albumViewer from '/@/components/releases/albumViewer.vue';
 import {useRoute} from 'vue-router';
+import albumViewer from '/@/components/releases/albumViewer.vue';
+import videoPlayer from '/@/components/releases/videoPlayer.vue';
 
 const route = useRoute();
 </script>

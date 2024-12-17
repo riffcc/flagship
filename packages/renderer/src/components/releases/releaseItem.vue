@@ -72,7 +72,11 @@ import {downloadFile} from '/@/utils';
 
 const {orbiter} = useOrbiter();
 
-const props = defineProps<{release: orbiterTypes.ReleaseWithId; contributor: string; site: string}>();
+const props = defineProps<{
+  release: orbiterTypes.ReleaseWithId;
+  contributor: string;
+  site: string;
+}>();
 
 const myAccountId = follow(orbiter.listenForAccountId);
 

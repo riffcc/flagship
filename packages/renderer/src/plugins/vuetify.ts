@@ -6,12 +6,12 @@
 
 // Styles
 import '@mdi/font/css/materialdesignicons.css';
+import colors from 'vuetify/util/colors';
 import '/@/styles/main.scss';
 import '/@/styles/settings.scss';
-import colors from 'vuetify/util/colors';
 // Composables
 import {createVuetify} from 'vuetify';
-import { aliases, mdi } from 'vuetify/iconsets/mdi';
+import {aliases, mdi} from 'vuetify/iconsets/mdi';
 // https://vuetifyjs.com/en/introduction/why-vuetify/#feature-guides
 const vuetify = createVuetify({
   icons: {

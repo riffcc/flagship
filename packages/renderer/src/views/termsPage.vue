@@ -13,10 +13,10 @@
             experiences.
           </p><br />
           <p>
-            The files made available through Riff.CC are made available under legally free
-            licences. If you believe something uploaded here does not fit that or is not legal to
-            distribute, please contact wings@riff.cc with details, and if it is a DMCA complaint,
-            please put "[DMCA]" in the subject line.
+            The files made available through Riff.CC are made available under legally free licences.
+            If you believe something uploaded here does not fit that or is not legal to distribute,
+            please contact wings@riff.cc with details, and if it is a DMCA complaint, please put
+            "[DMCA]" in the subject line.
           </p><br />
           <p>
             Riff.CC is not affiliated with any other sites, and is not responsible for the content
@@ -31,9 +31,8 @@
             <li>You will not upload anything illegal or abusive.</li>
             <li>You will not infringe or cause us to infringe the copyrights of any party.</li>
             <li>
-              You will not upload anything you can't give us the ability to legally distribute
-              (it's fine to upload Creative Commons material, it's not fine to upload "pirated"
-              material)
+              You will not upload anything you can't give us the ability to legally distribute (it's
+              fine to upload Creative Commons material, it's not fine to upload "pirated" material)
             </li>
           </ul><br />
           <p>
