@@ -12,8 +12,10 @@
       class="d-none"
       crossorigin="anonymous"
       :src="`https://${IPFS_GATEWAY}/ipfs/${activeTrack?.cid}`"
-      @loadeddata="play"
       @ended="handleNext"
+      @loadeddata="play"
+      @canplay="canPlay"
+      @progress="updateProgress"
     ></audio>
     <v-btn
       :class=" smAndDown ? 'border position-absolute top-0 right-0 left-0 mx-auto mt-n6' : 'border position-absolute top-0 right-0 mt-n2 mr-n2'"
@@ -139,21 +141,30 @@
 </template>
 
 <script setup lang="ts">
-import {onUnmounted, ref, watch, onMounted} from 'vue';
-import {IPFS_GATEWAY} from '/@/constants/ipfs';
-import {formatTime} from '/@/utils';
-import {useDisplay} from 'vuetify';
+import { watch } from 'vue';
+import { IPFS_GATEWAY } from '/@/constants/ipfs';
+import { useDisplay } from 'vuetify';
 import { usePlayerVolume } from '/@/composables/playerVolume';
-import { useAudioPlayback } from '/@/composables/audioPlayback';
+import { useAudioAlbum } from '/@/composables/audioAlbum';
+import { usePlaybackController } from '/@/composables/playbackController';
 
+const { xs, smAndDown } = useDisplay();
 
-const audioPlayerRef = ref<HTMLAudioElement>();
-const isPlaying = ref(false);
-const progress = ref(0);
-const isLoading = ref(true);
-const currentTime = ref('00:00');
-const duration = ref('00:00');
-const { volume, toggleVolume } = usePlayerVolume();
+const {
+  playerRef: audioPlayerRef,
+  currentTime,
+  duration,
+  progress,
+  isLoading,
+  isPlaying,
+  seekingTrack,
+  togglePlay,
+  updateProgress,
+  canPlay,
+  play,
+  pause,
+} = usePlaybackController<HTMLAudioElement>();
+
 const {
   activeTrack,
   repeat,
@@ -163,8 +174,9 @@ const {
   handleOnClose,
   toggleRepeat,
   toggleShuffle,
-} = useAudioPlayback();
-const {xs, smAndDown } = useDisplay();
+} = useAudioAlbum();
+
+const { volume, toggleVolume } = usePlayerVolume();
 
 watch(volume, v => {
   if (audioPlayerRef.value) {
@@ -172,53 +184,6 @@ watch(volume, v => {
   }
 });
 
-const seekingTrack = (v: number) => {
-  if (audioPlayerRef.value) {
-    isLoading.value = true;
-    pause();
-    audioPlayerRef.value.currentTime = v;
-  }
-};
-
-const togglePlay = () => isPlaying.value ? pause() : play();
-
-
-const pause = () => {
-  if (audioPlayerRef.value) {
-    audioPlayerRef.value.pause();
-  }
-};
-
-const play = () => {
-  if (audioPlayerRef.value) {
-    audioPlayerRef.value.play();
-  }
-};
-
-const updateProgress = () => {
-  if (audioPlayerRef.value) {
-    currentTime.value = formatTime(audioPlayerRef.value.currentTime);
-    duration.value = formatTime(audioPlayerRef.value.duration);
-
-    progress.value = audioPlayerRef.value.currentTime;
-    // if ('setPositionState' in navigator.mediaSession) {
-    //   navigator.mediaSession.setPositionState({
-    //     duration: audioPlayerRef.value.duration,
-    //     playbackRate: audioPlayerRef.value.playbackRate,
-    //     position: audioPlayerRef.value.currentTime,
-    //   });
-    // }
-    requestAnimationFrame(updateProgress);
-
-  }
-};
-
-const canPlay = () => {
-  isLoading.value = false;
-  if (audioPlayerRef.value && audioPlayerRef.value.currentTime > 0) {
-    audioPlayerRef.value.play();
-  }
-};
 
 const close = () => {
   pause();
@@ -226,86 +191,63 @@ const close = () => {
   handleOnClose();
 };
 
-const onPlayCallback = () => {
-  isPlaying.value = true;
-  navigator.mediaSession.playbackState = 'playing';
-};
-const onPauseCallback = () => {
-  isPlaying.value = false;
-  navigator.mediaSession.playbackState = 'paused';
-};
+// const defaultSkipTime = 10;
 
-const defaultSkipTime = 10;
+// onMounted(() => {
+//   if ('mediaSession' in navigator) {
+//     navigator.mediaSession.setActionHandler('play', () => {
+//       play();
+//     });
+//     navigator.mediaSession.setActionHandler('pause', () => {
+//       pause();
+//     });
+//     navigator.mediaSession.setActionHandler('previoustrack', () => {
+//       handlePrevious();
+//     });
+//     navigator.mediaSession.setActionHandler('nexttrack', () => {
+//       handleNext();
+//     });
 
-onMounted(() => {
-  if (audioPlayerRef.value) {
-    audioPlayerRef.value.addEventListener('play', onPlayCallback);
-    audioPlayerRef.value.addEventListener('pause', onPauseCallback);
-    audioPlayerRef.value.addEventListener('progress', updateProgress);
-    audioPlayerRef.value.addEventListener('canplay', canPlay);
-  }
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.setActionHandler('play', () => {
-      play();
-    });
-    navigator.mediaSession.setActionHandler('pause', () => {
-      pause();
-    });
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
-      handlePrevious();
-    });
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      handleNext();
-    });
+//     navigator.mediaSession.setActionHandler('seekbackward', function(event) {
+//       const skipTime = event.seekOffset || defaultSkipTime;
+//       if (audioPlayerRef.value) {
+//         audioPlayerRef.value.currentTime = Math.max(audioPlayerRef.value.currentTime - skipTime, 0);
+//       }
+//     });
 
-    navigator.mediaSession.setActionHandler('seekbackward', function(event) {
-      const skipTime = event.seekOffset || defaultSkipTime;
-      if (audioPlayerRef.value) {
-        audioPlayerRef.value.currentTime = Math.max(audioPlayerRef.value.currentTime - skipTime, 0);
-      }
-    });
+//     navigator.mediaSession.setActionHandler('seekforward', function(event) {
+//       const skipTime = event.seekOffset || defaultSkipTime;
+//       if (audioPlayerRef.value) {
+//         audioPlayerRef.value.currentTime = Math.min(audioPlayerRef.value.currentTime + skipTime, audioPlayerRef.value.duration);
+//       }
+//     });
 
-    navigator.mediaSession.setActionHandler('seekforward', function(event) {
-      const skipTime = event.seekOffset || defaultSkipTime;
-      if (audioPlayerRef.value) {
-        audioPlayerRef.value.currentTime = Math.min(audioPlayerRef.value.currentTime + skipTime, audioPlayerRef.value.duration);
-      }
-    });
+//     try {
+//       navigator.mediaSession.setActionHandler('seekto', function(event) {
+//         if (audioPlayerRef.value && event.seekTime) {
+//           if (event.fastSeek && ('fastSeek' in audioPlayerRef.value)) {
+//             audioPlayerRef.value.fastSeek(event.seekTime);
+//             return;
+//           }
+//           audioPlayerRef.value.currentTime = event.seekTime;
+//         }
 
-    try {
-      navigator.mediaSession.setActionHandler('seekto', function(event) {
-        if (audioPlayerRef.value && event.seekTime) {
-          if (event.fastSeek && ('fastSeek' in audioPlayerRef.value)) {
-            audioPlayerRef.value.fastSeek(event.seekTime);
-            return;
-          }
-          audioPlayerRef.value.currentTime = event.seekTime;
-        }
+//       });
+//     } catch {
+//       console.log('Warning! The "seekto" media session action is not supported.');
+//     }
+//     try {
+//       navigator.mediaSession.setActionHandler('stop', function() {
+//         if (audioPlayerRef.value) {
+//           pause();
+//           audioPlayerRef.value.currentTime = 0;
+//         }
+//       });
+//     } catch {
+//       console.log('Warning! The "stop" media session action is not supported.');
+//     }
+//   }
 
-      });
-    } catch {
-      console.log('Warning! The "seekto" media session action is not supported.');
-    }
-    try {
-      navigator.mediaSession.setActionHandler('stop', function() {
-        if (audioPlayerRef.value) {
-          pause();
-          audioPlayerRef.value.currentTime = 0;
-        }
-      });
-    } catch {
-      console.log('Warning! The "stop" media session action is not supported.');
-    }
-  }
+// });
 
-});
-
-onUnmounted(() => {
-  if (audioPlayerRef.value) {
-    audioPlayerRef.value.removeEventListener('play', onPlayCallback);
-    audioPlayerRef.value.removeEventListener('pause', onPauseCallback);
-    audioPlayerRef.value.removeEventListener('progress', updateProgress);
-    audioPlayerRef.value.removeEventListener('canplay', canPlay);
-  }
-});
 </script>

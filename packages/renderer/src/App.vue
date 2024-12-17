@@ -17,10 +17,10 @@ import appBar from '/@/components/layout/appBar.vue';
 import appFooter from '/@/components/layout/appFooter.vue';
 
 import {useShowDefederation} from '/@/composables/showDefed';
-import { useAudioPlayback } from '/@/composables/audioPlayback';
+import { useAudioAlbum } from '/@/composables/audioAlbum';
 
 const {showDefederation} = useShowDefederation();
-const { activeTrack } = useAudioPlayback();
+const { activeTrack } = useAudioAlbum();
 
 const MAGIC_KEY = 'magicmagic';
 

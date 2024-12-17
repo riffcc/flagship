@@ -44,7 +44,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import type { AudioTrack } from '/@/composables/audioPlayback';
+import type { AudioTrack } from '../../composables/audioAlbum';
 import { IPFS_GATEWAY } from '/@/constants/ipfs';
 
 export default defineComponent({

@@ -64,7 +64,7 @@ const handleNext = () => {
 
 const handleOnClose = () => (activeTrack.value = undefined);
 
-export const useAudioPlayback = () => {
+export const useAudioAlbum = () => {
   return {
     albumFiles,
     activeTrack,

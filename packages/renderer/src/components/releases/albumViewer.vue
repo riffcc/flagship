@@ -135,8 +135,8 @@ import {IPFS_GATEWAY} from '/@/constants/ipfs';
 import {useRouter} from 'vue-router';
 import {cid} from 'is-ipfs';
 import {useDisplay} from 'vuetify';
-import type { AudioTrack} from '/@/composables/audioPlayback';
-import { useAudioPlayback } from '/@/composables/audioPlayback';
+import type { AudioTrack} from '/@/composables/audioAlbum';
+import { useAudioAlbum } from '/@/composables/audioAlbum';
 import trackDownloaderDialog from './trackDownloader.vue';
 
 type Props = {
@@ -156,7 +156,7 @@ const {xs} = useDisplay();
 const isLoading = ref(true);
 const trackDownloader = ref();
 
-const { albumFiles, handlePlay, activeTrack } = useAudioPlayback();
+const { albumFiles, handlePlay, activeTrack } = useAudioAlbum();
 
 const selectTrack = async (i: number) => {
   await new Promise((r) => setTimeout(r, 200));

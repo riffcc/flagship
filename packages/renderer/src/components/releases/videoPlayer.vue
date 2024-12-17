@@ -28,6 +28,9 @@
           :controls="false"
           crossorigin="anonymous"
           @click="togglePlay"
+          @loadeddata="play"
+          @canplay="canPlay"
+          @progress="updateProgress"
         ></video>
 
         <v-progress-circular
@@ -78,26 +81,35 @@
 </template>
 
 <script setup lang="ts">
-import type {Ref} from 'vue';
-import {onMounted, onBeforeUnmount, ref, computed, watch} from 'vue';
+import {onMounted, computed, watch} from 'vue';
 import {useRouter} from 'vue-router';
 import {IPFS_GATEWAY} from '/@/constants/ipfs';
 import {useDisplay} from 'vuetify';
 import { usePlayerVolume } from '/@/composables/playerVolume';
-import { useAudioPlayback } from '/@/composables/audioPlayback';
+import { useAudioAlbum } from '../../composables/audioAlbum';
+import { usePlaybackController } from '/@/composables/playbackController';
 
 const props = defineProps<{
   contentCid: string;
 }>();
 
 const router = useRouter();
-const videoPlayerRef: Ref<HTMLVideoElement | null> = ref(null);
-const isPlaying = ref(false);
-const isLoading = ref(true);
-const progress = ref(0);
+
+const {
+  playerRef: videoPlayerRef,
+  progress,
+  isLoading,
+  isPlaying,
+  seekingTrack,
+  togglePlay,
+  updateProgress,
+  canPlay,
+  play,
+} = usePlaybackController();
 
 const { volume, toggleVolume } = usePlayerVolume();
-const {albumFiles, activeTrack} = useAudioPlayback();
+const {albumFiles, activeTrack} = useAudioAlbum();
+
 watch(volume, v => {
   if (videoPlayerRef.value) {
     videoPlayerRef.value.volume = v;
@@ -106,62 +118,16 @@ watch(volume, v => {
 
 const {height: displayHeight} = useDisplay();
 
-const seekingTrack = (e: number): void => {
-  console.log('seeking', e);
-  if (!videoPlayerRef.value) return;
-  isLoading.value = true;
-  pause();
-  videoPlayerRef.value.currentTime = e;
-};
-
 const canBack = computed(() => Boolean(window.history.state.back));
-
-const togglePlay = (): void => (isPlaying.value ? pause() : play());
-
-const pause = (): void => {
-  if (!videoPlayerRef.value) return;
-  videoPlayerRef.value.pause();
-  isPlaying.value = false;
-};
-
-const play = (): void => {
-  if (!videoPlayerRef.value) return;
-  videoPlayerRef.value.play();
-  isPlaying.value = true;
-};
-
-const updateProgress = (): void => {
-  if (!videoPlayerRef.value) return;
-  progress.value = videoPlayerRef.value.currentTime;
-  if (isPlaying.value) {
-    requestAnimationFrame(updateProgress);
-  }
-};
 
 const toggleFullscreen = (): void => {
   if (!videoPlayerRef.value) return;
   videoPlayerRef.value.requestFullscreen();
 };
 
-const canPlay = () => {
-  isLoading.value = false;
-  if (videoPlayerRef.value && videoPlayerRef.value.currentTime > 0) {
-    videoPlayerRef.value?.play();
-    isPlaying.value = true;
-  }
-};
 onMounted((): void => {
   albumFiles.value = [];
   activeTrack.value = undefined;
-  if (videoPlayerRef.value) {
-    videoPlayerRef.value.addEventListener('progress', updateProgress);
-    videoPlayerRef.value.addEventListener('canplay', canPlay);
-  }
 });
 
-onBeforeUnmount((): void => {
-  if (!videoPlayerRef.value) return;
-  videoPlayerRef.value.removeEventListener('progress', updateProgress);
-  videoPlayerRef.value.removeEventListener('canplay', canPlay);
-});
 </script>
