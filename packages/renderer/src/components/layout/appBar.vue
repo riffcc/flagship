@@ -37,10 +37,28 @@
       >
         {{ item.label }}
       </router-link>
+      <div v-if="isAdmin">
+        <router-link
+          v-for="item in navigationMap.appBar.admin"
+          :key="item.label"
+          :to="item.path"
+          class="text-decoration-none mx-2 text-subtitle-1 text-white"
+          active-class="text-primary-lighten-1"
+        >
+          {{ item.label }}
+        </router-link>
+      </div>
     </div>
   </v-app-bar>
 </template>
 
 <script setup lang="ts">
+import { suivre as follow } from '@constl/vue';
 import {navigationMap} from '/@/constants/navigation';
+import { useOrbiter } from '/@/plugins/orbiter/utils';
+
+const {orbiter} = useOrbiter();
+
+
+const isAdmin = follow(orbiter.listenToIsModerator);
 </script>

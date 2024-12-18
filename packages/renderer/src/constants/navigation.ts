@@ -7,6 +7,7 @@ type NavigationMap = {
   appBar: {
     normal: Array<NavigationItem>;
     authenticated: Array<NavigationItem>;
+    admin: Array<NavigationItem>;
   };
   appFooter: {
     explore: Array<NavigationItem>;
@@ -26,6 +27,8 @@ export const navigationMap: NavigationMap = {
     authenticated: [
       {label: 'Upload', path: '/upload'},
       {label: 'Account', path: '/account'},
+    ],
+    admin: [
       {label: 'Admin', path: '/admin'},
     ],
   },
