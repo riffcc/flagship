@@ -11,6 +11,7 @@
       :label="`Static mode ${staticModeSwitch ? 'on' : 'off'}`"
       :color="staticModeSwitch ? 'primary' : 'secondary'"
     />
+    <h1>Account info</h1>
     <p>
       Account id: {{ accountId }}
     </p>
@@ -19,6 +20,10 @@
     </p>
     <p>
       Account status: {{ accountStatus }} ({{ statusExplanation }})
+    </p>
+    <h1>Connectivity</h1>
+    <p>
+      You are currently connected to {{ ipfsConnections?.length || 0 }} IPFS nodes, including {{ nOrbiterDevices }} user devices from {{ nOrbiterAccounts }} Orbiter accounts.
     </p>
   </v-container>
 </template>
@@ -38,6 +43,16 @@ const names = follow(orbiter.listenForNameChange);
 
 const displayName = computed(() => {
   return selectTranslation(names.value) || 'Anonymous';
+});
+
+// Dev static mode
+const {status} = useDevStatus();
+const staticModeSwitch = ref(status.value === 'static');
+watchEffect(() => {
+  status.value = staticModeSwitch.value ? 'static' : 'live';
+});
+watchEffect(() => {
+  staticModeSwitch.value = status.value === 'static';
 });
 
 // Account id
@@ -68,13 +83,14 @@ const statusExplanation = computed(()=>{
   }
 });
 
-// Dev static mode
-const {status} = useDevStatus();
-const staticModeSwitch = ref(status.value === 'static');
-watchEffect(() => {
-  status.value = staticModeSwitch.value ? 'static' : 'live';
+// Connectivity
+const ipfsConnections = follow(orbiter.constellation.réseau.suivreConnexionsPostesSFIP);
+const orbiterDevices = follow(orbiter.constellation.réseau.suivreConnexionsDispositifs);
+const orbiterAccounts = follow(orbiter.constellation.réseau.suivreConnexionsMembres);
+const nOrbiterDevices = computed(()=>{
+  return orbiterDevices.value?.filter(d => d.infoDispositif.idDispositif !== deviceId.value).length || 0;
 });
-watchEffect(() => {
-  staticModeSwitch.value = status.value === 'static';
+const nOrbiterAccounts = computed(()=>{
+  return orbiterAccounts.value?.filter(acc=>acc.infoMembre.idCompte !== accountId.value).length || 0;
 });
 </script>
