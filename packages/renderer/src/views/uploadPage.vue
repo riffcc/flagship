@@ -14,10 +14,21 @@
       >
         You aren't currently authorised to add releases to this instance of Riff.CC.
       </v-alert>
-      <v-skeleton-loader
+      <div
         v-else
-        type="list-item"
-      />
+      >
+        <v-alert
+          type="info"
+          class="mt-4"
+          color="black"
+          text-color="white"
+        >
+          Loading authorisation data...
+        </v-alert>
+        <v-skeleton-loader
+          type="list-item"
+        />
+      </div>
     </v-sheet>
   </v-container>
 </template>
