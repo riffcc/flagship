@@ -16,6 +16,9 @@ async function createWindow() {
       preload: join(app.getAppPath(), 'packages/preload/dist/index.cjs'),
     },
   });
+  gestionnaireFenêtres.connecterFenêtreÀConstellation(browserWindow);
+  connecterHttp();
+  connecterSystèmeFichiers();
 
   /**
    * If the 'show' property of the BrowserWindow's constructor is omitted from the initialization options,
@@ -69,9 +72,6 @@ export async function restoreOrCreateWindow() {
 
   if (window === undefined) {
     window = await createWindow();
-    gestionnaireFenêtres.connecterFenêtreÀConstellation(window);
-    connecterHttp();
-    connecterSystèmeFichiers();
   }
 
   if (window.isMinimized()) {
