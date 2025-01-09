@@ -77,10 +77,10 @@
     "vue-tsc": "2.1.10"
   },
   "dependencies": {
-    "@constl/ipa": "1.5.1",
+    "@constl/ipa": "1.5.5",
     "@constl/mandataire": "^3.0.3",
-    "@constl/mandataire-electron-principal": "^3.0.4",
-    "@constl/mandataire-electron-rendu": "^3.0.4",
+    "@constl/mandataire-electron-principal": "^3.1.0",
+    "@constl/mandataire-electron-rendu": "^3.1.0",
     "@constl/serveur": "^2.1.4",
     "@constl/utils-ipa": "^1.0.4",
     "@constl/vue": "^1.0.4",
