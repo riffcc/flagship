@@ -1,114 +1,85 @@
 <template>
-  <v-container class="text-center">
-    <h1>Admin</h1>
-    <h2 class="mt-6">My site id</h2>
-    <h3>{{ siteId }} </h3>
-    <h2 class="mt-6">Add trusted site</h2>
-    <v-form
-      ref="formRef"
-      validate-on="input lazy"
-      class="d-flex flex-column ga-2"
-      @submit.prevent="handleOnSubmit"
-    >
-      <v-text-field
-        v-model="trustedSiteName"
-        label="Site Name"
-        :rules="[rules.required]"
-      />
-      <v-text-field
-        v-model="trustedSiteId"
-        label="Site Id"
-        :rules="[rules.isValidSiteAddress]"
-      />
-      <v-btn
-        rounded="0"
-        color="primary"
-        type="submit"
-        block
-        text="Trust site"
-        :disabled="!readyToSave"
-        :loading="loading"
-      />
-    </v-form>
-    <h2 class="mt-6">Trusted sites</h2>
-    <v-list>
-      <v-list-item
-        v-for="s in trustedSites"
-        :key="s.id"
-        :title="s.données.siteId"
-        :subtitle="s.données.siteName"
+  <v-container
+    class="fill-height pa-0"
+    fluid
+  >
+    <div :class="lgAndUp ? 'd-flex flex-row w-100 h-100' : 'd-flex flex-column w-100 h-100'">
+      <v-tabs
+        v-model="tab"
+        :direction="lgAndUp ? 'vertical' : 'horizontal'"
+        :align-tabs="lgAndUp ? 'start' : 'center'"
+        center-active
+        show-arrows
       >
-        <template #append>
-          <v-btn
-            icon="mdi-delete"
-            @click="() => untrustSite({elementId: s.id})"
-          ></v-btn>
-        </template>
-      </v-list-item>
-      <v-list-item
-        v-if="!trustedSites?.length"
-        :title="`No other Orbiter sites are currently being followed by ${siteDomainName}.`"
-      />
-    </v-list>
+        <v-tab
+          slider-color="primary"
+          value="content"
+        >
+          Content
+        </v-tab>
+        <v-tab
+          slider-color="primary"
+          value="admins"
+        >
+          Access
+        </v-tab>
+        <v-tab
+          slider-color="primary"
+          value="featured"
+        >
+          Featured
+        </v-tab>
+        <v-tab
+          slider-color="primary"
+          value="subscriptions"
+        >
+          Subscriptions
+        </v-tab>
+        <v-tab
+          slider-color="primary"
+          value="site"
+        >
+          Site
+        </v-tab>
+      </v-tabs>
+      <v-window
+        v-model="tab"
+        class="flex-1-0 border-s-sm"
+      >
+        <v-window-item
+          value="content"
+        >
+          <p>content magnament</p>
+        </v-window-item>
+        <v-window-item
+          value="admins"
+        >
+          <p>access magnament</p>
+        </v-window-item>
+        <v-window-item
+          value="featured"
+        >
+          <p>featured magnament</p>
+        </v-window-item>
+        <v-window-item
+          value="subscriptions"
+        >
+          <p>subcriptions magnament</p>
+        </v-window-item>
+        <v-window-item
+          value="site"
+        >
+          <p>site magnament</p>
+        </v-window-item>
+      </v-window>
+    </div>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import {adresseOrbiteValide} from '@constl/utils-ipa';
-import {suivre as follow, obt} from '@constl/vue';
-import {computed, ref} from 'vue';
-import {useOrbiter} from '../plugins/orbiter/utils';
+import {ref} from 'vue';
+import {useDisplay} from 'vuetify';
 
-const {orbiter} = useOrbiter();
-const formRef = ref();
-
-const trustedSiteId = ref<string>();
-const trustedSiteName = ref<string>();
-
-const rules = {
-  required: (v: string) => Boolean(v) || 'Required field.',
-  isValidSiteAddress: (v: string) =>
-    adresseOrbiteValide(v) || 'Please enter a valid site address (`/orbitdb/...`).',
-};
-
-const readyToSave = computed(() => {
-  if (trustedSiteId.value && trustedSiteName.value && formRef.value.isValid) {
-    return {
-      trustedSiteIdValue: trustedSiteId.value,
-      trustedSiteNameValue: trustedSiteName.value,
-    };
-  } else return undefined;
-});
-
-const loading = ref(false);
-const handleOnSubmit = async () => {
-  if (!readyToSave.value) return;
-  const {trustedSiteIdValue, trustedSiteNameValue} = readyToSave.value;
-  loading.value = true;
-
-  await orbiter.trustSite({
-    siteId: trustedSiteIdValue,
-    siteName: trustedSiteNameValue,
-  });
-  clearForm();
-  loading.value = false;
-};
-
-const clearForm = () => {
-  trustedSiteId.value = undefined;
-  trustedSiteName.value = undefined;
-};
-
-const siteConfig = obt(orbiter.siteConfigured.bind(orbiter));
-const siteId = computed(() => siteConfig.value?.siteId);
-
-const trustedSites = follow(orbiter.followTrustedSites.bind(orbiter));
-
-const siteDomainName = computed(() => {
-  return document.location.hostname;
-});
-
-const untrustSite = async ({elementId}: {elementId: string}) => {
-  await orbiter.untrustSite({elementId});
-};
+const {lgAndUp} = useDisplay();
+const tab = ref(null);
 </script>
