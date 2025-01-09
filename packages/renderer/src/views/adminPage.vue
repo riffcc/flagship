@@ -49,7 +49,7 @@
         <v-window-item
           value="content"
         >
-          <p>content magnament</p>
+          <content-magnament></content-magnament>
         </v-window-item>
         <v-window-item
           value="admins"
@@ -79,6 +79,7 @@
 <script setup lang="ts">
 import {ref} from 'vue';
 import {useDisplay} from 'vuetify';
+import contentMagnament from '/@/components/admin/contentMagnament.vue';
 
 const {lgAndUp} = useDisplay();
 const tab = ref(null);

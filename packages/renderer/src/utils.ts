@@ -1,3 +1,5 @@
+import type { ItemStatus } from '/@/composables/staticReleases';
+
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
 
@@ -44,4 +46,16 @@ export const formatTime = (ms: number): string => {
   min = parseInt(min) < 10 ? `0${min}` : min;
   sec = parseInt(sec) < 10 ? `0${sec}` : sec;
   return `${min}:${sec}`;
+};
+
+export function getStatusColor(status: ItemStatus) {
+  if (status === 'pending') {
+    return 'blue';
+  } else if (status === 'approved') {
+    return 'green';
+  } else if (status === 'rejected') {
+    return 'red';
+  } else {
+    return 'default';
+  }
 };
