@@ -6,14 +6,14 @@
   >
     <template #prev="{props: prevProps}">
       <v-sheet
-        v-if="props.featuredList.length > 1"
+        v-if="featuredList.length > 1"
         color="transparent"
         width="64px"
         class="position-relative h-100"
       >
         <v-img
           v-if="!xs"
-          :src="props.featuredList[slide === 0 ? props.featuredList.length - 1 : slide - 1].cover"
+          :src="featuredList[slide === 0 ? featuredList.length - 1 : slide - 1].cover"
           height="100%"
           position="right"
           gradient="rgba(33,33,33,.6), rgba(33,33,33,.4)"
@@ -31,14 +31,14 @@
     </template>
     <template #next="{props: nextProps}">
       <v-sheet
-        v-if="props.featuredList.length > 1"
+        v-if="featuredList.length > 1"
         color="transparent"
         width="64px"
         class="position-relative h-100"
       >
         <v-img
           v-if="!xs"
-          :src="props.featuredList[slide === props.featuredList.length - 1 ? 0 : slide + 1].cover"
+          :src="featuredList[slide === featuredList.length - 1 ? 0 : slide + 1].cover"
           height="100%"
           position="left"
           gradient="rgba(33,33,33,.6), rgba(33,33,33,.4)"
@@ -55,7 +55,7 @@
       </v-sheet>
     </template>
     <v-carousel-item
-      v-for="featured in props.featuredList"
+      v-for="featured in featuredList"
       :key="featured.id"
       :src="featured.cover"
       cover
@@ -84,8 +84,8 @@
               <p class="mb-4 text-h5 text-lg-h4">
                 {{
                   featured.category === 'audio'
-                    ? `${featured.title} - ${featured.metadata?.author}`
-                    : featured.title
+                    ? `${featured.name} - ${featured.metadata?.author}`
+                    : featured.name
                 }}
               </p>
               <div class="d-flex align-center ga-2">
@@ -103,7 +103,7 @@
                 class="text-subtitle-2 text-medium-emphasis mt-2 mb-4"
                 style="line-height: 1.1em"
               >
-                {{ featured.metadata?.description }}
+                {{ featured.description }}
               </p>
               <div class="d-flex mt-8">
                 <v-btn
@@ -160,15 +160,14 @@ import {ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
 import {useShowDefederation} from '/@/composables/showDefed';
-import type {FeaturedItem} from '/@/views/homePage.vue';
+import type {FeaturedItem} from '/@/composables/staticReleases';
 
 const router = useRouter();
 const {showDefederation} = useShowDefederation();
 
-interface Props {
+defineProps<{
   featuredList: Array<FeaturedItem>;
-}
-const props = defineProps<Props>();
+}>();
 
 const slide = ref(0);
 const {xs} = useDisplay();

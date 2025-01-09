@@ -40,10 +40,10 @@
             query: {
               category: item.category,
               contentCID: item.contentCID,
-              title: item.title,
+              name: item.name,
               thumbnail: item.thumbnail,
               author: item.metadata?.author,
-              description: item.metadata?.description,
+              description: item.description,
               releaseYear: item.metadata?.releaseYear,
             },
           })
@@ -56,10 +56,10 @@
           aspect-ratio="1"
         ></v-img>
         <p class="text-caption text-sm-subtitle-1 text-center mt-1">
-          {{ item.category === 'video' ? item.title : item.metadata?.author }}
+          {{ item.category === 'video' ? item.name : item.metadata?.author }}
         </p>
         <p class="text-caption text-sm-subtitle-1 text-center text-medium-emphasis">
-          {{ item.category === 'video' ? item.metadata?.releaseYear : item.title }}
+          {{ item.category === 'video' ? item.metadata?.releaseYear : item.name }}
         </p>
       </v-sheet>
     </v-col>
@@ -85,10 +85,10 @@
               query: {
                 category: item.category,
                 contentCID: item.contentCID,
-                title: item.title,
+                name: item.name,
                 thumbnail: item.thumbnail,
                 author: item.metadata?.author,
-                description: item.metadata?.description,
+                description: item.description,
                 releaseYear: item.metadata?.releaseYear,
               },
             })
@@ -115,7 +115,7 @@
             {{ item.metadata?.author }}
           </p>
           <p class="text-caption text-sm-subtitle-1 text-center text-medium-emphasis">
-            {{ item.title }}
+            {{ item.name }}
           </p>
         </v-sheet>
       </v-hover>
@@ -143,8 +143,8 @@
             gradient="to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)"
           >
             <v-card-item>
-              <p class="text-subtitle-1">{{ item.title }}</p>
-              <p class="text-subtitle-2">{{ item.subtitle }}</p>
+              <p class="text-subtitle-1">{{ item.name }}</p>
+              <p class="text-subtitle-2">{{ item.description }}</p>
               <div
                 v-if="isHovering"
                 class="position-absolute top-0 bottom-0 right-0 d-flex flex-column justify-center mr-2 ga-1"
@@ -199,15 +199,16 @@
 <script setup lang="ts">
 import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
-import type {ItemContent} from '/@/views/homePage.vue';
-const router = useRouter();
-const {xs} = useDisplay();
-interface Props {
+import type { ItemContent } from '/@/composables/staticReleases';
+
+defineProps<{
   title: string;
   items: ItemContent[];
   layout: 'card' | 'list' | 'grid';
   showNavigation?: boolean;
   showViewAll?: boolean;
-}
-defineProps<Props>();
+}>();
+
+const router = useRouter();
+const {xs} = useDisplay();
 </script>
