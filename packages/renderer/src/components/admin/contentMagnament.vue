@@ -131,32 +131,12 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    <v-dialog
-      v-model="confirmDeleteReleaseDialog"
-      max-width="500px"
-    >
-      <v-card class="pa-2">
-        <v-card-title>Are you sure you want to delete this release?</v-card-title>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="blue-darken-1"
-            variant="text"
-            @click="confirmDeleteReleaseDialog = false"
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="blue-darken-1"
-            variant="text"
-            @click="confirmDeleteRelease"
-          >
-            OK
-          </v-btn>
-          <v-spacer></v-spacer>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <confirmation-dialog
+      message="Are you sure you want to delete this release?"
+      :dialog-open="confirmDeleteReleaseDialog"
+      @close="() => {confirmDeleteReleaseDialog = false}"
+      @confirm="confirmDeleteRelease"
+    ></confirmation-dialog>
   </v-container>
 </template>
 <script setup lang="ts">
@@ -165,6 +145,7 @@ import {useDisplay} from 'vuetify';
 import {useStaticReleases, type ItemStatus} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { getStatusColor } from '/@/utils';
+import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 
 const {lgAndUp, smAndDown} = useDisplay();
 const {orbiter} = useOrbiter();
