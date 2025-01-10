@@ -59,3 +59,9 @@ export function getStatusColor(status: ItemStatus) {
     return 'default';
   }
 };
+
+export function isValidEmail(email: string) {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
+};
+

@@ -54,7 +54,7 @@
         <v-window-item
           value="admins"
         >
-          <p>access magnament</p>
+          <access-magnament></access-magnament>
         </v-window-item>
         <v-window-item
           value="featured"
@@ -80,6 +80,7 @@
 import {ref} from 'vue';
 import {useDisplay} from 'vuetify';
 import contentMagnament from '/@/components/admin/contentMagnament.vue';
+import accessMagnament from '/@/components/admin/accessMagnament.vue';
 
 const {lgAndUp} = useDisplay();
 const tab = ref(null);
