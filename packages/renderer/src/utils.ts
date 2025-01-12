@@ -1,4 +1,4 @@
-import type { ItemStatus } from '/@/composables/staticReleases';
+import type { ItemStatus, FeaturedItem } from '/@/composables/staticReleases';
 
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
@@ -63,5 +63,13 @@ export function getStatusColor(status: ItemStatus) {
 export function isValidEmail(email: string) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return regex.test(email);
+};
+
+export function filterActivedFeature(featured: FeaturedItem) {
+  const now = new Date();
+  const startTime = new Date(featured.startTime);
+  const endTime = new Date(featured.endTime);
+
+  return now >= startTime && now <= endTime;
 };
 
