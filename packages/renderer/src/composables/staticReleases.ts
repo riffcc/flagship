@@ -13,9 +13,13 @@ export interface ItemContent {
     classification?: string;
     description?: string;
     duration?: string;
-    rating?: number;
+    rating?: {
+      value: number;
+      source: string;
+    };
     releaseYear?: number | string;
     seasons?: number | string;
+    songs?: number;
   };
   sourceSite: string;
   status: ItemStatus;
@@ -116,7 +120,10 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       description:
       'Join filmmaker Brett Gaylor and mashup artist Girl Talk as they explore copyright and content creation in the digital age. In the process they dissect the media landscape of the 21st century and shatter the wall between users and producers.',
       duration: '1h 26m',
-      rating: 4.5,
+      rating: {
+        value: 4,
+        source: 'IMDb',
+      },
       releaseYear: '2008',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
@@ -143,12 +150,10 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     name: 'Maple Ridge',
     metadata: {
       author: 'Swear and Shake',
-      classification: 'PG',
       description:
       'One of our favourite folk albums, and an early inspiration for the Riff.CC project.',
-      duration: '1h 26m',
-      rating: 4.5,
-      releaseYear: '2015',
+      songs: 10,
+      releaseYear: '2012',
     },
     status: 'approved',
     thumbnail: '/mock/music-mapleridge.webp',
@@ -189,7 +194,10 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       description:
       "The Internet's Own Boy follows the story of programming prodigy and information activist Aaron Swartz.",
       duration: '1h 45m',
-      rating: 4,
+      rating: {
+        value: 4,
+        source: 'IMDb',
+      },
       releaseYear: '2014',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
@@ -207,8 +215,11 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       description:
       'The Pirate Bay Away From Keyboard is a documentary film about the file sharing website The Pirate Bay.',
       duration: '1h 26m',
-      rating: 4.5,
-      releaseYear: '2012',
+      rating: {
+        value: 3.7,
+        source: 'IMDb',
+      },
+      releaseYear: '2013',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     status: 'approved',

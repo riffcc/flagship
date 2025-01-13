@@ -81,25 +81,57 @@
               color="transparent"
               class="my-10"
             >
-              <p class="mb-4 text-h5 text-lg-h4">
+              <h5 class="text-h5 text-lg-h4">
                 {{
                   featuredItem.category === 'music'
                     ? `${featuredItem.name} - ${featuredItem.metadata?.author}`
                     : featuredItem.name
                 }}
-              </p>
-              <div class="d-flex align-center ga-2">
-                <v-chip label>
+              </h5>
+              <div
+                v-if="featuredItem.metadata?.rating"
+                class="d-flex align-center"
+              >
+                <v-rating
+                  half-increments
+                  readonly
+                  :length="5"
+                  :size="32"
+                  :model-value="featuredItem.metadata.rating.value"
+                  active-color="primary"
+                  color="primary"
+                />
+                <v-chip
+                  variant="text"
+                >
+                  ({{ featuredItem.metadata.rating.source }})
+                </v-chip>
+              </div>
+
+              <div class="d-flex align-center mt-1">
+                <v-chip
+                  v-if="featuredItem.metadata?.classification"
+                  label
+                >
                   {{ featuredItem.metadata?.classification }}
                 </v-chip>
                 <v-chip
+                  v-if="featuredItem.metadata?.duration && featuredItem.metadata?.releaseYear"
                   variant="text"
                   class="text-medium-emphasis"
                 >
                   {{ featuredItem.metadata?.duration }} • {{ featuredItem.metadata?.releaseYear }}
                 </v-chip>
+                <v-chip
+                  v-if="featuredItem.metadata?.songs && featuredItem.metadata?.releaseYear"
+                  variant="text"
+                  class="text-medium-emphasis"
+                >
+                  {{ featuredItem.metadata?.songs }} Songs • {{ featuredItem.metadata?.releaseYear }}
+                </v-chip>
               </div>
               <p
+                v-if="featuredItem.metadata?.description"
                 class="text-subtitle-2 text-medium-emphasis mt-2 mb-4"
                 style="line-height: 1.1em"
               >
