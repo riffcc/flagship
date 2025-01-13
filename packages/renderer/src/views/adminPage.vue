@@ -69,7 +69,7 @@
         <v-window-item
           value="site"
         >
-          <p>site magnament</p>
+          <site-magnament></site-magnament>
         </v-window-item>
       </v-window>
     </div>
@@ -83,6 +83,7 @@ import contentMagnament from '/@/components/admin/contentMagnament.vue';
 import accessMagnament from '/@/components/admin/accessMagnament.vue';
 import featuredMagnament from '/@/components/admin/featuredMagnament.vue';
 import subscriptionMagnament from '/@/components/admin/subscriptionMagnament.vue';
+import siteMagnament from '/@/components/admin/siteMagnament.vue';
 
 const {lgAndUp} = useDisplay();
 const tab = ref(null);
