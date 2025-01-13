@@ -18,7 +18,10 @@
         :release-year="targetRelease.metadata?.releaseYear"
       ></album-viewer>
     </template>
-    <div class="d-flex flex-column align-center justify-center h-screen">
+    <div
+      v-else
+      class="d-flex flex-column align-center justify-center h-screen"
+    >
       <p class="mb-2">Release not found.</p>
       <v-btn
         color="primary"
