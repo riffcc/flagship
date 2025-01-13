@@ -1,66 +1,65 @@
 <template>
   <v-container>
-    <v-row>
+    <v-row justify="center">
       <v-col
         cols="12"
         md="6"
+        lg="5"
       >
         <v-sheet
-          class="pa-2"
-          min-height="384px"
+          class="px-6 py-4 mx-auto"
+          max-width="448px"
         >
-          <v-sheet
-            class="mx-auto pa-4"
-            max-width="384px"
-          >
-            <h6 class="text-h6 font-weight-bold mb-4">Add New Admin</h6>
-            <v-form @submit="handleOnSubmit">
-              <v-text-field
-                v-model="newAdmin.id"
-                label="ID"
-                :rules="rules"
-              ></v-text-field>
-              <v-switch
-                v-model="newAdmin.super"
-                color="primary"
-                label="Super"
-              ></v-switch>
-              <v-btn
-                class="mt-2"
-                color="primary"
-                type="submit"
-                block
-              >
-                Submit
-              </v-btn>
-            </v-form>
-          </v-sheet>
+          <h6 class="text-h6 font-weight-bold mb-4">New Admin</h6>
+          <v-form @submit="handleOnSubmit">
+            <v-text-field
+              v-model="newAdmin.id"
+              label="ID"
+              :rules="rules"
+            ></v-text-field>
+            <v-switch
+              v-model="newAdmin.super"
+              color="primary"
+              label="Super"
+            ></v-switch>
+            <v-btn
+              color="primary"
+              type="submit"
+              text="Add"
+              block
+            >
+            </v-btn>
+          </v-form>
         </v-sheet>
       </v-col>
       <v-col
         cols="12"
         md="6"
+        lg="5"
       >
         <v-sheet
-          class="pa-2 h-100"
-          min-height="384px"
+          class="px-6 py-4 mx-auto h-100"
+          max-width="448px"
+          min-height="256px"
         >
+          <h6 class="text-h6 font-weight-bold mb-4">Admins</h6>
           <v-list v-if="adminList.length > 0">
             <v-list-item
               v-for="admin, i in adminList"
               :key="i"
+              class="px-0"
+              :title="admin.id"
             >
               <template #prepend>
                 <v-icon
                   :icon="admin.super ? 'mdi-account-supervisor' : 'mdi-account'"
+                  size="small"
                 ></v-icon>
-              </template>
-              <template #title>
-                <p class="text-subtitle-1">{{ admin.id }}</p>
               </template>
               <template #append>
                 <v-btn
                   icon="mdi-delete"
+                  size="small"
                   @click="confirmDeleteAdminDialog = true"
                 >
                 </v-btn>
@@ -75,9 +74,9 @@
           </v-list>
           <div
             v-else
-            class="h-100 d-flex text-body-2 text-medium-emphasis"
+            class="d-flex h-75"
           >
-            <span class="ma-auto">No Admins found.</span>
+            <span class="ma-auto text-body-2 text-medium-emphasis">No Admins found.</span>
           </div>
         </v-sheet>
       </v-col>

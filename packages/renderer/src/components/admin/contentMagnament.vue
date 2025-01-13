@@ -1,6 +1,6 @@
 <!-- eslint-disable vue/valid-v-slot -->
 <template>
-  <v-container fill-height>
+  <v-container>
     <v-data-table
       :headers="smAndDown ? smTableHeaders : tableHeaders"
       :items="tableItems"

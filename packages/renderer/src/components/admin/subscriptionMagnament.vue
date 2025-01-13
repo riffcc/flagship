@@ -1,54 +1,52 @@
 <template>
   <v-container>
-    <v-row>
+    <v-row justify="center">
       <v-col
         cols="12"
         md="6"
+        lg="5"
       >
         <v-sheet
-          class="pa-2"
-          min-height="384px"
+          class="px-6 py-4 mx-auto"
+          max-width="448px"
         >
-          <v-sheet
-            class="mx-auto pa-4"
-            max-width="384px"
+          <h6 class="text-h6 font-weight-bold mb-4">New Subscription</h6>
+          <v-form
+            ref="formRef"
+            validate-on="input lazy"
+            class="d-flex flex-column ga-2"
+            @submit.prevent="handleOnSubmit"
           >
-            <h6 class="text-h6 font-weight-bold mb-4">New Subscription</h6>
-            <v-form
-              ref="formRef"
-              validate-on="input lazy"
-              class="d-flex flex-column ga-2"
-              @submit.prevent="handleOnSubmit"
-            >
-              <v-text-field
-                v-model="trustedSiteName"
-                label="Site Name"
-                :rules="[rules.required]"
-              />
-              <v-text-field
-                v-model="trustedSiteId"
-                label="Site Id"
-                :rules="[rules.isValidSiteAddress]"
-              />
-              <v-btn
-                color="primary"
-                type="submit"
-                block
-                text="Subscribe"
-                :disabled="!readyToSave"
-                :loading="loading"
-              />
-            </v-form>
-          </v-sheet>
+            <v-text-field
+              v-model="trustedSiteName"
+              label="Site Name"
+              :rules="[rules.required]"
+            />
+            <v-text-field
+              v-model="trustedSiteId"
+              label="Site Id"
+              :rules="[rules.isValidSiteAddress]"
+            />
+            <v-btn
+              color="primary"
+              type="submit"
+              block
+              text="Subscribe"
+              :disabled="!readyToSave"
+              :loading="loading"
+            />
+          </v-form>
         </v-sheet>
       </v-col>
       <v-col
         cols="12"
         md="6"
+        lg="5"
       >
         <v-sheet
-          class="pa-4 h-100"
-          min-height="384px"
+          class="px-6 py-4 mx-auto h-100"
+          max-width="448px"
+          min-height="256px"
         >
           <h6 class="text-h6 font-weight-bold mb-4">Subscriptions</h6>
           <v-list v-if="trustedSites && trustedSites?.length > 0">
@@ -68,9 +66,9 @@
           </v-list>
           <div
             v-else
-            class="h-100 d-flex text-body-2 text-medium-emphasis"
+            class="d-flex h-75"
           >
-            <span class="ma-auto">No Subscriptions found.</span>
+            <span class="ma-auto text-body-2 text-medium-emphasis">No Subscriptions found.</span>
           </div>
         </v-sheet>
       </v-col>

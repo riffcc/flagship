@@ -67,55 +67,66 @@
       >
         <v-row
           justify="center"
-          align="center"
-          justify-sm="space-around"
-          class="px-sm-12"
+          class="px-md-4"
         >
           <v-col
-            cols="12"
-            sm="7"
-            md="6"
-            lg="5"
+            cols="10"
+            sm="9"
+            md="8"
+            lg="6"
           >
             <v-sheet
               color="transparent"
-              class="my-10"
             >
-              <h5 class="text-h5 text-lg-h4">
-                {{
-                  featuredItem.category === 'music'
-                    ? `${featuredItem.name} - ${featuredItem.metadata?.author}`
-                    : featuredItem.name
-                }}
+              <h5 class="text-h5 text-sm-h4">
+                {{ featuredItem.name }}
               </h5>
-              <div class="d-flex align-center mt-1">
+              <template v-if="['music'].includes(featuredItem.category)">
+                <p
+                  v-if="featuredItem.metadata?.author"
+                  class="text-body-2 text-sm-body-1"
+                >
+                  {{ featuredItem.metadata.author }}
+                </p>
+                <v-chip
+                  v-if="featuredItem.metadata?.songs && featuredItem.metadata?.releaseYear"
+                  class="opacity-100 px-0 text-medium-emphasis mt-2"
+                  density="comfortable"
+                  disabled
+                  variant="text"
+                >
+                  {{ featuredItem.metadata.songs }} Songs • {{ featuredItem.metadata.releaseYear }}
+                </v-chip>
+              </template>
+
+              <v-chip-group
+                v-if="['movie'].includes(featuredItem.category)"
+              >
                 <v-chip
                   v-if="featuredItem.metadata?.classification"
+                  class="opacity-100"
+                  density="comfortable"
+                  disabled
                   label
                 >
-                  {{ featuredItem.metadata?.classification }}
+                  {{ featuredItem.metadata.classification }}
                 </v-chip>
                 <v-chip
                   v-if="featuredItem.metadata?.duration && featuredItem.metadata?.releaseYear"
+                  density="comfortable"
+                  disabled
+                  class="opacity-100 text-medium-emphasis"
                   variant="text"
-                  class="text-medium-emphasis"
                 >
-                  {{ featuredItem.metadata?.duration }} • {{ featuredItem.metadata?.releaseYear }}
+                  {{ featuredItem.metadata.duration }} • {{ featuredItem.metadata.releaseYear }}
                 </v-chip>
-                <v-chip
-                  v-if="featuredItem.metadata?.songs && featuredItem.metadata?.releaseYear"
-                  variant="text"
-                  class="text-medium-emphasis"
-                >
-                  {{ featuredItem.metadata?.songs }} Songs • {{ featuredItem.metadata?.releaseYear }}
-                </v-chip>
-              </div>
+              </v-chip-group>
               <p
                 v-if="featuredItem.metadata?.description"
-                class="text-subtitle-2 text-medium-emphasis mt-2 mb-4"
+                class="text-subtitle-2 text-medium-emphasis mt-4"
                 style="line-height: 1.1em"
               >
-                {{ featuredItem.metadata?.description }}
+                {{ featuredItem.metadata.description }}
               </p>
               <div class="d-flex mt-8">
                 <v-btn

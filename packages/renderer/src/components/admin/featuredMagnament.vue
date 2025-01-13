@@ -1,11 +1,10 @@
 <template>
-  <v-container fill-height>
+  <v-container>
     <v-sheet
-      class="mx-auto py-4 px-6"
-      max-width="384px"
-      height="384px"
+      class="px-6 py-4 mx-auto"
+      max-width="448px"
     >
-      <h6 class="text-h6 font-weight-bold mb-4">Create Featured Release</h6>
+      <h6 class="text-h6 font-weight-bold mb-4">New Featured Release</h6>
       <v-form @submit="handleOnSubmit">
         <v-text-field
           v-model="releaseId"
@@ -29,12 +28,11 @@
           label="End at"
         ></v-text-field>
         <v-btn
-          class="mt-2"
           color="primary"
           type="submit"
+          text="Create"
           block
         >
-          Create
         </v-btn>
       </v-form>
     </v-sheet>

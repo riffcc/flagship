@@ -1,8 +1,8 @@
 <template>
-  <v-container fill-height>
+  <v-container>
     <v-sheet
-      class="mx-auto py-4 px-6"
-      max-width="384px"
+      class="px-6 py-4 mx-auto"
+      max-width="448px"
     >
       <h6 class="text-h6 font-weight-bold mb-4">Edit Site Info</h6>
       <v-file-input
@@ -42,13 +42,11 @@
         label="Site Description"
       ></v-textarea>
       <v-btn
-        class="mt-2"
         color="primary"
+        text="Save"
         block
         @click="handleOnSave"
-      >
-        Save
-      </v-btn>
+      ></v-btn>
     </v-sheet>
   </v-container>
 </template>
