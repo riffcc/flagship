@@ -34,20 +34,7 @@
         class="cursor-pointer mx-auto"
         color="transparent"
         :width="xs ? '172px' : '192px'"
-        @click="
-          router.push({
-            path: '/release',
-            query: {
-              category: item.category,
-              contentCID: item.contentCID,
-              name: item.name,
-              thumbnail: item.thumbnail,
-              author: item.metadata?.author,
-              description: item.description,
-              releaseYear: item.metadata?.releaseYear,
-            },
-          })
-        "
+        @click="router.push(`/release/${item.id}`)"
       >
         <v-img
           :src="item.thumbnail"
@@ -56,10 +43,10 @@
           aspect-ratio="1"
         ></v-img>
         <p class="text-caption text-sm-subtitle-1 text-center mt-1">
-          {{ item.category === 'video' ? item.name : item.metadata?.author }}
+          {{ item.category === 'movie' ? item.name : item.metadata?.author }}
         </p>
         <p class="text-caption text-sm-subtitle-1 text-center text-medium-emphasis">
-          {{ item.category === 'video' ? item.metadata?.releaseYear : item.name }}
+          {{ item.category === 'movie' ? `(${item.metadata?.releaseYear})` : item.name }}
         </p>
       </v-sheet>
     </v-col>
@@ -79,20 +66,7 @@
           class="cursor-pointer mx-auto"
           color="transparent"
           :width="xs ? '172px' : '240px'"
-          @click="
-            router.push({
-              path: '/release',
-              query: {
-                category: item.category,
-                contentCID: item.contentCID,
-                name: item.name,
-                thumbnail: item.thumbnail,
-                author: item.metadata?.author,
-                description: item.description,
-                releaseYear: item.metadata?.releaseYear,
-              },
-            })
-          "
+          @click="router.push(`/release/${item.id}`)"
         >
           <v-sheet
             color="transparent"
@@ -144,7 +118,7 @@
           >
             <v-card-item>
               <p class="text-subtitle-1">{{ item.name }}</p>
-              <p class="text-subtitle-2">{{ item.description }}</p>
+              <p class="text-subtitle-2">{{ item.metadata?.seasons }} Seasons</p>
               <div
                 v-if="isHovering"
                 class="position-absolute top-0 bottom-0 right-0 d-flex flex-column justify-center mr-2 ga-1"
@@ -178,15 +152,7 @@
                 size="small"
                 class="text-none"
                 text="Play now"
-                @click="
-                  router.push({
-                    path: '/release',
-                    query: {
-                      category: item.category,
-                      contentCID: item.contentCID,
-                    },
-                  })
-                "
+                @click="router.push(`/release/${item.id}`)"
               ></v-btn>
             </v-card-actions>
           </v-img>

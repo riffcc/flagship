@@ -3,26 +3,51 @@
     fluid
     class="pa-0"
   >
-    <video-player
-      v-if="route.query.category === 'video' || route.query.category === 'movie'"
-      :content-cid="route.query.contentCID as string"
-    />
-    <album-viewer
-      v-if="route.query.category === 'audio'"
-      :content-cid="route.query.contentCID as string"
-      :title="route.query.title as string"
-      :thumbnail="route.query.thumbnail as string"
-      :author="route.query.author as string"
-      :description="route.query.description as string"
-      :release-year="route.query.releaseYear as string"
-    ></album-viewer>
+    <template v-if="targetRelease">
+      <video-player
+        v-if="['video', 'movie'].includes(targetRelease.category)"
+        :content-cid="targetRelease.contentCID"
+      />
+      <album-viewer
+        v-else-if="['audio', 'music'].includes(targetRelease.category)"
+        :content-cid="targetRelease.contentCID"
+        :title="targetRelease.name"
+        :thumbnail="targetRelease.thumbnail"
+        :author="targetRelease.metadata?.author"
+        :description="targetRelease.metadata?.description"
+        :release-year="targetRelease.metadata?.releaseYear"
+      ></album-viewer>
+    </template>
+    <div class="d-flex flex-column align-center justify-center h-screen">
+      <p class="mb-2">Release not found.</p>
+      <v-btn
+        color="primary"
+        @click="router.push('/')"
+      >
+        Go Home
+      </v-btn>
+    </div>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import {useRoute} from 'vue-router';
+import { useRouter } from 'vue-router';
 import albumViewer from '/@/components/releases/albumViewer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
+import { useStaticReleases, type ItemContent } from '/@/composables/staticReleases';
+import { onBeforeMount, type Ref, ref } from 'vue';
 
-const route = useRoute();
+const props = defineProps<{
+  id: string;
+}>();
+const router = useRouter();
+const { staticReleases } = useStaticReleases();
+const targetRelease: Ref<ItemContent | null> = ref(null);
+
+onBeforeMount(() => {
+  const _targetRelease = staticReleases.value.find(r => r.id === props.id);
+  if (_targetRelease) {
+    targetRelease.value = _targetRelease;
+  }
+});
 </script>

@@ -6,14 +6,14 @@
   >
     <template #prev="{props: prevProps}">
       <v-sheet
-        v-if="featuredList.length > 1"
+        v-if="featuredItems.length > 1"
         color="transparent"
         width="64px"
         class="position-relative h-100"
       >
         <v-img
           v-if="!xs"
-          :src="featuredList[slide === 0 ? featuredList.length - 1 : slide - 1].cover"
+          :src="previousSlideImage"
           height="100%"
           position="right"
           gradient="rgba(33,33,33,.6), rgba(33,33,33,.4)"
@@ -31,14 +31,14 @@
     </template>
     <template #next="{props: nextProps}">
       <v-sheet
-        v-if="featuredList.length > 1"
+        v-if="featuredItems.length > 1"
         color="transparent"
         width="64px"
         class="position-relative h-100"
       >
         <v-img
           v-if="!xs"
-          :src="featuredList[slide === featuredList.length - 1 ? 0 : slide + 1].cover"
+          :src="nextSlideImage"
           height="100%"
           position="left"
           gradient="rgba(33,33,33,.6), rgba(33,33,33,.4)"
@@ -55,15 +55,15 @@
       </v-sheet>
     </template>
     <v-carousel-item
-      v-for="featured in featuredList"
-      :key="featured.id"
-      :src="featured.cover"
+      v-for="featuredItem in featuredItems"
+      :key="featuredItem.id"
+      :src="featuredItem.cover ?? featuredItem.thumbnail"
       cover
       gradient="to right, rgba(0,0,0,.8), rgba(0,0,0,.01)"
     >
       <v-container
         class="fill-height"
-        :style="showDefederation ? `border: 1px solid ${lensColorHash(featured)};` : ''"
+        :style="showDefederation ? `border: 1px solid ${lensColorHash(featuredItem)};` : ''"
       >
         <v-row
           justify="center"
@@ -83,27 +83,27 @@
             >
               <p class="mb-4 text-h5 text-lg-h4">
                 {{
-                  featured.category === 'audio'
-                    ? `${featured.name} - ${featured.metadata?.author}`
-                    : featured.name
+                  featuredItem.category === 'music'
+                    ? `${featuredItem.name} - ${featuredItem.metadata?.author}`
+                    : featuredItem.name
                 }}
               </p>
               <div class="d-flex align-center ga-2">
                 <v-chip label>
-                  {{ featured.classification }}
+                  {{ featuredItem.metadata?.classification }}
                 </v-chip>
                 <v-chip
                   variant="text"
                   class="text-medium-emphasis"
                 >
-                  {{ featured.metadata?.duration }} • {{ featured.metadata?.releaseYear }}
+                  {{ featuredItem.metadata?.duration }} • {{ featuredItem.metadata?.releaseYear }}
                 </v-chip>
               </div>
               <p
                 class="text-subtitle-2 text-medium-emphasis mt-2 mb-4"
                 style="line-height: 1.1em"
               >
-                {{ featured.description }}
+                {{ featuredItem.metadata?.description }}
               </p>
               <div class="d-flex mt-8">
                 <v-btn
@@ -112,15 +112,7 @@
                   prepend-icon="mdi-play"
                   class="text-none mr-4"
                   text="Play now"
-                  @click="
-                    router.push({
-                      path: '/release',
-                      query: {
-                        category: featured.category,
-                        contentCID: featured.contentCID,
-                      },
-                    })
-                  "
+                  @click="router.push(`/release/${featuredItem.id}`)"
                 ></v-btn>
               </div>
             </v-sheet>
@@ -156,24 +148,40 @@
 <script setup lang="ts">
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
-import {ref} from 'vue';
+import {computed, ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
 import {useShowDefederation} from '/@/composables/showDefed';
-import type {FeaturedItem} from '/@/composables/staticReleases';
+import {type FeaturedItem, type ItemContent, useStaticReleases} from '/@/composables/staticReleases';
 
-const router = useRouter();
-const {showDefederation} = useShowDefederation();
-
-defineProps<{
+const props = defineProps<{
   featuredList: Array<FeaturedItem>;
 }>();
 
-const slide = ref(0);
+const router = useRouter();
+const {showDefederation} = useShowDefederation();
+const {staticReleases} = useStaticReleases();
 const {xs} = useDisplay();
+const slide = ref(0);
+
+const featuredItems = computed(() => {
+  const featuredIds = props.featuredList.map(f => f.releaseId);
+  return staticReleases.value.filter(sr => featuredIds.includes(sr.id));
+});
+
+const previousSlideImage = computed(() => {
+  const previousIndex = slide.value === 0 ? featuredItems.value.length - 1 : slide.value - 1;
+  return featuredItems.value[previousIndex].cover ?? featuredItems.value[previousIndex].thumbnail;
+});
+
+const nextSlideImage = computed(() => {
+  const nextIndex = slide.value === featuredItems.value.length - 1 ? 0 : slide.value + 1;
+  return featuredItems.value[nextIndex].cover ?? featuredItems.value[nextIndex].thumbnail;
+});
+
 
 // Colors
-const lensColorHash = (featured: FeaturedItem): string => {
+const lensColorHash = (featured: ItemContent): string => {
   const idSite = featured.sourceSite.replace('/orbitdb/', '');
   return '#' + CID.parse(idSite).toString(base16.encoder).slice(-6);
 };

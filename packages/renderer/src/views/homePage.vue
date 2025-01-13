@@ -41,16 +41,16 @@
 </template>
 
 <script setup lang="ts">
+import {computed} from 'vue';
+import {suivre as follow} from '@constl/vue';
 import ContentSection from '/@/components/home/contentSection.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
+import InitiateModDBs from '/@/components/initiateModDBs.vue';
 import {useDevStatus} from '/@/composables/devStatus';
-
-import {suivre as follow} from '@constl/vue';
-import {computed} from 'vue';
-import InitiateModDBs from '../components/initiateModDBs.vue';
 import type {FeaturedItem, ItemContent} from '/@/composables/staticReleases';
 import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
+import { filterActivedFeature } from '/@/utils';
 
 const {orbiter} = useOrbiter();
 const {status} = useDevStatus();
@@ -59,26 +59,19 @@ const {staticFeaturedReleases, staticReleases} = useStaticReleases();
 const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
 
 const featuredReleases = computed<Array<FeaturedItem>>(() => {
+
   // Note : this is a quick hack. We are using all releases from Orbiter as "featured releases".
   // TODO: Add option for featuring releases, and then modify below to show only these
-  if (status.value === 'static') return staticFeaturedReleases.value;
+  if (status.value === 'static') return staticFeaturedReleases.value.filter(fr => filterActivedFeature(fr));
   else {
     return (orbiterReleases.value || []).map((r): FeaturedItem => {
       return {
-        id: r.release.id,
-        category: r.release.release.category,
-        contentCID: r.release.release.file,
-        name: r.release.release.contentName,
-        thumbnail: r.release.release.thumbnail,
-        sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-        classification: 'Unknown', // TODO
-        cover: r.release.release.cover,
-        rating: 1, // TODO,
-        status: 'approved',
-        startTime: 0,
-        endTime: 1,
+        id: (staticFeaturedReleases.value.length + 1).toString(),
+        releaseId: r.release.id,
+        startTime: '2025-01-01T00:00',
+        endTime: '2026-01-01T00:00',
       };
-    });
+    }).filter(fr => filterActivedFeature(fr));
   }
 });
 
