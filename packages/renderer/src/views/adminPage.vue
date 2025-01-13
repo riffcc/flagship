@@ -64,7 +64,7 @@
         <v-window-item
           value="subscriptions"
         >
-          <p>subcriptions magnament</p>
+          <subscription-magnament></subscription-magnament>
         </v-window-item>
         <v-window-item
           value="site"
@@ -82,6 +82,7 @@ import {useDisplay} from 'vuetify';
 import contentMagnament from '/@/components/admin/contentMagnament.vue';
 import accessMagnament from '/@/components/admin/accessMagnament.vue';
 import featuredMagnament from '/@/components/admin/featuredMagnament.vue';
+import subscriptionMagnament from '/@/components/admin/subscriptionMagnament.vue';
 
 const {lgAndUp} = useDisplay();
 const tab = ref(null);
