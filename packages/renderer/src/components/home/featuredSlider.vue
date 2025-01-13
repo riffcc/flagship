@@ -88,26 +88,6 @@
                     : featuredItem.name
                 }}
               </h5>
-              <div
-                v-if="featuredItem.metadata?.rating"
-                class="d-flex align-center"
-              >
-                <v-rating
-                  half-increments
-                  readonly
-                  :length="5"
-                  :size="32"
-                  :model-value="featuredItem.metadata.rating.value"
-                  active-color="primary"
-                  color="primary"
-                />
-                <v-chip
-                  variant="text"
-                >
-                  ({{ featuredItem.metadata.rating.source }})
-                </v-chip>
-              </div>
-
               <div class="d-flex align-center mt-1">
                 <v-chip
                   v-if="featuredItem.metadata?.classification"
