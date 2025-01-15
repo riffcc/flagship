@@ -1,25 +1,34 @@
 <template>
-  <v-menu open-on-hover>
+  <v-menu>
     <template #activator="{props: activatorProps}">
       <v-avatar
         v-bind="activatorProps"
         :image="userAvatar"
+        border
+        class="mr-2 d-none d-sm-block"
       />
     </template>
-    <v-list>
-      <v-list-item
-        title="Manage account"
-        prepend-icon="mdi-account"
-      />
-      <v-list-item
-        title="Site info"
-        prepend-icon="mdi-cog"
-      />
-      <v-list-item
-        title="About Riff.CC"
-        prepend-icon="mdi-information-outline"
-      />
-    </v-list>
+    <v-sheet
+      border
+      width="192px"
+      class="mt-2"
+    >
+      <div class="px-4 py-2">
+        <h4>{{ userData?.name }}</h4>
+        <p class="text-caption mt-1">
+          {{ userData?.email }}
+        </p>
+      </div>
+      <v-divider></v-divider>
+      <v-list>
+        <v-list-item
+          v-for="menuItem in menuItems"
+          :key="menuItem.label"
+          :title="menuItem.label"
+          @click="menuItem.onClick"
+        />
+      </v-list>
+    </v-sheet>
   </v-menu>
 </template>
 
@@ -27,6 +36,8 @@
 import {suivre as follow} from '@constl/vue';
 import {useUserProfilePhoto} from '/@/components/users/utils';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
+import { useRouter } from 'vue-router';
+import { useUserSession } from '/@/composables/userSession';
 
 const {orbiter} = useOrbiter();
 
@@ -34,4 +45,14 @@ const {orbiter} = useOrbiter();
 const accountId = follow(orbiter.listenForAccountId);
 
 const userAvatar = useUserProfilePhoto(accountId);
+
+const router = useRouter();
+
+
+const { userData } = useUserSession();
+const menuItems = [
+  { label: 'Account', onClick: () => router.push('/account')},
+  { label: 'Settings', onClick: () => router.push('/account/settings')},
+  { label: 'Disconnect', onClick: () => { userData.value = null; }},
+];
 </script>

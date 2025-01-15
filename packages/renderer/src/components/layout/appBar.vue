@@ -49,6 +49,7 @@
         </router-link>
       </div>
     </div>
+    <account-menu v-if="userData"></account-menu>
   </v-app-bar>
 </template>
 
@@ -56,9 +57,13 @@
 import { suivre as follow } from '@constl/vue';
 import {navigationMap} from '/@/constants/navigation';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
+import { useUserSession } from '/@/composables/userSession';
+import accountMenu from '/@/components/account/accountMenu.vue';
 
 const {orbiter} = useOrbiter();
 
 
 const isAdmin = follow(orbiter.listenToIsModerator);
+const { userData } = useUserSession();
+
 </script>
