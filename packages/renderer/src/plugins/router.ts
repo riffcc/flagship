@@ -38,18 +38,6 @@ const routes: Array<RouteRecordRaw> = [
     component: AdminPage,
   },
   {
-    path: '/music',
-    component: BuildingPage,
-  },
-  {
-    path: '/movies',
-    component: BuildingPage,
-  },
-  {
-    path: '/tv-shows',
-    component: BuildingPage,
-  },
-  {
     path: '/about',
     component: AboutPage,
   },
@@ -66,6 +54,12 @@ const routes: Array<RouteRecordRaw> = [
     name: 'Release',
     component: ReleasePage,
     props: true,
+  },
+  {
+    path: '/featured/:category',
+    component: BuildingPage,
+    props: true,
+
   },
 ];
 

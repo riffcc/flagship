@@ -104,6 +104,7 @@
     "is-ipfs": "^8.0.4",
     "node-gyp-build": "^4.8.4",
     "nuchabal": "^3.2.7",
+    "pluralize-esm": "^9.0.5",
     "semaphore-async-await": "^1.5.1",
     "tiny-typed-emitter": "^2.1.0",
     "tslib": "^2.8.1",

@@ -59,6 +59,17 @@
                   height="24px"
                   @click="item.path === '/contact' ? openEmailClient() : router.push(item.path)"
                 ></v-list-item>
+                <template v-if="key === 'explore'">
+                  <v-list-item
+                    v-for="item in contentCategories.filter((cc: ContentCategory) => cc.featured)"
+                    :key="item.id"
+                    :subtitle="pluralize(startCase(item.id))"
+                    class="mb-2 pl-1"
+                    min-height="12px"
+                    height="24px"
+                    @click="router.push(`/featured/${item.id}`)"
+                  ></v-list-item>
+                </template>
               </v-list>
             </div>
           </v-sheet>
@@ -98,6 +109,9 @@
 <script setup lang="ts">
 import {useRouter} from 'vue-router';
 import {navigationMap} from '/@/constants/navigation';
+import {startCase} from 'lodash';
+import pluralize from 'pluralize-esm';
+import { type ContentCategory, useSiteSettings } from '/@/composables/siteSettings';
 
 const router = useRouter();
 
@@ -111,4 +125,5 @@ const scrollToTop = () => {
 const openEmailClient = () => {
   window.location.href = 'mailto:wings@riff.cc';
 };
+const { contentCategories } = useSiteSettings();
 </script>

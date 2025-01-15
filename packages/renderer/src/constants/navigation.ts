@@ -4,11 +4,6 @@ type NavigationItem = {
 };
 
 type NavigationMap = {
-  appBar: {
-    normal: Array<NavigationItem>;
-    authenticated: Array<NavigationItem>;
-    admin: Array<NavigationItem>;
-  };
   appFooter: {
     explore: Array<NavigationItem>;
     company: Array<NavigationItem>;
@@ -17,28 +12,9 @@ type NavigationMap = {
 };
 
 export const navigationMap: NavigationMap = {
-  appBar: {
-    normal: [
-      {label: 'Home', path: '/'},
-      {label: 'Music', path: '/music'},
-      {label: 'Movies', path: '/movies'},
-      {label: 'TV Shows', path: '/tv-shows'},
-    ],
-    authenticated: [
-      {label: 'Upload', path: '/upload'},
-      {label: 'Account', path: '/account'},
-    ],
-    admin: [
-      {label: 'Admin', path: '/admin'},
-    ],
-  },
   appFooter: {
     explore: [
       {label: 'Home', path: '/'},
-      {label: 'Movies', path: '/movies'},
-      {label: 'TV Shows', path: '/tv-shows'},
-      {label: 'Music', path: '/music'},
-      {label: 'AudioBooks', path: '/audiobooks'},
     ],
     company: [
       {label: 'Terms of Use', path: '/terms'},
