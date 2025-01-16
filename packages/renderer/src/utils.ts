@@ -41,11 +41,20 @@ export const formatTime = (ms: number): string => {
   if (ms === 0 || isNaN(ms)) {
     return '00:00';
   }
-  let [min, sec] = (ms / 60).toFixed(2).split('.');
-  sec = ((parseInt(sec) / 100) * 60).toFixed();
-  min = parseInt(min) < 10 ? `0${min}` : min;
-  sec = parseInt(sec) < 10 ? `0${sec}` : sec;
-  return `${min}:${sec}`;
+
+  let totalSeconds = Math.floor(ms);
+  const hours = Math.floor(totalSeconds / 3600);
+  totalSeconds %= 3600;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  const formattedHours = hours > 0 ? (hours < 10 ? `0${hours}` : `${hours}`) : null;
+  const formattedMinutes = minutes < 10 ? `0${minutes}` : `${minutes}`;
+  const formattedSeconds = seconds < 10 ? `0${seconds}` : `${seconds}`;
+
+  return formattedHours
+    ? `${formattedHours}:${formattedMinutes}:${formattedSeconds}`
+    : `${formattedMinutes}:${formattedSeconds}`;
 };
 
 export function getStatusColor(status: ItemStatus) {

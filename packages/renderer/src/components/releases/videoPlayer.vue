@@ -64,6 +64,16 @@
             </template>
 
             <template #append>
+              <v-sheet
+                v-if="!floating"
+                color="transparent"
+                width="136px"
+                class="d-flex justify-center ga-1 text-subtitle-2 pt-1"
+              >
+                <span>{{ currentTime }}</span>
+                <span>/</span>
+                <span>{{ duration }}</span>
+              </v-sheet>
               <v-btn
                 :icon="volume === 0 ? 'mdi-volume-off' : 'mdi-volume-high'"
                 density="comfortable"
@@ -104,6 +114,8 @@ const {
   progress,
   isLoading,
   isPlaying,
+  currentTime,
+  duration,
   seekingTrack,
   togglePlay,
   updateProgress,
