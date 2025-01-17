@@ -19,7 +19,7 @@ export interface ItemContent {
   };
   sourceSite: string;
   status: ItemStatus;
-  thumbnail?: string;
+  thumbnail: string;
 }
 
 export interface FeaturedItem {

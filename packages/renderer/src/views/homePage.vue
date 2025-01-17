@@ -8,18 +8,50 @@
     <content-section
       v-if="categorizedStaticReleases['featured-various'].length > 0"
       title="Featured"
-      :items="categorizedStaticReleases['featured-various']"
-      layout="list"
-      description="Various featured content of mixed media"
-      :show-view-all="true"
-    />
+    >
+      <v-col
+        v-for="item in categorizedStaticReleases['featured-various']"
+        :key="item.id"
+      >
+        <content-card
+          :background-image="item.thumbnail"
+          cursor-pointer
+          :subtitle="item.category === 'movie' ? `(${item.metadata?.releaseYear})` : item.name"
+          :title="item.category === 'movie' ? item.name : item.metadata?.author ?? ''"
+          :width="xs ? '10.5rem' : '12rem'"
+          @click="router.push(`/release/${item.id}`)"
+        >
+        </content-card>
+      </v-col>
+    </content-section>
     <content-section
       v-if="categorizedStaticReleases['featured-music'].length > 0"
       title="Featured Music"
-      :items="categorizedStaticReleases['featured-music']"
-      layout="grid"
-      :show-view-all="true"
-    />
+    >
+      <v-col
+        v-for="item in categorizedStaticReleases['featured-music']"
+        :key="item.id"
+      >
+        <content-card
+          :background-image="item.thumbnail"
+          cursor-pointer
+          hovering-children
+          :subtitle="item.metadata?.author ?? ''"
+          :title="item.name"
+          :width="xs ? '10.5rem' : '15rem'"
+          @click="router.push(`/release/${item.id}`)"
+        >
+          <template #hovering>
+            <v-icon
+              size="4.5rem"
+              icon="mdi-play"
+              color="primary"
+              class="position-absolute top-0 left-0 right-0 bottom-0 ma-auto"
+            ></v-icon>
+          </template>
+        </content-card>
+      </v-col>
+    </content-section>
     <v-alert
       v-if="categorizedStaticReleases['tv-shows'].length > 0"
       type="info"
@@ -33,17 +65,68 @@
     <content-section
       v-if="categorizedStaticReleases['tv-shows'].length > 0"
       title="TV Shows"
-      :items="categorizedStaticReleases['tv-shows']"
-      layout="card"
-      :show-navigation="true"
-    />
+      :navigation="true"
+    >
+      <v-col
+        v-for="item in categorizedStaticReleases['tv-shows']"
+        :key="item.id"
+      >
+        <content-card
+          background-gradient="to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)"
+          :background-image="item.thumbnail"
+          height="10rem"
+          hovering-children
+          overlapping
+          :subtitle="`${item.metadata?.seasons} Seasons`"
+          :title="item.name"
+          width="17rem"
+        >
+          <template #hovering>
+            <div class="position-absolute top-0 bottom-0 right-0 d-flex flex-column justify-center mr-2 ga-1">
+              <v-btn
+                size="small"
+                color="grey-lighten-3"
+                density="comfortable"
+                icon="mdi-share-variant"
+              ></v-btn>
+              <v-btn
+                size="small"
+                color="grey-lighten-3"
+                density="comfortable"
+                icon="mdi-heart"
+              ></v-btn>
+              <v-btn
+                size="small"
+                color="grey-lighten-3"
+                density="comfortable"
+                icon="mdi-plus"
+              ></v-btn>
+            </div>
+          </template>
+          <template #actions>
+            <v-btn
+              color="primary"
+              rounded="0"
+              prepend-icon="mdi-play"
+              size="small"
+              class="position-absolute bottom-0 rigth-0 text-none ml-4 mb-10"
+              text="Play now"
+              @click="router.push(`/release/${item.id}`)"
+            ></v-btn>
+          </template>
+        </content-card>
+      </v-col>
+    </content-section>
   </v-container>
 </template>
 
 <script setup lang="ts">
 import {computed} from 'vue';
+import {useDisplay} from 'vuetify';
+import {useRouter} from 'vue-router';
 import {suivre as follow} from '@constl/vue';
 import ContentSection from '/@/components/home/contentSection.vue';
+import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import InitiateModDBs from '/@/components/initiateModDBs.vue';
 import {useDevStatus} from '/@/composables/devStatus';
@@ -52,6 +135,8 @@ import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { filterActivedFeature } from '/@/utils';
 
+const router = useRouter();
+const {xs} = useDisplay();
 const {orbiter} = useOrbiter();
 const {status} = useDevStatus();
 const {staticFeaturedReleases, staticReleases} = useStaticReleases();
