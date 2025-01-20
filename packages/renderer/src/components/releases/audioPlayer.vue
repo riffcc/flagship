@@ -145,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import {watch} from 'vue';
+import {onMounted, watch} from 'vue';
 import {useDisplay} from 'vuetify';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {usePlaybackController} from '/@/composables/playbackController';
@@ -167,6 +167,7 @@ const {
   canPlay,
   play,
   pause,
+  stop,
 } = usePlaybackController<HTMLAudioElement>();
 
 const {
@@ -194,62 +195,31 @@ const close = () => {
   handleOnClose();
 };
 
-// const defaultSkipTime = 10;
-
-// onMounted(() => {
-//   if ('mediaSession' in navigator) {
-//     navigator.mediaSession.setActionHandler('play', () => {
-//       play();
-//     });
-//     navigator.mediaSession.setActionHandler('pause', () => {
-//       pause();
-//     });
-//     navigator.mediaSession.setActionHandler('previoustrack', () => {
-//       handlePrevious();
-//     });
-//     navigator.mediaSession.setActionHandler('nexttrack', () => {
-//       handleNext();
-//     });
-
-//     navigator.mediaSession.setActionHandler('seekbackward', function(event) {
-//       const skipTime = event.seekOffset || defaultSkipTime;
-//       if (audioPlayerRef.value) {
-//         audioPlayerRef.value.currentTime = Math.max(audioPlayerRef.value.currentTime - skipTime, 0);
-//       }
-//     });
-
-//     navigator.mediaSession.setActionHandler('seekforward', function(event) {
-//       const skipTime = event.seekOffset || defaultSkipTime;
-//       if (audioPlayerRef.value) {
-//         audioPlayerRef.value.currentTime = Math.min(audioPlayerRef.value.currentTime + skipTime, audioPlayerRef.value.duration);
-//       }
-//     });
-
-//     try {
-//       navigator.mediaSession.setActionHandler('seekto', function(event) {
-//         if (audioPlayerRef.value && event.seekTime) {
-//           if (event.fastSeek && ('fastSeek' in audioPlayerRef.value)) {
-//             audioPlayerRef.value.fastSeek(event.seekTime);
-//             return;
-//           }
-//           audioPlayerRef.value.currentTime = event.seekTime;
-//         }
-
-//       });
-//     } catch {
-//       console.log('Warning! The "seekto" media session action is not supported.');
-//     }
-//     try {
-//       navigator.mediaSession.setActionHandler('stop', function() {
-//         if (audioPlayerRef.value) {
-//           pause();
-//           audioPlayerRef.value.currentTime = 0;
-//         }
-//       });
-//     } catch {
-//       console.log('Warning! The "stop" media session action is not supported.');
-//     }
-//   }
-
-// });
+const defaultSkipTime = 10;
+onMounted(() => {
+  if ('mediaSession' in navigator) {
+  navigator.mediaSession.setActionHandler('play', play);
+  navigator.mediaSession.setActionHandler('pause', pause);
+  navigator.mediaSession.setActionHandler('stop', stop);
+  navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+    const skipTime = details.seekOffset || defaultSkipTime;
+    if (audioPlayerRef.value) {
+      seekingTrack(Math.max(audioPlayerRef.value.currentTime - skipTime, 0));
+    }
+  });
+  navigator.mediaSession.setActionHandler('seekforward', (details) => {
+    const skipTime = details.seekOffset || defaultSkipTime;
+    if (audioPlayerRef.value) {
+      seekingTrack(Math.min(audioPlayerRef.value.currentTime + skipTime, audioPlayerRef.value.duration));
+    }
+  });
+  navigator.mediaSession.setActionHandler('seekto', (details) => {
+    if(details.seekTime) {
+      seekingTrack(details.seekTime);
+    }
+  });
+  navigator.mediaSession.setActionHandler('previoustrack', handlePrevious);
+  navigator.mediaSession.setActionHandler('nexttrack', handleNext);
+}
+});
 </script>

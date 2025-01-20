@@ -43,6 +43,14 @@ export const usePlaybackController = <T extends HTMLMediaElement>() => {
     }
   };
 
+  const stop = () => {
+    if (playerRef.value) {
+      playerRef.value.stop();
+      isPlaying.value = false;
+      navigator.mediaSession.playbackState = 'none';
+    }
+  };
+
   const updateProgress = () => {
     if (playerRef.value) {
       currentTime.value = formatTime(playerRef.value.currentTime);
@@ -73,5 +81,6 @@ export const usePlaybackController = <T extends HTMLMediaElement>() => {
     canPlay,
     play,
     pause,
+    stop,
   };
 };

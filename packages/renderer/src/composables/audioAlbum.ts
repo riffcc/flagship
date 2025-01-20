@@ -1,10 +1,10 @@
-import {ref} from 'vue';
+import {ref, watch} from 'vue';
 
 export type AudioTrack = {
   index: number;
   cid: string;
   title: string;
-  album?: string;
+  album: string;
   artist?: string;
   duration?: string;
   size?: string;
@@ -27,13 +27,6 @@ const handlePlay = (index: number) => {
     artist: albumFiles.value[index].artist,
     duration: albumFiles.value[index].duration,
   };
-  if ('mediaSession' in window.navigator) {
-    window.navigator.mediaSession.metadata = new MediaMetadata({
-      title: activeTrack.value.title,
-      album: activeTrack.value.album,
-      artist: activeTrack.value.artist,
-    });
-  }
 };
 
 const handlePrevious = () => {
@@ -62,6 +55,18 @@ const handleNext = () => {
 };
 
 const handleOnClose = () => (activeTrack.value = undefined);
+
+watch(activeTrack, (t) => {
+  if ('mediaSession' in navigator) {
+    if (navigator.mediaSession.metadata && t) {
+      navigator.mediaSession.metadata.title = t.title;
+      navigator.mediaSession.metadata.album = t.album;
+      if (t.artist) {
+        navigator.mediaSession.metadata.artist = t.artist;
+      }
+    }
+  }
+});
 
 export const useAudioAlbum = () => {
   return {

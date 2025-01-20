@@ -51,6 +51,17 @@ onBeforeMount(() => {
   const _targetRelease = staticReleases.value.find(r => r.id === props.id);
   if (_targetRelease) {
     targetRelease.value = _targetRelease;
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: _targetRelease.name,
+        artwork: _targetRelease.thumbnail ? [
+          {
+            src: _targetRelease.thumbnail,
+            type: 'image/png',
+          },
+        ] : undefined,
+      });
+  }
   }
 });
 </script>

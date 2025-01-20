@@ -121,6 +121,8 @@ const {
   updateProgress,
   canPlay,
   play,
+  pause,
+  stop,
 } = usePlaybackController();
 
 const {volume, toggleVolume} = usePlayerVolume();
@@ -142,6 +144,7 @@ const toggleFullscreen = (): void => {
   videoPlayerRef.value.requestFullscreen();
 };
 
+const defaultSkipTime = 10;
 onMounted((): void => {
   albumFiles.value = [];
   activeTrack.value = undefined;
@@ -150,6 +153,28 @@ onMounted((): void => {
     seekingTrack(floatingVideoInitialTime.value);
   } else {
     closeFloatingVideo();
+  }
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('play', play);
+    navigator.mediaSession.setActionHandler('pause', pause);
+    navigator.mediaSession.setActionHandler('stop', stop);
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+      const skipTime = details.seekOffset || defaultSkipTime;
+      if (videoPlayerRef.value) {
+        seekingTrack(Math.max(videoPlayerRef.value.currentTime - skipTime, 0));
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      const skipTime = details.seekOffset || defaultSkipTime;
+      if (videoPlayerRef.value) {
+        seekingTrack(Math.min(videoPlayerRef.value.currentTime + skipTime, videoPlayerRef.value.duration));
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if(details.seekTime) {
+        seekingTrack(details.seekTime);
+      }
+    });
   }
 });
 
