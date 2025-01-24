@@ -42,7 +42,7 @@ import { useUserSession } from '/@/composables/userSession';
 const {orbiter} = useOrbiter();
 
 // User avatar
-const accountId = follow(orbiter.listenForAccountId);
+const accountId = follow(orbiter.listenForAccountId.bind(orbiter));
 
 const userAvatar = useUserProfilePhoto(accountId);
 

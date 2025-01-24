@@ -39,7 +39,7 @@ import {useOrbiter} from '/@/plugins/orbiter/utils';
 const {orbiter} = useOrbiter();
 
 // User name
-const names = follow(orbiter.listenForNameChange);
+const names = follow(orbiter.listenForNameChange.bind(orbiter));
 
 const displayName = computed(() => {
   return selectTranslation(names.value) || 'Anonymous';
@@ -63,8 +63,8 @@ const deviceId = obt(orbiter.constellation.obtIdDispositif);
 const userAvatar = useUserProfilePhoto(accountId.value);
 
 // Account status
-const moderator = follow(orbiter.listenToIsModerator);
-const canUpload = follow(orbiter.followCanUpload);
+const moderator = follow(orbiter.followIsModerator.bind(orbiter), { userId: deviceId });
+const canUpload = follow(orbiter.followCanUpload.bind(orbiter), { userId: deviceId });
 const accountStatus = computed(()=>{
   return moderator.value || (canUpload.value ? 'MEMBER' : 'GUEST');
 });

@@ -60,8 +60,8 @@ import {copyText, selectTranslation} from '/@/utils';
 
 const {orbiter} = useOrbiter();
 
-const account = follow(orbiter.listenForAccountId);
-const names = follow(orbiter.listenForNameChange);
+const account = follow(orbiter.listenForAccountId.bind(orbiter));
+const names = follow(orbiter.listenForNameChange.bind(orbiter));
 
 const accountIdCopied = ref(false);
 const copyAccountId = async () => {

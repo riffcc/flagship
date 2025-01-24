@@ -78,7 +78,7 @@ const props = defineProps<{
   site: string;
 }>();
 
-const myAccountId = follow(orbiter.listenForAccountId);
+const myAccountId = follow(orbiter.listenForAccountId.bind(orbiter));
 
 const myRelease = computed(() => {
   return props.contributor === myAccountId.value;
