@@ -21,7 +21,7 @@ importers:
         version: 3.0.3
       '@constl/mandataire-electron-principal':
         specifier: ^3.1.0
-        version: 3.1.0(@constl/ipa@1.5.6(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@constl/mandataire@3.0.3)(@constl/serveur@2.1.4(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(electron@33.2.1)
+        version: 3.1.0(@constl/ipa@1.5.6(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@constl/mandataire@3.0.3)(@constl/serveur@2.1.4(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(electron@33.3.2)
       '@constl/mandataire-electron-rendu':
         specifier: ^3.1.0
         version: 3.1.0
@@ -171,8 +171,8 @@ importers:
         specifier: ^7.0.3
         version: 7.0.3
       electron:
-        specifier: ^33.2.1
-        version: 33.2.1
+        specifier: ^33.3.2
+        version: 33.3.2
       electron-builder:
         specifier: 26.0.0-alpha.6
         version: 26.0.0-alpha.6(electron-builder-squirrel-windows@24.13.3)
@@ -3356,8 +3356,8 @@ packages:
   electron-updater@6.3.9:
     resolution: {integrity: sha512-2PJNONi+iBidkoC5D1nzT9XqsE8Q1X28Fn6xRQhO3YX8qRRyJ3mkV4F1aQsuRnYPqq6Hw+E51y27W75WgDoofw==}
 
-  electron@33.2.1:
-    resolution: {integrity: sha512-SG/nmSsK9Qg1p6wAW+ZfqU+AV8cmXMTIklUL18NnOKfZLlum4ZsDoVdmmmlL39ZmeCaq27dr7CgslRPahfoVJg==}
+  electron@33.3.2:
+    resolution: {integrity: sha512-2pWr0frM9UrZGX1d7eoFdMROw10h2vXIWJmXdjwlKnSWWUm18GCrEOUeDUr+IMgz5EjO7JM7FQDHDMApeMgHyg==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
 
@@ -7984,12 +7984,12 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@constl/mandataire-electron-principal@3.1.0(@constl/ipa@1.5.6(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@constl/mandataire@3.0.3)(@constl/serveur@2.1.4(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(electron@33.2.1)':
+  '@constl/mandataire-electron-principal@3.1.0(@constl/ipa@1.5.6(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@constl/mandataire@3.0.3)(@constl/serveur@2.1.4(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(electron@33.3.2)':
     dependencies:
       '@constl/ipa': 1.5.6(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
       '@constl/mandataire': 3.0.3
       '@constl/serveur': 2.1.4(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
-      electron: 33.2.1
+      electron: 33.3.2
       lodash: 4.17.21
       semaphore-async-await: 1.5.1
       tslib: 2.8.1
@@ -11585,7 +11585,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@33.2.1:
+  electron@33.3.2:
     dependencies:
       '@electron/get': 2.0.3
       '@types/node': 20.17.13
