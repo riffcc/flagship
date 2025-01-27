@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-latest, ubuntu-latest, macos-latest ]
+        os: [ windows-latest, ubuntu-22.04, macos-latest ]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
@@ -36,10 +36,10 @@ jobs:
       # I ran into problems trying to run an electron window in ubuntu due to a missing graphics server.
       # That's why this special command for Ubuntu is here
       - run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" -- pnpm test:e2e
-        if: matrix.os == 'ubuntu-latest'
+        if: contains(matrix.os, 'ubuntu')
 
       - run: pnpm test:e2e
-        if: matrix.os != 'ubuntu-latest'
+        if: "!contains(matrix.os, 'ubuntu')"
 
       # Publish test converage
       - name: Send coverage to CodeCov
