@@ -168,15 +168,21 @@
       block
       text="Submit"
       :disabled="!readyToSave"
-      :loading="loading"
+      :is-loading="isLoading"
     />
   </v-form>
+  <v-alert
+    v-if="resultDetails"
+    class="mt-2"
+    :text="resultDetails.message"
+    :type="resultDetails.variant"
+  />
 </template>
 
 <script setup lang="ts">
 import {consts, type types} from '@riffcc/orbiter';
 import {cid} from 'is-ipfs';
-import {computed, ref} from 'vue';
+import {computed, ref, watch} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 // import convert from 'image-file-resize';
 
@@ -199,7 +205,11 @@ const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
   isValidCid: (v: string) => cid(v) || 'Please enter a valid CID.',
 };
-const loading = ref(false);
+const isLoading = ref(false);
+const resultDetails = ref<{
+  message: string;
+  variant: 'success' | 'error'
+} | null>(null);
 const readyToSave = computed(() => {
   if (
     contentCID.value &&
@@ -235,28 +245,40 @@ const readyToSave = computed(() => {
 
 const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
-  loading.value = true;
-  console.log('ON SUBMIT');
-  const {
-    contentCIDValue,
-    authorValue,
-    metadataValue,
-    releaseNameValue,
-    releaseCategoryValue,
-    coverCIDValue,
-  } = readyToSave.value;
-  await orbiter.addRelease({
-    [consts.RELEASES_AUTHOR_COLUMN]: authorValue,
-    [consts.RELEASES_CATEGORY_COLUMN]: releaseCategoryValue,
-    [consts.RELEASES_FILE_COLUMN]: contentCIDValue,
-    [consts.RELEASES_METADATA_COLUMN]: JSON.stringify(metadataValue),
-    [consts.RELEASES_NAME_COLUMN]: releaseNameValue,
-    [consts.RELEASES_THUMBNAIL_COLUMN]: thumbnailCID.value,
-    [consts.RELEASES_STATUS_COLUMN]: 'pending',
-    [consts.RELEASES_COVER_COLUMN]: coverCIDValue,
-  });
-  clearForm();
-  loading.value = false;
+  isLoading.value = true;
+  try {
+    const {
+      contentCIDValue,
+      authorValue,
+      metadataValue,
+      releaseNameValue,
+      releaseCategoryValue,
+      coverCIDValue,
+    } = readyToSave.value;
+    await orbiter.addRelease({
+      [consts.RELEASES_AUTHOR_COLUMN]: authorValue,
+      [consts.RELEASES_CATEGORY_COLUMN]: releaseCategoryValue,
+      [consts.RELEASES_FILE_COLUMN]: contentCIDValue,
+      [consts.RELEASES_METADATA_COLUMN]: JSON.stringify(metadataValue),
+      [consts.RELEASES_NAME_COLUMN]: releaseNameValue,
+      [consts.RELEASES_THUMBNAIL_COLUMN]: thumbnailCID.value,
+      [consts.RELEASES_STATUS_COLUMN]: 'pending',
+      [consts.RELEASES_COVER_COLUMN]: coverCIDValue,
+    });
+    resultDetails.value = {
+      message: 'Release uploaded successfully, yay!',
+      variant: 'success',
+    };
+    clearForm();
+  } catch (error) {
+    console.log('error uploading release', error);
+    resultDetails.value = {
+      message: 'Error uploading release. Please try again later.',
+      variant: 'error',
+    };
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 const clearForm = () => {
@@ -271,6 +293,14 @@ const clearForm = () => {
   musicReleaseMetadata.value = {};
   movieReleaseMetadata.value = {};
 };
+
+watch(resultDetails, (v) => {
+  if (v) {
+    setTimeout(() => {
+      resultDetails.value = null;
+    }, 10000);
+  }
+});
 
 const licenseTypes = ['CC BY', 'CC BY-NC', 'CC BY-NC-ND'];
 
