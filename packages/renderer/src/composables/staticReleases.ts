@@ -2,21 +2,23 @@ import {ref, type Ref} from 'vue';
 
 export type ItemStatus = 'pending' | 'approved' | 'rejected' | 'deleted';
 
+export interface ItemMetadata {
+  author?: string;
+  classification?: string;
+  description?: string;
+  duration?: string;
+  releaseYear?: number | string;
+  seasons?: number | string;
+  songs?: number;
+}
+
 export interface ItemContent {
   id: string;
   category: string;
   contentCID: string;
   cover?: string;
   name: string;
-  metadata?: {
-    author?: string;
-    classification?: string;
-    description?: string;
-    duration?: string;
-    releaseYear?: number | string;
-    seasons?: number | string;
-    songs?: number;
-  };
+  metadata?: ItemMetadata;
   sourceSite: string;
   status: ItemStatus;
   thumbnail: string;
