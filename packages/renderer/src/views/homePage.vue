@@ -130,7 +130,7 @@ import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import InitiateModDBs from '/@/components/initiateModDBs.vue';
 import {useDevStatus} from '/@/composables/devStatus';
-import type {FeaturedItem, ItemContent} from '/@/composables/staticReleases';
+import type {FeaturedItem, ItemContent, ItemMetadata} from '/@/composables/staticReleases';
 import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { filterActivedFeature } from '/@/utils';
@@ -142,19 +142,36 @@ const {status} = useDevStatus();
 const {staticFeaturedReleases, staticReleases} = useStaticReleases();
 
 const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
+const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
 
-const featuredReleases = computed<Array<FeaturedItem>>(() => {
+const releases = computed<ItemContent[]>(() => {
+  if (status.value === 'static') return staticReleases.value;
+  else {
+    return (orbiterReleases.value || []).map((r) => {
+      return {
+        id: r.release.id,
+        category: r.release.release.category,
+        contentCID: r.release.release.file,
+        name: r.release.release.contentName,
+        metadata: JSON.parse(r.release.release.metadata as string) as ItemMetadata,
+        thumbnail: r.release.release.thumbnail,
+        sourceSite: r.site,
+        status: r.release.release.status,
+        cover: r.release.release.cover,
+      };
+    }) as ItemContent[];
+  }
+});
 
-  // Note : this is a quick hack. We are using all releases from Orbiter as "featured releases".
-  // TODO: Add option for featuring releases, and then modify below to show only these
+const featuredReleases = computed<FeaturedItem[]>(() => {
   if (status.value === 'static') return staticFeaturedReleases.value.filter(fr => filterActivedFeature(fr));
   else {
-    return (orbiterReleases.value || []).map((r): FeaturedItem => {
+    return (orbiterFeaturedReleases.value || []).map((fr): FeaturedItem => {
       return {
-        id: (staticFeaturedReleases.value.length + 1).toString(),
-        releaseId: r.release.id,
-        startTime: '2025-01-01T00:00',
-        endTime: '2026-01-01T00:00',
+        id: fr.id,
+        releaseId: fr.featured.releaseId,
+        startTime: fr.featured.startTime,
+        endTime: fr.featured.endTime,
       };
     }).filter(fr => filterActivedFeature(fr));
   }
@@ -205,7 +222,7 @@ function categorizeItems(items: ItemContent[], limit: number = 8) {
   return result;
 }
 
-const categorizedStaticReleases = computed(() => categorizeItems(staticReleases.value));
+const categorizedStaticReleases = computed(() => categorizeItems(status.value === 'static' ? staticReleases.value : releases.value));
 </script>
 <!--
       {

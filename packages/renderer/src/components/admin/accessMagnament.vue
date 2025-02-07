@@ -11,7 +11,11 @@
           max-width="448px"
         >
           <h6 class="text-h6 font-weight-bold mb-4">New Admin</h6>
-          <v-form @submit="handleOnSubmit">
+          <v-form
+            ref="formRef"
+            validate-on="input lazy"
+            @submit.prevent="handleOnSubmit"
+          >
             <v-text-field
               v-model="newAdmin.id"
               label="ID"
@@ -26,6 +30,8 @@
               color="primary"
               type="submit"
               text="Add"
+              :loading="isLoading"
+              :disabled="isLoading || !readyToSave"
               block
             >
             </v-btn>
@@ -85,10 +91,9 @@
 </template>
 
 <script setup lang="ts">
-import { type Ref, ref } from 'vue';
-import type { SubmitEventPromise } from 'vuetify';
-import { isValidEmail } from '/@/utils';
+import { computed, type Ref, ref } from 'vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
+import { useOrbiter } from '/@/plugins/orbiter/utils';
 type Admin = {
   id: string;
   super: boolean;
@@ -105,22 +110,38 @@ const newAdmin: Ref<Admin> = ref({
 
 const rules = [
   (v: string) => Boolean(v) || 'Required field.',
-  (v: string) => isValidEmail(v) || 'Please enter a valid email.',
-  (v: string) => !adminList.value.map(a => a.id).includes(v) || 'Email already registered as Admin.',
+  (v: string) => !adminList.value.map(a => a.id).includes(v) || 'User already registered as Admin.',
 ];
 
-function handleOnSubmit(e: SubmitEventPromise){
-  e.preventDefault();
-  e.then(result => {
-    if (result.valid) {
-      adminList.value.push(newAdmin.value);
-      newAdmin.value = {
-        id: '',
-        super: false,
-      };
-    }
-  });
-}
+const formRef = ref();
+const isLoading = ref(false);
+const {orbiter} = useOrbiter();
+const readyToSave = computed(() => {
+  if (newAdmin.value.id && formRef.value.isValid) {
+    return {
+      newAdminId: newAdmin.value.id,
+      newAdminSuper: newAdmin.value.super,
+    };
+  } else return undefined;
+});
+
+const handleOnSubmit = async () => {
+  if (!readyToSave.value) return;
+  console.log('adding new admin');
+  isLoading.value = true;
+  try {
+    await orbiter.inviteModerator({
+      userId: readyToSave.value.newAdminId,
+      admin: readyToSave.value.newAdminSuper,
+    });
+    console.log('admin added succesfully');
+
+  } catch (error) {
+    console.log('error on adding admin', error);
+  } finally {
+  isLoading.value = false;
+  }
+};
 const confirmDeleteAdminDialog = ref(false);
 
 function confirmDeleteAdmin(id: string){
