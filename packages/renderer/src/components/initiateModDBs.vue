@@ -103,12 +103,12 @@ const generatingEnvFile = ref<boolean>(false);
 const generateDb = async () => {
   generatingDb.value = true;
 
-  const {siteId, variableIds} = await orbiter.setUpSite();
+  const {siteId, swarmId, variableIds} = await orbiter.setUpSite();
 
   // For now, only admins can add content.
-  await orbiter.makeSitePrivate();
+  // await orbiter.makeSitePrivate();
 
-  const {swarmId} = await orbiter.orbiterConfig();
+  // const {swarmId} = await orbiter.orbiterConfig();
 
   generatedSiteId.value = siteId;
   generatedVariableIds.value = variableIds;
