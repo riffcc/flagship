@@ -6,7 +6,6 @@ import AboutPage from '/@/views/aboutPage.vue';
 import AccountPage from '/@/views/accountPage.vue';
 import BuildingPage from '/@/views/buildingPage.vue';
 import HomePage from '/@/views/homePage.vue';
-import InitPage from '/@/views/initPage.vue';
 import PrivacyPolicyPage from '/@/views/privacyPolicyPage.vue';
 import ReleasePage from '/@/views/releasePage.vue';
 import TermsPage from '/@/views/termsPage.vue';
@@ -26,11 +25,6 @@ const routes: Array<RouteRecordRaw> = [
     path: '/upload',
     name: 'Upload',
     component: UploadPage,
-  },
-  {
-    path: '/init',
-    name: 'Create Website',
-    component: InitPage,
   },
   {
     path: '/admin',

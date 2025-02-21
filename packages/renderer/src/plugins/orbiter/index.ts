@@ -1,25 +1,24 @@
 import type {types as orbiterTypes} from '@riffcc/orbiter';
 import {Orbiter} from '@riffcc/orbiter';
 import type {App} from 'vue';
-import {loadStubData} from './dev/index.js';
+import {configIsComplete} from '@riffcc/orbiter/dist/config.js';
 export default {
   install: (app: App) => {
-    const variableIds = getVariableIds();
-    const constellation = app.config.globalProperties.$constl;
-
-    const orbiterApp = new Orbiter({
-      constellation,
-      siteId: variableIds ? import.meta.env.VITE_SITE_ID : undefined,
-      swarmId: variableIds ? import.meta.env.VITE_SWARM_ID : undefined,
-      variableIds,
-    });
-
-    app.config.globalProperties.$orbiter = orbiterApp;
-
-    if (import.meta.env.VITE_STUB_DATA) {
-      loadStubData(orbiterApp);
+    const orbiterConfig = {
+      siteId: import.meta.env.VITE_SITE_ID,
+      swarmId: import.meta.env.VITE_SWARM_ID,
+      variableIds: getVariableIds(),
+    };
+    let orbiterApp: Orbiter | undefined = undefined;
+    if (configIsComplete(orbiterConfig)) {
+      const constellation = app.config.globalProperties.$constl;
+      orbiterApp = new Orbiter({
+        constellation,
+        ...orbiterConfig,
+      });
     }
 
+    app.config.globalProperties.$orbiter = orbiterApp;
     app.provide('orbiter', orbiterApp);
   },
 };

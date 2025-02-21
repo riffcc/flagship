@@ -1,6 +1,5 @@
 <template>
   <v-container class="fill-height pb-12">
-    <InitiateModDBs />
     <featured-slider
       v-if="featuredReleases.length > 0"
       :featured-list="featuredReleases"
@@ -128,7 +127,6 @@ import {suivre as follow} from '@constl/vue';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
-import InitiateModDBs from '/@/components/initiateModDBs.vue';
 import {useDevStatus} from '/@/composables/devStatus';
 import type {FeaturedItem, ItemContent, ItemMetadata} from '/@/composables/staticReleases';
 import {useStaticReleases} from '/@/composables/staticReleases';

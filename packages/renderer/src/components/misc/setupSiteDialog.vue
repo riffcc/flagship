@@ -1,6 +1,6 @@
 <template>
   <v-dialog
-    v-model="dialog"
+    :model-value="true"
     persistent
     max-width="800"
   >
@@ -42,14 +42,14 @@
         >
           Configure site
         </v-btn>
-        <v-btn
+        <!-- <v-btn
           color="primary mx-auto"
           variant="outlined"
           prepend-icon="mdi-exit"
           @click="() => (status = 'static')"
         >
           View in dev (static data) mode
-        </v-btn>
+        </v-btn> -->
       </v-card-actions>
       <v-card-actions v-else>
         <v-spacer />
@@ -75,23 +75,14 @@
 
 <script setup lang="ts">
 import type {types as orbiterTypes} from '@riffcc/orbiter';
+import {setUpSite} from '@riffcc/orbiter';
+import type { Constellation } from '@constl/ipa';
 
-import {computed, ref} from 'vue';
+import {computed, inject, ref} from 'vue';
 
-import {suivre as follow} from '@constl/vue';
 import {constantCase} from 'change-case';
 import {saveAs} from 'file-saver';
-import {useDevStatus} from '../composables/devStatus';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
 
-const {orbiter} = useOrbiter();
-const {status} = useDevStatus();
-
-const siteConfigured = follow(({f}) => orbiter.listenForSiteConfigured({f}));
-const siteNotConfigured = computed(() => siteConfigured.value === false);
-
-const staticDevMode = computed(() => status.value === 'static');
-const dialog = computed(() => siteNotConfigured.value && !staticDevMode.value);
 
 const generatingDb = ref<boolean>(false);
 const generatedSiteId = ref<string>();
@@ -99,17 +90,11 @@ const generatedSwarmId = ref<string>();
 const generatedVariableIds = ref<orbiterTypes.VariableIds>();
 
 const generatingEnvFile = ref<boolean>(false);
-
+const constellation = inject<Constellation>('constl');
 const generateDb = async () => {
+  if (!constellation) return;
   generatingDb.value = true;
-
-  const {siteId, swarmId, variableIds} = await orbiter.setUpSite();
-
-  // For now, only admins can add content.
-  // await orbiter.makeSitePrivate();
-
-  // const {swarmId} = await orbiter.orbiterConfig();
-
+  const {siteId, swarmId, variableIds} = await setUpSite({ constellation });
   generatedSiteId.value = siteId;
   generatedVariableIds.value = variableIds;
   generatedSwarmId.value = swarmId;
