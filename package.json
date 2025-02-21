@@ -37,7 +37,7 @@
     "format": "npx prettier --write \"**/*.{js,mjs,cjs,ts,mts,cts,vue,json}\""
   },
   "devDependencies": {
-    "@constl/utils-tests": "^1.6.7",
+    "@constl/utils-tests": "^1.6.13",
     "@eslint/js": "^9.19.0",
     "@mdi/font": "^7.4.47",
     "@rollup/plugin-node-resolve": "^15.3.1",
@@ -77,17 +77,17 @@
     "vue-tsc": "2.1.10"
   },
   "dependencies": {
-    "@constl/ipa": "1.5.6",
+    "@constl/ipa": "^1.5.15",
     "@constl/mandataire": "^3.0.3",
-    "@constl/mandataire-electron-principal": "^3.1.0",
-    "@constl/mandataire-electron-rendu": "^3.1.0",
-    "@constl/serveur": "^2.1.4",
+    "@constl/mandataire-electron-principal": "^3.1.3",
+    "@constl/mandataire-electron-rendu": "^3.1.3",
+    "@constl/serveur": "^2.1.7",
     "@constl/utils-ipa": "^1.0.4",
     "@constl/vue": "^1.0.4",
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@ffmpeg/core": "^0.9.0",
     "@ffmpeg/ffmpeg": "^0.9.8",
-    "@riffcc/orbiter": "^0.1.4",
+    "@riffcc/orbiter": "^0.1.5",
     "@vueuse/core": "^12.5.0",
     "ajv": "^8.17.1",
     "assert": "^2.1.0",
@@ -95,7 +95,7 @@
     "core-js": "^3.40.0",
     "crypto-browserify": "^3.12.1",
     "electron-updater": "6.3.9",
-    "ennikkai": "^2.3.2",
+    "ennikkai": "^2.3.4",
     "events": "^3.3.0",
     "file-saver": "^2.0.5",
     "hls.js": "^1.5.20",
@@ -119,7 +119,9 @@
     "overrides": {
       "node-datachannel": "^0.20.0",
       "@libp2p/autonat": "2.0.10",
-      "node-gyp": "^10.2.0"
+      "node-gyp": "^10.2.0",
+      "@constl/ipa": "^1.5.15",
+      "@orbitdb/core": "2.4.4-3d41ab5.0"
     }
   }
 }
