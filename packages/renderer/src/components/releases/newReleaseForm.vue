@@ -17,7 +17,7 @@
     />
     <v-select
       v-model="releaseCategory"
-      :items="orbiter.contentCategories"
+      :items="consts.CONTENT_CATEGORIES"
       :rules="[rules.required]"
       label="Category"
     />

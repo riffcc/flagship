@@ -97,7 +97,7 @@
           <v-select
             v-model="editedRelease.category"
             label="Category"
-            :items="orbiter.contentCategories"
+            :items="consts.CONTENT_CATEGORIES"
             variant="solo"
           ></v-select>
           <v-text-field
@@ -142,7 +142,7 @@
 <script setup lang="ts">
 import {computed, ref, type Ref} from 'vue';
 import {suivre as follow} from '@constl/vue';
-
+import {consts} from '@riffcc/orbiter';
 import {useDisplay} from 'vuetify';
 import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
