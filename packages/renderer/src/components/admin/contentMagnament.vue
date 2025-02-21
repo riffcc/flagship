@@ -71,14 +71,14 @@
           </v-icon>
         </div>
       </template>
-      <template #item.status="{item}">
+      <!-- <template #item.status="{item}">
         <v-chip
           :color="getStatusColor(item.status)"
           class="text-uppercase text-caption"
         >
           {{ item.status }}
         </v-chip>
-      </template>
+      </template> -->
     </v-data-table>
     <v-dialog
       v-model="editReleaseDialog"
@@ -104,12 +104,12 @@
             v-model="editedRelease.contentCid"
             label="Content CID"
           ></v-text-field>
-          <v-select
+          <!-- <v-select
             v-model="editedRelease.status"
             label="Status"
             :items="orbiter.statusType.filter(s => s !== 'deleted')"
             variant="solo"
-          ></v-select>
+          ></v-select> -->
         </v-card-text>
 
         <v-card-actions>
@@ -144,9 +144,9 @@ import {computed, ref, type Ref} from 'vue';
 import {suivre as follow} from '@constl/vue';
 
 import {useDisplay} from 'vuetify';
-import {useStaticReleases, type ItemStatus} from '/@/composables/staticReleases';
+import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
-import { getStatusColor } from '/@/utils';
+// import { getStatusColor } from '/@/utils';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { useDevStatus } from '/@/composables/devStatus';
 
@@ -179,32 +179,32 @@ const tableHeaders: Header[] = [
   {title: 'Name', align: 'start', key: 'name'},
   {title: 'Category', align: 'start', key: 'category'},
   {title: 'Content CID', align: 'start', key: 'contentCid'},
-  {title: 'Status', align: 'start', key: 'status'},
+  // {title: 'Status', align: 'start', key: 'status'},
   {title: 'Actions', key: 'actions', sortable: false},
 ];
 
 const tableItems = computed(() => {
   if (status.value === 'static') {
     return staticReleases.value
-    .filter(r => r.status !== 'deleted')
+    // .filter(r => r.status !== 'deleted')
     .map(r => ({
       id: r.id,
       thumbnail: r.thumbnail,
       name: r.name,
       category: r.category,
       contentCid: r.contentCID,
-      status: r.status,
+      // status: r.status,
     }));
   } else {
     return (orbiterReleases.value || [])
-    .filter(r => r.release.release.status !== 'deleted')
+    // .filter(r => r.release.release.status !== 'deleted')
     .map(r => ({
       id: r.release.id,
       thumbnail: r.release.release.thumbnail,
       name: r.release.release.contentName,
       category: r.release.release.category,
       contentCid: r.release.release.file,
-      status: r.release.release.status as ItemStatus,
+      // status: r.release.release.status as ItemStatus,
     }));
   }
 });
@@ -214,13 +214,13 @@ const editedRelease: Ref<{
   name: string;
   category: string;
   contentCid: string;
-  status: ItemStatus;
+  // status: ItemStatus;
 }> = ref({
   id: '',
   name: '',
   category: '',
   contentCid: '',
-  status: 'pending',
+  // status: 'pending',
 });
 const editReleaseDialog = ref(false);
 const confirmDeleteReleaseDialog = ref(false);
@@ -249,7 +249,7 @@ async function saveRelease() {
           contentName: editedRelease.value.name,
           category: editedRelease.value.category,
           file: editedRelease.value.contentCid,
-          status: editedRelease.value.status,
+          // status: editedRelease.value.status,
         },
       });
       editReleaseDialog.value = false;
@@ -267,7 +267,7 @@ function deleteRelease(id: string) {
     name: '',
     category: '',
     contentCid: '',
-    status: 'deleted',
+    // status: 'deleted',
   };
   confirmDeleteReleaseDialog.value = true;
 }
@@ -292,7 +292,7 @@ async function confirmDeleteRelease() {
           contentName: editedRelease.value.name,
           category: editedRelease.value.category,
           file: editedRelease.value.contentCid,
-          status: editedRelease.value.status,
+          // status: editedRelease.value.status,
         },
       });
       editReleaseDialog.value = false;
@@ -314,7 +314,7 @@ function editRelease(id: string) {
         name: targetRelease.name,
         category: targetRelease.category,
         contentCid: targetRelease.contentCID,
-        status: targetRelease.status,
+        // status: targetRelease.status,
       };
     }
   } else {
@@ -325,7 +325,7 @@ function editRelease(id: string) {
         name: targetRelease.release.release.contentName,
         category: targetRelease.release.release.category,
         contentCid: targetRelease.release.release.file,
-        status: targetRelease.release.release.status as ItemStatus,
+        // status: targetRelease.release.release.status as ItemStatus,
       };
     }
   }

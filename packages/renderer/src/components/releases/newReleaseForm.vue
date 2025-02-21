@@ -262,7 +262,6 @@ const handleOnSubmit = async () => {
       [consts.RELEASES_METADATA_COLUMN]: JSON.stringify(metadataValue),
       [consts.RELEASES_NAME_COLUMN]: releaseNameValue,
       [consts.RELEASES_THUMBNAIL_COLUMN]: thumbnailCID.value,
-      [consts.RELEASES_STATUS_COLUMN]: 'pending',
       [consts.RELEASES_COVER_COLUMN]: coverCIDValue,
     });
     resultDetails.value = {

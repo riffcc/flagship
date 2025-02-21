@@ -1,6 +1,6 @@
 import {ref, type Ref} from 'vue';
 
-export type ItemStatus = 'pending' | 'approved' | 'rejected' | 'deleted';
+// export type ItemStatus = 'pending' | 'approved' | 'rejected' | 'deleted';
 
 export interface ItemMetadata {
   author?: string;
@@ -20,7 +20,7 @@ export interface ItemContent {
   name: string;
   metadata?: ItemMetadata;
   sourceSite: string;
-  status: ItemStatus;
+  // status: ItemStatus;
   thumbnail: string;
 }
 
@@ -68,7 +68,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       seasons: 1,
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/tvshow-purepwnage.png',
   },
   {
@@ -80,7 +80,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       seasons: 2,
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/tvshow-pioneerone.png',
   },
   {
@@ -92,7 +92,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       seasons: 1,
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/tvshow-flashgordon.png',
   },
   {
@@ -104,7 +104,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       seasons: '~1.6',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/tvshow-beverleyhillbillies.png',
   },
   {
@@ -121,7 +121,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       releaseYear: '2008',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/movie-rip-poster.png',
   },
   {
@@ -133,7 +133,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     },
     contentCID: 'QmQ5mZFnruyqA4tzwguKJ9e4wLigokE2pQE3e99u3YK8vg',
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/music-letskickfire.jpg',
   },
   {
@@ -162,7 +162,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       author: 'Nine Inch Nails',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/music-theslip.jpg',
   },
   {
@@ -174,7 +174,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       author: 'Radiohead',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/music-inrainbows.jpg',
   },
   {
@@ -191,7 +191,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       releaseYear: '2014',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/movie-aaronsw.jpg',
   },
   {
@@ -221,7 +221,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     },
     thumbnail: '/mock/movie-cosmoslaundromat.webp',
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
   },
   {
     id: '13',
@@ -233,7 +233,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     },
     thumbnail: '/mock/music-ghosts-i-iv.png',
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
   },
   {
     id: '14',
@@ -245,7 +245,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     },
     thumbnail: '/mock/movie-nightofthelivingdead.webp',
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
   },
   {
     id: '15',
@@ -256,7 +256,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       author: 'Girl Talk',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/music-allday.png',
   },
   {
@@ -268,7 +268,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       author: 'paniq',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/music-storyofohm.png',
   },
   {
@@ -280,7 +280,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       author: 'OK! Crazy Fiction Lady',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/music-byebyefishies.png',
   },
   {
@@ -293,7 +293,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       releaseYear: 2006,
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/music-everythingyoushouldknow.jpg',
   },
   {
@@ -305,7 +305,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       author: 'OK! Crazy Fiction Lady',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/music-okcfl.png',
   },
   {
@@ -317,7 +317,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       author: 'paniq',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/music-paniq-bgae.jpg',
   },
   {
@@ -329,7 +329,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       author: 'Brad Sucks',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/music-guesswhosamess.webp',
   },
   {
@@ -341,7 +341,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
       author: 'Swear and Shake',
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
-    status: 'approved',
+    // status: 'approved',
     thumbnail: '/mock/music-swearandshake-extendedplay.webp',
   },
 ]);

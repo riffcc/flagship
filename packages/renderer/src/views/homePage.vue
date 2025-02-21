@@ -156,7 +156,6 @@ const releases = computed<ItemContent[]>(() => {
         metadata: JSON.parse(r.release.release.metadata as string) as ItemMetadata,
         thumbnail: r.release.release.thumbnail,
         sourceSite: r.site,
-        status: r.release.release.status,
         cover: r.release.release.cover,
       };
     }) as ItemContent[];
@@ -190,8 +189,7 @@ function categorizeItems(items: ItemContent[], limit: number = 8) {
   function addToCategory(targetArray: ItemContent[], item: ItemContent, categoryLimit: number) {
     if (
       targetArray.length < categoryLimit &&
-      !addedItems.has(item.id) &&
-      item.status === 'approved'
+      !addedItems.has(item.id)
     ) {
       targetArray.push(item);
       addedItems.add(item.id);

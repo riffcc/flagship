@@ -41,7 +41,6 @@ export const loadStubData = async (app: Orbiter) => {
     [consts.RELEASES_FILE_COLUMN]: audioCid,
     [consts.RELEASES_METADATA_COLUMN]: 'With an open-access licence, of course.',
     [consts.RELEASES_CATEGORY_COLUMN]: 'audio',
-    [consts.RELEASES_STATUS_COLUMN]: 'pending',
     [consts.RELEASES_COVER_COLUMN]: 'todo',
   });
 };

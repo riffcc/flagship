@@ -45,7 +45,7 @@
 import { useRouter } from 'vue-router';
 import albumViewer from '/@/components/releases/albumViewer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
-import type { ItemMetadata, ItemStatus, ItemContent} from '/@/composables/staticReleases';
+import type { ItemMetadata, ItemContent} from '/@/composables/staticReleases';
 import { useStaticReleases } from '/@/composables/staticReleases';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useDevStatus } from '/@/composables/devStatus';
@@ -76,7 +76,7 @@ const targetRelease = computed(() => {
         metadata: JSON.parse(otr.release.release.metadata as string) as ItemMetadata,
         thumbnail: otr.release.release.thumbnail as string,
         sourceSite: otr.site,
-        status: otr.release.release.status as ItemStatus,
+        // status: otr.release.release.status as ItemStatus,
         cover: otr.release.release.cover,
       };
     }
