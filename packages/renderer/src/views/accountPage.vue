@@ -63,8 +63,8 @@ const deviceId = obt(orbiter.constellation.obtIdDispositif);
 const userAvatar = useUserProfilePhoto(accountId.value);
 
 // Account status
-const moderator = follow(orbiter.followIsModerator.bind(orbiter), { userId: deviceId });
-const canUpload = follow(orbiter.followCanUpload.bind(orbiter), { userId: deviceId });
+const moderator = follow(orbiter.followIsModerator.bind(orbiter));
+const canUpload = follow(orbiter.followCanUpload.bind(orbiter));
 const accountStatus = computed(()=>{
   return moderator.value || (canUpload.value ? 'MEMBER' : 'GUEST');
 });
