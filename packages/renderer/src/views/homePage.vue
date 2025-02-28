@@ -1,6 +1,6 @@
 <template>
   <v-container class="fill-height pb-12">
-    <div v-if="featuredReleases.length > 0 && releases.length > 0">
+    <div v-if="featuredReleases.length > 0 || releases.length > 0">
       <featured-slider
         v-if="featuredReleases.length > 0"
         :featured-list="featuredReleases"
