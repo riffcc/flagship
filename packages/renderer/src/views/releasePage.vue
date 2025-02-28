@@ -48,7 +48,7 @@ import videoPlayer from '/@/components/releases/videoPlayer.vue';
 import type { ItemMetadata, ItemContent} from '/@/composables/staticReleases';
 import { useStaticReleases } from '/@/composables/staticReleases';
 import { computed, onMounted, ref, watch } from 'vue';
-import { useDevStatus } from '/@/composables/devStatus';
+import { useStaticStatus } from '../composables/staticStatus';
 import {suivre as follow} from '@constl/vue';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
 
@@ -57,13 +57,13 @@ const props = defineProps<{
   id: string;
 }>();
 const router = useRouter();
-const {status} = useDevStatus();
+const {staticStatus} = useStaticStatus();
 const { staticReleases } = useStaticReleases();
 const {orbiter} = useOrbiter();
 const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
 const targetRelease = computed(() => {
   let _targetRelease: ItemContent | undefined = undefined;
-  if (status.value === 'static') {
+  if (staticStatus.value === 'static') {
     _targetRelease = staticReleases.value.find(r => r.id === props.id);
   } else {
     const otr = orbiterReleases.value?.find(r => r.release.id === props.id);

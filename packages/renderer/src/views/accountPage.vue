@@ -33,7 +33,7 @@ import {selectTranslation} from '/@/utils';
 
 import {suivre as follow, obt} from '@constl/vue';
 import {useUserProfilePhoto} from '/@/components/users/utils';
-import {useDevStatus} from '/@/composables/devStatus';
+import {useStaticStatus} from '../composables/staticStatus';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 
 const {orbiter} = useOrbiter();
@@ -46,13 +46,13 @@ const displayName = computed(() => {
 });
 
 // Dev static mode
-const {status} = useDevStatus();
-const staticModeSwitch = ref(status.value === 'static');
+const {staticStatus} = useStaticStatus();
+const staticModeSwitch = ref(staticStatus.value === 'static');
 watchEffect(() => {
-  status.value = staticModeSwitch.value ? 'static' : 'live';
+  staticStatus.value = staticModeSwitch.value ? 'static' : 'live';
 });
 watchEffect(() => {
-  staticModeSwitch.value = status.value === 'static';
+  staticModeSwitch.value = staticStatus.value === 'static';
 });
 
 // Account id

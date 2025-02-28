@@ -127,7 +127,7 @@ import {suivre as follow} from '@constl/vue';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
-import {useDevStatus} from '/@/composables/devStatus';
+import {useStaticStatus} from '../composables/staticStatus';
 import type {FeaturedItem, ItemContent, ItemMetadata} from '/@/composables/staticReleases';
 import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
@@ -136,14 +136,14 @@ import { filterActivedFeature } from '/@/utils';
 const router = useRouter();
 const {xs} = useDisplay();
 const {orbiter} = useOrbiter();
-const {status} = useDevStatus();
+const {staticStatus} = useStaticStatus();
 const {staticFeaturedReleases, staticReleases} = useStaticReleases();
 
 const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
 const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
 
 const releases = computed<ItemContent[]>(() => {
-  if (status.value === 'static') return staticReleases.value;
+  if (staticStatus.value === 'static') return staticReleases.value;
   else {
     return (orbiterReleases.value || []).map((r) => {
       return {
@@ -161,7 +161,7 @@ const releases = computed<ItemContent[]>(() => {
 });
 
 const featuredReleases = computed<FeaturedItem[]>(() => {
-  if (status.value === 'static') return staticFeaturedReleases.value.filter(fr => filterActivedFeature(fr));
+  if (staticStatus.value === 'static') return staticFeaturedReleases.value.filter(fr => filterActivedFeature(fr));
   else {
     return (orbiterFeaturedReleases.value || []).map((fr): FeaturedItem => {
       return {
@@ -218,7 +218,7 @@ function categorizeItems(items: ItemContent[], limit: number = 8) {
   return result;
 }
 
-const categorizedStaticReleases = computed(() => categorizeItems(status.value === 'static' ? staticReleases.value : releases.value));
+const categorizedStaticReleases = computed(() => categorizeItems(staticStatus.value === 'static' ? staticReleases.value : releases.value));
 </script>
 <!--
       {

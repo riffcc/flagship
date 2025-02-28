@@ -148,9 +148,9 @@ import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 // import { getStatusColor } from '/@/utils';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import { useDevStatus } from '/@/composables/devStatus';
+import { useStaticStatus } from '../../composables/staticStatus';
 
-const {status} = useDevStatus();
+const {staticStatus} = useStaticStatus();
 const {lgAndUp, smAndDown} = useDisplay();
 const {orbiter} = useOrbiter();
 const {staticReleases} = useStaticReleases();
@@ -184,7 +184,7 @@ const tableHeaders: Header[] = [
 ];
 
 const tableItems = computed(() => {
-  if (status.value === 'static') {
+  if (staticStatus.value === 'static') {
     return staticReleases.value
     // .filter(r => r.status !== 'deleted')
     .map(r => ({
@@ -230,7 +230,7 @@ isSavingLoading.value = true;
 
 
 async function saveRelease() {
-  if (status.value === 'static') {
+  if (staticStatus.value === 'static') {
     const targetReleaseIndex = staticReleases.value.findIndex(
       r => r.id == editedRelease.value.id,
     );
@@ -273,7 +273,7 @@ function deleteRelease(id: string) {
 }
 
 async function confirmDeleteRelease() {
-  if (status.value === 'static') {
+  if (staticStatus.value === 'static') {
     const targetReleaseIndex = staticReleases.value.findIndex(
       r => r.id == editedRelease.value.id,
     );
@@ -306,7 +306,7 @@ async function confirmDeleteRelease() {
 }
 
 function editRelease(id: string) {
-  if (status.value === 'static') {
+  if (staticStatus.value === 'static') {
     const targetRelease =  staticReleases.value.find(r => r.id == id);
     if (targetRelease) {
       editedRelease.value = {
