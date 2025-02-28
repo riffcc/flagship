@@ -13,10 +13,13 @@
     />
     <h1>Account info</h1>
     <p>
-      Account id: {{ accountId }}
+      Account ID: {{ accountId }}
     </p>
     <p>
-      Device id: {{ deviceId }}
+      Device ID: {{ deviceId }}
+    </p>
+    <p>
+      Peer ID: {{ peerId }}
     </p>
     <p>
       Account status: {{ accountStatus }} ({{ statusExplanation }})
@@ -58,6 +61,7 @@ watchEffect(() => {
 // Account id
 const accountId = follow(orbiter.constellation.suivreIdCompte);
 const deviceId = obt(orbiter.constellation.obtIdDispositif);
+const peerId = obt(orbiter.constellation.obtIdSFIP);
 
 // User avatar
 const userAvatar = useUserProfilePhoto(accountId.value);
