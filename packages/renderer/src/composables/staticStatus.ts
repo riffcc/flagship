@@ -2,7 +2,7 @@ import {readonly, ref, watch, type Ref} from 'vue';
 
 export type StaticStatusTypes = 'static' | 'live';
 
-const staticStatus = ref<StaticStatusTypes>('static');
+const staticStatus = ref<StaticStatusTypes>(import.meta.env.VITE_STATIC_MODE ? 'static' : 'live');
 
 const alreadyChanged = ref(false);
 
