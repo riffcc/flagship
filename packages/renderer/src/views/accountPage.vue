@@ -28,6 +28,15 @@
     <p>
       You are currently connected to {{ ipfsConnections?.length || 0 }} IPFS nodes, including {{ nOrbiterDevices }} user devices from {{ nOrbiterAccounts }} Orbiter accounts.
     </p>
+    <v-sheet
+      v-if="debug"
+      class="d-flex flex-column flex-sm-row ga-2 mx-auto mt-4 justify-center"
+      color="transparent"
+    >
+      <v-btn @click="logPeers">log peers</v-btn>
+      <v-btn @click="logTopics">log topics</v-btn>
+      <v-btn @click="logConnections">log connections</v-btn>
+    </v-sheet>
   </v-container>
 </template>
 <script setup lang="ts">
@@ -50,6 +59,8 @@ const displayName = computed(() => {
 
 // Dev static mode
 const {staticStatus} = useStaticStatus();
+const debug = import.meta.env.VITE_DEBUG;
+
 const staticModeSwitch = ref(staticStatus.value === 'static');
 watchEffect(() => {
   staticStatus.value = staticModeSwitch.value ? 'static' : 'live';
@@ -97,4 +108,19 @@ const nOrbiterDevices = computed(()=>{
 const nOrbiterAccounts = computed(()=>{
   return orbiterAccounts.value?.filter(acc=>acc.infoMembre.idCompte !== accountId.value).length || 0;
 });
+
+const logPeers = async () => {
+  const { sfip } = await orbiter.constellation.attendreSfipEtOrbite();
+  console.log(sfip.libp2p.getPeers().map(p => p.toString()));
+};
+const logTopics = async () => {
+  const { sfip } = await orbiter.constellation.attendreSfipEtOrbite();
+  console.log(sfip.libp2p.services.pubsub.getTopics());
+};
+const logConnections = async () => {
+  const forgetFn = await orbiter.constellation.réseau.suivreConnexionsPostesSFIP({
+    f: (connections) =>  console.log(connections.map(c => `${c.pair}\n${c.adresses.join('\n')}`).join('\n\n')),
+  });
+  await forgetFn();
+};
 </script>
