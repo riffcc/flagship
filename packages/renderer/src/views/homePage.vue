@@ -6,11 +6,11 @@
         :featured-list="featuredReleases"
       />
       <content-section
-        v-if="categorizedStaticReleases['featured-various'].length > 0"
+        v-if="categorizedReleases['featured-various'].length > 0"
         title="Featured"
       >
         <v-col
-          v-for="item in categorizedStaticReleases['featured-various']"
+          v-for="item in categorizedReleases['featured-various']"
           :key="item.id"
         >
           <content-card
@@ -25,11 +25,11 @@
         </v-col>
       </content-section>
       <content-section
-        v-if="categorizedStaticReleases['featured-music'].length > 0"
+        v-if="categorizedReleases['featured-music'].length > 0"
         title="Featured Music"
       >
         <v-col
-          v-for="item in categorizedStaticReleases['featured-music']"
+          v-for="item in categorizedReleases['featured-music']"
           :key="item.id"
         >
           <content-card
@@ -53,7 +53,7 @@
         </v-col>
       </content-section>
       <v-alert
-        v-if="categorizedStaticReleases['tv-shows'].length > 0"
+        v-if="categorizedReleases['tv-shows'].length > 0"
         type="info"
         class="mt-8 mb-n8"
         color="black"
@@ -63,12 +63,12 @@
         like on this platform.
       </v-alert>
       <content-section
-        v-if="categorizedStaticReleases['tv-shows'].length > 0"
+        v-if="categorizedReleases['tv-shows'].length > 0"
         title="TV Shows"
         :navigation="true"
       >
         <v-col
-          v-for="item in categorizedStaticReleases['tv-shows']"
+          v-for="item in categorizedReleases['tv-shows']"
           :key="item.id"
         >
           <content-card
@@ -234,7 +234,7 @@ function categorizeItems(items: ItemContent[], limit: number = 8) {
   return result;
 }
 
-const categorizedStaticReleases = computed(() => categorizeItems(staticStatus.value === 'static' ? staticReleases.value : releases.value));
+const categorizedReleases = computed(() => categorizeItems(staticStatus.value === 'static' ? staticReleases.value : releases.value));
 </script>
 <!--
       {
