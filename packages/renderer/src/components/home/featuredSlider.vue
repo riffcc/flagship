@@ -169,13 +169,12 @@
 </template>
 
 <script setup lang="ts">
-import {base16} from 'multiformats/bases/base16';
-import {CID} from 'multiformats/cid';
 import {computed, ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
 import {useShowDefederation} from '/@/composables/showDefed';
-import {type FeaturedItem, type ItemContent, useStaticReleases} from '/@/composables/staticReleases';
+import {type FeaturedItem, useStaticReleases} from '/@/composables/staticReleases';
+import { lensColorHash } from '/@/utils';
 
 const props = defineProps<{
   featuredList: Array<FeaturedItem>;
@@ -202,10 +201,4 @@ const nextSlideImage = computed(() => {
   return featuredItems.value[nextIndex].cover ?? featuredItems.value[nextIndex].thumbnail;
 });
 
-
-// Colors
-const lensColorHash = (featured: ItemContent): string => {
-  const idSite = featured.sourceSite.replace('/orbitdb/', '');
-  return '#' + CID.parse(idSite).toString(base16.encoder).slice(-6);
-};
 </script>
