@@ -63,7 +63,7 @@
     >
       <v-container
         class="fill-height"
-        :style="showDefederation ? `border: 1px solid ${lensColorHash(featuredItem)};` : ''"
+        :style="showDefederation ? `border: 1px solid ${lensColorHash(featuredItem.sourceSite)};` : ''"
       >
         <v-row
           justify="center"

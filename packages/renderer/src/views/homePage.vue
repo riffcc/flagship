@@ -19,6 +19,7 @@
             :subtitle="item.category === 'movie' ? `(${item.metadata?.releaseYear})` : item.name"
             :title="item.category === 'movie' ? item.name : item.metadata?.author ?? ''"
             :width="xs ? '10.5rem' : '12rem'"
+            :sourceSite="item.sourceSite"
             @click="router.push(`/release/${item.id}`)"
           >
           </content-card>
@@ -39,6 +40,7 @@
             :subtitle="item.metadata?.author ?? ''"
             :title="item.name"
             :width="xs ? '10.5rem' : '15rem'"
+            :sourceSite="item.sourceSite"
             @click="router.push(`/release/${item.id}`)"
           >
             <template #hovering>
@@ -79,6 +81,7 @@
             overlapping
             :subtitle="`${item.metadata?.seasons} Seasons`"
             :title="item.name"
+            :sourceSite="item.sourceSite"
             width="17rem"
           >
             <template #hovering>

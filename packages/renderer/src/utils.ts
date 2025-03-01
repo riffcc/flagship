@@ -68,8 +68,9 @@ export const formatTime = (ms: number): string => {
 };
 
 // Colors
-export const lensColorHash = (featured: ItemContent): string => {
-  const idSite = featured.sourceSite.replace('/orbitdb/', '');
+export const lensColorHash = (sourceSite: string): string => {
+  const idSite = sourceSite.replace('/orbitdb/', '');
+  console.log('#' + CID.parse(idSite).toString(base16.encoder))
   return '#' + CID.parse(idSite).toString(base16.encoder).slice(-6);
 };
 

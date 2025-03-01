@@ -10,7 +10,7 @@
       color="transparent"
       :height="height"
       :width="width"
-      :style="showDefederation ? `border: 1px solid ${lensColorHash(item)};` : ''"
+      :style="showDefederation ? `border: 1px solid ${lensColorHash(sourceSite)};` : ''"
       @click="onClick"
     >
       <template v-if="overlapping">
@@ -75,6 +75,7 @@ defineProps<{
   overlapping?: boolean;
   subtitle: string;
   title: string;
+  sourceSite: string;
   width?: string | number;
   onClick?: () => void;
 }>();
