@@ -1,5 +1,5 @@
 <template>
-  <v-app v-if="orbiter">
+  <v-app>
     <app-bar />
     <v-main min-height="100vh">
       <router-view />
@@ -12,9 +12,6 @@
     ></video-player>
     <app-footer />
   </v-app>
-  <v-container v-else>
-    <setup-site-dialog />
-  </v-container>
 </template>
 
 <script setup lang="ts">
@@ -25,14 +22,11 @@ import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
 import appBar from '/@/components/layout/appBar.vue';
 import appFooter from '/@/components/layout/appFooter.vue';
-import setupSiteDialog from '/@/components/misc/setupSiteDialog.vue';
 
-import { useOrbiter } from './plugins/orbiter/utils';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {useFloatingVideo} from '/@/composables/floatingVideo';
 import {useShowDefederation} from '/@/composables/showDefed';
 
-const {orbiter} = useOrbiter();
 const {showDefederation} = useShowDefederation();
 const {activeTrack} = useAudioAlbum();
 const {floatingVideoSource} = useFloatingVideo();
