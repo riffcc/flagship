@@ -19,7 +19,6 @@
             :subtitle="item.category === 'movie' ? `(${item.metadata?.releaseYear})` : item.name"
             :title="item.category === 'movie' ? item.name : item.metadata?.author ?? ''"
             :width="xs ? '10.5rem' : '12rem'"
-            :style="showDefederation ? `border: 1px solid ${lensColorHash(item)};` : ''"
             @click="router.push(`/release/${item.id}`)"
           >
           </content-card>
@@ -40,7 +39,6 @@
             :subtitle="item.metadata?.author ?? ''"
             :title="item.name"
             :width="xs ? '10.5rem' : '15rem'"
-            :style="showDefederation ? `border: 1px solid ${lensColorHash(item)};` : ''"
             @click="router.push(`/release/${item.id}`)"
           >
             <template #hovering>
@@ -82,7 +80,6 @@
             :subtitle="`${item.metadata?.seasons} Seasons`"
             :title="item.name"
             width="17rem"
-            :style="showDefederation ? `border: 1px solid ${lensColorHash(item)};` : ''"
           >
             <template #hovering>
               <div class="position-absolute top-0 bottom-0 right-0 d-flex flex-column justify-center mr-2 ga-1">
@@ -151,15 +148,12 @@ import type {FeaturedItem, ItemContent, ItemMetadata} from '/@/composables/stati
 import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { filterActivedFeature } from '/@/utils';
-import {useShowDefederation} from '/@/composables/showDefed';
-import { lensColorHash } from '/@/utils';
 
 const router = useRouter();
 const {xs} = useDisplay();
 const {orbiter} = useOrbiter();
 const {staticStatus} = useStaticStatus();
 const {staticFeaturedReleases, staticReleases} = useStaticReleases();
-const {showDefederation} = useShowDefederation();
 
 const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
 const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));

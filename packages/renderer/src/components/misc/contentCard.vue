@@ -10,7 +10,7 @@
       color="transparent"
       :height="height"
       :width="width"
-      :style="style"
+      :style="showDefederation ? `border: 1px solid ${lensColorHash(item)};` : ''"
       @click="onClick"
     >
       <template v-if="overlapping">
@@ -60,6 +60,12 @@
 </template>
 
 <script setup lang="ts">
+import { useShowDefederation } from '/@/composables/showDefed';
+import { lensColorHash } from '/@/utils';
+
+
+const {showDefederation} = useShowDefederation();
+
 
 defineProps<{
   backgroundGradient?: string;
@@ -69,7 +75,6 @@ defineProps<{
   overlapping?: boolean;
   subtitle: string;
   title: string;
-  style?: string;
   width?: string | number;
   onClick?: () => void;
 }>();
