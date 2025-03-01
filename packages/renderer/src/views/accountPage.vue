@@ -22,6 +22,9 @@
       Peer ID: {{ peerId }}
     </p>
     <p>
+      Libp2p network id: {{ peerId }}
+    </p>
+    <p>
       Account status: {{ accountStatus }} ({{ statusExplanation }})
     </p>
     <h1>Connectivity</h1>
@@ -69,7 +72,7 @@ watchEffect(() => {
   staticModeSwitch.value = staticStatus.value === 'static';
 });
 
-// Account id
+// Account and device ids
 const accountId = follow(orbiter.constellation.suivreIdCompte);
 const deviceId = obt(orbiter.constellation.obtIdDispositif);
 const peerId = obt(orbiter.constellation.obtIdSFIP);

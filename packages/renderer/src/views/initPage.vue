@@ -14,7 +14,6 @@
 
     <div class="py-14" />
 
-    <initiateModDBs />
     <!-- <v-row>
     <v-col cols="auto">
       <initiate-account>
@@ -67,7 +66,6 @@ import {onMounted, ref} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 
 // import initiateAccount from '/@/components/initiateAccount.vue';
-import initiateModDBs from '/@/components/initiateModDBs.vue';
 
 const {orbiter} = useOrbiter();
 

@@ -1,7 +1,5 @@
 import {ref, type Ref} from 'vue';
 
-// export type ItemStatus = 'pending' | 'approved' | 'rejected' | 'deleted';
-
 export interface ItemMetadata {
   author?: string;
   classification?: string;
@@ -20,7 +18,6 @@ export interface ItemContent {
   name: string;
   metadata?: ItemMetadata;
   sourceSite: string;
-  // status: ItemStatus;
   thumbnail: string;
 }
 

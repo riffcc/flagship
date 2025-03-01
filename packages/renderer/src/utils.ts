@@ -1,4 +1,7 @@
-import type { ItemStatus, FeaturedItem } from '/@/composables/staticReleases';
+import { Constellation } from '@constl/ipa';
+import type { FeaturedItem } from '/@/composables/staticReleases';
+import { inject } from 'vue';
+
 
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
@@ -36,6 +39,12 @@ export async function copyText(text: string | undefined) {
 }
 
 export const RIFFCC_PROTOCOL = 'Riff.CC';
+
+export const useConstellation = (): {constl: Constellation} => {
+  const constl = inject<Constellation>('constl');
+  if (constl) return {constl};
+  throw new Error("Constellation n'est pas trouvable.");
+};
 
 export const formatTime = (ms: number): string => {
   if (ms === 0 || isNaN(ms)) {
