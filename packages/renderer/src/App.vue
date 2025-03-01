@@ -45,4 +45,18 @@ onKeyStroke(e => {
 watchEffect(() => {
   if (!yetToType.value.length) showDefederation.value = true;
 });
+
+const CURTAIN_KEY = 'curtain';
+const yetToTypeCurtain = ref(CURTAIN_KEY);
+onKeyStroke(e => {
+  if (!yetToTypeCurtain.value.length) return;
+  if (e.key === yetToTypeCurtain.value[0]) {
+    yetToTypeCurtain.value = yetToTypeCurtain.value.slice(1);
+  } else {
+    yetToTypeCurtain.value = CURTAIN_KEY;
+  }
+});
+watchEffect(() => {
+  if (!yetToTypeCurtain.value.length) showDefederation.value = false;
+});
 </script>
