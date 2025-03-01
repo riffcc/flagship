@@ -10,6 +10,7 @@
       color="transparent"
       :height="height"
       :width="width"
+      :style="style"
       @click="onClick"
     >
       <template v-if="overlapping">
@@ -68,6 +69,7 @@ defineProps<{
   overlapping?: boolean;
   subtitle: string;
   title: string;
+  style?: string;
   width?: string | number;
   onClick?: () => void;
 }>();

@@ -19,6 +19,7 @@
             :subtitle="item.category === 'movie' ? `(${item.metadata?.releaseYear})` : item.name"
             :title="item.category === 'movie' ? item.name : item.metadata?.author ?? ''"
             :width="xs ? '10.5rem' : '12rem'"
+            :style="showDefederation ? `border: 1px solid ${lensColorHash(item)};` : ''"
             @click="router.push(`/release/${item.id}`)"
           >
           </content-card>
@@ -39,6 +40,7 @@
             :subtitle="item.metadata?.author ?? ''"
             :title="item.name"
             :width="xs ? '10.5rem' : '15rem'"
+            :style="showDefederation ? `border: 1px solid ${lensColorHash(item)};` : ''"
             @click="router.push(`/release/${item.id}`)"
           >
             <template #hovering>
