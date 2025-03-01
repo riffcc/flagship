@@ -132,9 +132,9 @@
       "@ipshipyard/node-datachannel",
       "simple-git-hooks",
       "vue-demi"
-    ]
-  },
-  "overrides": {
-    "magic-string": "0.30.15"
+    ],
+    "overrides": {
+      "magic-string": "0.30.15"
+    }
   }
 }
