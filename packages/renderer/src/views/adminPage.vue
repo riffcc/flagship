@@ -49,27 +49,27 @@
         <v-window-item
           value="content"
         >
-          <content-magnament></content-magnament>
+          <content-management></content-management>
         </v-window-item>
         <v-window-item
           value="admins"
         >
-          <access-magnament></access-magnament>
+          <access-management></access-management>
         </v-window-item>
         <v-window-item
           value="featured"
         >
-          <featured-magnament></featured-magnament>
+          <featured-management></featured-management>
         </v-window-item>
         <v-window-item
           value="subscriptions"
         >
-          <subscription-magnament></subscription-magnament>
+          <subscription-management></subscription-management>
         </v-window-item>
         <v-window-item
           value="site"
         >
-          <site-magnament></site-magnament>
+          <site-management></site-management>
         </v-window-item>
       </v-window>
     </div>
@@ -79,11 +79,11 @@
 <script setup lang="ts">
 import {ref} from 'vue';
 import {useDisplay} from 'vuetify';
-import contentMagnament from '/@/components/admin/contentMagnament.vue';
-import accessMagnament from '/@/components/admin/accessMagnament.vue';
-import featuredMagnament from '/@/components/admin/featuredMagnament.vue';
-import subscriptionMagnament from '/@/components/admin/subscriptionMagnament.vue';
-import siteMagnament from '/@/components/admin/siteMagnament.vue';
+import contentManagement from '/@/components/admin/contentManagement.vue';
+import accessManagement from '/@/components/admin/accessManagement.vue';
+import featuredManagement from '/@/components/admin/featuredManagement.vue';
+import subscriptionManagement from '/@/components/admin/subscriptionManagement.vue';
+import siteManagement from '/@/components/admin/siteManagement.vue';
 
 const {lgAndUp} = useDisplay();
 const tab = ref(null);
