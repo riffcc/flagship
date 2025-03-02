@@ -158,8 +158,11 @@ const {orbiter} = useOrbiter();
 const {staticStatus} = useStaticStatus();
 const {staticFeaturedReleases, staticReleases} = useStaticReleases();
 
-const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
-const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
+const orbiterReleases = orbiter?.listenForReleases ? 
+  follow(orbiter.listenForReleases.bind(orbiter)) : [];
+
+const orbiterFeaturedReleases = orbiter?.listenForSiteFeaturedReleases ? 
+  follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter)) : [];
 
 const releases = computed<ItemContent[]>(() => {
   if (staticStatus.value === 'static') return staticReleases.value;

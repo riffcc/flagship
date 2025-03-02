@@ -132,7 +132,7 @@ import accountMenu from '/@/components/account/accountMenu.vue';
 const {orbiter} = useOrbiter();
 const router = useRouter();
 const route = useRoute();
-const isAdmin = follow(orbiter.followIsModerator.bind(orbiter));
+const isAdmin = orbiter?.followIsModerator ? follow(orbiter.followIsModerator.bind(orbiter)) : false;
 const { contentCategories } = useSiteSettings();
 const { userData } = useUserSession();
 
