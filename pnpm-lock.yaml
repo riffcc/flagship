@@ -42,8 +42,8 @@ importers:
         specifier: ^0.9.8
         version: 0.9.8(encoding@0.1.13)
       '@riffcc/orbiter':
-        specifier: ^0.1.8
-        version: 0.1.8(@constl/ipa@1.5.17(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@types/node@22.13.8)
+        specifier: ^0.1.9
+        version: 0.1.9(@constl/ipa@1.5.17(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@types/node@22.13.8)
       '@vueuse/core':
         specifier: ^12.7.0
         version: 12.7.0(typescript@5.8.2)
@@ -2039,8 +2039,8 @@ packages:
       '@types/react':
         optional: true
 
-  '@riffcc/orbiter@0.1.8':
-    resolution: {integrity: sha512-1pT5EiQPaS3TeyMcatK3QZLXG6W2xGdSucIQGDN5ZIjMIMEvLe0PZAe0AsQyfc8MbtpYsxrO3plHO+nPYNvYqw==}
+  '@riffcc/orbiter@0.1.9':
+    resolution: {integrity: sha512-sfv6XzkctJQOkm0b4zCvn3MFromKrjbRVJOgAMyjfRUxKOZAddIhbyOmDSOTyqNF0qTfxt5tELwkbzw4AV2giQ==}
     hasBin: true
     peerDependencies:
       '@constl/ipa': ^1.0.14
@@ -10059,12 +10059,12 @@ snapshots:
       react: 18.3.1
       react-native: 0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)
 
-  '@riffcc/orbiter@0.1.8(@constl/ipa@1.5.17(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@types/node@22.13.8)':
+  '@riffcc/orbiter@0.1.9(@constl/ipa@1.5.17(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@types/node@22.13.8)':
     dependencies:
       '@constl/ipa': 1.5.17(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.7)(@babel/preset-env@7.26.0(@babel/core@7.26.7))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
       '@constl/utils-ipa': 1.0.5
       '@inquirer/prompts': 7.3.2(@types/node@22.13.8)
-      '@orbitdb/core': 2.4.3
+      '@orbitdb/core': 2.5.0
       chalk: 5.4.1
       change-case: 5.4.4
       deepcopy: 2.1.0
