@@ -1,6 +1,20 @@
 <template>
   <v-container class="fill-height pb-16">
-    <template v-if="featuredReleases.length > 0 || releases.length > 0">
+    <v-sheet
+      v-if="!(featuredReleases.length > 0) && !(releases.length > 0)"
+      color="transparent"
+      class="d-flex flex-column mx-auto"
+      max-width="16rem"
+    >
+      <p class="text-white text-center mb-2">No content here. Please upload a release first.</p>
+      <v-btn
+        color="primary-darken-1"
+        @click="router.push('/upload')"
+      >
+        Go to Upload
+      </v-btn>
+    </v-sheet>
+    <template v-else>
       <featured-slider
         v-if="featuredReleases.length > 0"
         :featured-list="featuredReleases"
@@ -121,20 +135,6 @@
         </v-col>
       </content-section>
     </template>
-    <v-sheet
-      v-else
-      color="transparent"
-      class="d-flex flex-column mx-auto"
-      max-width="16rem"
-    >
-      <p class="text-white text-center mb-2">No content here. Please upload a release first.</p>
-      <v-btn
-        color="primary-darken-1"
-        @click="router.push('/upload')"
-      >
-        Go to Upload
-      </v-btn>
-    </v-sheet>
   </v-container>
 </template>
 
@@ -200,7 +200,7 @@ function categorizeItems(items: ItemContent[], limit: number = 8) {
     'tv-shows': [],
     'featured-various': [],
   };
-
+  if (!(items.length > 0)) return result;
   const addedItems = new Set<string>(); // Track all added items to avoid duplication
 
   // Helper to add items without duplicates and respect limits
