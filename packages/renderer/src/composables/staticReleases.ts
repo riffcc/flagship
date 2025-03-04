@@ -178,7 +178,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     id: '10',
     category: 'movie',
     contentCID: 'QmPjxGcAYBv1fbwWSA2Zu4rHFN21DpFTKpQivXk9Kozqqe',
-    cover: '/mock/movie-aaronsw.jpg',
+    cover: 'bafkreiemmzezvfmeueaeuqfewtf4d6fiuvjqnh4xulgwuugfknmh3abfxi',
     name: "The Internet's Own Boy: The Story of Aaron Swartz",
     metadata: {
       classification: 'PG',
@@ -189,13 +189,13 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
-    thumbnail: '/mock/movie-aaronsw.jpg',
+    thumbnail: 'bafkreiemmzezvfmeueaeuqfewtf4d6fiuvjqnh4xulgwuugfknmh3abfxi',
   },
   {
     id: '11',
     category: 'movie',
     contentCID: 'QmPSGARS6emPSEf8umwmjdG8AS7z7o8Nd36258B3BMi291',
-    cover: '/mock/featured-tpbafk-fanart.png',
+    cover: 'bafkreiemqveqhpksefhup46d77iybtatf2vb2bgyak4hfydxaz5hxser34',
     name: 'TPB AFK: The Pirate Bay Away from Keyboard',
     metadata: {
       classification: 'Unrated',
@@ -206,7 +206,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     status: 'approved',
-    thumbnail: '/mock/movie-tbpafk.webp',
+    thumbnail: 'bafkreiemqveqhpksefhup46d77iybtatf2vb2bgyak4hfydxaz5hxser34',
   },
   {
     id: '12',
