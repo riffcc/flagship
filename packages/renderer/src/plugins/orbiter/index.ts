@@ -6,7 +6,6 @@ export default {
   install: (app: App) => {
     const orbiterConfig = {
       siteId: import.meta.env.VITE_SITE_ID,
-      swarmId: import.meta.env.VITE_SWARM_ID,
       variableIds: getVariableIds(),
     };
     let orbiterApp: Orbiter | undefined = undefined;
