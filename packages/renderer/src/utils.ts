@@ -1,5 +1,5 @@
 import type { Constellation } from '@constl/ipa';
-import type { FeaturedItem, ItemContent } from '/@/composables/staticReleases';
+import type { FeaturedItem } from '/@/composables/staticReleases';
 import { inject } from 'vue';
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
@@ -71,21 +71,21 @@ export const formatTime = (ms: number): string => {
 // Colors
 export const lensColorHash = (sourceSite: string): string => {
   const idSite = sourceSite.replace('/orbitdb/', '');
-  console.log('#' + CID.parse(idSite).toString(base16.encoder))
+  console.log('#' + CID.parse(idSite).toString(base16.encoder));
   return '#' + CID.parse(idSite).toString(base16.encoder).slice(-6);
 };
 
-export function getStatusColor(status: ItemStatus) {
-  if (status === 'pending') {
-    return 'blue';
-  } else if (status === 'approved') {
-    return 'green';
-  } else if (status === 'rejected') {
-    return 'red';
-  } else {
-    return 'default';
-  }
-};
+// export function getStatusColor(status: ItemStatus) {
+//   if (status === 'pending') {
+//     return 'blue';
+//   } else if (status === 'approved') {
+//     return 'green';
+//   } else if (status === 'rejected') {
+//     return 'red';
+//   } else {
+//     return 'default';
+//   }
+// };
 
 export function isValidEmail(email: string) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
