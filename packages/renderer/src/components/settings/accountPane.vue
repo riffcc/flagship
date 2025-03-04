@@ -94,6 +94,6 @@ async function deleteAccount() {
 
 onMounted(async () => {
   // These don't need to be dynamically followed, just noted once ready
-  siteId.value = (await orbiter.siteConfigured()).siteId;
+  siteId.value = orbiter.siteId;
 });
 </script>

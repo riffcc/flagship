@@ -10,7 +10,7 @@ export function downloadFile(filename: string, content: string | Uint8Array) {
 
   let url: string;
   if (content instanceof Uint8Array) {
-    url = URL.createObjectURL(new Blob([content.buffer]));
+    url = URL.createObjectURL(new Blob([content.buffer as ArrayBuffer]));
   } else {
     url = content;
   }

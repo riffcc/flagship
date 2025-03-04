@@ -39,6 +39,6 @@ const props = defineProps<{site: tableaux.élémentDonnées<orbiterTypes.Trusted
 const {orbiter} = useOrbiter();
 
 const untrustSite = async () => {
-  await orbiter.untrustSite({elementId: props.site.id});
+  await orbiter.untrustSite({siteId: props.site.id});
 };
 </script>

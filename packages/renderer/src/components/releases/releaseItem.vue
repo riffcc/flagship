@@ -95,7 +95,7 @@ watchEffect(async () => {
     });
     if (image) {
       thumbnailURL.value = URL.createObjectURL(
-        new Blob([image.buffer], {type: `image/${thumbnail.split('.')[1]}`}),
+        new Blob([image.buffer as ArrayBuffer], {type: `image/${thumbnail.split('.')[1]}`}),
       );
     } else {
       thumbnailURL.value = undefined;

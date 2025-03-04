@@ -34,7 +34,7 @@ onMounted(async () => {
     id: props.file,
   });
   console.log(videoData);
-  videoURL.value = URL.createObjectURL(new Blob([videoData!.buffer]));
+  videoURL.value = URL.createObjectURL(new Blob([videoData!.buffer as ArrayBuffer]));
   console.log(videoURL);
   return;
   /*
@@ -73,7 +73,7 @@ onMounted(async () => {
 
       video.value?.play();
     });
-    
+
   }*/
 });
 </script>

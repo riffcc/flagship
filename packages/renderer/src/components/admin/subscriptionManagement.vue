@@ -59,7 +59,7 @@
               <template #append>
                 <v-btn
                   icon="mdi-delete"
-                  @click="() => untrustSite({elementId: s.id})"
+                  @click="() => untrustSite({siteId: s.id})"
                 ></v-btn>
               </template>
             </v-list-item>
@@ -131,7 +131,7 @@ const trustedSites = follow(orbiter.followTrustedSites.bind(orbiter));
 //   return document.location.hostname;
 // });
 
-const untrustSite = async ({elementId}: {elementId: string}) => {
-  await orbiter.untrustSite({elementId});
+const untrustSite = async ({siteId}: {siteId: string}) => {
+  await orbiter.untrustSite({siteId});
 };
 </script>

@@ -31,6 +31,6 @@ onMounted(async () => {
     id: props.file,
   });
   console.log(audioData);
-  if (audioData) audioSource.value = URL.createObjectURL(new Blob([audioData.buffer]));
+  if (audioData) audioSource.value = URL.createObjectURL(new Blob([audioData.buffer as ArrayBuffer]));
 });
 </script>
