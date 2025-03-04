@@ -14,7 +14,7 @@
           :key="item.id"
         >
           <content-card
-            :background-image="item.thumbnail"
+            :background-image="parseUrlOrCid(item.thumbnail)"
             cursor-pointer
             :subtitle="item.category === 'movie' ? `(${item.metadata?.releaseYear})` : item.name"
             :title="item.category === 'movie' ? item.name : item.metadata?.author ?? ''"
@@ -34,7 +34,7 @@
           :key="item.id"
         >
           <content-card
-            :background-image="item.thumbnail"
+            :background-image="parseUrlOrCid(item.thumbnail)"
             cursor-pointer
             hovering-children
             :subtitle="item.metadata?.author ?? ''"
@@ -75,7 +75,7 @@
         >
           <content-card
             background-gradient="to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)"
-            :background-image="item.thumbnail"
+            :background-image="parseUrlOrCid(item.thumbnail)"
             height="10rem"
             hovering-children
             overlapping
@@ -150,7 +150,7 @@ import {useStaticStatus} from '../composables/staticStatus';
 import type {FeaturedItem, ItemContent, ItemMetadata} from '/@/composables/staticReleases';
 import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
-import { filterActivedFeature } from '/@/utils';
+import { filterActivedFeature, parseUrlOrCid } from '/@/utils';
 
 const router = useRouter();
 const {xs} = useDisplay();

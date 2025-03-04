@@ -3,7 +3,8 @@ import type { FeaturedItem, ItemContent } from '/@/composables/staticReleases';
 import { inject } from 'vue';
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
-
+import {cid as isCID} from 'is-ipfs';
+import { IPFS_GATEWAY } from './constants/ipfs';
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
 
@@ -99,3 +100,6 @@ export function filterActivedFeature(featured: FeaturedItem) {
   return now >= startTime && now <= endTime;
 };
 
+export function parseUrlOrCid(urlOrCid: string) {
+  return isCID(urlOrCid) ? `https://${IPFS_GATEWAY}/ipfs/${urlOrCid}` : urlOrCid;
+};
