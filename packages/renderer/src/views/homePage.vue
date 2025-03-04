@@ -16,7 +16,7 @@
           <content-card
             :background-image="parseUrlOrCid(item.thumbnail)"
             cursor-pointer
-            :subtitle="item.category === 'movie' ? `(${item.metadata?.releaseYear})` : item.name"
+            :subtitle="item.category === 'movie' ? item.metadata?.releaseYear ? `(${item.metadata.releaseYear})` : '' : item.name"
             :title="item.category === 'movie' ? item.name : item.metadata?.author ?? ''"
             :width="xs ? '10.5rem' : '12rem'"
             :source-site="item.sourceSite"
