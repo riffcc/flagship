@@ -19,7 +19,7 @@
             :subtitle="item.category === 'movie' ? `(${item.metadata?.releaseYear})` : item.name"
             :title="item.category === 'movie' ? item.name : item.metadata?.author ?? ''"
             :width="xs ? '10.5rem' : '12rem'"
-            :sourceSite="item.sourceSite"
+            :source-site="item.sourceSite"
             @click="router.push(`/release/${item.id}`)"
           >
           </content-card>
@@ -40,7 +40,7 @@
             :subtitle="item.metadata?.author ?? ''"
             :title="item.name"
             :width="xs ? '10.5rem' : '15rem'"
-            :sourceSite="item.sourceSite"
+            :source-site="item.sourceSite"
             @click="router.push(`/release/${item.id}`)"
           >
             <template #hovering>
@@ -81,7 +81,7 @@
             overlapping
             :subtitle="`${item.metadata?.seasons} Seasons`"
             :title="item.name"
-            :sourceSite="item.sourceSite"
+            :source-site="item.sourceSite"
             width="17rem"
           >
             <template #hovering>
@@ -158,11 +158,9 @@ const {orbiter} = useOrbiter();
 const {staticStatus} = useStaticStatus();
 const {staticFeaturedReleases, staticReleases} = useStaticReleases();
 
-const orbiterReleases = orbiter?.listenForReleases ? 
-  follow(orbiter.listenForReleases.bind(orbiter)) : [];
+const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
 
-const orbiterFeaturedReleases = orbiter?.listenForSiteFeaturedReleases ? 
-  follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter)) : [];
+const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
 
 const releases = computed<ItemContent[]>(() => {
   if (staticStatus.value === 'static') return staticReleases.value;
