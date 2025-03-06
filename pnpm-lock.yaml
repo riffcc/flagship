@@ -13,14 +13,14 @@ importers:
   .:
     dependencies:
       '@constl/ipa':
-        specifier: ^1.6.0
-        version: 1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
+        specifier: ^1.6.1
+        version: 1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
       '@constl/mandataire':
         specifier: ^3.0.3
         version: 3.0.3
       '@constl/mandataire-electron-principal':
         specifier: ^3.1.3
-        version: 3.1.3(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@constl/mandataire@3.0.3)(@constl/serveur@2.1.8(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(electron@34.3.0)
+        version: 3.1.3(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@constl/mandataire@3.0.3)(@constl/serveur@2.1.8(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(electron@34.3.0)
       '@constl/mandataire-electron-rendu':
         specifier: ^3.1.3
         version: 3.1.3
@@ -32,7 +32,7 @@ importers:
         version: 1.0.5
       '@constl/vue':
         specifier: ^1.0.4
-        version: 1.0.4(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))(vue@3.5.13(typescript@5.8.2))
+        version: 1.0.4(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))(vue@3.5.13(typescript@5.8.2))
       '@esbuild-plugins/node-globals-polyfill':
         specifier: ^0.2.3
         version: 0.2.3(esbuild@0.25.0)
@@ -44,7 +44,7 @@ importers:
         version: 0.9.8(encoding@0.1.13)
       '@riffcc/orbiter':
         specifier: ^0.1.10
-        version: 0.1.10(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@types/node@22.13.8)
+        version: 0.1.10(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@types/node@22.13.8)
       '@vueuse/core':
         specifier: ^12.7.0
         version: 12.7.0(typescript@5.8.2)
@@ -92,7 +92,7 @@ importers:
         version: 4.8.4
       nuchabal:
         specifier: ^3.2.7
-        version: 3.2.7(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))
+        version: 3.2.7(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))
       pluralize-esm:
         specifier: ^9.0.5
         version: 9.0.5
@@ -1014,8 +1014,8 @@ packages:
   '@constl/bohr-db@1.2.3':
     resolution: {integrity: sha512-IJXOqeMnJEOqD7DRNMowwPOY7bVKlTdQNu3DNn9zoSKj+fBzTXLzkxl4uRbKLu9vwWzjoXyxgvp2iw7vkt/amQ==}
 
-  '@constl/ipa@1.6.0':
-    resolution: {integrity: sha512-8+2hzngfLoWIt1AlqLJpueLNcrx7RpU67ucmxh10SKAwpnZxq9ZyFvcXuyygOoFHj6Gbxct/sAcJ6bOKrRBe8w==}
+  '@constl/ipa@1.6.1':
+    resolution: {integrity: sha512-3qqIja7G8hjHOW5WEjnXBnf32O2321g7T+ppiZTtTPxi1ds3iN3fW3OkAydPRpfr4QmSQJJWPKxEqP2Wm4mGEw==}
     engines: {node: '>=20'}
 
   '@constl/mandataire-electron-principal@3.1.3':
@@ -6995,7 +6995,7 @@ snapshots:
     dependencies:
       '@achingbrain/ssdp': 4.2.1
       '@chainsafe/is-ip': 2.0.2
-      '@libp2p/logger': 5.1.6
+      '@libp2p/logger': 5.1.10
       abort-error: 1.0.0
       err-code: 3.0.1
       netmask: 2.0.2
@@ -7936,12 +7936,12 @@ snapshots:
 
   '@chainsafe/libp2p-gossipsub@14.1.0':
     dependencies:
-      '@libp2p/crypto': 5.0.9
-      '@libp2p/interface': 2.4.0
-      '@libp2p/interface-internal': 2.2.2
+      '@libp2p/crypto': 5.0.13
+      '@libp2p/interface': 2.6.1
+      '@libp2p/interface-internal': 2.3.5
       '@libp2p/peer-id': 5.0.14
       '@libp2p/pubsub': 10.0.15
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       denque: 2.1.0
       it-length-prefixed: 9.1.1
       it-pipe: 3.0.1
@@ -7975,8 +7975,8 @@ snapshots:
     dependencies:
       '@chainsafe/as-chacha20poly1305': 0.1.0
       '@chainsafe/as-sha256': 1.0.0
-      '@libp2p/crypto': 5.0.9
-      '@libp2p/interface': 2.4.0
+      '@libp2p/crypto': 5.0.13
+      '@libp2p/interface': 2.6.1
       '@libp2p/peer-id': 5.0.14
       '@noble/ciphers': 1.2.1
       '@noble/curves': 1.8.1
@@ -7993,8 +7993,8 @@ snapshots:
 
   '@chainsafe/libp2p-yamux@7.0.1':
     dependencies:
-      '@libp2p/interface': 2.4.0
-      '@libp2p/utils': 6.3.1
+      '@libp2p/interface': 2.6.1
+      '@libp2p/utils': 6.5.5
       get-iterator: 2.0.1
       it-foreach: 2.1.1
       it-pushable: 3.2.3
@@ -8026,7 +8026,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))':
+  '@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))':
     dependencies:
       '@chainsafe/libp2p-gossipsub': 14.1.0
       '@chainsafe/libp2p-noise': 16.0.3
@@ -8112,9 +8112,9 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@constl/mandataire-electron-principal@3.1.3(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@constl/mandataire@3.0.3)(@constl/serveur@2.1.8(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(electron@34.3.0)':
+  '@constl/mandataire-electron-principal@3.1.3(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@constl/mandataire@3.0.3)(@constl/serveur@2.1.8(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(electron@34.3.0)':
     dependencies:
-      '@constl/ipa': 1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
+      '@constl/ipa': 1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
       '@constl/mandataire': 3.0.3
       '@constl/serveur': 2.1.8(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
       electron: 34.3.0
@@ -8136,7 +8136,7 @@ snapshots:
 
   '@constl/serveur@2.1.8(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))':
     dependencies:
-      '@constl/ipa': 1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
+      '@constl/ipa': 1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
       axios: 1.8.1(debug@4.4.0)
       bip39: 3.1.0
       bufferutil: 4.0.9
@@ -8202,15 +8202,15 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@constl/vue@1.0.4(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))(vue@3.5.13(typescript@5.8.2))':
+  '@constl/vue@1.0.4(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))(vue@3.5.13(typescript@5.8.2))':
     dependencies:
       '@chriscdn/promise-semaphore': 2.0.9
       '@constl/utils-ipa': 1.0.5
-      '@lassi-js/kili': 0.3.16(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))
+      '@lassi-js/kili': 0.3.16(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))
       '@lassi-js/kilimukku': 1.1.7(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
       deep-equal: 2.2.3
       ennikkai: 2.3.4
-      nuchabal: 3.2.7(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))
+      nuchabal: 3.2.7(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))
       uuid: 10.0.0
       vue: 3.5.13(typescript@5.8.2)
     transitivePeerDependencies:
@@ -8577,8 +8577,8 @@ snapshots:
     dependencies:
       '@helia/interface': 5.2.0
       '@ipld/dag-pb': 4.1.3
-      '@libp2p/interface': 2.4.0
-      '@libp2p/logger': 5.1.6
+      '@libp2p/interface': 2.6.1
+      '@libp2p/logger': 5.1.10
       '@multiformats/murmur3': 2.1.8
       hamt-sharding: 3.0.6
       interface-blockstore: 5.3.1
@@ -8897,9 +8897,9 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@lassi-js/kili@0.3.16(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))':
+  '@lassi-js/kili@0.3.16(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))':
     dependencies:
-      '@constl/ipa': 1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
+      '@constl/ipa': 1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
       '@constl/utils-ipa': 1.0.5
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/fea4a60f8c818eabf946d56dfdcec5ca9d8ebc4e
       deepcopy: 2.1.0
@@ -8912,9 +8912,9 @@ snapshots:
 
   '@lassi-js/kilimukku@1.1.7(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))':
     dependencies:
-      '@constl/ipa': 1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
+      '@constl/ipa': 1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
       '@constl/utils-ipa': 1.0.5
-      '@lassi-js/kili': 0.3.16(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))
+      '@lassi-js/kili': 0.3.16(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))
       uuid: 9.0.1
       wherearewe: 2.0.1
     transitivePeerDependencies:
@@ -8934,7 +8934,7 @@ snapshots:
       '@libp2p/peer-collections': 6.0.21
       '@libp2p/peer-id': 5.0.14
       '@libp2p/utils': 6.5.5
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       any-signal: 4.1.1
       it-protobuf-stream: 1.1.5
       multiformats: 13.3.2
@@ -8947,7 +8947,7 @@ snapshots:
       '@libp2p/interface-internal': 2.3.5
       '@libp2p/peer-id': 5.0.14
       '@multiformats/mafmt': 12.1.6
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
 
   '@libp2p/circuit-relay-v2@3.2.4':
     dependencies:
@@ -8958,7 +8958,7 @@ snapshots:
       '@libp2p/peer-id': 5.0.14
       '@libp2p/peer-record': 8.0.21
       '@libp2p/utils': 6.5.5
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       '@multiformats/multiaddr-matcher': 1.6.0
       any-signal: 4.1.1
       it-protobuf-stream: 1.1.5
@@ -8992,11 +8992,11 @@ snapshots:
 
   '@libp2p/crypto@5.0.9':
     dependencies:
-      '@libp2p/interface': 2.4.0
+      '@libp2p/interface': 2.6.1
       '@noble/curves': 1.8.1
       '@noble/hashes': 1.7.1
       asn1js: 3.0.5
-      multiformats: 13.3.1
+      multiformats: 13.3.2
       protons-runtime: 5.5.0
       uint8arraylist: 2.4.8
       uint8arrays: 5.1.0
@@ -9006,7 +9006,7 @@ snapshots:
       '@libp2p/interface': 2.6.1
       '@libp2p/interface-internal': 2.3.5
       '@libp2p/utils': 6.5.5
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       '@multiformats/multiaddr-matcher': 1.6.0
       delay: 6.0.0
       it-protobuf-stream: 1.1.5
@@ -9017,9 +9017,9 @@ snapshots:
     dependencies:
       '@libp2p/crypto': 5.0.13
       '@libp2p/interface': 2.6.1
-      '@libp2p/interface-internal': 2.2.2
+      '@libp2p/interface-internal': 2.3.5
       '@libp2p/peer-id': 5.0.14
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       '@multiformats/multiaddr-to-uri': 11.0.0
       '@perseveranza-pets/milo': 0.2.1
       p-defer: 4.0.1
@@ -9035,7 +9035,7 @@ snapshots:
       '@libp2p/peer-id': 5.0.14
       '@libp2p/peer-record': 8.0.21
       '@libp2p/utils': 6.5.5
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       '@multiformats/multiaddr-matcher': 1.6.0
       it-drain: 3.0.7
       it-parallel: 3.0.8
@@ -9048,15 +9048,15 @@ snapshots:
     dependencies:
       '@libp2p/interface-peer-id': 2.0.2
       '@libp2p/interfaces': 3.3.2
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       it-stream-types: 2.0.2
       uint8arraylist: 2.4.8
 
   '@libp2p/interface-internal@2.2.2':
     dependencies:
-      '@libp2p/interface': 2.4.0
-      '@libp2p/peer-collections': 6.0.14
-      '@multiformats/multiaddr': 12.3.4
+      '@libp2p/interface': 2.6.1
+      '@libp2p/peer-collections': 6.0.21
+      '@multiformats/multiaddr': 12.4.0
       progress-events: 1.0.1
       uint8arraylist: 2.4.8
 
@@ -9089,7 +9089,7 @@ snapshots:
       '@libp2p/interface-connection': 5.1.1
       '@libp2p/interface-stream-muxer': 4.1.2
       '@libp2p/interfaces': 3.3.2
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       it-stream-types: 2.0.2
     transitivePeerDependencies:
       - supports-color
@@ -9123,7 +9123,7 @@ snapshots:
       '@libp2p/peer-id': 5.0.14
       '@libp2p/record': 4.0.5
       '@libp2p/utils': 6.5.5
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       any-signal: 4.1.1
       interface-datastore: 8.3.1
       it-all: 3.0.6
@@ -9162,7 +9162,7 @@ snapshots:
   '@libp2p/logger@2.1.1':
     dependencies:
       '@libp2p/interface-peer-id': 2.0.2
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       debug: 4.4.0
       interface-datastore: 8.3.1
       multiformats: 11.0.2
@@ -9191,7 +9191,7 @@ snapshots:
       '@libp2p/interface-internal': 2.3.5
       '@libp2p/peer-id': 5.0.14
       '@libp2p/utils': 6.5.5
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       '@types/multicast-dns': 7.2.4
       dns-packet: 5.6.1
       multicast-dns: 7.2.5
@@ -9221,9 +9221,9 @@ snapshots:
 
   '@libp2p/peer-collections@6.0.14':
     dependencies:
-      '@libp2p/interface': 2.4.0
+      '@libp2p/interface': 2.6.1
       '@libp2p/peer-id': 5.0.14
-      '@libp2p/utils': 6.3.1
+      '@libp2p/utils': 6.5.5
       multiformats: 13.3.2
 
   '@libp2p/peer-collections@6.0.21':
@@ -9246,7 +9246,7 @@ snapshots:
       '@libp2p/interface': 2.6.1
       '@libp2p/peer-id': 5.0.14
       '@libp2p/utils': 6.5.5
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       multiformats: 13.3.2
       protons-runtime: 5.5.0
       uint8-varint: 2.0.4
@@ -9273,29 +9273,29 @@ snapshots:
       '@libp2p/crypto': 5.0.13
       '@libp2p/interface': 2.6.1
       '@libp2p/interface-internal': 2.3.5
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       it-byte-stream: 1.1.0
       uint8arrays: 5.1.0
 
   '@libp2p/pubsub-peer-discovery@11.0.1':
     dependencies:
-      '@libp2p/crypto': 5.0.9
-      '@libp2p/interface': 2.4.0
-      '@libp2p/interface-internal': 2.2.2
+      '@libp2p/crypto': 5.0.13
+      '@libp2p/interface': 2.6.1
+      '@libp2p/interface-internal': 2.3.5
       '@libp2p/peer-id': 5.0.14
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       protons-runtime: 5.5.0
       uint8arraylist: 2.4.8
       uint8arrays: 5.1.0
 
   '@libp2p/pubsub@10.0.15':
     dependencies:
-      '@libp2p/crypto': 5.0.9
-      '@libp2p/interface': 2.4.0
-      '@libp2p/interface-internal': 2.2.2
-      '@libp2p/peer-collections': 6.0.14
+      '@libp2p/crypto': 5.0.13
+      '@libp2p/interface': 2.6.1
+      '@libp2p/interface-internal': 2.3.5
+      '@libp2p/peer-collections': 6.0.21
       '@libp2p/peer-id': 5.0.14
-      '@libp2p/utils': 6.3.1
+      '@libp2p/utils': 6.5.5
       it-length-prefixed: 9.1.1
       it-pipe: 3.0.1
       it-pushable: 3.2.3
@@ -9315,7 +9315,7 @@ snapshots:
       '@libp2p/interface': 2.6.1
       '@libp2p/utils': 6.5.5
       '@multiformats/mafmt': 12.1.6
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       '@types/sinon': 17.0.3
       p-defer: 4.0.1
       p-event: 6.0.1
@@ -9346,7 +9346,7 @@ snapshots:
       '@libp2p/interface': 2.6.1
       '@libp2p/interface-internal': 2.3.5
       '@libp2p/utils': 6.5.5
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       '@multiformats/multiaddr-matcher': 1.6.0
       p-defer: 4.0.1
       race-signal: 1.1.3
@@ -9441,7 +9441,7 @@ snapshots:
     dependencies:
       '@libp2p/interface': 2.6.1
       '@libp2p/utils': 6.5.5
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       '@multiformats/multiaddr-matcher': 1.6.0
       '@multiformats/multiaddr-to-uri': 11.0.0
       '@types/ws': 8.5.14
@@ -9461,7 +9461,7 @@ snapshots:
       '@libp2p/interface': 2.6.1
       '@libp2p/peer-id': 5.0.14
       '@libp2p/utils': 6.5.5
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       '@multiformats/multiaddr-matcher': 1.6.0
       it-stream-types: 2.0.2
       multiformats: 13.3.2
@@ -9506,7 +9506,7 @@ snapshots:
   '@multiformats/multiaddr-matcher@1.6.0':
     dependencies:
       '@chainsafe/is-ip': 2.0.2
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       multiformats: 13.3.2
 
   '@multiformats/multiaddr-to-uri@11.0.0':
@@ -9538,7 +9538,7 @@ snapshots:
 
   '@multiformats/uri-to-multiaddr@8.0.0':
     dependencies:
-      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr': 12.4.0
       is-ip: 5.0.1
 
   '@noble/ciphers@0.6.0': {}
@@ -9966,9 +9966,9 @@ snapshots:
       react: 18.3.1
       react-native: 0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)
 
-  '@riffcc/orbiter@0.1.10(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@types/node@22.13.8)':
+  '@riffcc/orbiter@0.1.10(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))(@types/node@22.13.8)':
     dependencies:
-      '@constl/ipa': 1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
+      '@constl/ipa': 1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
       '@constl/utils-ipa': 1.0.5
       '@inquirer/prompts': 7.3.2(@types/node@22.13.8)
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/fea4a60f8c818eabf946d56dfdcec5ca9d8ebc4e
@@ -10163,7 +10163,7 @@ snapshots:
   '@types/multicast-dns@7.2.4':
     dependencies:
       '@types/dns-packet': 5.6.5
-      '@types/node': 22.13.8
+      '@types/node': 22.13.9
 
   '@types/murmurhash3js-revisited@3.0.3': {}
 
@@ -10218,7 +10218,7 @@ snapshots:
 
   '@types/ws@8.5.14':
     dependencies:
-      '@types/node': 22.13.8
+      '@types/node': 22.13.9
 
   '@types/yargs-parser@21.0.3': {}
 
@@ -10777,7 +10777,7 @@ snapshots:
   axios@1.8.1(debug@4.4.0):
     dependencies:
       follow-redirects: 1.15.9(debug@4.4.0)
-      form-data: 4.0.1
+      form-data: 4.0.2
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
       - debug
@@ -11618,7 +11618,7 @@ snapshots:
       array-buffer-byte-length: 1.0.2
       call-bind: 1.0.8
       es-get-iterator: 1.1.3
-      get-intrinsic: 1.2.7
+      get-intrinsic: 1.3.0
       is-arguments: 1.2.0
       is-array-buffer: 3.0.5
       is-date-object: 1.1.0
@@ -11752,7 +11752,7 @@ snapshots:
 
   dunder-proto@1.0.1:
     dependencies:
-      call-bind-apply-helpers: 1.0.1
+      call-bind-apply-helpers: 1.0.2
       es-errors: 1.3.0
       gopd: 1.2.0
 
@@ -11918,7 +11918,7 @@ snapshots:
   es-get-iterator@1.1.3:
     dependencies:
       call-bind: 1.0.8
-      get-intrinsic: 1.2.7
+      get-intrinsic: 1.3.0
       has-symbols: 1.1.0
       is-arguments: 1.2.0
       is-map: 2.0.3
@@ -12835,7 +12835,7 @@ snapshots:
     dependencies:
       call-bind: 1.0.8
       call-bound: 1.0.3
-      get-intrinsic: 1.2.7
+      get-intrinsic: 1.3.0
 
   is-arrayish@0.2.1: {}
 
@@ -12986,7 +12986,7 @@ snapshots:
   is-weakset@2.0.4:
     dependencies:
       call-bound: 1.0.3
-      get-intrinsic: 1.2.7
+      get-intrinsic: 1.3.0
 
   is-wsl@1.1.0:
     optional: true
@@ -14062,10 +14062,10 @@ snapshots:
     dependencies:
       boolbase: 1.0.0
 
-  nuchabal@3.2.7(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))):
+  nuchabal@3.2.7(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))):
     dependencies:
-      '@constl/ipa': 1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
-      '@lassi-js/kili': 0.3.16(@constl/ipa@1.6.0(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))
+      '@constl/ipa': 1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1))
+      '@lassi-js/kili': 0.3.16(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.76.1(@babel/core@7.26.9)(@babel/preset-env@7.26.0(@babel/core@7.26.9))(@react-native-community/cli-server-api@14.1.0(bufferutil@4.0.9))(bufferutil@4.0.9)(encoding@0.1.13)(react@18.3.1)))
       deepmerge: 4.3.1
       events: 3.3.0
 
@@ -15009,14 +15009,14 @@ snapshots:
     dependencies:
       call-bound: 1.0.3
       es-errors: 1.3.0
-      get-intrinsic: 1.2.7
+      get-intrinsic: 1.3.0
       object-inspect: 1.13.3
 
   side-channel-weakmap@1.0.2:
     dependencies:
       call-bound: 1.0.3
       es-errors: 1.3.0
-      get-intrinsic: 1.2.7
+      get-intrinsic: 1.3.0
       object-inspect: 1.13.3
       side-channel-map: 1.0.1
 
