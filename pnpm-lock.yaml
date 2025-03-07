@@ -43,8 +43,8 @@ importers:
         specifier: ^0.9.8
         version: 0.9.8(encoding@0.1.13)
       '@riffcc/orbiter':
-        specifier: ^0.1.10
-        version: 0.1.10(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.26.9)(@babel/preset-env@7.26.9(@babel/core@7.26.9))(bufferutil@4.0.9)(react@19.0.0)))(@types/node@22.13.9)
+        specifier: ^0.2.2
+        version: 0.2.2(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.26.9)(@babel/preset-env@7.26.9(@babel/core@7.26.9))(bufferutil@4.0.9)(react@19.0.0)))(@types/node@22.13.9)
       '@vueuse/core':
         specifier: ^12.7.0
         version: 12.8.2(typescript@5.8.2)
@@ -1912,8 +1912,8 @@ packages:
       '@types/react':
         optional: true
 
-  '@riffcc/orbiter@0.1.10':
-    resolution: {integrity: sha512-gnbRh/4mOPRQ3QJ0s1/pnn7aMOEfb4DMKhyK5dLY59mf+dyHeBKUF0ctPH3u0oc7bRMuzDhaSul+uiY4OVy2ig==}
+  '@riffcc/orbiter@0.2.2':
+    resolution: {integrity: sha512-UoJU6zlp8gTHpDN0USi64MqIu1WqZc+i+LMqxMPVJ/Iqhb15Irp4+3ufbGj0qeeWYKDGRB9c9/VbwUt2Em4BTw==}
     hasBin: true
     peerDependencies:
       '@constl/ipa': ^1.0.14
@@ -9449,12 +9449,11 @@ snapshots:
       react: 19.0.0
       react-native: 0.78.0(@babel/core@7.26.9)(@babel/preset-env@7.26.9(@babel/core@7.26.9))(bufferutil@4.0.9)(react@19.0.0)
 
-  '@riffcc/orbiter@0.1.10(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.26.9)(@babel/preset-env@7.26.9(@babel/core@7.26.9))(bufferutil@4.0.9)(react@19.0.0)))(@types/node@22.13.9)':
+  '@riffcc/orbiter@0.2.2(@constl/ipa@1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.26.9)(@babel/preset-env@7.26.9(@babel/core@7.26.9))(bufferutil@4.0.9)(react@19.0.0)))(@types/node@22.13.9)':
     dependencies:
       '@constl/ipa': 1.6.1(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.26.9)(@babel/preset-env@7.26.9(@babel/core@7.26.9))(bufferutil@4.0.9)(react@19.0.0))
       '@constl/utils-ipa': 1.0.5
       '@inquirer/prompts': 7.3.2(@types/node@22.13.9)
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/6a208c83fb2a3b2174e55bea5b2d9e636344c782
       chalk: 5.4.1
       change-case: 5.4.4
       deepcopy: 2.1.0
