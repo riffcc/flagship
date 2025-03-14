@@ -117,19 +117,21 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@ipshipyard/node-datachannel",
       "@localfirst/auth",
       "@localfirst/crdx",
       "@localfirst/crypto",
       "@localfirst/shared",
+      "@parcel/watcher",
       "bufferutil",
       "classic-level",
       "core-js",
       "electron",
+      "electron-winstaller",
       "esbuild",
       "iso-constants",
       "msgpackr-extract",
       "node-datachannel",
-      "@ipshipyard/node-datachannel",
       "simple-git-hooks",
       "vue-demi"
     ],
