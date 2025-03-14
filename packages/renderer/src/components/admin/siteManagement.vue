@@ -5,7 +5,10 @@
       max-width="448px"
     >
       <v-list-item class="px-0 mb-4">
-        <template #prepend>
+        <template
+          v-if="showDefederation"
+          #prepend
+        >
           <v-menu>
             <template #activator="{ props }">
               <v-btn
@@ -90,6 +93,7 @@ import { IPFS_GATEWAY } from '/@/constants/ipfs';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
 import { useSiteColors } from '/@/composables/siteColors';
 import { copyText } from '/@/utils';
+import { useShowDefederation } from '/@/composables/showDefed';
 
 const file: Ref<File | null> = ref(null);
 const fileBlobUrl: Ref<string | null> = ref(null);
@@ -109,4 +113,5 @@ watch(file, (v) => {
 function handleOnSave(){};
 const {orbiter} = useOrbiter();
 const {getSiteColor, saveColor, selectedColors} = useSiteColors();
+const {showDefederation} = useShowDefederation();
 </script>
