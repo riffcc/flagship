@@ -10,7 +10,7 @@
       color="transparent"
       :height="height"
       :width="width"
-      :style="showDefederation ? `border: 1px solid ${lensColorHash(sourceSite)};` : ''"
+      :style="showDefederation ? `border: 1px solid ${getSiteColor(sourceSite)};` : ''"
       @click="onClick"
     >
       <template v-if="overlapping">
@@ -61,10 +61,11 @@
 
 <script setup lang="ts">
 import { useShowDefederation } from '/@/composables/showDefed';
-import { lensColorHash } from '/@/utils';
+import { useSiteColors } from '/@/composables/siteColors';
 
 
 const {showDefederation} = useShowDefederation();
+const {getSiteColor} = useSiteColors();
 
 
 defineProps<{

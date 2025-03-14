@@ -53,12 +53,36 @@
             <v-list-item
               v-for="s in trustedSites"
               :key="s.id"
-              :title="s.données.siteId"
+              :title="`${s.données.siteId.slice(0,17)}...${s.données.siteId.slice(-10)}`"
               :subtitle="s.données.siteName"
             >
+              <template
+                v-if="showDefederation"
+                #prepend
+              >
+                <v-menu>
+                  <template #activator="{ props }">
+                    <v-btn
+                      v-bind="props"
+                      icon="mdi-circle"
+                      variant="text"
+                      density="compact"
+                      size="x-small"
+                      class="mr-2"
+                      :color="getSiteColor(s.données.siteId)"
+                    />
+                  </template>
+                  <v-color-picker
+                    v-model="selectedColors[s.données.siteId]"
+                    @update:model-value="saveColor(s.données.siteId, $event)"
+                  />
+                </v-menu>
+              </template>
               <template #append>
                 <v-btn
                   icon="mdi-delete"
+                  density="comfortable"
+                  size="small"
                   @click="() => untrustSite({siteId: s.id})"
                 ></v-btn>
               </template>
@@ -81,6 +105,8 @@ import {adresseOrbiteValide} from '@constl/utils-ipa';
 import {suivre as follow} from '@constl/vue';
 import {computed, ref} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
+import { useSiteColors } from '/@/composables/siteColors';
+import { useShowDefederation } from '/@/composables/showDefed';
 
 const {orbiter} = useOrbiter();
 const formRef = ref();
@@ -134,4 +160,7 @@ const trustedSites = follow(orbiter.followTrustedSites.bind(orbiter));
 const untrustSite = async ({siteId}: {siteId: string}) => {
   await orbiter.untrustSite({siteId});
 };
+
+const {getSiteColor, saveColor, selectedColors} = useSiteColors();
+const {showDefederation} = useShowDefederation();
 </script>

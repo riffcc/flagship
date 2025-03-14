@@ -63,7 +63,7 @@
     >
       <v-container
         class="fill-height"
-        :style="showDefederation ? `border: 1px solid ${lensColorHash(featuredItem.sourceSite)};` : ''"
+        :style="showDefederation ? `border: 1px solid ${getSiteColor(featuredItem.sourceSite)};` : ''"
       >
         <v-row
           justify="center"
@@ -174,7 +174,7 @@ import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
 import {useShowDefederation} from '/@/composables/showDefed';
 import {type FeaturedItem, useStaticReleases} from '/@/composables/staticReleases';
-import { lensColorHash } from '/@/utils';
+import { useSiteColors } from '/@/composables/siteColors';
 
 const props = defineProps<{
   featuredList: Array<FeaturedItem>;
@@ -200,5 +200,7 @@ const nextSlideImage = computed(() => {
   const nextIndex = slide.value === featuredItems.value.length - 1 ? 0 : slide.value + 1;
   return featuredItems.value[nextIndex].cover ?? featuredItems.value[nextIndex].thumbnail;
 });
+
+const {getSiteColor} = useSiteColors();
 
 </script>
