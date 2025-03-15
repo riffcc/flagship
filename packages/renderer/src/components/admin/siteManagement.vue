@@ -4,7 +4,10 @@
       class="px-6 py-4 mx-auto"
       max-width="448px"
     >
-      <v-list-item class="px-0 mb-4">
+      <v-list-item
+        class="px-0 mb-4"
+        :title="`Site ID: ${orbiter.siteId.slice(0, 17)}...${orbiter.siteId.slice(-10)}`"
+      >
         <template
           v-if="showDefederation"
           #prepend
@@ -15,7 +18,7 @@
                 v-bind="props"
                 icon="mdi-circle"
                 variant="text"
-                density="compact"
+                density="comfortable"
                 size="x-small"
                 class="mr-2"
                 :color="getSiteColor(orbiter.siteId)"
@@ -27,14 +30,12 @@
             />
           </v-menu>
         </template>
-
-        <p class="text-body">Site ID: {{ `${orbiter.siteId.slice(0, 17)}...${orbiter.siteId.slice(-10)}` }}</p>
         <template #append>
           <v-btn
             icon="mdi-clipboard-multiple-outline"
             variant="text"
             density="comfortable"
-            size="small"
+            size="x-small"
             @click="copyText(orbiter.siteId)"
           ></v-btn>
         </template>
