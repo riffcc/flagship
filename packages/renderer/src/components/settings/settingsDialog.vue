@@ -106,7 +106,7 @@ let forgetModerator: (() => void) | undefined = undefined;
 onMounted(async () => {
   forgetAccount = await orbiter.listenForAccountId({f: a => (account.value = a)});
   forgetAccountExists = await orbiter.listenForAccountExists({f: a => (accountExists.value = a)});
-  forgetModerator = await orbiter.listenToIsModerator({f: isMod => (moderator.value = !!isMod)});
+  forgetModerator = await orbiter.followIsModerator({f: isMod => (moderator.value = !!isMod)});
 });
 
 onUnmounted(async () => {

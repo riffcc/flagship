@@ -1,12 +1,7 @@
 import {
-  RELEASES_AUTHOR_COLUMN,
-  RELEASES_FILE_COLUMN,
-  RELEASES_METADATA_COLUMN,
-  RELEASES_NAME_COLUMN,
-  RELEASES_THUMBNAIL_COLUMN,
-  RELEASES_TYPE_COLUMN,
-} from '../consts';
-import type Orbiter from '../orbiter';
+  consts,
+} from '@riffcc/orbiter';
+import type {Orbiter }from '@riffcc/orbiter';
 
 const clearData = async () => {
   localStorage.clear();
@@ -40,11 +35,12 @@ export const loadStubData = async (app: Orbiter) => {
     nomFichier: 'logo.svg',
   });
   await app.addRelease({
-    [RELEASES_NAME_COLUMN]: 'Famous song',
-    [RELEASES_AUTHOR_COLUMN]: 'I. B. Astar',
-    [RELEASES_THUMBNAIL_COLUMN]: thumbnailCid,
-    [RELEASES_FILE_COLUMN]: audioCid,
-    [RELEASES_METADATA_COLUMN]: 'With an open-access licence, of course.',
-    [RELEASES_TYPE_COLUMN]: 'audio',
+    [consts.RELEASES_NAME_COLUMN]: 'Famous song',
+    [consts.RELEASES_AUTHOR_COLUMN]: 'I. B. Astar',
+    [consts.RELEASES_THUMBNAIL_COLUMN]: thumbnailCid,
+    [consts.RELEASES_FILE_COLUMN]: audioCid,
+    [consts.RELEASES_METADATA_COLUMN]: 'With an open-access licence, of course.',
+    [consts.RELEASES_CATEGORY_COLUMN]: 'audio',
+    [consts.RELEASES_COVER_COLUMN]: 'todo',
   });
 };

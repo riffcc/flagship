@@ -5,16 +5,18 @@
  */
 
 // Plugins
+import routeur from '../router';
 import vuetify from '../vuetify';
 import {loadFonts} from '../webfontloader';
 
-import orbiter from '../orbiter';
+import orbiter from '../orbiter/index';
 
 // Types
 import type {App} from 'vue';
 
 export function registerPlugins(app: App) {
   loadFonts();
+  app.use(routeur);
   app.use(vuetify);
   app.use(orbiter);
 }

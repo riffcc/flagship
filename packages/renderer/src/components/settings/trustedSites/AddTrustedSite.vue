@@ -37,13 +37,13 @@
 import {computed, ref} from 'vue';
 
 import type {tableaux} from '@constl/ipa';
+import type {types as orbiterTypes} from '@riffcc/orbiter';
 import {watchEffect} from 'vue';
-import type {TrustedSite} from '/@/plugins/orbiter/types';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 
 const {orbiter} = useOrbiter();
 
-const props = defineProps<{site?: tableaux.élémentDonnées<TrustedSite>}>();
+const props = defineProps<{site?: tableaux.élémentDonnées<orbiterTypes.TrustedSite>}>();
 
 const dialog = ref(false);
 const saving = ref(false);
@@ -64,7 +64,7 @@ const siteName = ref<string>();
 
 watchEffect(() => {
   if (siteInfo.value) {
-    const info = JSON.parse(atob(siteInfo.value)) as TrustedSite;
+    const info = JSON.parse(atob(siteInfo.value)) as orbiterTypes.TrustedSite;
     siteId.value = info.siteId;
     siteName.value = info.siteName;
   }

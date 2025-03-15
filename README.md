@@ -80,7 +80,7 @@ git clone https://github.com/riffcc/orbiter.git
     pnpm watch:web
     ```
 
-4. Visit the application in your browser, generate a moderation database, copy the parameters the application gives you, and copy them to `./.env.local`
+4. Visit the application in your browser (for productio, in Electron), generate a moderation database, copy the parameters the application gives you, and copy the line beginning with `VITE_SITE_ID=/orbitdb/...` to `./.env.local` (or the whole texto to `./.env`).
 
 5. Stop and re-run the application to apply the new moderation database.
 

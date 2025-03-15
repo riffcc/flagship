@@ -1,23 +1,28 @@
-if (process.env.VITE_APP_VERSION === undefined) {
-  const now = new Date();
-  process.env.VITE_APP_VERSION = `${now.getUTCFullYear() - 2000}.${
-    now.getUTCMonth() + 1
-  }.${now.getUTCDate()}-${now.getUTCHours() * 60 + now.getUTCMinutes()}`;
-}
+/**
+ * TODO: Rewrite this config to ESM
+ * But currently electron-builder doesn't support ESM configs
+ * @see https://github.com/develar/read-config-file/issues/10
+ */
 
 /**
- * @type {import('electron-builder').Configuration}
+ * @type {() => import('electron-builder').Configuration}
  * @see https://www.electron.build/configuration/configuration
  */
-const config = {
-  directories: {
-    output: 'dist',
-    buildResources: 'buildResources',
-  },
-  files: ['packages/**/dist/**'],
-  extraMetadata: {
-    version: process.env.VITE_APP_VERSION,
-  },
-};
+module.exports = async function () {
+  const {getVersion} = await import('./version/getVersion.mjs');
+  return {
+    directories: {
+      output: 'dist',
+      buildResources: 'buildResources',
+    },
+    files: ['packages/**/dist/**'],
+    extraMetadata: {
+      version: getVersion(),
+    },
 
-module.exports = config;
+    // Specify linux target just for disabling snap compilation
+    linux: {
+      target: 'deb',
+    },
+  };
+};

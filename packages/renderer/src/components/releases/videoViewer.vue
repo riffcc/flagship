@@ -34,7 +34,7 @@ onMounted(async () => {
     id: props.file,
   });
   console.log(videoData);
-  videoURL.value = URL.createObjectURL(new Blob([videoData!.buffer]));
+  videoURL.value = URL.createObjectURL(new Blob([videoData!.buffer as ArrayBuffer]));
   console.log(videoURL);
   return;
   /*
@@ -43,7 +43,6 @@ onMounted(async () => {
     hls.loadSource(videoURL.value);
     hls.attachMedia(video.value!);
     hls.on(Hls.Events.MANIFEST_PARSED, function () {
-      console.log('ici');
       const node = document.createTextNode('Video ready...');
       status.value?.appendChild(node);
 
@@ -69,13 +68,12 @@ onMounted(async () => {
 
     hls.attachMedia(video.value);
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      console.log('ici');
       const node = document.createTextNode('Video ready...');
       status.value?.appendChild(node);
 
       video.value?.play();
     });
-    
+
   }*/
 });
 </script>

@@ -18,7 +18,7 @@ const {orbiter} = useOrbiter();
 
 const props = defineProps<{accountId: string}>();
 
-const names = follow(orbiter.listenForNameChange, {accountId: computed(() => props.accountId)});
+const names = follow(orbiter.listenForNameChange.bind(orbiter), {accountId: computed(() => props.accountId)});
 
 const displayName = computed(() => {
   return selectTranslation(names.value) || 'Anonymous';

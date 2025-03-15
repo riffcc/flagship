@@ -2,6 +2,7 @@ import type {MockedClass, MockedObject} from 'vitest';
 import {beforeEach, expect, test, vi} from 'vitest';
 import {restoreOrCreateWindow} from '../src/mainWindow';
 
+import {GestionnaireFenêtres} from '@constl/mandataire-electron-principal';
 import {BrowserWindow} from 'electron';
 
 /**
@@ -14,6 +15,7 @@ vi.mock('electron', () => {
   bw.prototype.loadURL = vi.fn((_: string, __?: Electron.LoadURLOptions) => Promise.resolve());
   bw.prototype.loadFile = vi.fn((_: string, __?: Electron.LoadFileOptions) => Promise.resolve());
   // Use "any" because the on function is overloaded
+  // @ts-expect-error I have no idea why
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   bw.prototype.on = vi.fn<any>();
   bw.prototype.destroy = vi.fn();
@@ -49,8 +51,17 @@ vi.mock('electron', () => {
   return {BrowserWindow: bw, app, ipcMain};
 });
 
+vi.mock('@constl/mandataire-electron-principal', () => {
+  const gf = vi.fn() as unknown as MockedClass<typeof GestionnaireFenêtres>;
+  gf.prototype.connecterFenêtreÀConstellation = vi.fn();
+  return {
+    GestionnaireFenêtres: gf,
+  };
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(GestionnaireFenêtres);
 });
 
 test('Devrait créer une nouvelle fenêtre', async () => {

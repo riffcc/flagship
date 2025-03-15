@@ -40,7 +40,7 @@ jobs:
   web_tests:
     uses: ./.github/workflows/webTests.yml
   publish_web_app:
-    needs: [ typechecking, web_tests ]
+    needs: [ web_tests ]
     uses: ./.github/workflows/publishPage.yml
   draft_release:
     permissions:

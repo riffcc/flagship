@@ -9,7 +9,7 @@ export const useUserProfilePhoto = (
 ): ComputedRef<string | undefined> => {
   const {orbiter} = useOrbiter();
 
-  const profilePic = follow(orbiter.listenForProfilePhotoChange, {accountId});
+  const profilePic = follow(orbiter.listenForProfilePhotoChange.bind(orbiter), {accountId});
   const defaultAvatar = ref<string>();
   onMounted(async () => {
     const svg = await [

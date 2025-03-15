@@ -24,7 +24,7 @@
 
     <v-divider class="my-2" />
 
-    <h2>Blocked CIDs</h2>
+    <!-- <h2>Blocked CIDs</h2>
     <v-list>
       <v-list-item>
         <v-list-item-title>
@@ -53,7 +53,7 @@
           </v-btn>
         </template>
       </v-list-item>
-    </v-list>
+    </v-list> -->
   </div>
 </template>
 
@@ -61,7 +61,7 @@
 import {onMounted, onUnmounted, ref} from 'vue';
 
 import type {tableaux} from '@constl/ipa';
-import type {TrustedSite} from '/@/plugins/orbiter/types';
+import type {types as orbiterTypes} from '@riffcc/orbiter';
 
 import TrustSiteDialog from './trustedSites/AddTrustedSite.vue';
 import TrustedSiteListItem from './trustedSites/TrustedSiteItem.vue';
@@ -69,29 +69,29 @@ import {useOrbiter} from '/@/plugins/orbiter/utils';
 
 const {orbiter} = useOrbiter();
 
-const blockedCIDs = ref<{cid: string; id: string}[]>();
-const toBlock = ref<string>();
+// const blockedCIDs = ref<{cid: string; id: string}[]>();
+// const toBlock = ref<string>();
 
-const trustedSites = ref<tableaux.élémentDonnées<TrustedSite>[]>();
+const trustedSites = ref<tableaux.élémentDonnées<orbiterTypes.TrustedSite>[]>();
 
-const blockRelease = async (cid: string) => {
-  await orbiter.blockRelease({cid});
-  toBlock.value = undefined;
-};
-const unblockRelease = async (id: string) => {
-  await orbiter.unblockRelease({id});
-};
+// const blockRelease = async (cid: string) => {
+//   await orbiter.blockRelease({cid});
+//   toBlock.value = undefined;
+// };
+// const unblockRelease = async (id: string) => {
+//   await orbiter.unblockRelease({id});
+// };
 
-let forgetBlockedCIDs: (() => Promise<void>) | undefined = undefined;
+// let forgetBlockedCIDs: (() => Promise<void>) | undefined = undefined;
 let forgetTrustedSites: (() => Promise<void>) | undefined = undefined;
 
 onMounted(async () => {
-  forgetBlockedCIDs = await orbiter.listenForSiteBlockedReleases({f: x => (blockedCIDs.value = x)});
+  // forgetBlockedCIDs = await orbiter.listenForSiteBlockedReleases({f: x => (blockedCIDs.value = x)});
   forgetTrustedSites = await orbiter.followTrustedSites({f: x => (trustedSites.value = x)});
 });
 
 onUnmounted(async () => {
-  if (forgetBlockedCIDs) await forgetBlockedCIDs();
+  // if (forgetBlockedCIDs) await forgetBlockedCIDs();
   if (forgetTrustedSites) await forgetTrustedSites();
 });
 </script>
