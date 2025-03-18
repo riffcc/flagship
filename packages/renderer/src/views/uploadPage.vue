@@ -4,7 +4,7 @@
       width="480px"
       class="px-8 pb-16 pt-10 mx-auto"
     >
-      <new-release-form v-if="canUpload" />
+      <release-form v-if="canUpload" />
       <v-alert
         v-else-if="canUpload === false"
         type="info"
@@ -37,7 +37,7 @@
 import {suivre as follow} from '@constl/vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 
-import NewReleaseForm from '/@/components/releases/newReleaseForm.vue';
+import releaseForm from '/@/components/releases/releaseForm.vue';
 
 const {orbiter} = useOrbiter();
 const canUpload = follow(orbiter.followCanUpload.bind(orbiter));
