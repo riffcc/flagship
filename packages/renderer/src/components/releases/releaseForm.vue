@@ -69,7 +69,7 @@
           <v-text-field
             v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).tags"
             label="Tags"
-            placeholder="Values sepatared by comma"
+            placeholder="Values separated by comma"
           >
             <template #append-inner>
               <v-tooltip location="top">
