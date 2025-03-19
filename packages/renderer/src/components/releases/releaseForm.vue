@@ -1,6 +1,7 @@
 <template>
   <v-form
     ref="formRef"
+    :disabled="isLoading"
     validate-on="input lazy"
     class="d-flex flex-column ga-2"
     @submit.prevent="handleOnSubmit"
@@ -13,7 +14,7 @@
     <v-text-field
       v-model="releaseItem.contentCID"
       label="Content CID"
-      :rules="[rules.isValidCid]"
+      :rules="[rules.required, rules.isValidCid]"
     />
     <v-select
       v-model="releaseItem.category"
@@ -29,10 +30,12 @@
     <v-text-field
       v-model="releaseItem.thumbnail"
       label="Thumbnail CID (Optional)"
+      :rules="[rules.isValidCid]"
     />
     <v-text-field
       v-model="releaseItem.cover"
       label="Cover Image CID (Optional)"
+      :rules="[rules.isValidCid]"
     />
     <v-dialog
       v-model="openAdvanced"
@@ -211,7 +214,7 @@ const releaseItem = ref<ReleaseItem>({
 
 const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
-  isValidCid: (v: string) => cid(v) || 'Please enter a valid CID.',
+  isValidCid: (v: string) => !v || cid(v) || 'Please enter a valid CID.',
 };
 const isLoading = ref(false);
 const resultDetails = ref<{
