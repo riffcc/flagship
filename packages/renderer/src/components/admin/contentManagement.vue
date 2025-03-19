@@ -90,26 +90,12 @@
         </v-card-title>
 
         <v-card-text>
-          <v-text-field
-            v-model="editedRelease.name"
-            label="Name"
-          ></v-text-field>
-          <v-select
-            v-model="editedRelease.category"
-            label="Category"
-            :items="consts.CONTENT_CATEGORIES"
-            variant="solo"
-          ></v-select>
-          <v-text-field
-            v-model="editedRelease.contentCid"
-            label="Content CID"
-          ></v-text-field>
-          <!-- <v-select
-            v-model="editedRelease.status"
-            label="Status"
-            :items="orbiter.statusType.filter(s => s !== 'deleted')"
-            variant="solo"
-          ></v-select> -->
+          <release-form
+            :initial-data="editedRelease"
+            mode="edit"
+            @update:success="handleSuccess"
+            @update:error="handleError"
+          />
         </v-card-text>
 
         <v-card-actions>
@@ -120,13 +106,6 @@
             @click="editReleaseDialog = false"
           >
             Cancel
-          </v-btn>
-          <v-btn
-            color="blue-darken-1"
-            variant="text"
-            @click="saveRelease"
-          >
-            Save
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -142,13 +121,14 @@
 <script setup lang="ts">
 import {computed, ref, type Ref} from 'vue';
 import {suivre as follow} from '@constl/vue';
-import {consts} from '@riffcc/orbiter';
 import {useDisplay} from 'vuetify';
 import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 // import { getStatusColor } from '/@/utils';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
+import ReleaseForm from '/@/components/releases/releaseForm.vue';
 import { useStaticStatus } from '../../composables/staticStatus';
+import type { PartialReleaseItem } from '/@/@types/release';
 
 const {staticStatus} = useStaticStatus();
 const {lgAndUp, smAndDown} = useDisplay();
@@ -166,7 +146,7 @@ type Header = {
 const smTableHeaders: Header[] = [
   {title: 'ID', align: 'start', key: 'id'},
   {title: 'Name', align: 'start', key: 'name'},
-  {title: 'Status', align: 'start', key: 'status'},
+  // {title: 'Status', align: 'start', key: 'status'},
   {title: 'Actions', key: 'actions', sortable: false},
 ];
 const tableHeaders: Header[] = [
@@ -179,7 +159,6 @@ const tableHeaders: Header[] = [
   {title: 'Name', align: 'start', key: 'name'},
   {title: 'Category', align: 'start', key: 'category'},
   {title: 'Content CID', align: 'start', key: 'contentCid'},
-  // {title: 'Status', align: 'start', key: 'status'},
   {title: 'Actions', key: 'actions', sortable: false},
 ];
 
@@ -209,126 +188,81 @@ const tableItems = computed(() => {
   }
 });
 
-const editedRelease: Ref<{
-  id: string;
-  name: string;
-  category: string;
-  contentCid: string;
-  // status: ItemStatus;
-}> = ref({
-  id: '',
+const editedRelease: Ref<PartialReleaseItem> = ref({
   name: '',
+  contentCID: '',
   category: '',
-  contentCid: '',
-  // status: 'pending',
+  author: '',
+  metadata: {},
 });
+
 const editReleaseDialog = ref(false);
 const confirmDeleteReleaseDialog = ref(false);
 
-const isSavingLoading = ref(false);
-isSavingLoading.value = true;
-
-
-async function saveRelease() {
+function editRelease(id?: string) {
+  if (!id) return;
   if (staticStatus.value === 'static') {
-    const targetReleaseIndex = staticReleases.value.findIndex(
-      r => r.id == editedRelease.value.id,
-    );
-    if (targetReleaseIndex !== -1) {
-      staticReleases.value.splice(targetReleaseIndex, 1, {
-        ...staticReleases.value[targetReleaseIndex],
-        ...editedRelease.value,
-      });
+    const targetRelease = staticReleases.value.find(r => r.id === id);
+    if (targetRelease) {
+      editedRelease.value = {
+        id: targetRelease.id,
+        name: targetRelease.name,
+        contentCID: targetRelease.contentCID,
+        category: targetRelease.category,
+        author: targetRelease.author,
+        thumbnail: targetRelease.thumbnail,
+        cover: targetRelease.cover,
+        metadata: targetRelease.metadata ?? {},
+      };
     }
-    editReleaseDialog.value = false;
   } else {
-    try {
-      await orbiter.editRelease({
-        releaseId: editedRelease.value.id,
-        release: {
-          contentName: editedRelease.value.name,
-          category: editedRelease.value.category,
-          file: editedRelease.value.contentCid,
-          // status: editedRelease.value.status,
-        },
-      });
-      editReleaseDialog.value = false;
-    } catch (error) {
-      console.log('error on saveRelease', error);
-    } finally {
-      isSavingLoading.value = false;
+    const targetRelease = orbiterReleases.value?.find(r => r.release.id === id);
+    if (targetRelease) {
+      editedRelease.value = {
+        id: targetRelease.release.id,
+        name: targetRelease.release.release.contentName,
+        contentCID: targetRelease.release.release.file,
+        category: targetRelease.release.release.category,
+        author: targetRelease.release.release.author,
+        thumbnail: targetRelease.release.release.thumbnail,
+        cover: targetRelease.release.release.cover,
+        metadata: targetRelease.release.release.metadata
+          ? JSON.parse(targetRelease.release.release.metadata)
+          : {},
+      };
     }
   }
+  editReleaseDialog.value = true;
 }
 
-function deleteRelease(id: string) {
-  editedRelease.value = {
-    id,
-    name: '',
-    category: '',
-    contentCid: '',
-    // status: 'deleted',
-  };
+function handleSuccess(message: string) {
+  console.log('Success:', message);
+  editReleaseDialog.value = false;
+}
+
+function handleError(message: string) {
+  console.error('Error:', message);
+}
+
+function deleteRelease(id?: string) {
+  if (!id) return;
+  editedRelease.value = { id };
   confirmDeleteReleaseDialog.value = true;
 }
 
 async function confirmDeleteRelease() {
   if (staticStatus.value === 'static') {
-    const targetReleaseIndex = staticReleases.value.findIndex(
-      r => r.id == editedRelease.value.id,
-    );
+    const targetReleaseIndex = staticReleases.value.findIndex(r => r.id === editedRelease.value.id);
     if (targetReleaseIndex !== -1) {
-      staticReleases.value.splice(targetReleaseIndex, 1, {
-        ...staticReleases.value[targetReleaseIndex],
-        ...editedRelease.value,
-      });
+      staticReleases.value.splice(targetReleaseIndex, 1);
     }
-    confirmDeleteReleaseDialog.value = false;
   } else {
     try {
-      await orbiter.editRelease({
-        releaseId: editedRelease.value.id,
-        release: {
-          contentName: editedRelease.value.name,
-          category: editedRelease.value.category,
-          file: editedRelease.value.contentCid,
-          // status: editedRelease.value.status,
-        },
-      });
-      editReleaseDialog.value = false;
+      await orbiter.removeRelease(editedRelease.value.id!);
     } catch (error) {
-      console.log('error on confirmDeleteRelease', error);
-    } finally {
-      isSavingLoading.value = false;
+      console.error('Error deleting release:', error);
     }
   }
-
-}
-
-function editRelease(id: string) {
-  if (staticStatus.value === 'static') {
-    const targetRelease =  staticReleases.value.find(r => r.id == id);
-    if (targetRelease) {
-      editedRelease.value = {
-        id: targetRelease.id,
-        name: targetRelease.name,
-        category: targetRelease.category,
-        contentCid: targetRelease.contentCID,
-        // status: targetRelease.status,
-      };
-    }
-  } else {
-    const targetRelease = orbiterReleases.value?.find((r => r.release.id == id));
-    if (targetRelease) {
-      editedRelease.value = {
-        id: targetRelease.release.id,
-        name: targetRelease.release.release.contentName,
-        category: targetRelease.release.release.category,
-        contentCid: targetRelease.release.release.file,
-        // status: targetRelease.release.release.status as ItemStatus,
-      };
-    }
-  }
-  editReleaseDialog.value = true;
+  confirmDeleteReleaseDialog.value = false;
 }
 </script>

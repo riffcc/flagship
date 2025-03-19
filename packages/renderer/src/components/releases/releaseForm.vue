@@ -73,10 +73,10 @@
           >
             <template #append-inner>
               <v-tooltip location="top">
-                <template #activator="{props}">
+                <template #activator="{props: tagsTooltipProps}">
                   <v-icon
                     size="small"
-                    v-bind="props"
+                    v-bind="tagsTooltipProps"
                     color="grey-lighten-1"
                     icon="mdi-help-circle-outline"
                   ></v-icon>
@@ -92,10 +92,10 @@
           >
             <template #append-inner>
               <v-tooltip location="top">
-                <template #activator="{props}">
+                <template #activator="{props: musicBrainzIDTooltipProps}">
                   <v-icon
                     size="small"
-                    v-bind="props"
+                    v-bind="musicBrainzIDTooltipProps"
                     color="grey-lighten-1"
                     icon="mdi-help-circle-outline"
                   ></v-icon>
@@ -186,6 +186,17 @@ import {computed, ref, watch} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import type { ReleaseItem, PartialReleaseItem } from '/@/@types/release';
 
+const props = defineProps<{
+  initialData?: PartialReleaseItem;
+  mode?: 'create' | 'edit';
+}>();
+
+const emit = defineEmits<{
+  (e: 'submit', data: unknown): void;
+  (e: 'update:success', message: string): void;
+  (e: 'update:error', message: string): void;
+}>();
+
 const {orbiter} = useOrbiter();
 const formRef = ref();
 const openAdvanced = ref<boolean>();
@@ -224,34 +235,30 @@ const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
   isLoading.value = true;
   try {
-    const {
-      contentCIDValue,
-      authorValue,
-      metadataValue,
-      releaseNameValue,
-      releaseCategoryValue,
-      coverCIDValue,
-    } = readyToSave.value;
-    await orbiter.addRelease({
-      [consts.RELEASES_AUTHOR_COLUMN]: authorValue,
-      [consts.RELEASES_CATEGORY_COLUMN]: releaseCategoryValue,
-      [consts.RELEASES_FILE_COLUMN]: contentCIDValue,
-      [consts.RELEASES_METADATA_COLUMN]: JSON.stringify(metadataValue),
-      [consts.RELEASES_NAME_COLUMN]: releaseNameValue,
-      [consts.RELEASES_THUMBNAIL_COLUMN]: thumbnailCID.value,
-      [consts.RELEASES_COVER_COLUMN]: coverCIDValue,
-    });
-    resultDetails.value = {
-      message: 'Release uploaded successfully, yay!',
-      variant: 'success',
+    const data = readyToSave.value;
+    const release = {
+      [consts.RELEASES_AUTHOR_COLUMN]: data.author,
+      [consts.RELEASES_CATEGORY_COLUMN]: data.category,
+      [consts.RELEASES_FILE_COLUMN]: data.contentCID,
+      [consts.RELEASES_METADATA_COLUMN]: JSON.stringify(data.metadata),
+      [consts.RELEASES_NAME_COLUMN]: data.name,
+      [consts.RELEASES_THUMBNAIL_COLUMN]: data.thumbnail,
+      [consts.RELEASES_COVER_COLUMN]: data.cover,
     };
+    if (props.mode === 'edit' && props.initialData?.id) {
+      await orbiter.editRelease({
+        releaseId: props.initialData.id,
+        release,
+      });
+    } else {
+      await orbiter.addRelease(release);
+    }
+    emit('submit', data);
+    emit('update:success', 'Release saved successfully!');
     clearForm();
   } catch (error) {
-    console.log('error uploading release', error);
-    resultDetails.value = {
-      message: 'Error uploading release. Please try again later.',
-      variant: 'error',
-    };
+    console.error('Error saving release:', error);
+    emit('update:error', 'Error saving release. Please try again later.');
   } finally {
     isLoading.value = false;
   }
