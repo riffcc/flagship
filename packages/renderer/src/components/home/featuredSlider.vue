@@ -63,7 +63,7 @@
     >
       <v-container
         class="fill-height"
-        :style="showDefederation ? `border: 1px solid ${getSiteColor(featuredItem.sourceSite)};` : ''"
+        :style="showDefederation && featuredItem.sourceSite ? `border: 1px solid ${getSiteColor(featuredItem.sourceSite)};` : ''"
       >
         <v-row
           justify="center"
@@ -82,20 +82,17 @@
                 {{ featuredItem.name }}
               </h5>
               <template v-if="['music'].includes(featuredItem.category)">
-                <p
-                  v-if="featuredItem.metadata?.author"
-                  class="text-body-2 text-sm-body-1"
-                >
-                  {{ featuredItem.metadata.author }}
+                <p class="text-body-2 text-sm-body-1">
+                  {{ featuredItem.author }}
                 </p>
                 <v-chip
-                  v-if="featuredItem.metadata?.songs && featuredItem.metadata?.releaseYear"
+                  v-if="(featuredItem.metadata as orbiterTypes.MusicReleaseMetadata).totalSongs && (featuredItem.metadata as orbiterTypes.MusicReleaseMetadata).releaseYear"
                   class="opacity-100 px-0 text-medium-emphasis mt-2"
                   density="comfortable"
                   disabled
                   variant="text"
                 >
-                  {{ featuredItem.metadata.songs }} Songs • {{ featuredItem.metadata.releaseYear }}
+                  {{ (featuredItem.metadata as orbiterTypes.MusicReleaseMetadata).totalSongs }} Songs • {{ (featuredItem.metadata as orbiterTypes.MusicReleaseMetadata).releaseYear }}
                 </v-chip>
               </template>
 
@@ -103,22 +100,22 @@
                 v-if="['movie'].includes(featuredItem.category)"
               >
                 <v-chip
-                  v-if="featuredItem.metadata?.classification"
+                  v-if="(featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).classification"
                   class="opacity-100"
                   density="comfortable"
                   disabled
                   label
                 >
-                  {{ featuredItem.metadata.classification }}
+                  {{ (featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).classification }}
                 </v-chip>
                 <v-chip
-                  v-if="featuredItem.metadata?.duration && featuredItem.metadata?.releaseYear"
+                  v-if="(featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).duration && (featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).releaseYear"
                   density="comfortable"
                   disabled
                   class="opacity-100 text-medium-emphasis"
                   variant="text"
                 >
-                  {{ featuredItem.metadata.duration }} • {{ featuredItem.metadata.releaseYear }}
+                  {{ (featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).duration }} • {{ (featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).releaseYear }}
                 </v-chip>
               </v-chip-group>
               <p
@@ -175,6 +172,7 @@ import {useDisplay} from 'vuetify';
 import {useShowDefederation} from '/@/composables/showDefed';
 import {type FeaturedItem, useStaticReleases} from '/@/composables/staticReleases';
 import { useSiteColors } from '/@/composables/siteColors';
+import type { types as orbiterTypes } from '@riffcc/orbiter';
 
 const props = defineProps<{
   featuredList: Array<FeaturedItem>;
@@ -188,7 +186,7 @@ const slide = ref(0);
 
 const featuredItems = computed(() => {
   const featuredIds = props.featuredList.map(f => f.releaseId);
-  return staticReleases.value.filter(sr => featuredIds.includes(sr.id));
+  return staticReleases.value.filter(sr => sr.id && featuredIds.includes(sr.id));
 });
 
 const previousSlideImage = computed(() => {

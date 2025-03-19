@@ -30,8 +30,8 @@
           <content-card
             :background-image="parseUrlOrCid(item.thumbnail)"
             cursor-pointer
-            :subtitle="item.category === 'movie' ? item.metadata?.releaseYear ? `(${item.metadata.releaseYear})` : '' : item.name"
-            :title="item.category === 'movie' ? item.name : item.metadata?.author ?? ''"
+            :subtitle="item.category === 'movie' ? (item.metadata as orbiterTypes.MovieReleaseMetadata).releaseYear ? `(${(item.metadata as orbiterTypes.MovieReleaseMetadata).releaseYear})` : undefined : item.name"
+            :title="item.category === 'movie' ? item.name : item.author"
             :width="xs ? '10.5rem' : '12rem'"
             :source-site="item.sourceSite"
             @click="router.push(`/release/${item.id}`)"
@@ -51,7 +51,7 @@
             :background-image="parseUrlOrCid(item.thumbnail)"
             cursor-pointer
             hovering-children
-            :subtitle="item.metadata?.author ?? ''"
+            :subtitle="item.author ?? ''"
             :title="item.name"
             :width="xs ? '10.5rem' : '15rem'"
             :source-site="item.sourceSite"
@@ -93,7 +93,7 @@
             height="10rem"
             hovering-children
             overlapping
-            :subtitle="`${item.metadata?.seasons} Seasons`"
+            :subtitle="(item.metadata as orbiterTypes.TvShowReleaseMetadata).seasons ? `${(item.metadata as orbiterTypes.TvShowReleaseMetadata).seasons} Seasons` : undefined"
             :title="item.name"
             :source-site="item.sourceSite"
             width="17rem"
@@ -147,10 +147,12 @@ import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import {useStaticStatus} from '../composables/staticStatus';
-import type {FeaturedItem, ItemContent, ItemMetadata} from '/@/composables/staticReleases';
+import type {FeaturedItem} from '/@/composables/staticReleases';
+import type {ReleaseItem} from '/@/@types/release';
 import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { filterActivedFeature, parseUrlOrCid } from '/@/utils';
+import type { types as orbiterTypes } from '@riffcc/orbiter';
 
 const router = useRouter();
 const {xs} = useDisplay();
@@ -162,21 +164,22 @@ const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
 
 const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
 
-const releases = computed<ItemContent[]>(() => {
+const releases = computed<ReleaseItem[]>(() => {
   if (staticStatus.value === 'static') return staticReleases.value;
   else {
     return (orbiterReleases.value || []).map((r) => {
       return {
         id: r.release.id,
-        category: r.release.release.category,
-        contentCID: r.release.release.file,
         name: r.release.release.contentName,
-        metadata: JSON.parse(r.release.release.metadata as string) as ItemMetadata,
+        contentCID: r.release.release.file,
+        category: r.release.release.category,
+        author: r.release.release.author,
         thumbnail: r.release.release.thumbnail,
-        sourceSite: r.site,
         cover: r.release.release.cover,
+        metadata: JSON.parse(r.release.release.metadata as string),
+        sourceSite: r.site,
       };
-    }) as ItemContent[];
+    }) as ReleaseItem[];
   }
 });
 
@@ -194,8 +197,8 @@ const featuredReleases = computed<FeaturedItem[]>(() => {
   }
 });
 
-function categorizeItems(items: ItemContent[], limit: number = 8) {
-  const result: Record<string, ItemContent[]> = {
+function categorizeItems(items: ReleaseItem[], limit: number = 8) {
+  const result: Record<string, ReleaseItem[]> = {
     'featured-music': [],
     'tv-shows': [],
     'featured-various': [],
@@ -204,9 +207,9 @@ function categorizeItems(items: ItemContent[], limit: number = 8) {
   const addedItems = new Set<string>(); // Track all added items to avoid duplication
 
   // Helper to add items without duplicates and respect limits
-  function addToCategory(targetArray: ItemContent[], item: ItemContent, categoryLimit: number) {
+  function addToCategory(targetArray: ReleaseItem[], item: ReleaseItem, categoryLimit: number) {
     if (
-      targetArray.length < categoryLimit &&
+      targetArray.length < categoryLimit && item.id &&
       !addedItems.has(item.id)
     ) {
       targetArray.push(item);

@@ -10,12 +10,12 @@
       color="transparent"
       :height="height"
       :width="width"
-      :style="showDefederation ? `border: 1px solid ${getSiteColor(sourceSite)};` : ''"
+      :style="showDefederation && sourceSite ? `border: 1px solid ${getSiteColor(sourceSite)};` : ''"
       @click="onClick"
     >
       <template v-if="overlapping">
         <v-img
-          :src="backgroundImage"
+          :src="backgroundImage ?? '/no-image-icon.png'"
           width="100%"
           cover
           aspect-ratio="1"
@@ -24,7 +24,10 @@
           <p class="ml-4 mt-2 text-subtitle-1">
             {{ title }}
           </p>
-          <p class="ml-4 text-subtitle-2">
+          <p
+            v-if="subtitle"
+            class="ml-4 text-subtitle-2"
+          >
             {{ subtitle }}
           </p>
           <slot
@@ -38,7 +41,7 @@
       </template>
       <template v-else>
         <v-img
-          :src="backgroundImage"
+          :src="backgroundImage ?? '/no-image-icon.png'"
           width="100%"
           cover
           aspect-ratio="1"
@@ -51,7 +54,10 @@
         <p class="text-caption text-sm-subtitle-1 text-center mt-1">
           {{ title }}
         </p>
-        <p class="text-caption text-sm-subtitle-1 text-center text-medium-emphasis">
+        <p
+          v-if="subtitle"
+          class="text-caption text-sm-subtitle-1 text-center text-medium-emphasis"
+        >
           {{ subtitle }}
         </p>
       </template>
@@ -70,13 +76,13 @@ const {getSiteColor} = useSiteColors();
 
 defineProps<{
   backgroundGradient?: string;
-  backgroundImage: string;
+  backgroundImage?: string;
   cursorPointer?: boolean;
   height?: string | number;
   overlapping?: boolean;
-  subtitle: string;
+  subtitle?: string;
   title: string;
-  sourceSite: string;
+  sourceSite?: string;
   width?: string | number;
   onClick?: () => void;
 }>();

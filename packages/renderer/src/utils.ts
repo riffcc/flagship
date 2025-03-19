@@ -100,6 +100,7 @@ export function filterActivedFeature(featured: FeaturedItem) {
   return now >= startTime && now <= endTime;
 };
 
-export function parseUrlOrCid(urlOrCid: string) {
+export function parseUrlOrCid(urlOrCid?: string) {
+  if (!urlOrCid) return undefined;
   return isCID(urlOrCid) ? `https://${IPFS_GATEWAY}/ipfs/${urlOrCid}` : urlOrCid;
 };

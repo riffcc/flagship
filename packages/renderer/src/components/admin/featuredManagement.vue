@@ -86,7 +86,7 @@ const handleOnSubmit = (e: SubmitEventPromise) => {
   e.then(result => {
     if (result.valid) {
       const targetRelease = staticReleases.value.find(r => r.id === releaseId.value);
-      if (targetRelease) {
+      if (targetRelease && targetRelease.id) {
         staticFeaturedReleases.value.push({
           id: (staticFeaturedReleases.value.length + 1).toString(),
           releaseId: targetRelease.id,

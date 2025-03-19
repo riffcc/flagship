@@ -1,25 +1,5 @@
 import {ref, type Ref} from 'vue';
-
-export interface ItemMetadata {
-  author?: string;
-  classification?: string;
-  description?: string;
-  duration?: string;
-  releaseYear?: number | string;
-  seasons?: number | string;
-  songs?: number;
-}
-
-export interface ItemContent {
-  id: string;
-  category: string;
-  contentCID: string;
-  cover?: string;
-  name: string;
-  metadata?: ItemMetadata;
-  sourceSite: string;
-  thumbnail: string;
-}
+import type { ReleaseItem } from '/@/@types/release';
 
 export interface FeaturedItem {
   id: string;
@@ -55,12 +35,13 @@ const staticFeaturedReleases: Ref<Array<FeaturedItem>> = ref([
   },
 ]);
 
-const staticReleases: Ref<Array<ItemContent>> = ref([
+const staticReleases: Ref<Array<ReleaseItem>> = ref([
   {
     id: '1',
     category: 'tvShow',
     contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
     name: 'Pure Pwnage',
+    author: 'Geoff Lapaire',
     metadata: {
       seasons: 1,
     },
@@ -73,6 +54,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'tvShow',
     contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
     name: 'Pioneer One',
+    author: 'Josh Bernhard and Bracey Smith',
     metadata: {
       seasons: 2,
     },
@@ -85,6 +67,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'tvShow',
     contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
     name: 'Flash Gordon',
+    author: 'Unknown',
     metadata: {
       seasons: 1,
     },
@@ -97,6 +80,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'tvShow',
     contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
     name: 'The Beverley Hillbillies',
+    author: 'Paul Henning',
     metadata: {
       seasons: '~1.6',
     },
@@ -110,6 +94,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
     cover: '/mock/movie-rip.png',
     name: 'RiP!: A Remix Manifesto',
+    author: 'Brett Gaylor',
     metadata: {
       classification: 'PG',
       description:
@@ -125,9 +110,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     id: '6',
     category: 'music',
     name: "Let's Kick Fire",
-    metadata: {
-      author: 'Adam McHeffey',
-    },
+    author: 'Adam McHeffey',
+    metadata: {},
     contentCID: 'QmQ5mZFnruyqA4tzwguKJ9e4wLigokE2pQE3e99u3YK8vg',
     sourceSite: '/orbitdb/zdpuAwQJUpaVmAmujzG2ALUAABqczyLNFziLwGURrXjs4WMzw',
     // status: 'approved',
@@ -139,8 +123,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     contentCID: 'QmU6WhM6h3uvnicXcCQPgYpwrg9Moz68nVGWBeaYca2bMv',
     cover: '/mock/music-mapleridge.webp',
     name: 'Maple Ridge',
+    author: 'Swear and Shake',
     metadata: {
-      author: 'Swear and Shake',
       description:
       'One of our favourite folk albums, and an early inspiration for the Riff.CC project.',
       songs: 10,
@@ -155,9 +139,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'music',
     name: 'The Slip',
     contentCID: 'QmR9hcaUqC7saAj8jjpkCwqa9bChmMJ3Mca17sRn6oiR2F',
-    metadata: {
-      author: 'Nine Inch Nails',
-    },
+    author: 'Nine Inch Nails',
+    metadata: {},
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
     thumbnail: '/mock/music-theslip.jpg',
@@ -167,9 +150,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'music',
     name: 'IN RAINBOWS',
     contentCID: 'QmWnDNcn7WCcuemYzRTBdJRMzSMgR8Hf6xtPiWLShtqucv',
-    metadata: {
-      author: 'Radiohead',
-    },
+    author: 'Radiohead',
+    metadata: {},
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
     thumbnail: '/mock/music-inrainbows.jpg',
@@ -180,6 +162,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     contentCID: 'QmPjxGcAYBv1fbwWSA2Zu4rHFN21DpFTKpQivXk9Kozqqe',
     cover: 'bafkreiemmzezvfmeueaeuqfewtf4d6fiuvjqnh4xulgwuugfknmh3abfxi',
     name: "The Internet's Own Boy: The Story of Aaron Swartz",
+    author: 'Brian Knappenberger',
     metadata: {
       classification: 'PG',
       description:
@@ -197,6 +180,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     contentCID: 'QmPSGARS6emPSEf8umwmjdG8AS7z7o8Nd36258B3BMi291',
     cover: 'bafkreiemqveqhpksefhup46d77iybtatf2vb2bgyak4hfydxaz5hxser34',
     name: 'TPB AFK: The Pirate Bay Away from Keyboard',
+    author: 'Simon Klose',
     metadata: {
       classification: 'Unrated',
       description:
@@ -213,6 +197,7 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'movie',
     contentCID: 'QmYVCbux1BK5Z2eJjwr5pJayZiQhp2TAUdCNUostkFkwee',
     name: 'Cosmos Laundromat: First Cycle',
+    author: 'Unknown',
     metadata: {
       releaseYear: '2015',
     },
@@ -225,9 +210,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'music',
     contentCID: 'Qmb9XpBQnw1vataDeWTh4jAnPMgNfKGyV7KWFz7uCvYHNd',
     name: 'Ghosts I-IV',
-    metadata: {
-      author: 'Nine Inch Nails',
-    },
+    author: 'Nine Inch Nails',
+    metadata: {},
     thumbnail: '/mock/music-ghosts-i-iv.png',
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
@@ -237,9 +221,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'movie',
     contentCID: 'QmWeLCFA27vv91r6Jxu1C4PZTXj4mXpam6GGQzM6cS8FYD',
     name: 'Night of the Living Dead',
-    metadata: {
-      releaseYear: '1968',
-    },
+    author: 'George A. Romero',
+    metadata: {},
     thumbnail: '/mock/movie-nightofthelivingdead.webp',
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
@@ -249,9 +232,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'music',
     contentCID: 'QmZAYJ1eQtTgMCcM2xxXiLjERqnbaseX1wMvuRbddqhaMj',
     name: 'All Day',
-    metadata: {
-      author: 'Girl Talk',
-    },
+    author: 'Girl Talk',
+    metadata: {},
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
     thumbnail: '/mock/music-allday.png',
@@ -261,9 +243,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'music',
     contentCID: 'QmcvUHaHp7bpnvs31Nka7rSQ2KEuWcgDSwK3V1wsRqMqns',
     name: 'Story of Ohm^',
-    metadata: {
-      author: 'paniq',
-    },
+    author: 'paniq',
+    metadata: {},
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
     thumbnail: '/mock/music-storyofohm.png',
@@ -273,9 +254,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'music',
     contentCID: 'QmZE5FLsfNDLvXpruXFehoGL3H1EUpbRpszcoFvSXx1iKd',
     name: 'Bye Bye Fishies',
-    metadata: {
-      author: 'OK! Crazy Fiction Lady',
-    },
+    author: 'OK! Crazy Fiction Lady',
+    metadata: {},
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
     thumbnail: '/mock/music-byebyefishies.png',
@@ -285,8 +265,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'music',
     contentCID: 'QmbQ6JUzJPXaMdh5HBBZsczGLzhgz5DaFmUbRFZByZggRq',
     name: 'Everything You Should Know',
+    author: 'Silence is Sexy',
     metadata: {
-      author: 'Silence is Sexy',
       releaseYear: 2006,
     },
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
@@ -298,9 +278,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'music',
     contentCID: 'QmUD6WSCQcyyBGdwEqUiQBivU8QXR8psx5eiuqv3BqK76M',
     name: 'OK! Crazy Fiction Lady',
-    metadata: {
-      author: 'OK! Crazy Fiction Lady',
-    },
+    author: 'OK! Crazy Fiction Lady',
+    metadata: {},
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
     thumbnail: '/mock/music-okcfl.png',
@@ -310,9 +289,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'music',
     contentCID: 'QmSPWyFztzp3wntTyBLR5P3xc35wYekaUZ9YyzHtYRu7Ky',
     name: 'Beyond Good and Evil',
-    metadata: {
-      author: 'paniq',
-    },
+    author: 'paniq',
+    metadata: {},
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
     thumbnail: '/mock/music-paniq-bgae.jpg',
@@ -322,9 +300,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'music',
     contentCID: 'QmNXPf83zcKpqp3nDFtjYuAcTWLqsLZkANbNmcH3YZSs34',
     name: "Guess Who's A Mess",
-    metadata: {
-      author: 'Brad Sucks',
-    },
+    author: 'Brad Sucks',
+    metadata: {},
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
     thumbnail: '/mock/music-guesswhosamess.webp',
@@ -334,9 +311,8 @@ const staticReleases: Ref<Array<ItemContent>> = ref([
     category: 'music',
     contentCID: 'Qme72tWtGJfQnUnWoadTb3PxkfQGAYziiAjf4hvqraokF9',
     name: 'Extended Play^',
-    metadata: {
-      author: 'Swear and Shake',
-    },
+    author: 'Swear and Shake',
+    metadata: {},
     sourceSite: '/orbitdb/zdpuAwQJUpaVmGURrXjs4WMzwAmujzG2ALUAABqczyLNFziLw',
     // status: 'approved',
     thumbnail: '/mock/music-swearandshake-extendedplay.webp',

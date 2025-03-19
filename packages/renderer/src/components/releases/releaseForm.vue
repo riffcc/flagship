@@ -6,33 +6,33 @@
     @submit.prevent="handleOnSubmit"
   >
     <v-text-field
-      v-model="releaseName"
+      v-model="releaseItem.name"
       label="Name"
       :rules="[rules.required]"
     />
     <v-text-field
-      v-model="contentCID"
+      v-model="releaseItem.contentCID"
       label="Content CID"
       :rules="[rules.isValidCid]"
     />
     <v-select
-      v-model="releaseCategory"
+      v-model="releaseItem.category"
       :items="consts.CONTENT_CATEGORIES"
       :rules="[rules.required]"
       label="Category"
     />
     <v-text-field
-      v-model="author"
+      v-model="releaseItem.author"
       label="Author"
       :rules="[rules.required]"
     />
     <v-text-field
-      v-model="thumbnailCID"
+      v-model="releaseItem.thumbnail"
       label="Thumbnail CID (Optional)"
     />
     <v-text-field
-      v-model="coverCID"
-      label="Cover image CID"
+      v-model="releaseItem.cover"
+      label="Cover Image CID (Optional)"
     />
     <v-dialog
       v-model="openAdvanced"
@@ -57,17 +57,17 @@
           Please fill out any extra information about the content that might be useful.
         </p>
         <v-text-field
-          v-model="releaseMetadata.description"
+          v-model="releaseItem.metadata.description"
           label="Description"
         />
         <v-select
-          v-model="releaseMetadata.license"
+          v-model="releaseItem.metadata.license"
           :items="licenseTypes"
           label="License"
         />
-        <template v-if="releaseCategory == 'music'">
+        <template v-if="releaseItem.category === 'music'">
           <v-text-field
-            v-model="musicReleaseMetadata.tags"
+            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).tags"
             label="Tags"
             placeholder="Values sepatared by comma"
           >
@@ -87,7 +87,7 @@
             </template>
           </v-text-field>
           <v-text-field
-            v-model="musicReleaseMetadata.musicBrainzID"
+            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).musicBrainzID"
             label="MusicBrainz ID"
           >
             <template #append-inner>
@@ -106,48 +106,48 @@
             </template>
           </v-text-field>
           <v-text-field
-            v-model="musicReleaseMetadata.albumTitle"
+            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).albumTitle"
             label="Album Title"
           />
           <v-text-field
-            v-model="musicReleaseMetadata.initialReleaseYear"
-            label="Initial Release Year"
+            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).releaseYear"
+            label="Release Year"
           />
           <v-select
-            v-model="musicReleaseMetadata.releaseType"
+            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).releaseType"
             :items="musicReleaseTypes"
             label="Release Type"
           />
           <v-select
-            v-model="musicReleaseMetadata.fileFormat"
+            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).fileFormat"
             :items="musicFileFormats"
             label="Format"
           />
           <v-text-field
-            v-model="musicReleaseMetadata.bitrate"
+            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).bitrate"
             label="Bitrate"
           />
           <v-select
-            v-model="musicReleaseMetadata.mediaFormat"
+            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).mediaFormat"
             :items="musicMediaFormats"
             label="Media"
           />
         </template>
-        <template v-else-if="releaseCategory == 'movie'">
+        <template v-else-if="releaseItem.category === 'movie'">
           <v-text-field
-            v-model="movieReleaseMetadata.posterCID"
+            v-model="(releaseItem.metadata as orbiterTypes.MovieReleaseMetadata).posterCID"
             label="Poster CID"
           />
           <v-text-field
-            v-model="movieReleaseMetadata.TMDBID"
+            v-model="(releaseItem.metadata as orbiterTypes.MovieReleaseMetadata).TMDBID"
             label="TMDB ID"
           />
           <v-text-field
-            v-model="movieReleaseMetadata.IMDBID"
+            v-model="(releaseItem.metadata as orbiterTypes.MovieReleaseMetadata).IMDBID"
             label="IMDB ID"
           />
           <v-select
-            v-model="movieReleaseMetadata.releaseType"
+            v-model="(releaseItem.metadata as orbiterTypes.MovieReleaseMetadata).releaseType"
             :items="movieReleaseTypes"
             label="Media"
           />
@@ -180,26 +180,23 @@
 </template>
 
 <script setup lang="ts">
-import {consts, type types} from '@riffcc/orbiter';
+import {consts, type types as orbiterTypes} from '@riffcc/orbiter';
 import {cid} from 'is-ipfs';
 import {computed, ref, watch} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
-// import convert from 'image-file-resize';
+import type { ReleaseItem, PartialReleaseItem } from '/@/@types/release';
 
 const {orbiter} = useOrbiter();
 const formRef = ref();
 const openAdvanced = ref<boolean>();
 
-const author = ref<string>();
-const contentCID = ref<string>();
-const releaseCategory = ref<string>();
-const releaseName = ref<string>();
-const thumbnailCID = ref<string>();
-const coverCID = ref<string>(); // TODO - option to autogenerate this from movie files
-
-const releaseMetadata = ref<types.ReleaseMetadata>({});
-const musicReleaseMetadata = ref<types.MusicReleaseMetadata>({});
-const movieReleaseMetadata = ref<types.MovieReleaseMetadata>({});
+const releaseItem = ref<ReleaseItem>({
+  name: '',
+  contentCID: '',
+  category: '',
+  author: '',
+  metadata: {},
+});
 
 const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
@@ -212,35 +209,15 @@ const resultDetails = ref<{
 } | null>(null);
 const readyToSave = computed(() => {
   if (
-    contentCID.value &&
-    author.value &&
-    releaseName.value &&
-    releaseCategory.value &&
-    coverCID.value &&
+    releaseItem.value.name &&
+    releaseItem.value.contentCID &&
+    releaseItem.value.category &&
+    releaseItem.value.author &&
     formRef.value.isValid
   ) {
-    let metadataValue = releaseMetadata.value;
-    if (releaseCategory.value == 'movie') {
-      metadataValue = {
-        ...metadataValue,
-        ...movieReleaseMetadata.value,
-      };
-    } else if (releaseCategory.value == 'music') {
-      metadataValue = {
-        ...metadataValue,
-        ...musicReleaseMetadata.value,
-      };
-    }
-
-    return {
-      contentCIDValue: contentCID.value,
-      authorValue: author.value,
-      metadataValue,
-      releaseNameValue: releaseName.value,
-      releaseCategoryValue: releaseCategory.value,
-      coverCIDValue: coverCID.value,
-    };
-  } else return undefined;
+    return releaseItem.value;
+  }
+  return undefined;
 });
 
 const handleOnSubmit = async () => {
@@ -281,16 +258,13 @@ const handleOnSubmit = async () => {
 };
 
 const clearForm = () => {
-  author.value = undefined;
-  contentCID.value = undefined;
-  releaseCategory.value = undefined;
-  releaseName.value = undefined;
-  thumbnailCID.value = undefined;
-  coverCID.value = undefined;
-
-  releaseMetadata.value = {};
-  musicReleaseMetadata.value = {};
-  movieReleaseMetadata.value = {};
+  releaseItem.value = {
+    name: '',
+    contentCID: '',
+    category: '',
+    author: '',
+    metadata: {},
+  };
 };
 
 watch(resultDetails, (v) => {
