@@ -117,6 +117,21 @@
       @confirm="confirmDeleteRelease"
     ></confirmation-dialog>
   </v-container>
+  <v-snackbar
+    v-model="showSnackbar"
+    :color="snackbarMessage?.type ?? 'default'"
+  >
+    {{ snackbarMessage?.text }}
+    <template #actions>
+      <v-btn
+        color="white"
+        variant="text"
+        @click="closeSnackbar"
+      >
+        Close
+      </v-btn>
+    </template>
+  </v-snackbar>
 </template>
 <script setup lang="ts">
 import {computed, ref, type Ref} from 'vue';
@@ -129,6 +144,7 @@ import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import ReleaseForm from '/@/components/releases/releaseForm.vue';
 import { useStaticStatus } from '../../composables/staticStatus';
 import type { PartialReleaseItem } from '/@/@types/release';
+import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 
 const {staticStatus} = useStaticStatus();
 const {lgAndUp, smAndDown} = useDisplay();
@@ -198,6 +214,7 @@ const editedRelease: Ref<PartialReleaseItem> = ref({
 
 const editReleaseDialog = ref(false);
 const confirmDeleteReleaseDialog = ref(false);
+const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
 function editRelease(id?: string) {
   if (!id) return;
@@ -236,11 +253,12 @@ function editRelease(id?: string) {
 }
 
 function handleSuccess(message: string) {
-  console.log('Success:', message);
+  openSnackbar(message, 'success');
   editReleaseDialog.value = false;
 }
 
 function handleError(message: string) {
+  openSnackbar(message, 'error');
   console.error('Error:', message);
 }
 

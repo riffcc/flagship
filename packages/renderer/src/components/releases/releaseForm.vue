@@ -174,18 +174,12 @@
       :is-loading="isLoading"
     />
   </v-form>
-  <v-alert
-    v-if="resultDetails"
-    class="mt-2"
-    :text="resultDetails.message"
-    :type="resultDetails.variant"
-  />
 </template>
 
 <script setup lang="ts">
 import {consts, type types as orbiterTypes} from '@riffcc/orbiter';
 import {cid} from 'is-ipfs';
-import {computed, ref, watch} from 'vue';
+import {computed, ref} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import type { ReleaseItem, PartialReleaseItem } from '/@/@types/release';
 
@@ -217,10 +211,7 @@ const rules = {
   isValidCid: (v: string) => !v || cid(v) || 'Please enter a valid CID.',
 };
 const isLoading = ref(false);
-const resultDetails = ref<{
-  message: string;
-  variant: 'success' | 'error'
-} | null>(null);
+
 const readyToSave = computed(() => {
   if (
     releaseItem.value.name &&
@@ -276,14 +267,6 @@ const clearForm = () => {
     metadata: {},
   };
 };
-
-watch(resultDetails, (v) => {
-  if (v) {
-    setTimeout(() => {
-      resultDetails.value = null;
-    }, 10000);
-  }
-});
 
 const licenseTypes = ['CC BY', 'CC BY-NC', 'CC BY-NC-ND'];
 
