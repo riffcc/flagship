@@ -179,7 +179,7 @@
 <script setup lang="ts">
 import {consts, type types as orbiterTypes} from '@riffcc/orbiter';
 import {cid} from 'is-ipfs';
-import {computed, ref} from 'vue';
+import {computed, onMounted, ref} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import type { ReleaseItem, PartialReleaseItem } from '/@/@types/release';
 
@@ -211,6 +211,16 @@ const rules = {
   isValidCid: (v: string) => !v || cid(v) || 'Please enter a valid CID.',
 };
 const isLoading = ref(false);
+
+onMounted(() => {
+  if(props.initialData) {
+    releaseItem.value = {
+      ...releaseItem.value,
+      ...props.initialData,
+      metadata: props.initialData.metadata ? { ...props.initialData.metadata } : {},
+    };
+  }
+});
 
 const readyToSave = computed(() => {
   if (
