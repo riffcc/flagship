@@ -1,10 +1,10 @@
 import type { Constellation } from '@constl/ipa';
-import type { FeaturedItem } from '/@/composables/staticReleases';
 import { inject } from 'vue';
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
 import {cid as isCID} from 'is-ipfs';
 import { IPFS_GATEWAY } from './constants/ipfs';
+import type { FeaturedReleaseItem } from './@types/release';
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
 
@@ -92,7 +92,7 @@ export function isValidEmail(email: string) {
   return regex.test(email);
 };
 
-export function filterActivedFeature(featured: FeaturedItem) {
+export function filterActivedFeature(featured: FeaturedReleaseItem) {
   const now = new Date();
   const startTime = new Date(featured.startTime);
   const endTime = new Date(featured.endTime);

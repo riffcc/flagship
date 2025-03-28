@@ -170,12 +170,12 @@ import {computed, ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
 import {useShowDefederation} from '/@/composables/showDefed';
-import {type FeaturedItem, useStaticReleases} from '/@/composables/staticReleases';
+import {useStaticReleases} from '/@/composables/staticReleases';
 import { useSiteColors } from '/@/composables/siteColors';
-import type { types as orbiterTypes } from '@riffcc/orbiter';
+import type { FeaturedReleaseItem } from '/@/@types/release';
 
 const props = defineProps<{
-  featuredList: Array<FeaturedItem>;
+  featuredList: FeaturedReleaseItem[];
 }>();
 
 const router = useRouter();

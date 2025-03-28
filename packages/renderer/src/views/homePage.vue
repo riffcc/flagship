@@ -147,8 +147,7 @@ import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import {useStaticStatus} from '../composables/staticStatus';
-import type {FeaturedItem} from '/@/composables/staticReleases';
-import type {ReleaseItem} from '/@/@types/release';
+import type {FeaturedReleaseItem, ReleaseItem} from '/@/@types/release';
 import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { filterActivedFeature, parseUrlOrCid } from '/@/utils';
@@ -183,10 +182,10 @@ const releases = computed<ReleaseItem[]>(() => {
   }
 });
 
-const featuredReleases = computed<FeaturedItem[]>(() => {
+const featuredReleases = computed<FeaturedReleaseItem[]>(() => {
   if (staticStatus.value === 'static') return staticFeaturedReleases.value.filter(fr => filterActivedFeature(fr));
   else {
-    return (orbiterFeaturedReleases.value || []).map((fr): FeaturedItem => {
+    return (orbiterFeaturedReleases.value || []).map((fr): FeaturedReleaseItem => {
       return {
         id: fr.id,
         releaseId: fr.featured.releaseId,

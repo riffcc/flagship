@@ -13,3 +13,10 @@ export interface ReleaseItem {
 }
 
 export type PartialReleaseItem = Partial<ReleaseItem>;
+
+export type FeaturedReleaseItem = {
+  id: string;
+  releaseId: string;
+  startTime: string;
+  endTime: string;
+};

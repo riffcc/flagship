@@ -1,14 +1,7 @@
 import {ref, type Ref} from 'vue';
-import type { ReleaseItem } from '/@/@types/release';
+import type { ReleaseItem, FeaturedReleaseItem } from '/@/@types/release';
 
-export interface FeaturedItem {
-  id: string;
-  releaseId: string;
-  startTime: string;
-  endTime: string;
-}
-
-const staticFeaturedReleases: Ref<Array<FeaturedItem>> = ref([
+const staticFeaturedReleases: Ref<FeaturedReleaseItem[]> = ref([
   {
     id: '1',
     releaseId: '5',
