@@ -41,6 +41,12 @@
         >
           Site
         </v-tab>
+        <v-tab
+          slider-color="primary"
+          value="categories"
+        >
+          Categories
+        </v-tab>
       </v-tabs>
       <v-window
         v-model="tab"
@@ -71,6 +77,11 @@
         >
           <site-management></site-management>
         </v-window-item>
+        <v-window-item
+          value="categories"
+        >
+          <categories-management></categories-management>
+        </v-window-item>
       </v-window>
     </div>
   </v-container>
@@ -84,6 +95,7 @@ import accessManagement from '/@/components/admin/accessManagement.vue';
 import featuredManagement from '/@/components/admin/featuredManagement.vue';
 import subscriptionManagement from '/@/components/admin/subscriptionManagement.vue';
 import siteManagement from '/@/components/admin/siteManagement.vue';
+import categoriesManagement from '/@/components/admin/categoriesManagement.vue';
 
 const {lgAndUp} = useDisplay();
 const tab = ref(null);

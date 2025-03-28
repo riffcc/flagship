@@ -18,9 +18,10 @@
     />
     <v-select
       v-model="releaseItem.category"
-      :items="consts.CONTENT_CATEGORIES"
+      :items="contentCategoriesItems"
       :rules="[rules.required]"
       label="Category"
+      @update:model-value="() => releaseItem.metadata = {}"
     />
     <v-text-field
       v-model="releaseItem.author"
@@ -44,6 +45,7 @@
       <template #activator="{props: activatorProps}">
         <v-btn
           v-bind="activatorProps"
+          :disabled="!Boolean(selectedContentCategory)"
           rounded="0"
           text="Advanced"
           variant="outlined"
@@ -52,6 +54,7 @@
         ></v-btn>
       </template>
       <v-sheet
+        v-if="selectedContentCategory"
         width="480px"
         max-height="620px"
         class="pa-8 ma-auto"
@@ -59,102 +62,43 @@
         <p class="text-subtitle mb-6 text-center">
           Please fill out any extra information about the content that might be useful.
         </p>
-        <v-text-field
-          v-model="releaseItem.metadata.description"
-          label="Description"
-        />
-        <v-select
-          v-model="releaseItem.metadata.license"
-          :items="licenseTypes"
-          label="License"
-        />
-        <template v-if="releaseItem.category === 'music'">
+        <div
+          v-for="[categoryId, {type, description, options}] in Object.entries(selectedContentCategory)"
+          :key="categoryId"
+        >
+          <v-select
+            v-if="options"
+            :items="options"
+            :label="categoryId"
+            :model-value="(releaseItem.metadata[categoryId] as string | null | undefined)"
+            @update:model-value="(v) => {
+              if (v) handleChangeMetadataField(categoryId, v)
+            }"
+          />
           <v-text-field
-            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).tags"
-            label="Tags"
-            placeholder="Values separated by comma"
+            v-else
+            :label="categoryId"
+            :model-value="releaseItem.metadata[categoryId]"
+            :type="type"
+            @update:model-value="(v) => handleChangeMetadataField(categoryId, v)"
           >
             <template #append-inner>
-              <v-tooltip location="top">
-                <template #activator="{props: tagsTooltipProps}">
+              <v-tooltip
+                location="top"
+                :text="description"
+              >
+                <template #activator="{props: tooltipProps}">
                   <v-icon
                     size="small"
-                    v-bind="tagsTooltipProps"
+                    v-bind="tooltipProps"
                     color="grey-lighten-1"
                     icon="mdi-help-circle-outline"
                   ></v-icon>
                 </template>
-                <span>Any tags you feel are appropriate for the media - such as rock, country, or
-                  pop.</span>
               </v-tooltip>
             </template>
           </v-text-field>
-          <v-text-field
-            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).musicBrainzID"
-            label="MusicBrainz ID"
-          >
-            <template #append-inner>
-              <v-tooltip location="top">
-                <template #activator="{props: musicBrainzIDTooltipProps}">
-                  <v-icon
-                    size="small"
-                    v-bind="musicBrainzIDTooltipProps"
-                    color="grey-lighten-1"
-                    icon="mdi-help-circle-outline"
-                  ></v-icon>
-                </template>
-                <span>If the content has an entry on MusicBrainz, enter it here to pre-fill the rest of
-                  this form.</span>
-              </v-tooltip>
-            </template>
-          </v-text-field>
-          <v-text-field
-            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).albumTitle"
-            label="Album Title"
-          />
-          <v-text-field
-            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).releaseYear"
-            label="Release Year"
-          />
-          <v-select
-            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).releaseType"
-            :items="musicReleaseTypes"
-            label="Release Type"
-          />
-          <v-select
-            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).fileFormat"
-            :items="musicFileFormats"
-            label="Format"
-          />
-          <v-text-field
-            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).bitrate"
-            label="Bitrate"
-          />
-          <v-select
-            v-model="(releaseItem.metadata as orbiterTypes.MusicReleaseMetadata).mediaFormat"
-            :items="musicMediaFormats"
-            label="Media"
-          />
-        </template>
-        <template v-else-if="releaseItem.category === 'movie'">
-          <v-text-field
-            v-model="(releaseItem.metadata as orbiterTypes.MovieReleaseMetadata).posterCID"
-            label="Poster CID"
-          />
-          <v-text-field
-            v-model="(releaseItem.metadata as orbiterTypes.MovieReleaseMetadata).TMDBID"
-            label="TMDB ID"
-          />
-          <v-text-field
-            v-model="(releaseItem.metadata as orbiterTypes.MovieReleaseMetadata).IMDBID"
-            label="IMDB ID"
-          />
-          <v-select
-            v-model="(releaseItem.metadata as orbiterTypes.MovieReleaseMetadata).releaseType"
-            :items="movieReleaseTypes"
-            label="Media"
-          />
-        </template>
+        </div>
         <v-btn
           rounded="0"
           text="Save"
@@ -178,6 +122,7 @@
 
 <script setup lang="ts">
 import {consts, type types as orbiterTypes} from '@riffcc/orbiter';
+import { suivre as follow } from '@constl/vue';
 import {cid} from 'is-ipfs';
 import {computed, onMounted, ref} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
@@ -211,6 +156,31 @@ const rules = {
   isValidCid: (v: string) => !v || cid(v) || 'Please enter a valid CID.',
 };
 const isLoading = ref(false);
+
+const contentCategories = follow(orbiter.listenForContentCategories.bind(orbiter));
+const contentCategoriesItems = computed(() => (contentCategories.value ?? []).map(item => ({
+  id: item.id,
+  value: item.contentCategory.categoryId,
+  title: item.contentCategory.displayName,
+})));
+
+const selectedContentCategory = computed(() => {
+  let categoryMetadataData: orbiterTypes.ContentCategoryMetadataField | undefined = undefined;
+  if (contentCategories.value) {
+    const targetItem = contentCategories.value.find(item => item.contentCategory.categoryId === releaseItem.value.category);
+    if (targetItem) {
+      categoryMetadataData = JSON.parse(targetItem.contentCategory.metadataSchema);
+    }
+  }
+  return categoryMetadataData;
+});
+
+const handleChangeMetadataField = (categoryId: string, value: string) => {
+  releaseItem.value.metadata = {
+    ...releaseItem.value.metadata,
+    [categoryId]: value,
+  };
+};
 
 onMounted(() => {
   if(props.initialData) {
@@ -277,37 +247,4 @@ const clearForm = () => {
     metadata: {},
   };
 };
-
-const licenseTypes = ['CC BY', 'CC BY-NC', 'CC BY-NC-ND'];
-
-const musicReleaseTypes = [
-  'Album',
-  'Soundtrack',
-  'EP',
-  'Anthology',
-  'Compilation',
-  'Single',
-  'Live Album',
-  'Remix',
-  'Bootleg',
-  'Interview',
-  'Mixtape',
-  'Demo',
-  'Concert Recording',
-  'DJ Mix',
-  'Unknown',
-];
-
-const musicFileFormats = ['MP3', 'FLAC', 'AAC', 'AC3', 'DTS'];
-
-const musicMediaFormats = ['CD', 'DVD', 'Vinyl', 'Soundboard', 'SACD', 'DAT', 'WEB', 'Blu-Ray'];
-
-const movieReleaseTypes = [
-  'Feature Film',
-  'Short Film',
-  'Miniseries',
-  'Stand-up Comedy',
-  'Live Performance',
-  'Movie Collection',
-];
 </script>
