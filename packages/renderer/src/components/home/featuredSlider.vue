@@ -86,13 +86,13 @@
                   {{ featuredItem.author }}
                 </p>
                 <v-chip
-                  v-if="(featuredItem.metadata as orbiterTypes.MusicReleaseMetadata).totalSongs && (featuredItem.metadata as orbiterTypes.MusicReleaseMetadata).releaseYear"
+                  v-if="featuredItem.metadata['totalSongs'] && featuredItem.metadata['releaseYear']"
                   class="opacity-100 px-0 text-medium-emphasis mt-2"
                   density="comfortable"
                   disabled
                   variant="text"
                 >
-                  {{ (featuredItem.metadata as orbiterTypes.MusicReleaseMetadata).totalSongs }} Songs • {{ (featuredItem.metadata as orbiterTypes.MusicReleaseMetadata).releaseYear }}
+                  {{ featuredItem.metadata['totalSongs'] }} Songs • {{ featuredItem.metadata['releaseYear'] }}
                 </v-chip>
               </template>
 
@@ -100,22 +100,22 @@
                 v-if="['movie'].includes(featuredItem.category)"
               >
                 <v-chip
-                  v-if="(featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).classification"
+                  v-if="featuredItem.metadata['classification']"
                   class="opacity-100"
                   density="comfortable"
                   disabled
                   label
                 >
-                  {{ (featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).classification }}
+                  {{ featuredItem.metadata['classification'] }}
                 </v-chip>
                 <v-chip
-                  v-if="(featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).duration && (featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).releaseYear"
+                  v-if="featuredItem.metadata['duration'] && featuredItem.metadata['releaseYear']"
                   density="comfortable"
                   disabled
                   class="opacity-100 text-medium-emphasis"
                   variant="text"
                 >
-                  {{ (featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).duration }} • {{ (featuredItem.metadata as orbiterTypes.MovieReleaseMetadata).releaseYear }}
+                  {{ featuredItem.metadata['duration'] }} • {{ featuredItem.metadata['releaseYear'] }}
                 </v-chip>
               </v-chip-group>
               <p

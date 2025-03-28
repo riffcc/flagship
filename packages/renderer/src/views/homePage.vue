@@ -30,7 +30,7 @@
           <content-card
             :background-image="parseUrlOrCid(item.thumbnail)"
             cursor-pointer
-            :subtitle="item.category === 'movie' ? (item.metadata as orbiterTypes.MovieReleaseMetadata).releaseYear ? `(${(item.metadata as orbiterTypes.MovieReleaseMetadata).releaseYear})` : undefined : item.name"
+            :subtitle="item.category === 'movie' ? item.metadata['releaseYear'] ? `(${item.metadata['releaseYear']})` : undefined : item.name"
             :title="item.category === 'movie' ? item.name : item.author"
             :width="xs ? '10.5rem' : '12rem'"
             :source-site="item.sourceSite"
@@ -93,7 +93,7 @@
             height="10rem"
             hovering-children
             overlapping
-            :subtitle="(item.metadata as orbiterTypes.TvShowReleaseMetadata).seasons ? `${(item.metadata as orbiterTypes.TvShowReleaseMetadata).seasons} Seasons` : undefined"
+            :subtitle="item.metadata['seasons'] ? `${item.metadata['seasons']} Seasons` : undefined"
             :title="item.name"
             :source-site="item.sourceSite"
             width="17rem"
@@ -151,7 +151,6 @@ import type {FeaturedReleaseItem, ReleaseItem} from '/@/@types/release';
 import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { filterActivedFeature, parseUrlOrCid } from '/@/utils';
-import type { types as orbiterTypes } from '@riffcc/orbiter';
 
 const router = useRouter();
 const {xs} = useDisplay();

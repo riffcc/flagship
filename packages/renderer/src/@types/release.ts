@@ -1,6 +1,4 @@
-import type { types as orbiterTypes } from '@riffcc/orbiter';
-
-export interface ReleaseItem {
+export type ReleaseItem = {
   id?: string;
   name: string;
   contentCID: string;
@@ -9,7 +7,7 @@ export interface ReleaseItem {
   thumbnail?: string;
   cover?: string;
   sourceSite?: string;
-  metadata: orbiterTypes.ReleaseMetadata | orbiterTypes.MusicReleaseMetadata | orbiterTypes.MovieReleaseMetadata;
+  metadata: Record<string, unknown>
 }
 
 export type PartialReleaseItem = Partial<ReleaseItem>;

@@ -14,8 +14,8 @@
         :title="targetRelease.name"
         :thumbnail="targetRelease.thumbnail"
         :author="targetRelease.author"
-        :description="targetRelease.metadata.description"
-        :release-year="(targetRelease.metadata as orbiterTypes.MusicReleaseMetadata).releaseYear"
+        :description="(targetRelease.metadata['description'] as string | undefined)"
+        :release-year="(targetRelease.metadata['releaseYear'] as string | number | undefined)"
       ></album-viewer>
     </template>
     <div
@@ -51,7 +51,6 @@ import { useStaticStatus } from '../composables/staticStatus';
 import {suivre as follow} from '@constl/vue';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
 import type { ReleaseItem } from '/@/@types/release';
-import type { types as orbiterTypes } from '@riffcc/orbiter';
 
 
 const props = defineProps<{
