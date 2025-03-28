@@ -1,7 +1,7 @@
 import type {types as orbiterTypes} from '@riffcc/orbiter';
 import {Orbiter} from '@riffcc/orbiter';
 import type {App} from 'vue';
-import {configIsComplete} from '@riffcc/orbiter/dist/config.js';
+import {configIsComplete} from '@riffcc/orbiter';
 export default {
   install: (app: App) => {
     const orbiterConfig = {
@@ -15,6 +15,8 @@ export default {
         constellation,
         ...orbiterConfig,
       });
+    } else {
+      throw new Error('Orbiter config is invalid, please check the .env or generate a new one with orb export-config');
     }
 
     app.config.globalProperties.$orbiter = orbiterApp;
