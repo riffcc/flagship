@@ -5,7 +5,7 @@
       max-width="448px"
     >
       <v-list-item
-        class="px-0 mb-4"
+        class="px-0"
         :title="`Site ID: ${orbiter.siteId.slice(0, 17)}...${orbiter.siteId.slice(-10)}`"
       >
         <template
@@ -40,12 +40,12 @@
           ></v-btn>
         </template>
       </v-list-item>
-
-      <h6 class="text-h6 font-weight-bold mb-4">Edit Site Info</h6>
+      <v-divider class="mt-2"></v-divider>
+      <h3 class="mt-4 mb-2">Edit Site Info</h3>
       <v-file-input
         v-model="file"
         accept="image/*"
-        label="Site Image"
+        label="Image"
         prepend-icon=""
       >
         <template #prepend-inner>
@@ -71,12 +71,12 @@
       </v-file-input>
       <v-text-field
         v-model="siteName"
-        label="Site Name"
+        label="Name"
       ></v-text-field>
       <v-textarea
         v-model="siteDescription"
         variant="solo-filled"
-        label="Site Description"
+        label="Description"
       ></v-textarea>
       <v-btn
         color="primary"
