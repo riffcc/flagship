@@ -87,7 +87,7 @@
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@ffmpeg/core": "^0.9.0",
     "@ffmpeg/ffmpeg": "^0.9.8",
-    "@riffcc/orbiter": "^0.2.6",
+    "@riffcc/orbiter": "^0.2.7",
     "@vueuse/core": "^12.7.0",
     "ajv": "^8.17.1",
     "assert": "^2.1.0",
@@ -137,7 +137,8 @@
     ],
     "overrides": {
       "magic-string": "0.30.15",
-      "@orbitdb/core": "github:benya7/orbitdb#fix/dial-protocol-retry"
+      "@orbitdb/core": "github:benya7/orbitdb#fix/dial-protocol-retry",
+      "@constl/ipa": "github:benya7/ipa"
     }
   }
 }
