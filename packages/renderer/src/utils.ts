@@ -43,7 +43,11 @@ export async function copyText(text: string | undefined) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+// Todo: make configurable with environmental variable and define in single location for main and renderer
+>>>>>>>  Veuillez saisir le message de validation pour vos modifications. Les lignes
 export const RIFFCC_PROTOCOL = 'Riff.CC';
 
 export const useConstellation = (): {
