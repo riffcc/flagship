@@ -170,25 +170,21 @@ import {computed, ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
 import {useShowDefederation} from '/@/composables/showDefed';
-import {useStaticReleases} from '/@/composables/staticReleases';
 import { useSiteColors } from '/@/composables/siteColors';
-import type { FeaturedReleaseItem } from '/@/@types/release';
+import { useReleasesStore } from '/@/stores/releases';
 
-const props = defineProps<{
-  featuredList: FeaturedReleaseItem[];
-}>();
 
 const router = useRouter();
 const {showDefederation} = useShowDefederation();
-const {staticReleases} = useStaticReleases();
 const {xs} = useDisplay();
 const slide = ref(0);
 
-const featuredItems = computed(() => {
-  const featuredIds = props.featuredList.map(f => f.releaseId);
-  return staticReleases.value.filter(sr => sr.id && featuredIds.includes(sr.id));
-});
+const {releases, featuredReleases} = useReleasesStore();
 
+const featuredItems = computed(() => {
+  const featuredReleasesIds = featuredReleases.map(fr => fr.releaseId);
+  return releases.filter(r => r.id && featuredReleasesIds.includes(r.id));
+});
 const previousSlideImage = computed(() => {
   const previousIndex = slide.value === 0 ? featuredItems.value.length - 1 : slide.value - 1;
   return featuredItems.value[previousIndex].cover ?? featuredItems.value[previousIndex].thumbnail;

@@ -1,7 +1,7 @@
 <template>
   <v-container class="fill-height pb-16">
     <v-sheet
-      v-if="!(featuredReleases.length > 0) && !(releases.length > 0)"
+      v-if="releases && !(releases.length > 0) && featuredReleases && !(featuredReleases.length > 0) "
       color="transparent"
       class="d-flex flex-column mx-auto"
       max-width="16rem"
@@ -16,8 +16,7 @@
     </v-sheet>
     <template v-else>
       <featured-slider
-        v-if="featuredReleases.length > 0"
-        :featured-list="featuredReleases"
+        v-if="featuredReleases?.length > 0"
       />
       <content-section
         v-if="categorizedReleases['featured-various'].length > 0"
@@ -142,58 +141,17 @@
 import {computed} from 'vue';
 import {useDisplay} from 'vuetify';
 import {useRouter} from 'vue-router';
-import {suivre as follow} from '@constl/vue';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
-import {useStaticStatus} from '../composables/staticStatus';
-import type {FeaturedReleaseItem, ReleaseItem} from '/@/@types/release';
-import {useStaticReleases} from '/@/composables/staticReleases';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
-import { filterActivedFeature, parseUrlOrCid } from '/@/utils';
+import type { ReleaseItem} from '/@/@types/release';
+import { parseUrlOrCid } from '/@/utils';
+import { useReleasesStore } from '../stores/releases';
 
 const router = useRouter();
 const {xs} = useDisplay();
-const {orbiter} = useOrbiter();
-const {staticStatus} = useStaticStatus();
-const {staticFeaturedReleases, staticReleases} = useStaticReleases();
 
-const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
-
-const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
-
-const releases = computed<ReleaseItem[]>(() => {
-  if (staticStatus.value === 'static') return staticReleases.value;
-  else {
-    return (orbiterReleases.value || []).map((r) => {
-      return {
-        id: r.release.id,
-        name: r.release.release.contentName,
-        contentCID: r.release.release.file,
-        category: r.release.release.category,
-        author: r.release.release.author,
-        thumbnail: r.release.release.thumbnail,
-        cover: r.release.release.cover,
-        metadata: JSON.parse(r.release.release.metadata as string),
-        sourceSite: r.site,
-      };
-    }) as ReleaseItem[];
-  }
-});
-
-const featuredReleases = computed<FeaturedReleaseItem[]>(() => {
-  if (staticStatus.value === 'static') return staticFeaturedReleases.value.filter(fr => filterActivedFeature(fr));
-  else {
-    return (orbiterFeaturedReleases.value || []).map((fr): FeaturedReleaseItem => {
-      return {
-        id: fr.id,
-        releaseId: fr.featured.releaseId,
-        startTime: fr.featured.startTime,
-        endTime: fr.featured.endTime,
-      };
-    }).filter(fr => filterActivedFeature(fr));
-  }
-});
+const {releases, featuredReleases} = useReleasesStore();
 
 function categorizeItems(items: ReleaseItem[], limit: number = 8) {
   const result: Record<string, ReleaseItem[]> = {
@@ -239,7 +197,7 @@ function categorizeItems(items: ReleaseItem[], limit: number = 8) {
   return result;
 }
 
-const categorizedReleases = computed(() => categorizeItems(staticStatus.value === 'static' ? staticReleases.value : releases.value));
+const categorizedReleases = computed(() => categorizeItems(releases));
 </script>
 <!--
       {
