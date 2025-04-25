@@ -46,29 +46,27 @@
             Edit
           </v-btn>
           <v-btn
-            prepend-icon="mdi-delete"
-            @click="deleteRelease(item.id)"
+            :prepend-icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
+            @click="deleteBlockRelease(item.id!, item.contentCid, item.sourceSite!)"
           >
-            Delete
+            {{ item.sourceSite === orbiter.siteId ? 'Delete' : 'Block' }}
           </v-btn>
         </v-menu>
         <div
           v-else
           class="d-flex"
         >
-          <v-icon
+          <v-btn
+            icon="mdi-pencil"
             class="me-2"
             size="small"
             @click="editRelease(item.id)"
-          >
-            mdi-pencil
-          </v-icon>
-          <v-icon
+          ></v-btn>
+          <v-btn
+            :icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
             size="small"
-            @click="deleteRelease(item.id)"
-          >
-            mdi-delete
-          </v-icon>
+            @click="deleteBlockRelease(item.id!, item.contentCid, item.sourceSite!)"
+          ></v-btn>
         </div>
       </template>
       <!-- <template #item.status="{item}">
@@ -111,10 +109,10 @@
       </v-card>
     </v-dialog>
     <confirmation-dialog
-      message="Are you sure you want to delete this release?"
-      :dialog-open="confirmDeleteReleaseDialog"
-      @close="() => {confirmDeleteReleaseDialog = false}"
-      @confirm="confirmDeleteRelease"
+      :message="`Are you sure you want to delete/block this release?`"
+      :dialog-open="confirmDeleteBlockReleaseDialog"
+      @close="() => {confirmDeleteBlockReleaseDialog = false}"
+      @confirm="confirmDeleteBlockRelease"
     ></confirmation-dialog>
   </v-container>
   <v-snackbar
@@ -162,7 +160,6 @@ type Header = {
 const smTableHeaders: Header[] = [
   {title: 'ID', align: 'start', key: 'id'},
   {title: 'Name', align: 'start', key: 'name'},
-  // {title: 'Status', align: 'start', key: 'status'},
   {title: 'Actions', key: 'actions', sortable: false},
 ];
 const tableHeaders: Header[] = [
@@ -188,6 +185,7 @@ const tableItems = computed(() => {
       name: r.name,
       category: r.category,
       contentCid: r.contentCID,
+      sourceSite: r.sourceSite,
       // status: r.status,
     }));
   } else {
@@ -199,6 +197,7 @@ const tableItems = computed(() => {
       name: r.release.release.contentName,
       category: r.release.release.category,
       contentCid: r.release.release.file,
+      sourceSite: r.site,
       // status: r.release.release.status as ItemStatus,
     }));
   }
@@ -213,7 +212,7 @@ const editedRelease: Ref<PartialReleaseItem> = ref({
 });
 
 const editReleaseDialog = ref(false);
-const confirmDeleteReleaseDialog = ref(false);
+const confirmDeleteBlockReleaseDialog = ref(false);
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
 function editRelease(id?: string) {
@@ -255,6 +254,7 @@ function editRelease(id?: string) {
 function handleSuccess(message: string) {
   openSnackbar(message, 'success');
   editReleaseDialog.value = false;
+  resetEditedRelease();
 }
 
 function handleError(message: string) {
@@ -262,13 +262,12 @@ function handleError(message: string) {
   console.error('Error:', message);
 }
 
-function deleteRelease(id?: string) {
-  if (!id) return;
-  editedRelease.value = { id };
-  confirmDeleteReleaseDialog.value = true;
+function deleteBlockRelease(id: string, contentCID: string, sourceSite: string) {
+  editedRelease.value = { id, contentCID, sourceSite };
+  confirmDeleteBlockReleaseDialog.value = true;
 }
 
-async function confirmDeleteRelease() {
+async function confirmDeleteBlockRelease() {
   if (staticStatus.value === 'static') {
     const targetReleaseIndex = staticReleases.value.findIndex(r => r.id === editedRelease.value.id);
     if (targetReleaseIndex !== -1) {
@@ -276,11 +275,37 @@ async function confirmDeleteRelease() {
     }
   } else {
     try {
-      await orbiter.removeRelease(editedRelease.value.id!);
+      if (editedRelease.value.sourceSite === orbiter.siteId) {
+        if (!editedRelease.value.id) throw Error('Target release id missing.');
+        await orbiter.removeRelease(editedRelease.value.id!);
+        openSnackbar('Release deleted successfully.', 'success');
+      } else {
+        if (!editedRelease.value.contentCID) throw Error('Target release content CID missing.');
+        await orbiter.blockRelease({ cid: editedRelease.value.contentCID });
+        openSnackbar('Release blocked successfully.', 'success');
+      }
+      resetEditedRelease();
     } catch (error) {
-      console.error('Error deleting release:', error);
+      if (editedRelease.value.sourceSite === orbiter.siteId) {
+        console.error('Error deleting release:', error);
+        openSnackbar('Error on deleting release.', 'error');
+      } else {
+        console.error('Error blocking release:', error);
+        openSnackbar('Error on blocking release.', 'error');
+      }
+
     }
   }
-  confirmDeleteReleaseDialog.value = false;
+  confirmDeleteBlockReleaseDialog.value = false;
 }
+
+function resetEditedRelease() {
+  editedRelease.value = {
+    name: '',
+    contentCID: '',
+    category: '',
+    author: '',
+    metadata: {},
+  };
+};
 </script>
