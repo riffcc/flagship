@@ -13,7 +13,7 @@
       >
         <v-img
           v-if="!xs"
-          :src="previousSlideImage"
+          :src="parseUrlOrCid(previousSlideImage)"
           height="100%"
           position="right"
           gradient="rgba(33,33,33,.6), rgba(33,33,33,.4)"
@@ -38,7 +38,7 @@
       >
         <v-img
           v-if="!xs"
-          :src="nextSlideImage"
+          :src="parseUrlOrCid(nextSlideImage)"
           height="100%"
           position="left"
           gradient="rgba(33,33,33,.6), rgba(33,33,33,.4)"
@@ -57,7 +57,7 @@
     <v-carousel-item
       v-for="featuredItem in featuredItems"
       :key="featuredItem.id"
-      :src="featuredItem.cover ?? featuredItem.thumbnail"
+      :src="parseUrlOrCid(featuredItem.cover ?? featuredItem.thumbnail)"
       cover
       gradient="to right, rgba(0,0,0,.8), rgba(0,0,0,.01)"
     >
@@ -169,6 +169,7 @@
 import {computed, ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
+import {parseUrlOrCid} from '/@/utils';
 import {useShowDefederation} from '/@/composables/showDefed';
 import { useSiteColors } from '/@/composables/siteColors';
 import { useReleasesStore } from '/@/stores/releases';
