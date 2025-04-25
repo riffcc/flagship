@@ -1,6 +1,6 @@
 import type {App} from 'vue';
 
-import {mandataire} from '@constl/ipa';
+import {mandataire} from 'constl-ipa-fork';
 import {RIFFCC_PROTOCOL} from '/@/utils';
 
 export default {

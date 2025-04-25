@@ -1,4 +1,4 @@
-import type { Constellation } from '@constl/ipa';
+import type { Constellation } from 'constl-ipa-fork';
 import { inject } from 'vue';
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
