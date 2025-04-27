@@ -121,37 +121,21 @@
 
 <script setup lang="ts">
 import {computed, onMounted, ref, watch, type Ref} from 'vue';
-import { suivre as follow } from '@constl/vue';
-import {useStaticReleases} from '/@/composables/staticReleases';
 import { useStaticStatus } from '/@/composables/staticStatus';
-import { useOrbiter } from '/@/plugins/orbiter/utils';
-import type { FeaturedReleaseItem } from '/@/@types/release';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { filterActivedFeature } from '/@/utils';
+import { useReleasesStore } from '/@/stores/releases';
+import { storeToRefs } from 'pinia';
+import { useOrbiter } from '/@/plugins/orbiter/utils';
 type FeaturedReleaseData = {
   releaseId: string | null;
   startAt: string | null;
   endAt: string | null;
 }
-
-const { staticStatus } = useStaticStatus();
-const { staticReleases, staticFeaturedReleases } = useStaticReleases();
 const { orbiter } = useOrbiter();
-const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
-
-const featuredReleases = computed<FeaturedReleaseItem[]>(() => {
-  if (staticStatus.value === 'static') return staticFeaturedReleases.value;
-  else {
-    return (orbiterFeaturedReleases.value || []).map((fr): FeaturedReleaseItem => {
-      return {
-        id: fr.id,
-        releaseId: fr.featured.releaseId,
-        startTime: fr.featured.startTime,
-        endTime: fr.featured.endTime,
-      };
-    });
-  }
-});
+const { staticStatus } = useStaticStatus();
+const releasesStore = useReleasesStore();
+const {releases, featuredReleases} = storeToRefs(releasesStore);
 
 const newFeaturedRelease: Ref<FeaturedReleaseData> = ref({
   releaseId: null,
@@ -245,9 +229,9 @@ const handleOnSubmit = async () => {
   try {
     if (staticStatus.value === 'static') {
       await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-      const targetRelease = staticReleases.value.find(r => r.id === readyToSave.value?.releaseId);
+      const targetRelease = releases.value.find(r => r.id === readyToSave.value?.releaseId);
       if (targetRelease && targetRelease.id && readyToSave.value) {
-        staticFeaturedReleases.value.push({
+        featuredReleases.value.push({
           id: `featured-${Date.now()}-${Math.random().toString(16).substring(2, 8)}`,
           releaseId: targetRelease.id,
           startTime: readyToSave.value.startTime,
@@ -277,10 +261,10 @@ const confirmEndFeaturedRelease = async (id: string) => {
   confirmEndFeaturedReleaseDialog.value = false;
 
   if (staticStatus.value === 'static') {
-    const index = staticFeaturedReleases.value.findIndex(fr => fr.id === id);
+    const index = featuredReleases.value.findIndex(fr => fr.id === id);
     if (index !== -1) {
-        staticFeaturedReleases.value[index] = {
-            ...staticFeaturedReleases.value[index],
+        featuredReleases.value[index] = {
+            ...featuredReleases.value[index],
             endTime: new Date().toISOString(),
         };
         console.log(`Static featured release ${id} ended.`);
