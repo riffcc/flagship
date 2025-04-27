@@ -1,7 +1,17 @@
 <template>
   <v-container class="fill-height pb-16">
     <v-sheet
-      v-if="releases && !(releases.length > 0) && featuredReleases && !(featuredReleases.length > 0) "
+      v-if="isLoading"
+      color="transparent"
+      class="d-flex w-100 fill-height align-center justify-center"
+    >
+      <v-progress-circular
+        indeterminate
+        color="primary"
+      ></v-progress-circular>
+    </v-sheet>
+    <v-sheet
+      v-else-if="noContent"
       color="transparent"
       class="d-flex flex-column mx-auto"
       max-width="16rem"
@@ -16,7 +26,7 @@
     </v-sheet>
     <template v-else>
       <featured-slider
-        v-if="featuredReleases?.length > 0"
+        v-if="featuredReleases && featuredReleases?.length > 0"
       />
       <content-section
         v-if="categorizedReleases['featured-various'].length > 0"
@@ -153,7 +163,7 @@ const router = useRouter();
 const {xs} = useDisplay();
 
 const releasesStore = useReleasesStore();
-const {releases, featuredReleases} = storeToRefs(releasesStore);
+const {releases, featuredReleases, isLoading, noContent} = storeToRefs(releasesStore);
 
 function categorizeItems(items: ReleaseItem[], limit: number = 8) {
   const result: Record<string, ReleaseItem[]> = {

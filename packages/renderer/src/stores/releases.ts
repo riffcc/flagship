@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia';
 import { suivre as follow } from '@constl/vue';
 import { useOrbiter } from '../plugins/orbiter/utils';
-import { computed } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
 import type { ReleaseItem, FeaturedReleaseItem } from '../@types/release';
 import { filterActivedFeature } from '../utils';
 import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
+
+const NO_CONTENT_DELAY_MS = 7000;
 
 export const useReleasesStore = defineStore('releases', () => {
   const { orbiter } = useOrbiter();
@@ -15,6 +17,14 @@ export const useReleasesStore = defineStore('releases', () => {
   const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
   const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
 
+
+  const initialLoadComplete = computed<boolean>(() => {
+    if (staticStatus.value === 'static') {
+      return true;
+    } else {
+      return orbiterReleases.value !== undefined && orbiterFeaturedReleases.value !== undefined;
+    }
+  });
   const releases = computed<ReleaseItem[]>(() => {
     if (staticStatus.value === 'static') return staticReleases.value;
     else {
@@ -47,5 +57,46 @@ export const useReleasesStore = defineStore('releases', () => {
       }).filter(fr => filterActivedFeature(fr));
     }
   });
-  return { releases, featuredReleases, orbiterReleases, orbiterFeaturedReleases };
+
+  const waitingForContentConfirmation = ref(false);
+  const isContentConfirmedEmpty = ref(false);
+  const noContentTimerId = ref<ReturnType<typeof setTimeout> | null>(null);
+
+  watch(
+    [initialLoadComplete, releases, featuredReleases],
+    ([isLoaded, currentReleases, currentFeatured]) => {
+      if (noContentTimerId.value !== null) {
+        clearTimeout(noContentTimerId.value);
+        noContentTimerId.value = null;
+      }
+      waitingForContentConfirmation.value = false;
+      isContentConfirmedEmpty.value = false;
+
+      const currentlyEmpty = isLoaded && currentReleases.length === 0 && currentFeatured.length === 0;
+
+      if (currentlyEmpty) {
+        waitingForContentConfirmation.value = true;
+        noContentTimerId.value = setTimeout(() => {
+          isContentConfirmedEmpty.value = true;
+          noContentTimerId.value = null;
+        }, NO_CONTENT_DELAY_MS);
+      }
+    },
+    { immediate: false },
+  );
+
+  onScopeDispose(() => {
+    if (noContentTimerId.value !== null) {
+      clearTimeout(noContentTimerId.value);
+    }
+  });
+
+  const noContent = computed(() => isContentConfirmedEmpty.value);
+  const isLoading = computed(() => !initialLoadComplete.value || waitingForContentConfirmation.value);
+  return {
+    releases,
+    featuredReleases,
+    isLoading,
+    noContent,
+  };
 });
