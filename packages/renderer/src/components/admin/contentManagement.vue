@@ -4,6 +4,7 @@
     <v-data-table
       :headers="smAndDown ? smTableHeaders : tableHeaders"
       :items="tableItems"
+      :loading="isLoading"
       hide-default-header
     >
       <template #item.thumbnail="{item}">
@@ -133,7 +134,6 @@
 </template>
 <script setup lang="ts">
 import {computed, ref, type Ref} from 'vue';
-import {suivre as follow} from '@constl/vue';
 import {useDisplay} from 'vuetify';
 import {useStaticReleases} from '/@/composables/staticReleases';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
@@ -143,13 +143,15 @@ import ReleaseForm from '/@/components/releases/releaseForm.vue';
 import { useStaticStatus } from '../../composables/staticStatus';
 import type { PartialReleaseItem } from '/@/@types/release';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
+import { useReleasesStore } from '/@/stores/releases';
+import { storeToRefs } from 'pinia';
 
 const {staticStatus} = useStaticStatus();
 const {lgAndUp, smAndDown} = useDisplay();
 const {orbiter} = useOrbiter();
 const {staticReleases} = useStaticReleases();
-const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
-
+const releasesStore = useReleasesStore();
+const {releases, isLoading } = storeToRefs(releasesStore);
 
 type Header = {
   title: string;
@@ -186,20 +188,9 @@ const tableItems = computed(() => {
       category: r.category,
       contentCid: r.contentCID,
       sourceSite: r.sourceSite,
-      // status: r.status,
     }));
   } else {
-    return (orbiterReleases.value || [])
-    // .filter(r => r.release.release.status !== 'deleted')
-    .map(r => ({
-      id: r.release.id,
-      thumbnail: r.release.release.thumbnail,
-      name: r.release.release.contentName,
-      category: r.release.release.category,
-      contentCid: r.release.release.file,
-      sourceSite: r.site,
-      // status: r.release.release.status as ItemStatus,
-    }));
+    return releases.value;
   }
 });
 
@@ -232,19 +223,17 @@ function editRelease(id?: string) {
       };
     }
   } else {
-    const targetRelease = orbiterReleases.value?.find(r => r.release.id === id);
+    const targetRelease = releases.value.find(r => r.id === id);
     if (targetRelease) {
       editedRelease.value = {
-        id: targetRelease.release.id,
-        name: targetRelease.release.release.contentName,
-        contentCID: targetRelease.release.release.file,
-        category: targetRelease.release.release.category,
-        author: targetRelease.release.release.author,
-        thumbnail: targetRelease.release.release.thumbnail,
-        cover: targetRelease.release.release.cover,
-        metadata: targetRelease.release.release.metadata
-          ? JSON.parse(targetRelease.release.release.metadata)
-          : {},
+        id: targetRelease.id,
+        name: targetRelease.name,
+        contentCID: targetRelease.contentCID,
+        category: targetRelease.category,
+        author: targetRelease.author,
+        thumbnail: targetRelease.thumbnail,
+        cover: targetRelease.cover,
+        metadata: targetRelease.metadata,
       };
     }
   }
