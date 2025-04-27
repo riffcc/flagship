@@ -25,9 +25,9 @@
           <span>{{ item.name }}</span>
         </v-container>
       </template>
-      <template #item.contentCid="{item}">
+      <template #item.contentCID="{item}">
         <span>{{
-          lgAndUp ? item.contentCid : `${item.contentCid.slice(0, 6)}...${item.contentCid.slice(-6)}`
+          lgAndUp ? item.contentCID : `${item.contentCID.slice(0, 6)}...${item.contentCID.slice(-6)}`
         }}</span>
       </template>
       <template #item.actions="{item}">
@@ -48,7 +48,7 @@
           </v-btn>
           <v-btn
             :prepend-icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
-            @click="deleteBlockRelease(item.id!, item.contentCid, item.sourceSite!)"
+            @click="deleteBlockRelease(item.id!, item.contentCID, item.sourceSite!)"
           >
             {{ item.sourceSite === orbiter.siteId ? 'Delete' : 'Block' }}
           </v-btn>
@@ -66,7 +66,7 @@
           <v-btn
             :icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
             size="small"
-            @click="deleteBlockRelease(item.id!, item.contentCid, item.sourceSite!)"
+            @click="deleteBlockRelease(item.id!, item.contentCID, item.sourceSite!)"
           ></v-btn>
         </div>
       </template>
@@ -173,20 +173,19 @@ const tableHeaders: Header[] = [
   },
   {title: 'Name', align: 'start', key: 'name'},
   {title: 'Category', align: 'start', key: 'category'},
-  {title: 'Content CID', align: 'start', key: 'contentCid'},
+  {title: 'Content CID', align: 'start', key: 'contentCID'},
   {title: 'Actions', key: 'actions', sortable: false},
 ];
 
 const tableItems = computed(() => {
   if (staticStatus.value === 'static') {
     return staticReleases.value
-    // .filter(r => r.status !== 'deleted')
     .map(r => ({
       id: r.id,
       thumbnail: r.thumbnail,
       name: r.name,
       category: r.category,
-      contentCid: r.contentCID,
+      contentCID: r.contentCID,
       sourceSite: r.sourceSite,
     }));
   } else {
