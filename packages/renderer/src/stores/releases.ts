@@ -7,12 +7,14 @@ import { filterActivedFeature } from '../utils';
 import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
 
-export const useReleasesStore = defineStore('counter', () => {
+export const useReleasesStore = defineStore('releases', () => {
   const { orbiter } = useOrbiter();
   const {staticReleases, staticFeaturedReleases} = useStaticReleases();
   const {staticStatus} = useStaticStatus();
+
   const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
   const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
+
   const releases = computed<ReleaseItem[]>(() => {
     if (staticStatus.value === 'static') return staticReleases.value;
     else {
