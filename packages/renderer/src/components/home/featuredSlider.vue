@@ -173,18 +173,19 @@ import {parseUrlOrCid} from '/@/utils';
 import {useShowDefederation} from '/@/composables/showDefed';
 import { useSiteColors } from '/@/composables/siteColors';
 import { useReleasesStore } from '/@/stores/releases';
+import { storeToRefs } from 'pinia';
 
 
 const router = useRouter();
 const {showDefederation} = useShowDefederation();
 const {xs} = useDisplay();
 const slide = ref(0);
-
-const {releases, featuredReleases} = useReleasesStore();
+const releasesStore = useReleasesStore();
+const {releases, featuredReleases} = storeToRefs(releasesStore);
 
 const featuredItems = computed(() => {
-  const featuredReleasesIds = featuredReleases.map(fr => fr.releaseId);
-  return releases.filter(r => r.id && featuredReleasesIds.includes(r.id));
+  const featuredReleasesIds = featuredReleases.value.map(fr => fr.releaseId);
+  return releases.value.filter(r => r.id && featuredReleasesIds.includes(r.id));
 });
 const previousSlideImage = computed(() => {
   const previousIndex = slide.value === 0 ? featuredItems.value.length - 1 : slide.value - 1;

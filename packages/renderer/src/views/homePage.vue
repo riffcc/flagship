@@ -147,11 +147,13 @@ import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import type { ReleaseItem} from '/@/@types/release';
 import { parseUrlOrCid } from '/@/utils';
 import { useReleasesStore } from '../stores/releases';
+import { storeToRefs } from 'pinia';
 
 const router = useRouter();
 const {xs} = useDisplay();
 
-const {releases, featuredReleases} = useReleasesStore();
+const releasesStore = useReleasesStore();
+const {releases, featuredReleases} = storeToRefs(releasesStore);
 
 function categorizeItems(items: ReleaseItem[], limit: number = 8) {
   const result: Record<string, ReleaseItem[]> = {
@@ -197,7 +199,7 @@ function categorizeItems(items: ReleaseItem[], limit: number = 8) {
   return result;
 }
 
-const categorizedReleases = computed(() => categorizeItems(releases));
+const categorizedReleases = computed(() => categorizeItems(releases.value));
 </script>
 <!--
       {
