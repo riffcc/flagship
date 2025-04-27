@@ -37,7 +37,7 @@ export const useReleasesStore = defineStore('releases', () => {
           author: r.release.release.author,
           thumbnail: r.release.release.thumbnail,
           cover: r.release.release.cover,
-          metadata: JSON.parse(r.release.release.metadata as string),
+          metadata: r.release.release.metadata ? JSON.parse(r.release.release.metadata as string) : {},
           sourceSite: r.site,
         };
       }) as ReleaseItem[];
