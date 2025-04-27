@@ -7,7 +7,7 @@ import { filterActivedFeature } from '../utils';
 import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
 
-const NO_CONTENT_DELAY_MS = 7000;
+const NO_CONTENT_DELAY_MS = 15000;
 
 export const useReleasesStore = defineStore('releases', () => {
   const { orbiter } = useOrbiter();
