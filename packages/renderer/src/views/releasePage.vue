@@ -51,9 +51,10 @@
 import { useRouter } from 'vue-router';
 import albumViewer from '/@/components/releases/albumViewer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
-import { computed, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { useReleasesStore } from '../stores/releases';
 import { storeToRefs } from 'pinia';
+import type { ReleaseItem } from '../@types/release';
 
 const props = defineProps<{
   id: string;
@@ -63,24 +64,55 @@ const router = useRouter();
 const releasesStore = useReleasesStore();
 const { releases, isLoading } = storeToRefs(releasesStore);
 
-const targetRelease = computed(() => {
-  return releases.value.find(r => r.id === props.id);
-});
+const targetRelease = ref<ReleaseItem | null>(null);
+
+
+watch(
+  [() => props.id, releases],
+  ([currentId, currentReleases], [prevId, _]) => {
+
+    if (currentId !== prevId && targetRelease.value?.id !== currentId) {
+      targetRelease.value = null;
+    }
+
+    if (!targetRelease.value || targetRelease.value.id !== currentId) {
+      const foundRelease = currentReleases.find(r => r.id === currentId);
+
+      if (foundRelease) {
+        targetRelease.value = foundRelease;
+      } else {
+        if (currentId !== prevId) {
+          targetRelease.value = null;
+        }
+      }
+    }
+  },
+  { immediate: true },
+);
 
 watch(targetRelease, (r) => {
   if (r) {
     if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: r.name,
-        artwork: r.thumbnail ? [
-          {
-            src: r.thumbnail,
-            type: 'image/png',
-          },
-        ] : undefined,
-      });
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: r.name,
+          artist: r.author,
+          album: r.metadata?.albumName as string || '',
+          artwork: r.thumbnail ? [
+            {
+              src: r.thumbnail,
+            },
+          ] : undefined,
+        });
+      } catch (error) {
+        console.error('Failed to set MediaMetadata:', error);
+      }
+    }
+  } else {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = null;
     }
   }
-});
+}, { immediate: true });
 
 </script>
