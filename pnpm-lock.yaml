@@ -43,8 +43,8 @@ importers:
         specifier: ^0.9.8
         version: 0.9.8(encoding@0.1.13)
       '@riffcc/orbiter':
-        specifier: ^0.2.16
-        version: 0.2.16(@constl/ipa@1.6.9(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0)))(@types/node@22.13.9)(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+        specifier: ^0.2.17
+        version: 0.2.17(@types/node@22.13.9)(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@vueuse/core':
         specifier: ^12.7.0
         version: 12.8.2(typescript@5.8.2)
@@ -1984,11 +1984,9 @@ packages:
       '@types/react':
         optional: true
 
-  '@riffcc/orbiter@0.2.16':
-    resolution: {integrity: sha512-Jy3enDBQ3JRYsVrG6Y3/K77aalaWc3FZbgqiwNsWyw7Tqebr4qIkZ4o2/59IQSPJpfOL2xmQA4vkk9sOjjVW2A==}
+  '@riffcc/orbiter@0.2.17':
+    resolution: {integrity: sha512-7zf9SMc2pWgq0wFh6U5pavnfW4QMe5EJ0Txi65hVbiWAoU+UJbURFeFqr+EoJkH8JF9U/FO8UuUDSGkYN3hB4w==}
     hasBin: true
-    peerDependencies:
-      '@constl/ipa': ^1.0.14
 
   '@rollup/plugin-inject@5.0.5':
     resolution: {integrity: sha512-2+DEJbNBoPROPkgTDNe8/1YXWcqxbN5DTjASVIOx8HS+pITXushyNiBV56RB08zuptzz8gT3YfkqriTBVycepg==}
@@ -3356,8 +3354,8 @@ packages:
   electron-publish@26.0.7:
     resolution: {integrity: sha512-zSCBtAXnLi1QhCDEomIEu22mjKgsf17VYW3fMyZ4Y9Q7s+Ftu9dqbTMaM/e/FBCn9VthnG7C/zPCr1yKpkI+dg==}
 
-  electron-to-chromium@1.5.145:
-    resolution: {integrity: sha512-pZ5EcTWRq/055MvSBgoFEyKf2i4apwfoqJbK/ak2jnFq8oHjZ+vzc3AhRcz37Xn+ZJfL58R666FLJx0YOK9yTw==}
+  electron-to-chromium@1.5.149:
+    resolution: {integrity: sha512-UyiO82eb9dVOx8YO3ajDf9jz2kKyt98DEITRdeLPstOEuTlLzDA4Gyq5K9he71TQziU5jUVu2OAu5N48HmQiyQ==}
 
   electron-updater@6.3.9:
     resolution: {integrity: sha512-2PJNONi+iBidkoC5D1nzT9XqsE8Q1X28Fn6xRQhO3YX8qRRyJ3mkV4F1aQsuRnYPqq6Hw+E51y27W75WgDoofw==}
@@ -9732,9 +9730,8 @@ snapshots:
       react: 19.0.0
       react-native: 0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0)
 
-  '@riffcc/orbiter@0.2.16(@constl/ipa@1.6.9(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0)))(@types/node@22.13.9)(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
+  '@riffcc/orbiter@0.2.17(@types/node@22.13.9)(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
-      '@constl/ipa': 1.6.9(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@constl/utils-ipa': 2.0.2
       '@inquirer/prompts': 7.5.0(@types/node@22.13.9)
       chalk: 5.4.1
@@ -10775,7 +10772,7 @@ snapshots:
   browserslist@4.24.4:
     dependencies:
       caniuse-lite: 1.0.30001716
-      electron-to-chromium: 1.5.145
+      electron-to-chromium: 1.5.149
       node-releases: 2.0.19
       update-browserslist-db: 1.1.3(browserslist@4.24.4)
 
@@ -11546,7 +11543,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron-to-chromium@1.5.145: {}
+  electron-to-chromium@1.5.149: {}
 
   electron-updater@6.3.9:
     dependencies:
