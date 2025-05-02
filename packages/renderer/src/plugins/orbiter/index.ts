@@ -1,7 +1,7 @@
 import type {types as orbiterTypes} from '@riffcc/orbiter';
-import {Orbiter} from '@riffcc/orbiter';
+import {Orbiter, configIsComplete} from '@riffcc/orbiter';
 import type {App} from 'vue';
-import {configIsComplete} from '@riffcc/orbiter';
+
 export default {
   install: (app: App) => {
     const orbiterConfig = {
@@ -10,9 +10,7 @@ export default {
     };
     let orbiterApp: Orbiter | undefined = undefined;
     if (configIsComplete(orbiterConfig)) {
-      const constellation = app.config.globalProperties.$constl;
       orbiterApp = new Orbiter({
-        constellation,
         ...orbiterConfig,
       });
     } else {

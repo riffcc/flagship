@@ -1,5 +1,3 @@
-import type { Constellation } from 'constl-ipa-fork';
-import { inject } from 'vue';
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
 import {cid as isCID} from 'is-ipfs';
@@ -39,14 +37,6 @@ export async function copyText(text: string | undefined) {
   if (!text) return;
   await navigator.clipboard.writeText(text);
 }
-
-export const RIFFCC_PROTOCOL = 'Riff.CC';
-
-export const useConstellation = (): {constl: Constellation} => {
-  const constl = inject<Constellation>('constl');
-  if (constl) return {constl};
-  throw new Error("Constellation n'est pas trouvable.");
-};
 
 export const formatTime = (ms: number): string => {
   if (ms === 0 || isNaN(ms)) {

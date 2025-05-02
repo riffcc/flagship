@@ -1,11 +1,9 @@
 import {createApp} from 'vue';
 import App from './App.vue';
-import {inscrireExtentions} from './plugins/inscription/electron.js';
+import { registerPlugins } from './plugins/inscription/common';
 
 const app = createApp(App);
 
-inscrireExtentions(app);
+registerPlugins(app);
 
 app.mount('#app');
-
-// Aspirational design: https://github.com/orgs/riffcc/projects/1/views/1?pane=issue&itemId=17693411
