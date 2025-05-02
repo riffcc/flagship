@@ -20,23 +20,29 @@
     </template>
     <div
       v-else
-      class="d-flex flex-column align-center justify-center h-screen"
+      class="d-flex align-center justify-center h-screen"
     >
-      <template v-if="isLoading">
-        <v-progress-circular
-          indeterminate
-          size="36"
-        ></v-progress-circular>
-      </template>
-      <template v-else>
-        <p class="mb-2">Release not found.</p>
-        <v-btn
-          color="primary"
-          @click="router.push('/')"
-        >
-          Go Home
-        </v-btn>
-      </template>
+      <v-sheet
+        color="transparent"
+        class="d-flex flex-column mx-auto"
+        max-width="16rem"
+      >
+        <template v-if="isLoading">
+          <v-progress-circular
+            indeterminate
+            color="primary"
+          ></v-progress-circular>
+        </template>
+        <template v-else>
+          <p class="text-white text-center mb-2">Release not found.</p>
+          <v-btn
+            color="primary-darken-1"
+            @click="router.push('/')"
+          >
+            Go to Home
+          </v-btn>
+        </template>
+      </v-sheet>
     </div>
   </v-container>
 </template>
@@ -45,43 +51,20 @@
 import { useRouter } from 'vue-router';
 import albumViewer from '/@/components/releases/albumViewer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
-import { useStaticReleases } from '/@/composables/staticReleases';
-import { computed, onMounted, ref, watch } from 'vue';
-import { useStaticStatus } from '../composables/staticStatus';
-import {suivre as follow} from '@constl/vue';
-import { useOrbiter } from '/@/plugins/orbiter/utils';
-import type { ReleaseItem } from '/@/@types/release';
-
+import { computed, watch } from 'vue';
+import { useReleasesStore } from '../stores/releases';
+import { storeToRefs } from 'pinia';
 
 const props = defineProps<{
   id: string;
 }>();
+
 const router = useRouter();
-const {staticStatus} = useStaticStatus();
-const { staticReleases } = useStaticReleases();
-const {orbiter} = useOrbiter();
-const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
+const releasesStore = useReleasesStore();
+const { releases, isLoading } = storeToRefs(releasesStore);
+
 const targetRelease = computed(() => {
-  let _targetRelease: ReleaseItem | undefined = undefined;
-  if (staticStatus.value === 'static') {
-    _targetRelease = staticReleases.value.find(r => r.id === props.id);
-  } else {
-    const otr = orbiterReleases.value?.find(r => r.release.id === props.id);
-    if (otr) {
-      _targetRelease = {
-        id: otr.release.id,
-        name: otr.release.release.contentName,
-        contentCID: otr.release.release.file,
-        category: otr.release.release.category,
-        author: otr.release.release.author,
-        thumbnail: otr.release.release.thumbnail as string,
-        cover: otr.release.release.cover,
-        metadata: JSON.parse(otr.release.release.metadata as string),
-        sourceSite: otr.site,
-      };
-    }
-  }
-  return _targetRelease;
+  return releases.value.find(r => r.id === props.id);
 });
 
 watch(targetRelease, (r) => {
@@ -100,11 +83,4 @@ watch(targetRelease, (r) => {
   }
 });
 
-const isLoading = ref(true);
-
-onMounted(() => {
-  setTimeout(() => {
-    isLoading.value = false;
-  }, 6000);
-});
 </script>
