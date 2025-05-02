@@ -2,7 +2,6 @@
   <v-form
     ref="formRef"
     :disabled="isLoading"
-    validate-on="input lazy"
     class="d-flex flex-column ga-2"
     @submit.prevent="handleOnSubmit"
   >
@@ -246,5 +245,7 @@ const clearForm = () => {
     author: '',
     metadata: {},
   };
+  formRef.value?.resetValidation();
+  formRef.value?.reset();
 };
 </script>
