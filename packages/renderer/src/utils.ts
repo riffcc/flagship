@@ -92,5 +92,8 @@ export function filterActivedFeature(featured: FeaturedReleaseItem) {
 
 export function parseUrlOrCid(urlOrCid?: string) {
   if (!urlOrCid) return undefined;
-  return isCID(urlOrCid) ? `https://${IPFS_GATEWAY}/ipfs/${urlOrCid}` : urlOrCid;
+  return isCID(urlOrCid) ?
+    urlOrCid.startsWith('zD') ?
+      `https://codex-${IPFS_GATEWAY}/api/codex/v1/data/${urlOrCid}/network/stream` : `https://${IPFS_GATEWAY}/ipfs/${urlOrCid}` :
+      urlOrCid;
 };
