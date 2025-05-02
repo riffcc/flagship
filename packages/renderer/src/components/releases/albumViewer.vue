@@ -158,55 +158,90 @@ const selectTrack = async (i: number) => {
   await new Promise(r => setTimeout(r, 200));
   handlePlay(i);
 };
-async function extractIPFSFilesFromFolder(url: string): Promise<AudioTrack[]> {
-  try {
-    const response = await fetch(url);
 
-    if (!response.ok) {
-      throw new Error(`Request error: ${response.statusText}`);
-    }
-
-    const htmlText = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlText, 'text/html');
-
-    const ipfsLinks = doc.querySelectorAll<HTMLAnchorElement>('a.ipfs-hash');
-    const ipfsSizesData = doc.querySelectorAll<HTMLAnchorElement>(
-      '[title="Cumulative size of IPFS DAG (data + metadata)"]',
-    );
-
-    const ipfsFiles: AudioTrack[] = [];
-
-    ipfsLinks.forEach((link, key) => {
-      const href = link.getAttribute('href');
-      if (href) {
-        const cidMatch = href.match(/\/ipfs\/([^?]+)/);
-        const cid = cidMatch ? cidMatch[1] : null;
-
-        const urlParams = new URLSearchParams(href.split('?')[1]);
-        const encodedName = urlParams.get('filename');
-        const fileName = encodedName ? decodeURIComponent(encodedName) : null;
-        const fileSize = ipfsSizesData[key + 1].innerText;
-
-        if (cid && fileName) {
-          if (['flac', 'mp3', 'ogg'].includes(fileName.split('.')[1])) {
-            ipfsFiles.push({
-              index: key,
-              album: props.title,
-              cid,
-              title: fileName.split('.')[0],
-              size: fileSize,
-            });
-          }
-        }
-      }
-    });
-    return ipfsFiles;
-  } catch (error) {
-    console.error('An error has occurred:', error);
+async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
+  const url = parseUrlOrCid(cid);
+  if (!url) {
+    console.error(`Could not construct a valid IPFS URL for CID: ${cid}`);
     return [];
   }
-}
+  try {
+    const ipfsFiles: AudioTrack[] = [];
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Request failed on fetchIPFSFiles: ${response.status} ${response.statusText}. URL: ${url}`);
+    }
+
+    if (cid.startsWith('zD')) {
+      const data = await response.json() as {
+        files: {
+          title: string;
+          cid: string;
+          size: string;
+        }[];
+      };
+
+      if (!data || !Array.isArray(data.files)) {
+          throw new Error(`Invalid JSON structure received from ${url}`);
+      }
+
+      data.files.forEach((file, index) => {
+        if (file.cid && file.title && file.size) {
+            ipfsFiles.push({
+                index: index,
+                album: props.title,
+                cid: file.cid,
+                title: file.title.split('.')[0],
+                size: file.size,
+            });
+        } else {
+            console.warn('Skipping invalid file entry in JSON response:', file);
+        }
+      });
+      return ipfsFiles;
+
+    }
+    else {
+      const htmlText = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, 'text/html');
+
+      const ipfsLinks = doc.querySelectorAll<HTMLAnchorElement>('a.ipfs-hash');
+      const ipfsSizesData = doc.querySelectorAll<HTMLAnchorElement>(
+        '[title="Cumulative size of IPFS DAG (data + metadata)"]',
+      );
+
+      ipfsLinks.forEach((link, key) => {
+        const href = link.getAttribute('href');
+        if (href) {
+          const cidMatch = href.match(/\/ipfs\/([^?]+)/);
+          const cid = cidMatch ? cidMatch[1] : null;
+
+          const urlParams = new URLSearchParams(href.split('?')[1]);
+          const encodedName = urlParams.get('filename');
+          const fileName = encodedName ? decodeURIComponent(encodedName) : null;
+          const fileSize = ipfsSizesData[key + 1].innerText;
+
+          if (cid && fileName) {
+            if (['flac', 'mp3', 'ogg'].includes(fileName.split('.')[1])) {
+              ipfsFiles.push({
+                index: key,
+                album: props.title,
+                cid,
+                title: fileName.split('.')[0],
+                size: fileSize,
+              });
+            }
+          }
+        }
+      });
+      return ipfsFiles;
+    }
+  } catch (error) {
+    console.error(`Error fetching or processing IPFS data for CID ${cid} from ${url}:`, error);
+    return [];
+  }
+};
 
 function setTrackToDownload(track: AudioTrack) {
   trackDownloader.value.setTrack(track);
@@ -218,9 +253,7 @@ onMounted(async () => {
   if (!activeTrack.value || (activeTrack.value && activeTrack.value.album !== props.title)) {
     albumFiles.value = [];
     activeTrack.value = undefined;
-    const ipfsFiles = await extractIPFSFilesFromFolder(
-      `https://${IPFS_GATEWAY}/ipfs/${props.contentCid}`,
-    );
+    const ipfsFiles = await fetchIPFSFiles(props.contentCid);
     albumFiles.value = ipfsFiles;
   }
   isLoading.value = false;
