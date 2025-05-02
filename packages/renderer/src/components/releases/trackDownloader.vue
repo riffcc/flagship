@@ -41,7 +41,7 @@
 <script lang="ts">
 import {defineComponent} from 'vue';
 import type {AudioTrack} from '../../composables/audioAlbum';
-import {IPFS_GATEWAY} from '/@/constants/ipfs';
+import { parseUrlOrCid } from '/@/utils';
 
 export default defineComponent({
   data() {
@@ -61,7 +61,8 @@ export default defineComponent({
     async downloadTrack() {
       try {
         this.loading = true;
-        const url = `https://${IPFS_GATEWAY}/ipfs/${this.track?.cid}`;
+        const url = parseUrlOrCid(this.track?.cid);
+        if (!url) throw new Error('Failed to get track url');
         const response = await fetch(url);
 
         if (!response.ok) {

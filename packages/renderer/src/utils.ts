@@ -90,10 +90,20 @@ export function filterActivedFeature(featured: FeaturedReleaseItem) {
   return now >= startTime && now <= endTime;
 };
 
-export function parseUrlOrCid(urlOrCid?: string) {
+
+export function parseUrlOrCid(urlOrCid?: string): string | undefined {
   if (!urlOrCid) return undefined;
-  return isCID(urlOrCid) ?
-    urlOrCid.startsWith('zD') ?
-      `https://codex-${IPFS_GATEWAY}/api/codex/v1/data/${urlOrCid}/network/stream` : `https://${IPFS_GATEWAY}/ipfs/${urlOrCid}` :
-      urlOrCid;
+  if (!isCID(urlOrCid)) {
+    return urlOrCid;
+  }
+  // Use HTTPS for gateways
+  const gatewayBase = `https://${IPFS_GATEWAY}`;
+  const codexGatewayBase = `https://codex-${IPFS_GATEWAY}`;
+
+  if (urlOrCid.startsWith('zD')) {
+    return `${codexGatewayBase}/api/codex/v1/data/${urlOrCid}/network/stream`;
+  } else {
+    return `${gatewayBase}/ipfs/${urlOrCid}`;
+  }
 };
+

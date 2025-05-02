@@ -11,7 +11,7 @@
       ref="audioPlayerRef"
       class="d-none"
       crossorigin="anonymous"
-      :src="`https://${IPFS_GATEWAY}/ipfs/${activeTrack?.cid}`"
+      :src="parseUrlOrCid(activeTrack?.cid)"
       @ended="handleNext"
       @loadeddata="play"
       @canplay="canPlay"
@@ -150,7 +150,7 @@ import {useDisplay} from 'vuetify';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {usePlaybackController} from '/@/composables/playbackController';
 import {usePlayerVolume} from '/@/composables/playerVolume';
-import {IPFS_GATEWAY} from '/@/constants/ipfs';
+import { parseUrlOrCid } from '/@/utils';
 
 const {xs, smAndDown} = useDisplay();
 

@@ -28,11 +28,7 @@
           <v-img
             :height="xs ? '148px' : '160px'"
             aspect-ratio="1/1"
-            :src="
-              cid(props.thumbnail ?? '')
-                ? `https://${IPFS_GATEWAY}/ipfs/${props.thumbnail}`
-                : props.thumbnail
-            "
+            :src="parseUrlOrCid(props.thumbnail)"
           ></v-img>
         </v-col>
 
@@ -129,15 +125,14 @@
   </v-sheet>
 </template>
 <script setup lang="ts">
-import {cid} from 'is-ipfs';
 import {computed, onMounted, ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
 import trackDownloaderDialog from './trackDownloader.vue';
 import type {AudioTrack} from '/@/composables/audioAlbum';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
-import {IPFS_GATEWAY} from '/@/constants/ipfs';
 import {useFloatingVideo} from '/@/composables/floatingVideo';
+import { parseUrlOrCid } from '/@/utils';
 
 type Props = {
   contentCid: string;

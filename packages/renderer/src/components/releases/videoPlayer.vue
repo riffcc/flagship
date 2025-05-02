@@ -25,7 +25,7 @@
             height: '100%',
             objectFit: 'contain',
           }"
-          :src="`https://${IPFS_GATEWAY}/ipfs/${props.contentCid}`"
+          :src="parseUrlOrCid(props.contentCid)"
           :controls="false"
           crossorigin="anonymous"
           @click="togglePlay"
@@ -95,12 +95,12 @@
 <script setup lang="ts">
 import {computed, onBeforeUnmount, onMounted, watch} from 'vue';
 import {useRouter} from 'vue-router';
-import {IPFS_GATEWAY} from '/@/constants/ipfs';
 import {useDisplay} from 'vuetify';
 import {useAudioAlbum} from '../../composables/audioAlbum';
 import {useFloatingVideo} from '/@/composables/floatingVideo';
 import {usePlaybackController} from '/@/composables/playbackController';
 import {usePlayerVolume} from '/@/composables/playerVolume';
+import { parseUrlOrCid } from '/@/utils';
 
 const props = defineProps<{
   contentCid: string;

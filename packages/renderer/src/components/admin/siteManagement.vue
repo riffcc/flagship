@@ -51,11 +51,11 @@
         <template #prepend-inner>
           <v-sheet class="my-1 mr-1">
             <v-img
-              v-if="siteImage || fileBlobUrl"
+              v-if="fileBlobUrl || siteImage"
               width="120px"
               height="120px"
               cover
-              :src="fileBlobUrl ? fileBlobUrl : `https://${IPFS_GATEWAY}/ipfs/${siteImage}`"
+              :src="parseUrlOrCid(fileBlobUrl || siteImage)"
             ></v-img>
             <v-sheet
               v-else
@@ -90,22 +90,21 @@
 
 <script setup lang="ts">
 import { type Ref, ref, watch } from 'vue';
-import { IPFS_GATEWAY } from '/@/constants/ipfs';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
 import { useSiteColors } from '/@/composables/siteColors';
-import { copyText } from '/@/utils';
+import { copyText, parseUrlOrCid } from '/@/utils';
 import { useShowDefederation } from '/@/composables/showDefed';
 
-const file: Ref<File | null> = ref(null);
-const fileBlobUrl: Ref<string | null> = ref(null);
+const file: Ref<File | undefined> = ref();
+const fileBlobUrl: Ref<string | undefined> = ref();
 
-const siteName: Ref<string | null> = ref(null);
-const siteDescription: Ref<string | null> = ref(null);
-const siteImage: Ref<string | null> = ref(null);
+const siteName: Ref<string | undefined> = ref();
+const siteDescription: Ref<string | undefined> = ref();
+const siteImage: Ref<string | undefined> = ref();
 
 watch(file, (v) => {
   if (!v) {
-    fileBlobUrl.value = null;
+    fileBlobUrl.value = undefined;
     return;
   }
   fileBlobUrl.value = URL.createObjectURL(v);
