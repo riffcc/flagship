@@ -87,9 +87,29 @@ vi.mock('electron', () => {
     },
   };
 
-  // Return an object containing only the mocked ipcRenderer
+  // Mock the necessary parts of 'app' and 'ipcMain' if they are used by the tested code
+  // or dependencies. Add more properties/methods as needed.
+  const mockedApp: Pick<Electron.App, 'getAppPath' | 'getPath'> = {
+    getAppPath: vi.fn(() => 'mock/app/path'),
+    getPath: vi.fn(() => 'mock/path'),
+  };
+
+  const mockedIpcMain: Pick<Electron.IpcMain, 'on' | 'handle'> = {
+    on: vi.fn(),
+    handle: vi.fn(),
+  };
+
+  // Return an object containing the mocked ipcRenderer AND a default export
   return {
     ipcRenderer: mockedIpcRenderer,
+    default: { // Provide the default export
+      app: mockedApp,
+      ipcMain: mockedIpcMain,
+      // Add other electron exports here if needed by dependencies
+    },
+    // Keep named exports if they are directly imported elsewhere
+    app: mockedApp,
+    ipcMain: mockedIpcMain,
   };
 });
 
