@@ -96,6 +96,7 @@ import featuredManagement from '/@/components/admin/featuredManagement.vue';
 import subscriptionManagement from '/@/components/admin/subscriptionManagement.vue';
 import siteManagement from '/@/components/admin/siteManagement.vue';
 import categoriesManagement from '/@/components/admin/categoriesManagement.vue';
+import tvSeriesManagement from '/@/components/admin/tvSeriesManagement.vue'; // Import the new component
 
 const {lgAndUp} = useDisplay();
 const tab = ref(null);
