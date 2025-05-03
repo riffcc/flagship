@@ -6,7 +6,9 @@ import AboutPage from '/@/views/aboutPage.vue';
 import AccountPage from '/@/views/accountPage.vue';
 import BuildingPage from '/@/views/buildingPage.vue';
 import HomePage from '/@/views/homePage.vue';
-import PlaceholderPage from '/@/views/placeholderPage.vue'; // Import the new placeholder
+import MusicPage from '/@/views/musicPage.vue'; // Import the new music page
+import MoviesPage from '/@/views/moviesPage.vue'; // Import the new movies page
+import TvShowsPage from '/@/views/tvShowsPage.vue'; // Import the new tv shows page
 import PrivacyPolicyPage from '/@/views/privacyPolicyPage.vue';
 import ReleasePage from '/@/views/releasePage.vue';
 import TermsPage from '/@/views/termsPage.vue';
@@ -48,17 +50,17 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/music',
     name: 'Music',
-    component: PlaceholderPage,
+    component: MusicPage, // Use MusicPage
   },
   {
     path: '/movies',
     name: 'Movies',
-    component: PlaceholderPage,
+    component: MoviesPage, // Use MoviesPage
   },
   {
     path: '/tv-shows',
     name: 'TV Shows',
-    component: PlaceholderPage,
+    component: TvShowsPage, // Use TvShowsPage
   },
   // End new section routes
   {
