@@ -5,6 +5,24 @@ import {restoreOrCreateWindow} from '../src/mainWindow';
 import {GestionnaireFenêtres} from '@constl/mandataire-electron-principal';
 import {BrowserWindow} from 'electron';
 
+// Mock import.meta.env
+vi.stubGlobal('import.meta', {
+  env: {
+    // Set environment variables needed by mainWindow.ts
+    DEV: true, // Or false, depending on the desired test scenario
+    VITE_DEV_SERVER_URL: 'http://localhost:5173', // Example URL
+    // Add other env vars if needed
+  },
+});
+
+// Mock modules imported by mainWindow that might cause side effects or errors
+vi.mock('../src/http', () => ({
+  connecterHttp: vi.fn(),
+}));
+vi.mock('../src/systèmeFichiers', () => ({
+  connecterSystèmeFichiers: vi.fn(),
+}));
+
 /**
  * Mock real electron BrowserWindow API
  */
