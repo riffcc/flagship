@@ -30,17 +30,20 @@ describe('Test app window', function () {
     }
   });
 
-  afterAll(async () => {
-      ({appli: appliÉlectron, page, fermer} = await surÉlectron());
-    } else if (['firefox', 'chromium', 'webkit'].includes(environnement)) {
-      ({page, fermer} = await surNavig({
-        typeNavigateur: environnement as 'webkit' | 'chromium' | 'webkit',
-      }));
-    } else {
-      throw new Error(environnement);
-    }
-  });
+  // This afterAll block seems to contain duplicated setup logic.
+  // It should only contain the cleanup.
+  // afterAll(async () => {
+  //     ({appli: appliÉlectron, page, fermer} = await surÉlectron());
+  //   } else if (['firefox', 'chromium', 'webkit'].includes(environnement)) {
+  //     ({page, fermer} = await surNavig({
+  //       typeNavigateur: environnement as 'webkit' | 'chromium' | 'webkit',
+  //     }));
+  //   } else {
+  //     throw new Error(environnement);
+  //   }
+  // });
 
+  // Correct afterAll block for cleanup
   afterAll(async () => {
     await fermer();
   });
