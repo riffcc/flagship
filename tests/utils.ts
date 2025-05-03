@@ -1,5 +1,6 @@
 import type {Browser, ElectronApplication, Page} from 'playwright';
 import {chromium, _electron as electron, firefox, webkit} from 'playwright';
+import electronExecutablePath from 'electron';
 
 import {dossiers} from '@constl/utils-tests';
 import path, {dirname} from 'path';
@@ -18,6 +19,7 @@ export const surÉlectron = async (): Promise<{
   try {
     // Inclure {...process.env} est nécessaire pour les tests sur Linux
     appli = await electron.launch({
+      executablePath: electronExecutablePath,
       args: ['.'],
       env: {...process.env, DOSSIER_CONSTL: dossier},
     });
