@@ -18,9 +18,10 @@ export const surÉlectron = async (): Promise<{
 
   try {
     // Inclure {...process.env} est nécessaire pour les tests sur Linux
+    const entryPoint = path.join(process.cwd(), 'packages', 'main', 'dist', 'index.cjs');
     appli = await electron.launch({
       executablePath: electronExecutablePath,
-      args: ['.'],
+      args: [entryPoint],
       env: {...process.env, DOSSIER_CONSTL: dossier},
     });
   } catch (error) {
