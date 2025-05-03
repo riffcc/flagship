@@ -14,14 +14,15 @@ describe('Test app window', function () {
 
   beforeAll(async () => {
     try {
-      if (!environnement || environnement === 'électron') {
+      if (environnement === 'électron') {
         ({appli: appliÉlectron, page, fermer} = await surÉlectron());
       } else if (['firefox', 'chromium', 'webkit'].includes(environnement)) {
         ({page, fermer} = await surNavig({
-          typeNavigateur: environnement as 'webkit' | 'chromium' | 'webkit', // Note: 'webkit' appears twice, might be a typo
+          typeNavigateur: environnement as 'firefox' | 'chromium' | 'webkit',
         }));
       } else {
-        throw new Error(`Unsupported test environment: ${environnement}`);
+        // Default to Chromium if no or unknown ENVIRONNEMENT_TESTS
+        ({page, fermer} = await surNavig({ typeNavigateur: 'chromium' }));
       }
     } catch (error) {
       console.error('Error during test setup:', error);
