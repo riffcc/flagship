@@ -27,7 +27,14 @@ export const useTvSeriesStore = defineStore('tvSeries', () => {
   // const { staticTvSeries } = useStaticTvSeries(); // If static mode is needed
 
   // --- State ---
-  const orbiterTvSeries = follow<OrbiterTvSeriesData[] | undefined>(orbiter.listenForTvSeries.bind(orbiter)); // Assuming this method exists
+  // Guard against missing Orbiter method
+  let orbiterTvSeries: Ref<OrbiterTvSeriesData[] | undefined> = ref(undefined);
+  if (typeof orbiter.listenForTvSeries === 'function') {
+    orbiterTvSeries = follow<OrbiterTvSeriesData[] | undefined>(orbiter.listenForTvSeries.bind(orbiter));
+  } else {
+    console.warn('Orbiter instance does not provide "listenForTvSeries". TV Show functionality will be limited.');
+    // Keep orbiterTvSeries as ref(undefined) to trigger loading/error state below
+  }
   const status: Ref<'loading' | 'idle' | 'empty' | 'error'> = ref('loading'); // Simplified status
 
   // --- Getters ---

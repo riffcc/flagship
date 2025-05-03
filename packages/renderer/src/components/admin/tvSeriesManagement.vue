@@ -3,10 +3,20 @@
     <v-sheet class="pa-4">
       <h2 class="text-h6 mb-4">Manage TV Series</h2>
 
+      <!-- Warning if backend methods are missing -->
+       <v-alert
+        v-if="backendMissing"
+        type="warning"
+        variant="tonal"
+        class="mb-4"
+        title="Backend Support Missing"
+        text="The backend does not fully support TV Series management (add, edit, or delete functions are missing). Functionality will be limited."
+      ></v-alert>
+
       <!-- Add New Series Button/Dialog (Optional) -->
       <v-dialog v-model="dialogOpen" max-width="600px">
         <template #activator="{ props }">
-          <v-btn color="primary" class="mb-4" v-bind="props">Add New Series</v-btn>
+          <v-btn color="primary" class="mb-4" v-bind="props" :disabled="!canAddSeries && !editingSeries">Add New Series</v-btn>
         </template>
         <v-card>
           <v-card-title>
@@ -41,7 +51,13 @@
           <v-card-actions>
             <v-spacer></v-spacer>
             <v-btn color="blue darken-1" text @click="closeDialog">Cancel</v-btn>
-            <v-btn color="blue darken-1" text @click="saveSeries" :loading="isSaving">Save</v-btn>
+            <v-btn
+              color="blue darken-1"
+              text
+              @click="saveSeries"
+              :loading="isSaving"
+              :disabled="editingSeries ? !canEditSeries : !canAddSeries"
+            >Save</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -55,8 +71,16 @@
         class="elevation-1"
       >
         <template #item.actions="{ item }">
-          <v-icon small class="mr-2" @click="editSeries(item.raw as TvSeries)">mdi-pencil</v-icon>
-          <v-icon small @click="confirmDelete(item.raw as TvSeries)">mdi-delete</v-icon>
+           <v-tooltip text="Edit Series" location="top">
+            <template #activator="{ props }">
+              <v-icon v-bind="props" small class="mr-2" @click="editSeries(item.raw as TvSeries)" :disabled="!canEditSeries">mdi-pencil</v-icon>
+            </template>
+          </v-tooltip>
+           <v-tooltip text="Delete Series" location="top">
+             <template #activator="{ props }">
+              <v-icon v-bind="props" small @click="confirmDelete(item.raw as TvSeries)" :disabled="!canDeleteSeries">mdi-delete</v-icon>
+            </template>
+          </v-tooltip>
         </template>
          <template #item.thumbnail="{ item }">
            <v-img :src="parseUrlOrCid(item.raw.thumbnail)" height="40" width="60" aspect-ratio="16/9" cover class="my-1"></v-img>
@@ -91,9 +115,9 @@ import { useOrbiter } from '/@/plugins/orbiter/utils';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import ConfirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { cid } from 'is-ipfs';
-import { parseUrlOrCid } from '/@/utils'; // Assuming parseUrlOrCid handles CIDs
+import { parseUrlOrCid } from '/@/utils';
 
-const { orbiter } = useOrbiter(); // Assuming orbiter has add/edit/deleteTvSeries methods
+const { orbiter } = useOrbiter();
 const tvSeriesStore = useTvSeriesStore();
 const { tvSeries, isLoading } = storeToRefs(tvSeriesStore);
 const { open: openSnackbar } = useSnackbarMessage();
@@ -106,6 +130,11 @@ const isSaving = ref(false);
 const confirmationDialogRef = ref<InstanceType<typeof ConfirmationDialog> | null>(null);
 const seriesToDelete = ref<TvSeries | null>(null);
 
+// Check if Orbiter methods exist
+const canAddSeries = computed(() => typeof orbiter.addTvSeries === 'function');
+const canEditSeries = computed(() => typeof orbiter.editTvSeries === 'function');
+const canDeleteSeries = computed(() => typeof orbiter.deleteTvSeries === 'function');
+const backendMissing = computed(() => !canAddSeries.value || !canEditSeries.value || !canDeleteSeries.value);
 
 const rules = {
   required: (v: string) => !!v || 'Required field.',
