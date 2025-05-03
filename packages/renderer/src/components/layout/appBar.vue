@@ -31,14 +31,26 @@
           :active="route.path === '/'"
           @click="router.push('/')"
         ></v-list-item>
+        <!-- Static Links for main categories -->
         <v-list-item
-          v-for="item in contentCategories.filter((cc: ContentCategory) => cc.featured)"
-          :key="item.id"
-          :title="pluralize(startCase(item.id))"
+          title="Music"
           active-class="text-primary-lighten-1"
-          :active="route.path === item.id"
-          @click="router.push(`/featured/${item.id}`)"
+          :active="route.path === '/music'"
+          @click="router.push('/music')"
         ></v-list-item>
+        <v-list-item
+          title="Movies"
+          active-class="text-primary-lighten-1"
+          :active="route.path === '/movies'"
+          @click="router.push('/movies')"
+        ></v-list-item>
+        <v-list-item
+          title="TV Shows"
+          active-class="text-primary-lighten-1"
+          :active="route.path === '/tv-shows'"
+          @click="router.push('/tv-shows')"
+        ></v-list-item>
+        <!-- End Static Links -->
         <template v-if="userData">
           <v-divider class="my-1"></v-divider>
           <v-list-item
@@ -83,15 +95,29 @@
       >
         Home
       </router-link>
+      <!-- Static Links for main categories -->
       <router-link
-        v-for="item in contentCategories.filter((cc: ContentCategory) => cc.featured)"
-        :key="item.id"
-        :to="`/featured/${item.id}`"
+        to="/music"
         class="text-decoration-none mx-2 text-subtitle-1 text-white"
         active-class="text-primary-lighten-1"
       >
-        {{ pluralize(startCase(item.id)) }}
+        Music
       </router-link>
+      <router-link
+        to="/movies"
+        class="text-decoration-none mx-2 text-subtitle-1 text-white"
+        active-class="text-primary-lighten-1"
+      >
+        Movies
+      </router-link>
+      <router-link
+        to="/tv-shows"
+        class="text-decoration-none mx-2 text-subtitle-1 text-white"
+        active-class="text-primary-lighten-1"
+      >
+        TV Shows
+      </router-link>
+      <!-- End Static Links -->
 
       <template v-if="userData">
         <v-divider

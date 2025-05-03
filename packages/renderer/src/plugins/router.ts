@@ -6,6 +6,7 @@ import AboutPage from '/@/views/aboutPage.vue';
 import AccountPage from '/@/views/accountPage.vue';
 import BuildingPage from '/@/views/buildingPage.vue';
 import HomePage from '/@/views/homePage.vue';
+import PlaceholderPage from '/@/views/placeholderPage.vue'; // Import the new placeholder
 import PrivacyPolicyPage from '/@/views/privacyPolicyPage.vue';
 import ReleasePage from '/@/views/releasePage.vue';
 import TermsPage from '/@/views/termsPage.vue';
@@ -43,6 +44,23 @@ const routes: Array<RouteRecordRaw> = [
     path: '/terms',
     component: TermsPage,
   },
+  // Add routes for the new sections
+  {
+    path: '/music',
+    name: 'Music',
+    component: PlaceholderPage,
+  },
+  {
+    path: '/movies',
+    name: 'Movies',
+    component: PlaceholderPage,
+  },
+  {
+    path: '/tv-shows',
+    name: 'TV Shows',
+    component: PlaceholderPage,
+  },
+  // End new section routes
   {
     path: '/release/:id',
     name: 'Release',
