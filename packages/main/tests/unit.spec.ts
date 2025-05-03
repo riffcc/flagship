@@ -51,11 +51,21 @@ vi.mock('electron', () => {
   return {BrowserWindow: bw, app, ipcMain};
 });
 
-vi.mock('@constl/mandataire-electron-principal', () => {
-  const gf = vi.fn() as unknown as MockedClass<typeof GestionnaireFenêtres>;
-  gf.prototype.connecterFenêtreÀConstellation = vi.fn();
+// Modify the mock for @constl/mandataire-electron-principal
+vi.mock('@constl/mandataire-electron-principal', async importOriginal => {
+  // We don't strictly need the original here, but using the async factory
+  // can sometimes help with module resolution issues in Vitest.
+  // const actual = await importOriginal<typeof import('@constl/mandataire-electron-principal')>();
+
+  // Create a mock class for GestionnaireFenêtres
+  const MockGestionnaireFenêtres = vi.fn();
+  MockGestionnaireFenêtres.prototype.connecterFenêtreÀConstellation = vi.fn();
+
+  // Return the mocked module structure
   return {
-    GestionnaireFenêtres: gf,
+    // ...actual, // Optionally include actual exports if needed elsewhere
+    GestionnaireFenêtres: MockGestionnaireFenêtres,
+    // Mock other exports from the module if necessary
   };
 });
 
