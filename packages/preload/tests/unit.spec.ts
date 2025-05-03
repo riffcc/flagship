@@ -28,61 +28,71 @@ import {
   écouterMessagesDeServeurConstellation,
 } from '../src';
 
-
-vi.mock('electron', async importOriginal => {
-  const actual = await importOriginal<typeof import('electron')>();
-
+// Mock only the ipcRenderer from electron
+vi.mock('electron', () => {
+  // Define event types for the mock emitter
   type ÉvénementsCoquille = {
-    [CODE_MESSAGE_D_IPA]: (x: [IpcRendererEvent, MessageDIpa[]]) => void;
-    [CODE_MESSAGE_DE_SERVEUR]: (x: [IpcRendererEvent, messageDeServeur[]]) => void;
-    [CODE_CLIENT_PRÊT]: (e: IpcRendererEvent, args: unknown[]) => void;
+    [key: string]: (...args: any[]) => void; // Generic signature
   };
   const événements = new EventEmitter() as TypedEmitter<ÉvénementsCoquille>;
 
-  // Define the type for the listener function more broadly for 'off'
   type ListenerFunc = (event: IpcRendererEvent, ...args: unknown[]) => void;
+  // Store mapping from original listener to the wrapped one used with EventEmitter
+  const listenerMap = new Map<ListenerFunc, ListenerFunc>();
 
-  const ipcRenderer: Pick<Electron.IpcRenderer, 'on' | 'once' | 'send' | 'off'> = {
-    on(
-      channel: typeof CODE_MESSAGE_D_IPA | typeof CODE_MESSAGE_DE_SERVEUR | typeof CODE_CLIENT_PRÊT,
-      listener: ListenerFunc,
-    ) {
-      if (channel === 'dIPA') {
-        événements.on(channel, (x: [IpcRendererEvent, MessageDIpa[]]) => listener(...x));
-      } else if (channel === 'deServeur') {
-        événements.on(channel, (x: [IpcRendererEvent, messageDeServeur[]]) => listener(...x));
-      }
-      return this;
+  const mockedIpcRenderer: Pick<Electron.IpcRenderer, 'on' | 'once' | 'send' | 'off'> = {
+    on(channel: string, listener: ListenerFunc) {
+      // Wrap the listener to ensure consistent handling and mapping
+      const wrappedListener = (event: IpcRendererEvent, ...args: unknown[]) => {
+        listener(event, ...args);
+      };
+      listenerMap.set(listener, wrappedListener); // Store the mapping
+      événements.on(channel, wrappedListener);
+      return mockedIpcRenderer; // Return the mock object itself
     },
-    once(
-      channel: typeof CODE_MESSAGE_D_IPA | typeof CODE_MESSAGE_DE_SERVEUR | typeof CODE_CLIENT_PRÊT,
-      listener: (event: IpcRendererEvent, ...args: unknown[]) => void,
-    ) {
-      if (channel === 'clientPrêt') {
-        listener({} as IpcRendererEvent);
-      }
-      événements.once(channel, listener);
-      return this;
+    once(channel: string, listener: ListenerFunc) {
+      // Wrap, map, and ensure cleanup for 'once'
+      const wrappedListener = (event: IpcRendererEvent, ...args: unknown[]) => {
+        listenerMap.delete(listener); // Clean up map after execution
+        listener(event, ...args);
+      };
+      listenerMap.set(listener, wrappedListener);
+      événements.once(channel, wrappedListener);
+      return mockedIpcRenderer; // Return the mock object itself
     },
-    send(
-      channel: typeof CODE_MESSAGE_POUR_IPA | typeof CODE_MESSAGE_POUR_SERVEUR,
-      ...args: unknown[]
-    ) {
+    off(channel: string, listener: ListenerFunc) {
+      // Retrieve the wrapped listener using the original listener as the key
+      const wrappedListener = listenerMap.get(listener);
+      if (wrappedListener) {
+        événements.off(channel, wrappedListener);
+        listenerMap.delete(listener); // Clean up map
+      } else {
+        // Fallback or warning if no mapping found
+        // console.warn(`ipcRenderer.off: No mapped listener found for channel "${channel}"`);
+        // événements.off(channel, listener); // Attempt to remove original directly (less reliable)
+      }
+      return mockedIpcRenderer; // Return the mock object itself
+    },
+    send(channel: string, ...args: unknown[]) {
+      // Simulate receiving the event back via the EventEmitter
+      // Emit on the channel the 'on' listener is listening to
       if (channel === 'pourIpa') {
-        événements.emit('dIPA', [{} as IpcRendererEvent, args[0] as MessageDIpa[]]);
+        // Pass event object and the actual message data (args[0])
+        événements.emit('dIPA', {} as IpcRendererEvent, args[0]);
       } else if (channel === 'pourServeur') {
-        événements.emit('deServeur', [{} as IpcRendererEvent, args[0] as messageDeServeur[]]);
+        événements.emit('deServeur', {} as IpcRendererEvent, args[0]);
       }
-      return this;
+      // Add other channel mappings if needed
+      return mockedIpcRenderer; // Return the mock object itself
     },
   };
 
-  // Explicitly return the mocked ipcRenderer alongside other actual exports
+  // Return an object containing only the mocked ipcRenderer
   return {
-    ...actual,
-    ipcRenderer: ipcRenderer,
+    ipcRenderer: mockedIpcRenderer,
   };
 });
+
 
 test('plateforme', async () => {
   expect(plateforme).toBe(process.platform);
