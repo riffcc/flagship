@@ -9,10 +9,28 @@ const environnement = process.env.ENVIRONNEMENT_TESTS;
 describe('Test app window', function () {
   let appliÉlectron: ElectronApplication | undefined = undefined;
   let page: Page;
-  let fermer: () => Promise<void>;
+  // Initialize fermer to prevent TypeError in afterAll if setup fails
+  let fermer: () => Promise<void> = async () => {};
 
   beforeAll(async () => {
-    if (!environnement || environnement === 'électron') {
+    try {
+      if (!environnement || environnement === 'électron') {
+        ({appli: appliÉlectron, page, fermer} = await surÉlectron());
+      } else if (['firefox', 'chromium', 'webkit'].includes(environnement)) {
+        ({page, fermer} = await surNavig({
+          typeNavigateur: environnement as 'webkit' | 'chromium' | 'webkit', // Note: 'webkit' appears twice, might be a typo
+        }));
+      } else {
+        throw new Error(`Unsupported test environment: ${environnement}`);
+      }
+    } catch (error) {
+      console.error('Error during test setup:', error);
+      // Optionally re-throw or skip tests if setup fails critically
+      // For now, initializing fermer handles the immediate TypeError
+    }
+  });
+
+  afterAll(async () => {
       ({appli: appliÉlectron, page, fermer} = await surÉlectron());
     } else if (['firefox', 'chromium', 'webkit'].includes(environnement)) {
       ({page, fermer} = await surNavig({

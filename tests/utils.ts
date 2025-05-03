@@ -13,12 +13,20 @@ export const surÉlectron = async (): Promise<{
 }> => {
   // Utiliser un dossier temporaire pour le compte Constellation dans les tests
   const {dossier, fEffacer} = await dossiers.dossierTempo();
+  let appli: ElectronApplication;
 
-  // Inclure {...process.env} est nécessaire pour les tests sur Linux
-  const appli = await electron.launch({
-    args: ['.'],
-    env: {...process.env, DOSSIER_CONSTL: dossier},
-  });
+  try {
+    // Inclure {...process.env} est nécessaire pour les tests sur Linux
+    appli = await electron.launch({
+      args: ['.'],
+      env: {...process.env, DOSSIER_CONSTL: dossier},
+    });
+  } catch (error) {
+    console.error('Electron launch failed:', error);
+    // Re-throw the error to fail the test setup clearly
+    throw new Error(`Electron launch failed: ${error.message}`);
+  }
+
   const page = await appli.firstWindow();
 
   const fermer = async () => {
