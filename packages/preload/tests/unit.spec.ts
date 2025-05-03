@@ -29,7 +29,9 @@ import {
 } from '../src';
 
 
-vi.mock('electron', () => {
+vi.mock('electron', async importOriginal => {
+  const actual = await importOriginal<typeof import('electron')>();
+
   type ÉvénementsCoquille = {
     [CODE_MESSAGE_D_IPA]: (x: [IpcRendererEvent, MessageDIpa[]]) => void;
     [CODE_MESSAGE_DE_SERVEUR]: (x: [IpcRendererEvent, messageDeServeur[]]) => void;
@@ -72,7 +74,10 @@ vi.mock('electron', () => {
     },
   };
 
-  return {ipcRenderer};
+  return {
+    ...actual, // Include the original exports
+    ipcRenderer, // Override with our mock ipcRenderer
+  };
 });
 
 test('plateforme', async () => {
