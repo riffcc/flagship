@@ -74,9 +74,10 @@ vi.mock('electron', async importOriginal => {
     },
   };
 
+  // Explicitly return the mocked ipcRenderer alongside other actual exports
   return {
-    ...actual, // Include the original exports
-    ipcRenderer, // Override with our mock ipcRenderer
+    ...actual,
+    ipcRenderer: ipcRenderer,
   };
 });
 

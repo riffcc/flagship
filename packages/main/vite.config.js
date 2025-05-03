@@ -39,12 +39,15 @@ const config = {
   },
   plugins: [injectAppVersion()],
   test: {
-    // Ensure Vitest processes these dependencies through Vite's transform pipeline,
-    // potentially resolving ESM/CJS interop or module resolution issues.
+    // Use the recommended setting instead of the deprecated 'deps.inline'
     deps: {
-      inline: [
-        /@constl\//, // Inline all @constl packages
-      ],
+      optimizer: {
+        ssr: {
+          include: [
+            /@constl\//, // Process @constl packages
+          ],
+        },
+      },
     },
     coverage: {
       provider: 'istanbul',
