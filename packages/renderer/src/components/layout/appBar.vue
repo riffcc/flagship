@@ -38,6 +38,13 @@
           :active="route.path === '/music'"
           @click="router.push('/music')"
         ></v-list-item>
+        <!-- Static Links for main categories -->
+        <v-list-item
+          title="Music"
+          active-class="text-primary-lighten-1"
+          :active="route.path === '/music'"
+          @click="router.push('/music')"
+        ></v-list-item>
         <v-list-item
           title="Movies"
           active-class="text-primary-lighten-1"
@@ -94,6 +101,14 @@
         active-class="text-primary-lighten-1"
       >
         Home
+      </router-link>
+      <!-- Static Links for main categories -->
+      <router-link
+        to="/music"
+        class="text-decoration-none mx-2 text-subtitle-1 text-white"
+        active-class="text-primary-lighten-1"
+      >
+        Music
       </router-link>
       <!-- Static Links for main categories -->
       <router-link

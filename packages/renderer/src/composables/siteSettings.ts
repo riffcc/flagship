@@ -6,12 +6,14 @@ export interface ContentCategory {
   featured?: boolean;
 }
 
+// Define categories more explicitly
 const contentCategories: Ref<ContentCategory[]> = ref([
-  { id: 'music', featured: true},
-  { id: 'movie', featured: true},
-  { id: 'tvShow', featured: true},
-  { id: 'audiobook'},
-  { id: 'game'},
+  { id: 'music', featured: true },
+  { id: 'movie', featured: true }, // Keep movie
+  { id: 'tvShow', featured: true }, // Keep tvShow
+  { id: 'video', featured: true }, // Keep generic video for now
+  { id: 'audiobook' },
+  { id: 'game' },
   { id: 'book'},
   { id: 'video'},
   { id: 'other'},

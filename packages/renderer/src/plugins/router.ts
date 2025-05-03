@@ -1,16 +1,19 @@
 import {createRouter, createWebHashHistory, type RouteRecordRaw} from 'vue-router';
 
 import {useStaticStatus} from '../composables/staticStatus';
+import {createRouter, createWebHashHistory, type RouteRecordRaw} from 'vue-router';
+
+import {useStaticStatus} from '../composables/staticStatus';
 import AdminPage from '../views/adminPage.vue';
 import AboutPage from '/@/views/aboutPage.vue';
 import AccountPage from '/@/views/accountPage.vue';
-import BuildingPage from '/@/views/buildingPage.vue';
+import BuildingPage from '/@/views/buildingPage.vue'; // Placeholder/generic page
 import HomePage from '/@/views/homePage.vue';
-import MusicPage from '/@/views/musicPage.vue'; // Import the new music page
-import MoviesPage from '/@/views/moviesPage.vue'; // Import the new movies page
-import TvShowsPage from '/@/views/tvShowsPage.vue'; // Import the new tv shows page
+import MusicPage from '/@/views/musicPage.vue';
+import MoviesPage from '/@/views/moviesPage.vue'; // Import the actual movies page
+import TvShowsPage from '/@/views/tvShowsPage.vue'; // Import the actual tv shows page
 import PrivacyPolicyPage from '/@/views/privacyPolicyPage.vue';
-import ReleasePage from '/@/views/releasePage.vue';
+import ReleasePage from '/@/views/releasePage.vue'; // Generic release detail page
 import TermsPage from '/@/views/termsPage.vue';
 import UploadPage from '/@/views/uploadPage.vue';
 
@@ -50,20 +53,20 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/music',
     name: 'Music',
-    component: MusicPage, // Use MusicPage
+    component: MusicPage,
   },
   {
     path: '/movies',
     name: 'Movies',
-    component: MoviesPage, // Use MoviesPage
+    component: MoviesPage, // Use the new MoviesPage
   },
   {
     path: '/tv-shows',
     name: 'TV Shows',
-    component: TvShowsPage, // Use TvShowsPage
+    component: TvShowsPage, // Use the new TvShowsPage
   },
   // End new section routes
-  {
+  { // Route for generic release detail (used by movies, music, etc.)
     path: '/release/:id',
     name: 'Release',
     component: ReleasePage,
@@ -73,7 +76,18 @@ const routes: Array<RouteRecordRaw> = [
     path: '/featured/:category',
     component: BuildingPage,
     props: true,
-
+  },
+  { // Route for TV Show specific detail page (component to be created)
+    path: '/tv-show/:id',
+    name: 'TV Show Detail',
+    // component: () => import('/@/views/tvShowDetailPage.vue'), // Lazy load later
+    component: BuildingPage, // Use placeholder for now
+    props: true,
+  },
+  { // Keep featured route if needed
+    path: '/featured/:category',
+    component: BuildingPage,
+    props: true,
   },
 ];
 

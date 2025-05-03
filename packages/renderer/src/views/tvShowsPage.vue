@@ -21,57 +21,28 @@
       <!-- <v-btn color="primary-darken-1" @click="router.push('/upload')">Upload TV Show</v-btn> -->
     </v-sheet>
     <template v-else>
-       <content-section
-        title="TV Shows"
-        :navigation="true"
-      >
+      <content-section title="TV Shows">
         <v-col
           v-for="item in tvShowReleases"
           :key="item.id"
         >
           <content-card
-            background-gradient="to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)"
             :background-image="parseUrlOrCid(item.thumbnail)"
-            height="10rem"
+            cursor-pointer
             hovering-children
-            overlapping
-            :subtitle="item.metadata['seasons'] ? `${item.metadata['seasons']} Seasons` : undefined"
+            :subtitle="item.author ?? ''"
             :title="item.name"
+            :width="xs ? '10.5rem' : '15rem'"
             :source-site="item.sourceSite"
-            width="17rem"
-          >
+            @click="router.push(`/tv-show/${item.id}`)"
+          > <!-- TODO: Update route when detail page exists -->
             <template #hovering>
-              <div class="position-absolute top-0 bottom-0 right-0 d-flex flex-column justify-center mr-2 ga-1">
-                <v-btn
-                  size="small"
-                  color="grey-lighten-3"
-                  density="comfortable"
-                  icon="mdi-share-variant"
-                ></v-btn>
-                <v-btn
-                  size="small"
-                  color="grey-lighten-3"
-                  density="comfortable"
-                  icon="mdi-heart"
-                ></v-btn>
-                <v-btn
-                  size="small"
-                  color="grey-lighten-3"
-                  density="comfortable"
-                  icon="mdi-plus"
-                ></v-btn>
-              </div>
-            </template>
-            <template #actions>
-              <v-btn
+              <v-icon
+                size="4.5rem"
+                icon="mdi-play"
                 color="primary"
-                rounded="0"
-                prepend-icon="mdi-play"
-                size="small"
-                class="position-absolute bottom-0 rigth-0 text-none ml-4 mb-10"
-                text="Play now"
-                @click="router.push(`/release/${item.id}`)"
-              ></v-btn>
+                class="position-absolute top-0 left-0 right-0 bottom-0 ma-auto"
+              ></v-icon>
             </template>
           </content-card>
         </v-col>
@@ -81,20 +52,20 @@
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue';
-import {useDisplay} from 'vuetify';
-import {useRouter} from 'vue-router';
+import { computed } from 'vue';
+import { useDisplay } from 'vuetify';
+import { useRouter } from 'vue-router';
+import { storeToRefs } from 'pinia';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import { parseUrlOrCid } from '/@/utils';
 import { useReleasesStore } from '../stores/releases';
-import { storeToRefs } from 'pinia';
 
 const router = useRouter();
-const {xs} = useDisplay(); // Keep xs if needed for responsive layout in the card
+const { xs } = useDisplay();
 
 const releasesStore = useReleasesStore();
-const {releases, isLoading, noContent} = storeToRefs(releasesStore);
+const { releases, isLoading, noContent } = storeToRefs(releasesStore);
 
 // Filter releases specifically for TV shows
 const tvShowReleases = computed(() => {
