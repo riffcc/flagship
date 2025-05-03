@@ -56,8 +56,7 @@ export const useReleasesStore = defineStore('releases', () => {
        seriesId: r.release.release.seriesId, // Example key - Adjust if Orbiter uses different field names
        seasonNumber: r.release.release.seasonNumber, // Example key - Adjust if Orbiter uses different field names
        episodeNumber: r.release.release.episodeNumber, // Example key - Adjust if Orbiter uses different field names
-     } as ReleaseItem; // Assert type after mapping
-     });
+     }) as ReleaseItem); // Correctly close the object literal before type assertion
    }
  });
 
