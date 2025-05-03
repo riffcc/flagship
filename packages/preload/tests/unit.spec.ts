@@ -39,10 +39,13 @@ vi.mock('electron', async importOriginal => {
   };
   const événements = new EventEmitter() as TypedEmitter<ÉvénementsCoquille>;
 
-  const ipcRenderer: Pick<Electron.IpcRenderer, 'on' | 'once' | 'send'> = {
+  // Define the type for the listener function more broadly for 'off'
+  type ListenerFunc = (event: IpcRendererEvent, ...args: unknown[]) => void;
+
+  const ipcRenderer: Pick<Electron.IpcRenderer, 'on' | 'once' | 'send' | 'off'> = {
     on(
       channel: typeof CODE_MESSAGE_D_IPA | typeof CODE_MESSAGE_DE_SERVEUR | typeof CODE_CLIENT_PRÊT,
-      listener: (event: IpcRendererEvent, ...args: unknown[]) => void,
+      listener: ListenerFunc,
     ) {
       if (channel === 'dIPA') {
         événements.on(channel, (x: [IpcRendererEvent, MessageDIpa[]]) => listener(...x));
