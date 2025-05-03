@@ -75,16 +75,15 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/featured/:category',
     component: BuildingPage,
-    props: true,
-  },
-  { // Route for TV Show specific detail page (component to be created)
-    path: '/tv-show/:id',
-    name: 'TV Show Detail',
-    // component: () => import('/@/views/tvShowDetailPage.vue'), // Lazy load later
-    component: BuildingPage, // Use placeholder for now
-    props: true,
-  },
-  { // Keep featured route if needed
+   props: true,
+ },
+ { // Route for TV Show specific detail page
+   path: '/tv-show/:id',
+   name: 'TV Show Detail',
+   component: () => import('/@/views/tvShowDetailPage.vue'), // Lazy load the new component
+   props: true,
+ },
+ { // Keep featured route if needed
     path: '/featured/:category',
     component: BuildingPage,
     props: true,

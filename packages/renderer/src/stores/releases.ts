@@ -49,12 +49,17 @@ export const useReleasesStore = defineStore('releases', () => {
         category: r.release.release.category,
         author: r.release.release.author,
         thumbnail: r.release.release.thumbnail,
-        cover: r.release.release.cover,
-        metadata: r.release.release.metadata ? JSON.parse(r.release.release.metadata as string) : {},
-        sourceSite: r.site,
-      })) as ReleaseItem[];
-    }
-  });
+       cover: r.release.release.cover,
+       metadata: r.release.release.metadata ? JSON.parse(r.release.release.metadata as string) : {},
+       sourceSite: r.site,
+       // Add mapping for new TV Show fields (adjust keys based on actual Orbiter response)
+       seriesId: r.release.release.seriesId, // Example key - Adjust if Orbiter uses different field names
+       seasonNumber: r.release.release.seasonNumber, // Example key - Adjust if Orbiter uses different field names
+       episodeNumber: r.release.release.episodeNumber, // Example key - Adjust if Orbiter uses different field names
+     } as ReleaseItem; // Assert type after mapping
+     });
+   }
+ });
 
   const featuredReleases = computed<FeaturedReleaseItem[]>(() => {
     if (staticStatus.value === 'static') return staticFeaturedReleases.value.filter(filterActivedFeature);

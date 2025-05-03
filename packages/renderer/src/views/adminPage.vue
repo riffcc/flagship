@@ -47,6 +47,12 @@
         >
           Categories
         </v-tab>
+        <v-tab
+          slider-color="primary"
+          value="tvseries"
+        >
+          TV Series
+        </v-tab>
       </v-tabs>
       <v-window
         v-model="tab"
@@ -81,6 +87,11 @@
           value="categories"
         >
           <categories-management></categories-management>
+        </v-window-item>
+        <v-window-item
+          value="tvseries"
+        >
+          <tv-series-management></tv-series-management> <!-- Add window item for the new component -->
         </v-window-item>
       </v-window>
     </div>

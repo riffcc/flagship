@@ -11,31 +11,32 @@
       ></v-progress-circular>
     </v-sheet>
     <v-sheet
-      v-else-if="noContent || tvShowReleases.length === 0"
+      v-else-if="noContent || tvSeries.length === 0"  
       color="transparent"
       class="d-flex flex-column mx-auto"
       max-width="16rem"
     >
-      <p class="text-white text-center mb-2">No TV show content found.</p>
-      <!-- Optional: Add an upload button if desired -->
-      <!-- <v-btn color="primary-darken-1" @click="router.push('/upload')">Upload TV Show</v-btn> -->
+      <p class="text-white text-center mb-2">No TV Series found.</p> 
+      <!-- Optional: Link to admin or upload if appropriate -->
+      <!-- <v-btn color="primary-darken-1" @click="router.push('/admin')">Manage Series</v-btn> -->
     </v-sheet>
     <template v-else>
       <content-section title="TV Shows">
         <v-col
-          v-for="item in tvShowReleases"
+          v-for="item in tvSeries" 
           :key="item.id"
+          cols="auto" 
         >
           <content-card
-            :background-image="parseUrlOrCid(item.thumbnail)"
+            :background-image="parseUrlOrCid(item.thumbnail || item.cover)" 
             cursor-pointer
             hovering-children
-            :subtitle="item.author ?? ''"
+            :subtitle="item.description?.substring(0, 50) + (item.description && item.description.length > 50 ? '...' : '') ?? ''" 
             :title="item.name"
             :width="xs ? '10.5rem' : '15rem'"
             :source-site="item.sourceSite"
-            @click="router.push(`/tv-show/${item.id}`)"
-          > <!-- TODO: Update route when detail page exists -->
+            @click="router.push(`/tv-show/${item.id}`)" 
+          > 
             <template #hovering>
               <v-icon
                 size="4.5rem"
@@ -59,16 +60,20 @@ import { storeToRefs } from 'pinia';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import { parseUrlOrCid } from '/@/utils';
-import { useReleasesStore } from '../stores/releases';
+// import { useReleasesStore } from '../stores/releases'; // No longer needed here
+import { useTvSeriesStore } from '/@/stores/tvSeries'; // Import the new TV Series store
 
 const router = useRouter();
 const { xs } = useDisplay();
 
-const releasesStore = useReleasesStore();
-const { releases, isLoading, noContent } = storeToRefs(releasesStore);
+// const releasesStore = useReleasesStore(); // No longer needed here
+// const { releases, isLoading, noContent } = storeToRefs(releasesStore); // No longer needed here
 
-// Filter releases specifically for TV shows
-const tvShowReleases = computed(() => {
-  return releases.value.filter(item => item.category === 'tvShow');
-});
+const tvSeriesStore = useTvSeriesStore(); // Use the TV Series store
+const { tvSeries, isLoading, noContent } = storeToRefs(tvSeriesStore); // Get series data
+
+// Filter releases specifically for TV shows - No longer needed here
+// const tvShowReleases = computed(() => {
+//   return releases.value.filter(item => item.category === 'tvShow');
+// });
 </script>
