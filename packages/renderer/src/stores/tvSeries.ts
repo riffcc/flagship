@@ -46,7 +46,9 @@ export const useTvSeriesStore = defineStore('tvSeries', () => {
         return [];
       }
 
-      const mappedSeries = (orbiterTvSeries.value || []).map((s): TvSeries => ({
+      const mappedSeries = (orbiterTvSeries.value || [])
+      .filter(s => s && s.series) // Add filter to ensure s.series exists
+      .map((s): TvSeries => ({
         id: s.id,
         name: s.series.name,
         description: s.series.description,
