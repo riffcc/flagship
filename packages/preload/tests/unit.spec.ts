@@ -28,86 +28,41 @@ import {
   écouterMessagesDeServeurConstellation,
 } from '../src';
 
-// Mock only the ipcRenderer from electron
+// Mock electron with simplified stubs
 vi.mock('electron', () => {
-  // Define event types for the mock emitter
-  type ÉvénementsCoquille = {
-    [key: string]: (...args: any[]) => void; // Generic signature
-  };
-  const événements = new EventEmitter() as TypedEmitter<ÉvénementsCoquille>;
-
-  type ListenerFunc = (event: IpcRendererEvent, ...args: unknown[]) => void;
-  // Store mapping from original listener to the wrapped one used with EventEmitter
-  const listenerMap = new Map<ListenerFunc, ListenerFunc>();
-
-  const mockedIpcRenderer: Pick<Electron.IpcRenderer, 'on' | 'once' | 'send' | 'off'> = {
-    on(channel: string, listener: ListenerFunc) {
-      // Wrap the listener to ensure consistent handling and mapping
-      const wrappedListener = (event: IpcRendererEvent, ...args: unknown[]) => {
-        listener(event, ...args);
-      };
-      listenerMap.set(listener, wrappedListener); // Store the mapping
-      événements.on(channel, wrappedListener);
-      return mockedIpcRenderer; // Return the mock object itself
-    },
-    once(channel: string, listener: ListenerFunc) {
-      // Wrap, map, and ensure cleanup for 'once'
-      const wrappedListener = (event: IpcRendererEvent, ...args: unknown[]) => {
-        listenerMap.delete(listener); // Clean up map after execution
-        listener(event, ...args);
-      };
-      listenerMap.set(listener, wrappedListener);
-      événements.once(channel, wrappedListener);
-      return mockedIpcRenderer; // Return the mock object itself
-    },
-    off(channel: string, listener: ListenerFunc) {
-      // Retrieve the wrapped listener using the original listener as the key
-      const wrappedListener = listenerMap.get(listener);
-      if (wrappedListener) {
-        événements.off(channel, wrappedListener);
-        listenerMap.delete(listener); // Clean up map
-      } else {
-        // Fallback or warning if no mapping found
-        // console.warn(`ipcRenderer.off: No mapped listener found for channel "${channel}"`);
-        // événements.off(channel, listener); // Attempt to remove original directly (less reliable)
-      }
-      return mockedIpcRenderer; // Return the mock object itself
-    },
-    send(channel: string, ...args: unknown[]) {
-      // Simulate receiving the event back via the EventEmitter
-      // Emit on the channel the 'on' listener is listening to
-      if (channel === 'pourIpa') {
-        // Pass event object and the actual message data (args[0])
-        événements.emit('dIPA', {} as IpcRendererEvent, args[0]);
-      } else if (channel === 'pourServeur') {
-        événements.emit('deServeur', {} as IpcRendererEvent, args[0]);
-      }
-      // Add other channel mappings if needed
-      return mockedIpcRenderer; // Return the mock object itself
-    },
+  // Simple stubs for ipcRenderer methods
+  const mockedIpcRenderer = {
+    on: vi.fn((_channel, _listener) => mockedIpcRenderer), // Return self for chaining if needed
+    off: vi.fn((_channel, _listener) => mockedIpcRenderer), // Return self
+    once: vi.fn((_channel, listener) => { // Basic 'once' simulation if needed
+      // Immediately call listener for specific channels if required by tests
+      // if (channel === 'clientPrêt') {
+      //   listener({} as IpcRendererEvent);
+      // }
+      return mockedIpcRenderer;
+    }),
+    send: vi.fn((_channel, ..._args) => {}), // Simple send stub
   };
 
-  // Mock the necessary parts of 'app' and 'ipcMain' if they are used by the tested code
-  // or dependencies. Add more properties/methods as needed.
-  const mockedApp: Pick<Electron.App, 'getAppPath' | 'getPath'> = {
+  // Basic stubs for app and ipcMain
+  const mockedApp = {
     getAppPath: vi.fn(() => 'mock/app/path'),
     getPath: vi.fn(() => 'mock/path'),
   };
 
-  const mockedIpcMain: Pick<Electron.IpcMain, 'on' | 'handle'> = {
+  const mockedIpcMain = {
     on: vi.fn(),
     handle: vi.fn(),
   };
 
-  // Return an object containing the mocked ipcRenderer AND a default export
+  // Return the structure expected by imports
   return {
     ipcRenderer: mockedIpcRenderer,
-    default: { // Provide the default export
+    default: { // Provide the default export needed by dependencies
       app: mockedApp,
       ipcMain: mockedIpcMain,
-      // Add other electron exports here if needed by dependencies
     },
-    // Keep named exports if they are directly imported elsewhere
+    // Also provide named exports if they are imported directly
     app: mockedApp,
     ipcMain: mockedIpcMain,
   };
