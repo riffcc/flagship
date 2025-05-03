@@ -31,7 +31,7 @@
             :background-image="parseUrlOrCid(item.thumbnail || item.cover)" 
             cursor-pointer
             hovering-children
-            :subtitle="item.description?.substring(0, 50) + (item.description && item.description.length > 50 ? '...' : '') ?? ''" 
+            :subtitle="item.description ? (item.description.substring(0, 50) + (item.description.length > 50 ? '...' : '')) : ''"
             :title="item.name"
             :width="xs ? '10.5rem' : '15rem'"
             :source-site="item.sourceSite"

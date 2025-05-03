@@ -345,8 +345,11 @@ const clearForm = () => {
     category: '',
     author: '',
     metadata: {},
+    seriesId: undefined, // Explicitly clear TV fields
+    seasonNumber: undefined,
+    episodeNumber: undefined,
   };
   formRef.value?.resetValidation();
-  formRef.value?.reset();
+  // formRef.value?.reset(); // Avoid calling reset() as it might interfere with v-model bindings
 };
 </script>
