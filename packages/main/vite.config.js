@@ -46,6 +46,9 @@ const config = {
           include: [
             /@constl\//, // Process @constl packages
           ],
+          exclude: [
+            'electron', // Ensure electron is treated as external
+          ],
         },
       },
     },
