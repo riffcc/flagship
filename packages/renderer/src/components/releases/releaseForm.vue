@@ -20,8 +20,9 @@
       :items="contentCategoriesItems"
       :rules="[rules.required]"
       label="Category"
-      <!-- @update:model-value="() => releaseItem.metadata = {}" --> <!-- Watch handles this now -->
     />
+    <!-- Metadata is now cleared by the watch on releaseItem.category -->
+    <!-- @update:model-value="() => releaseItem.metadata = {}" -->
 
     <!-- Conditional TV Show Fields -->
     <template v-if="isTvShowCategory">
