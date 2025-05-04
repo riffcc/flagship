@@ -52,6 +52,12 @@
             Edit
           </v-btn>
           <v-btn
+            prepend-icon="mdi-star-plus-outline"
+            @click="requestFeatureRelease(item.id)"
+          >
+            Feature
+          </v-btn>
+          <v-btn
             :prepend-icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
             @click="deleteBlockRelease(item.id!, item.contentCID, item.sourceSite!)"
           >
@@ -84,6 +90,20 @@
             size="small"
             @click="editRelease(item.id)"
           ></v-btn>
+          <v-tooltip
+            text="Feature Release"
+            location="bottom"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <v-btn
+                v-bind="tooltipProps"
+                icon="mdi-star-plus-outline"
+                class="me-2"
+                size="small"
+                @click="requestFeatureRelease(item.id)"
+              ></v-btn>
+            </template>
+          </v-tooltip>
           <v-btn
             :icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
             size="small"
@@ -175,6 +195,10 @@ const {staticReleases} = useStaticReleases();
 const releasesStore = useReleasesStore();
 const {releases, isLoading } = storeToRefs(releasesStore);
 const { copy, getIcon, getColor } = useCopyToClipboard();
+const emit = defineEmits<{
+  'feature-release': [id: string]
+}>();
+
 type Header = {
   title: string;
   align?: 'start' | 'end' | 'center';
@@ -318,4 +342,12 @@ function resetEditedRelease() {
     metadata: {},
   };
 };
+
+function requestFeatureRelease(releaseId: string | undefined) {
+  if (releaseId) {
+    emit('feature-release', releaseId);
+  } else {
+    console.warn('Attempted to feature a release with no ID.');
+  }
+}
 </script>

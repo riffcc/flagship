@@ -55,7 +55,7 @@
         <v-window-item
           value="content"
         >
-          <content-management></content-management>
+          <content-management @feature-release="handleFeatureReleaseRequest"></content-management>
         </v-window-item>
         <v-window-item
           value="admins"
@@ -65,7 +65,10 @@
         <v-window-item
           value="featured"
         >
-          <featured-management></featured-management>
+          <featured-management
+            :initial-feature-data="initialFeatureData"
+            @initial-data-consumed="clearInitialFeatureData"
+          ></featured-management>
         </v-window-item>
         <v-window-item
           value="subscriptions"
@@ -88,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue';
+import {ref, type Ref} from 'vue';
 import {useDisplay} from 'vuetify';
 import contentManagement from '/@/components/admin/contentManagement.vue';
 import accessManagement from '/@/components/admin/accessManagement.vue';
@@ -96,7 +99,27 @@ import featuredManagement from '/@/components/admin/featuredManagement.vue';
 import subscriptionManagement from '/@/components/admin/subscriptionManagement.vue';
 import siteManagement from '/@/components/admin/siteManagement.vue';
 import categoriesManagement from '/@/components/admin/categoriesManagement.vue';
+import type { FeaturedReleaseData } from '/@//stores/releases';
 
 const {lgAndUp} = useDisplay();
-const tab = ref(null);
+const tab = ref('content');
+
+const initialFeatureData: Ref<FeaturedReleaseData | null> = ref(null);
+const handleFeatureReleaseRequest = async (releaseId: string) => {
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setMonth(now.getMonth() + 1);
+
+  initialFeatureData.value = {
+    releaseId: releaseId,
+    startAt: now.toISOString().substring(0, 16),
+    endAt: tomorrow.toISOString().substring(0, 16),
+  };
+  tab.value = 'featured';
+};
+
+// NEW: Handler to clear the initial data once consumed by featuredManagement
+const clearInitialFeatureData = () => {
+  initialFeatureData.value = null;
+};
 </script>

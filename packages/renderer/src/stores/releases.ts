@@ -8,7 +8,11 @@ import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
 
 const NO_CONTENT_DELAY_MS = 20000;
-
+export type FeaturedReleaseData = {
+  releaseId: string | null;
+  startAt: string | null;
+  endAt: string | null;
+}
 type ContentStatus = 'loading' | 'checking' | 'idle' | 'empty';
 const determineTargetStatus = (
   currentStatus: ContentStatus,

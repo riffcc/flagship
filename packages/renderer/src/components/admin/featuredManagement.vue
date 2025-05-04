@@ -13,7 +13,6 @@
           <h6 class="text-h6 font-weight-bold mb-4">New Featured Release</h6>
           <v-form
             ref="formRef"
-            validate-on="input lazy"
             @submit.prevent="handleOnSubmit"
           >
             <v-text-field
@@ -124,21 +123,23 @@ import {computed, onMounted, ref, watch, type Ref} from 'vue';
 import { useStaticStatus } from '/@/composables/staticStatus';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { filterActivedFeature } from '/@/utils';
-import { useReleasesStore } from '/@/stores/releases';
+import { type FeaturedReleaseData, useReleasesStore } from '/@/stores/releases';
 import { storeToRefs } from 'pinia';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
 import { useStaticReleases } from '/@/composables/staticReleases';
-type FeaturedReleaseData = {
-  releaseId: string | null;
-  startAt: string | null;
-  endAt: string | null;
-}
+
 const { orbiter } = useOrbiter();
 const { staticStatus } = useStaticStatus();
 const {staticFeaturedReleases} = useStaticReleases();
 const releasesStore = useReleasesStore();
 const {releases, unfilteredFeaturedReleases} = storeToRefs(releasesStore);
 
+const props = defineProps<{
+  initialFeatureData: FeaturedReleaseData | null;
+}>();
+const emit = defineEmits<{
+  'initial-data-consumed': []
+}>();
 const newFeaturedRelease: Ref<FeaturedReleaseData> = ref({
   releaseId: null,
   startAt: null,
@@ -173,6 +174,17 @@ onMounted(() => {
   minDate.value = now.toISOString().substring(0, 16);
   maxDate.value = max.toISOString().substring(0, 16);
 });
+
+watch(() => props.initialFeatureData, (newData) => {
+  if (newData) {
+    newFeaturedRelease.value = {
+      ...newData,
+    };
+
+    emit('initial-data-consumed');
+  }
+}, { immediate: true });
+
 
 watch(() => newFeaturedRelease.value.startAt, newStartAt => {
   minEndDate.value = null;
