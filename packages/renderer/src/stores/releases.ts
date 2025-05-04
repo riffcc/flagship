@@ -56,16 +56,20 @@ export const useReleasesStore = defineStore('releases', () => {
     }
   });
 
-  const featuredReleases = computed<FeaturedReleaseItem[]>(() => {
-    if (staticStatus.value === 'static') return staticFeaturedReleases.value.filter(filterActivedFeature);
+  const unfilteredFeaturedReleases = computed<FeaturedReleaseItem[]>(() => {
+    if (staticStatus.value === 'static') return staticFeaturedReleases.value;
     else {
       return (orbiterFeaturedReleases.value || []).map((fr): FeaturedReleaseItem => ({
         id: fr.id,
         releaseId: fr.featured.releaseId,
         startTime: fr.featured.startTime,
         endTime: fr.featured.endTime,
-      })).filter(filterActivedFeature);
+      }));
     }
+  });
+
+  const featuredReleases = computed<FeaturedReleaseItem[]>(() => {
+    return unfilteredFeaturedReleases.value.filter(filterActivedFeature);
   });
 
   watch(
@@ -116,6 +120,7 @@ export const useReleasesStore = defineStore('releases', () => {
 
   return {
     releases,
+    unfilteredFeaturedReleases,
     featuredReleases,
     isLoading,
     noContent,

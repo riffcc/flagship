@@ -62,9 +62,9 @@
           min-height="256px"
         >
           <h6 class="text-h6 font-weight-bold mb-4">Featured Releases</h6>
-          <v-list v-if="featuredReleases.length > 0">
+          <v-list v-if="unfilteredFeaturedReleases.length > 0">
             <v-list-item
-              v-for="featuredRelease, i in featuredReleases"
+              v-for="featuredRelease, i in unfilteredFeaturedReleases"
               :key="i"
               class="px-0"
               :title="featuredRelease.id"
@@ -127,6 +127,7 @@ import { filterActivedFeature } from '/@/utils';
 import { useReleasesStore } from '/@/stores/releases';
 import { storeToRefs } from 'pinia';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
+import { useStaticReleases } from '/@/composables/staticReleases';
 type FeaturedReleaseData = {
   releaseId: string | null;
   startAt: string | null;
@@ -134,8 +135,9 @@ type FeaturedReleaseData = {
 }
 const { orbiter } = useOrbiter();
 const { staticStatus } = useStaticStatus();
+const {staticFeaturedReleases} = useStaticReleases();
 const releasesStore = useReleasesStore();
-const {releases, featuredReleases} = storeToRefs(releasesStore);
+const {releases, unfilteredFeaturedReleases} = storeToRefs(releasesStore);
 
 const newFeaturedRelease: Ref<FeaturedReleaseData> = ref({
   releaseId: null,
@@ -231,7 +233,7 @@ const handleOnSubmit = async () => {
       await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
       const targetRelease = releases.value.find(r => r.id === readyToSave.value?.releaseId);
       if (targetRelease && targetRelease.id && readyToSave.value) {
-        featuredReleases.value.push({
+        staticFeaturedReleases.value.push({
           id: `featured-${Date.now()}-${Math.random().toString(16).substring(2, 8)}`,
           releaseId: targetRelease.id,
           startTime: readyToSave.value.startTime,
@@ -261,10 +263,10 @@ const confirmEndFeaturedRelease = async (id: string) => {
   confirmEndFeaturedReleaseDialog.value = false;
 
   if (staticStatus.value === 'static') {
-    const index = featuredReleases.value.findIndex(fr => fr.id === id);
+    const index = staticFeaturedReleases.value.findIndex(fr => fr.id === id);
     if (index !== -1) {
-        featuredReleases.value[index] = {
-            ...featuredReleases.value[index],
+        staticFeaturedReleases.value[index] = {
+            ...staticFeaturedReleases.value[index],
             endTime: new Date().toISOString(),
         };
         console.log(`Static featured release ${id} ended.`);
