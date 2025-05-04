@@ -39,7 +39,12 @@
               v-bind="props"
             ></v-btn>
           </template>
-
+          <v-btn
+            prepend-icon="mdi-clipboard-multiple-outline"
+            @click="copy(item.id!, item.id!)"
+          >
+            Copy ID
+          </v-btn>
           <v-btn
             prepend-icon="mdi-pencil"
             @click="editRelease(item.id)"
@@ -57,6 +62,22 @@
           v-else
           class="d-flex"
         >
+          <v-tooltip
+            text="Copy Release ID"
+            location="bottom"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <v-btn
+                v-bind="tooltipProps"
+                :icon="getIcon(item.id!)"
+                :color="getColor(item.id!)"
+                class="me-2"
+                size="small"
+                variant="text"
+                @click="copy(item.id!, item.id!)"
+              ></v-btn>
+            </template>
+          </v-tooltip>
           <v-btn
             icon="mdi-pencil"
             class="me-2"
@@ -145,6 +166,7 @@ import type { PartialReleaseItem } from '/@/@types/release';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import { useReleasesStore } from '/@/stores/releases';
 import { storeToRefs } from 'pinia';
+import { useCopyToClipboard } from '/@/composables/copyToClipboard';
 
 const {staticStatus} = useStaticStatus();
 const {lgAndUp, smAndDown} = useDisplay();
@@ -152,7 +174,7 @@ const {orbiter} = useOrbiter();
 const {staticReleases} = useStaticReleases();
 const releasesStore = useReleasesStore();
 const {releases, isLoading } = storeToRefs(releasesStore);
-
+const { copy, getIcon, getColor } = useCopyToClipboard();
 type Header = {
   title: string;
   align?: 'start' | 'end' | 'center';

@@ -31,13 +31,22 @@
           </v-menu>
         </template>
         <template #append>
-          <v-btn
-            icon="mdi-clipboard-multiple-outline"
-            variant="text"
-            density="comfortable"
-            size="x-small"
-            @click="copyText(orbiter.siteId)"
-          ></v-btn>
+          <v-tooltip
+            text="Copy Site ID"
+            location="bottom"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <v-btn
+                v-bind="tooltipProps"
+                :icon="getIcon(orbiter.siteId)"
+                :color="getColor(orbiter.siteId)"
+                variant="text"
+                density="comfortable"
+                size="x-small"
+                @click="copy(orbiter.siteId, orbiter.siteId)"
+              ></v-btn>
+            </template>
+          </v-tooltip>
         </template>
       </v-list-item>
       <v-divider class="mt-2"></v-divider>
@@ -92,8 +101,9 @@
 import { type Ref, ref, watch } from 'vue';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
 import { useSiteColors } from '/@/composables/siteColors';
-import { copyText, parseUrlOrCid } from '/@/utils';
+import { parseUrlOrCid } from '/@/utils';
 import { useShowDefederation } from '/@/composables/showDefed';
+import { useCopyToClipboard } from '/@/composables/copyToClipboard';
 
 const file: Ref<File | undefined> = ref();
 const fileBlobUrl: Ref<string | undefined> = ref();
@@ -114,4 +124,6 @@ function handleOnSave(){};
 const {orbiter} = useOrbiter();
 const {getSiteColor, saveColor, selectedColors} = useSiteColors();
 const {showDefederation} = useShowDefederation();
+
+const { copy, getIcon, getColor } = useCopyToClipboard();
 </script>
