@@ -2,18 +2,42 @@ import { defineStore } from 'pinia';
 import { suivre as follow } from '@constl/vue';
 import { useOrbiter } from '../plugins/orbiter/utils';
 import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
-import type { ReleaseItem, FeaturedReleaseItem } from '../@types/release';
-import { filterActivedFeature } from '../utils';
 import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
 
 const NO_CONTENT_DELAY_MS = 20000;
-export type FeaturedReleaseData = {
-  releaseId: string | null;
-  startAt: string | null;
-  endAt: string | null;
-}
 type ContentStatus = 'loading' | 'checking' | 'idle' | 'empty';
+
+export type ReleaseItem = {
+  id?: string;
+  name: string;
+  contentCID: string;
+  category: string;
+  author: string;
+  thumbnail?: string;
+  cover?: string;
+  sourceSite?: string;
+  metadata: Record<string, unknown>
+}
+
+export type PartialReleaseItem = Partial<ReleaseItem>;
+
+export type FeaturedReleaseItem = {
+  id: string;
+  releaseId: string;
+  startTime: string;
+  endTime: string;
+};
+
+export type PartialFeaturedReleaseItem = Partial<FeaturedReleaseItem>;
+
+export function filterActivedFeatured(featured: FeaturedReleaseItem) {
+  const now = new Date();
+  const startTime = new Date(featured.startTime);
+  const endTime = new Date(featured.endTime);
+
+  return now >= startTime && now <= endTime;
+};
 const determineTargetStatus = (
   currentStatus: ContentStatus,
   isStatic: boolean,

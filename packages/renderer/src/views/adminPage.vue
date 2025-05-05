@@ -99,12 +99,12 @@ import featuredManagement from '/@/components/admin/featuredManagement.vue';
 import subscriptionManagement from '/@/components/admin/subscriptionManagement.vue';
 import siteManagement from '/@/components/admin/siteManagement.vue';
 import categoriesManagement from '/@/components/admin/categoriesManagement.vue';
-import type { FeaturedReleaseData } from '/@//stores/releases';
+import type { PartialFeaturedReleaseItem } from '/@//stores/releases';
 
 const {lgAndUp} = useDisplay();
 const tab = ref('content');
 
-const initialFeatureData: Ref<FeaturedReleaseData | null> = ref(null);
+const initialFeatureData: Ref<PartialFeaturedReleaseItem | null> = ref(null);
 const handleFeatureReleaseRequest = async (releaseId: string) => {
   const now = new Date();
   const tomorrow = new Date(now);
@@ -112,8 +112,8 @@ const handleFeatureReleaseRequest = async (releaseId: string) => {
 
   initialFeatureData.value = {
     releaseId: releaseId,
-    startAt: now.toISOString().substring(0, 16),
-    endAt: tomorrow.toISOString().substring(0, 16),
+    startTime: now.toISOString().substring(0, 16),
+    endTime: tomorrow.toISOString().substring(0, 16),
   };
   tab.value = 'featured';
 };

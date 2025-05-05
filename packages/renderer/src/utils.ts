@@ -2,7 +2,7 @@ import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
 import {cid as isCID} from 'is-ipfs';
 import { IPFS_GATEWAY } from './constants/ipfs';
-import type { FeaturedReleaseItem } from './@types/release';
+
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
 
@@ -81,15 +81,6 @@ export function isValidEmail(email: string) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return regex.test(email);
 };
-
-export function filterActivedFeature(featured: FeaturedReleaseItem) {
-  const now = new Date();
-  const startTime = new Date(featured.startTime);
-  const endTime = new Date(featured.endTime);
-
-  return now >= startTime && now <= endTime;
-};
-
 
 export function parseUrlOrCid(urlOrCid?: string): string | undefined {
   if (!urlOrCid) return undefined;

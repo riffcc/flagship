@@ -182,9 +182,8 @@ import {useOrbiter} from '/@/plugins/orbiter/utils';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import ReleaseForm from '/@/components/releases/releaseForm.vue';
 import { useStaticStatus } from '../../composables/staticStatus';
-import type { PartialReleaseItem } from '/@/@types/release';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
-import { useReleasesStore } from '/@/stores/releases';
+import { type PartialReleaseItem, useReleasesStore } from '/@/stores/releases';
 import { storeToRefs } from 'pinia';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
 

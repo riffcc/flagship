@@ -154,9 +154,8 @@ import {useRouter} from 'vue-router';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
-import type { ReleaseItem} from '/@/@types/release';
 import { parseUrlOrCid } from '/@/utils';
-import { useReleasesStore } from '../stores/releases';
+import { type ReleaseItem, useReleasesStore } from '/@//stores/releases';
 import { storeToRefs } from 'pinia';
 
 const router = useRouter();

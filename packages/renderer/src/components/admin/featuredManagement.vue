@@ -22,7 +22,7 @@
               :rules="rules"
             ></v-text-field>
             <v-text-field
-              v-model="newFeaturedRelease.startAt"
+              v-model="newFeaturedRelease.startTime"
               type="datetime-local"
               :min="minDate"
               :max="maxDate"
@@ -30,8 +30,8 @@
               label="Start at"
             ></v-text-field>
             <v-text-field
-              v-model="newFeaturedRelease.endAt"
-              :disabled="!newFeaturedRelease.startAt"
+              v-model="newFeaturedRelease.endTime"
+              :disabled="!newFeaturedRelease.startTime"
               type="datetime-local"
               :min="minEndDate"
               :max="maxDate"
@@ -92,8 +92,8 @@
                   icon="mdi-check"
                   size="small"
                   density="comfortable"
-                  :disabled="!filterActivedFeature(featuredRelease)"
-                  :color="filterActivedFeature(featuredRelease) ? 'blue' : 'default'"
+                  :disabled="!filterActivedFeatured(featuredRelease)"
+                  :color="filterActivedFeatured(featuredRelease) ? 'blue' : 'default'"
                   @click="confirmEndFeaturedReleaseDialog = true"
                 >
                 </v-btn>
@@ -122,8 +122,7 @@
 import {computed, onMounted, ref, watch, type Ref} from 'vue';
 import { useStaticStatus } from '/@/composables/staticStatus';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import { filterActivedFeature } from '/@/utils';
-import { type FeaturedReleaseData, useReleasesStore } from '/@/stores/releases';
+import { filterActivedFeatured, filterPromotedFeatured, useReleasesStore, type PartialFeaturedReleaseItem } from '/@/stores/releases';
 import { storeToRefs } from 'pinia';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
 import { useStaticReleases } from '/@/composables/staticReleases';
@@ -135,15 +134,17 @@ const releasesStore = useReleasesStore();
 const {releases, unfilteredFeaturedReleases} = storeToRefs(releasesStore);
 
 const props = defineProps<{
-  initialFeatureData: FeaturedReleaseData | null;
+  initialFeatureData: PartialFeaturedReleaseItem | null;
 }>();
+
 const emit = defineEmits<{
   'initial-data-consumed': []
 }>();
-const newFeaturedRelease: Ref<FeaturedReleaseData> = ref({
-  releaseId: null,
-  startAt: null,
-  endAt: null,
+
+const newFeaturedRelease: Ref<PartialFeaturedReleaseItem> = ref({
+  releaseId: undefined,
+  startAt: undefined,
+  endAt: undefined,
 });
 
 const formRef = ref();
@@ -154,10 +155,10 @@ const rules = [
 ];
 
 const endAtRules = [
-  (value: string | null) => !newFeaturedRelease.value.startAt || Boolean(value) || 'End date is required if start date is set.',
+  (value: string | null) => !newFeaturedRelease.value.startTime || Boolean(value) || 'End date is required if start date is set.',
   (value: string | null) => {
-      if (!value || !newFeaturedRelease.value.startAt) return true;
-      return new Date(value) > new Date(newFeaturedRelease.value.startAt) || 'End date must be after start date.';
+      if (!value || !newFeaturedRelease.value.startTime) return true;
+      return new Date(value) > new Date(newFeaturedRelease.value.startTime) || 'End date must be after start date.';
   },
 ];
 
@@ -186,7 +187,7 @@ watch(() => props.initialFeatureData, (newData) => {
 }, { immediate: true });
 
 
-watch(() => newFeaturedRelease.value.startAt, newStartAt => {
+watch(() => newFeaturedRelease.value.startTime, newStartAt => {
   minEndDate.value = null;
   if (newStartAt) {
     const newDate = new Date(newStartAt);
@@ -194,20 +195,20 @@ watch(() => newFeaturedRelease.value.startAt, newStartAt => {
     newDate.setMinutes(newDate.getMinutes() + 10);
     minEndDate.value = newDate.toISOString().substring(0, 16);
 
-    if (newFeaturedRelease.value.endAt && new Date(newFeaturedRelease.value.endAt) < newDate) {
-      newFeaturedRelease.value.endAt = null;
+    if (newFeaturedRelease.value.endTime && new Date(newFeaturedRelease.value.endTime) < newDate) {
+      newFeaturedRelease.value.endTime = undefined;
     }
   } else {
-    newFeaturedRelease.value.endAt = null;
+    newFeaturedRelease.value.endTime = undefined;
   }
 });
 
 
 const resetForm = () => {
   newFeaturedRelease.value = {
-    releaseId: null,
-    startAt: null,
-    endAt: null,
+    releaseId: undefined,
+    startTime: undefined,
+    endTime: undefined,
   };
   formRef.value?.resetValidation();
   formRef.value?.reset();
@@ -216,12 +217,12 @@ const resetForm = () => {
 const readyToSave = computed(() => {
   if (
     newFeaturedRelease.value.releaseId &&
-    newFeaturedRelease.value.startAt &&
-    newFeaturedRelease.value.endAt &&
+    newFeaturedRelease.value.startTime &&
+    newFeaturedRelease.value.endTime &&
     formRef.value?.isValid
   ) {
-    const startTime = new Date(newFeaturedRelease.value.startAt).toISOString();
-    const endTime = new Date(newFeaturedRelease.value.endAt).toISOString();
+    const startTime = new Date(newFeaturedRelease.value.startTime).toISOString();
+    const endTime = new Date(newFeaturedRelease.value.endTime).toISOString();
 
     return {
       releaseId: newFeaturedRelease.value.releaseId,
