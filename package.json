@@ -137,8 +137,7 @@
       "vue-demi"
     ],
     "overrides": {
-      "magic-string": "0.30.15",
-      "@orbitdb/core": "github:benya7/orbitdb#fix/dial-protocol-retry"
+      "magic-string": "0.30.15"
     }
   }
 }
