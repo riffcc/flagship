@@ -74,7 +74,7 @@
               :title="featuredRelease.releaseId"
             >
               <template #title="{title}">
-                <p class="text-subtitle-2 mx-2">{{ title }}</p>
+                <p class="text-subtitle-2 text-center">{{ title }}</p>
               </template>
               <template #prepend>
                 <v-sheet
@@ -103,6 +103,7 @@
                     v-else
                     color="red"
                     size="small"
+                    class="w-100 d-flex justify-center"
                   >
                     Ended
                   </v-chip>
@@ -112,7 +113,7 @@
                 <v-btn
                   icon="mdi-check"
                   size="small"
-                  density="comfortable"
+                  density="compact"
                   :disabled="!filterActivedFeatured(featuredRelease)"
                   :color="filterActivedFeatured(featuredRelease) ? 'blue' : 'default'"
                   @click="confirmEndFeaturedReleaseDialog = true"
