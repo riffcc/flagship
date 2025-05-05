@@ -71,7 +71,7 @@
               v-for="featuredRelease, i in unfilteredFeaturedReleases"
               :key="i"
               class="px-0"
-              :title="featuredRelease.id"
+              :title="featuredRelease.releaseId"
             >
               <template #title="{title}">
                 <p class="text-subtitle-2 mx-2">{{ title }}</p>
