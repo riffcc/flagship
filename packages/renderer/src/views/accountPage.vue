@@ -1,33 +1,75 @@
 <template>
-  <v-container class="text-center">
-    <v-img
-      :src="userAvatar"
-      class="mx-auto"
-      width="150"
-    />
-    {{ displayName }}
-    <v-switch
-      v-model="staticModeSwitch"
-      :label="`Static mode ${staticModeSwitch ? 'on' : 'off'}`"
-      :color="staticModeSwitch ? 'primary' : 'secondary'"
-    />
-    <h1>Account info</h1>
-    <p>
-      Account ID: {{ accountId }}
-    </p>
-    <p>
-      Device ID: {{ deviceId }}
-    </p>
-    <p>
-      Peer ID: {{ peerId }}
-    </p>
-    <p>
-      Account status: {{ accountStatus }} ({{ statusExplanation }})
-    </p>
-    <h1>Connectivity</h1>
-    <p>
-      You are currently connected to {{ ipfsConnections?.length || 0 }} IPFS nodes, including {{ nOrbiterDevices }} user devices from {{ nOrbiterAccounts }} Orbiter accounts.
-    </p>
+  <v-container>
+    <v-sheet
+      class="d-flex position-relative py-4 px-2 px-md-12"
+      max-height="160"
+    >
+      <v-img
+        :src="userAvatar"
+        max-width="120"
+      />
+      <p class="ml-4 my-auto">
+        {{ displayName }}
+      </p>
+      <v-switch
+        v-model="staticModeSwitch"
+        class="position-absolute right-0 top-0 mr-4 mr-md-12 mt-md-2"
+        label="Static mode"
+        :color="staticModeSwitch ? 'primary' : 'secondary'"
+      />
+    </v-sheet>
+
+    <v-card
+      class="mt-4 text-center"
+    >
+      <v-card-title>
+        <h3>
+          Account info
+        </h3>
+      </v-card-title>
+      <v-divider></v-divider>
+      <v-list lines="two">
+        <v-list-item
+          title="Account ID"
+          :subtitle="isCopied(accountId!) ? 'Copied!' : accountId"
+          :ripple="false"
+          @click="copy(accountId!, accountId!)"
+        >
+        </v-list-item>
+        <v-list-item
+          title="Device ID"
+          :subtitle="deviceId"
+        >
+        </v-list-item>
+        <v-list-item
+          title="Peer ID"
+          :subtitle="peerId"
+        >
+        </v-list-item>
+        <v-list-item
+          title="Account status"
+          :subtitle="`${accountStatus} (${statusExplanation})`"
+        >
+        </v-list-item>
+      </v-list>
+    </v-card>
+    <v-card
+      class="mt-4 text-center"
+    >
+      <v-card-title>
+        <h3>
+          Connectivity
+        </h3>
+      </v-card-title>
+      <v-divider></v-divider>
+      <v-list lines="two">
+        <v-list-item>
+          <p>
+            You are currently connected to {{ ipfsConnections?.length || 0 }} IPFS nodes, including {{ nOrbiterDevices }} user devices from {{ nOrbiterAccounts }} Orbiter accounts.
+          </p>
+        </v-list-item>
+      </v-list>
+    </v-card>
     <v-sheet
       v-if="debug"
       class="d-flex flex-column flex-sm-row ga-2 mx-auto mt-4 justify-center"
@@ -47,9 +89,9 @@ import {suivre as follow, obt} from '@constl/vue';
 import {useUserProfilePhoto} from '/@/components/users/utils';
 import {useStaticStatus} from '../composables/staticStatus';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
+import { useCopyToClipboard } from '/@/composables/copyToClipboard';
 
 const {orbiter} = useOrbiter();
-
 // User name
 const names = follow(orbiter.listenForNameChange.bind(orbiter));
 
@@ -73,6 +115,8 @@ watchEffect(() => {
 const accountId = follow(orbiter.constellation.suivreIdCompte);
 const deviceId = obt(orbiter.constellation.obtIdDispositif);
 const peerId = obt(orbiter.constellation.obtIdLibp2p);
+
+const { copy, isCopied } = useCopyToClipboard();
 
 // User avatar
 const userAvatar = useUserProfilePhoto(accountId.value);
