@@ -10,21 +10,7 @@
         color="primary"
       ></v-progress-circular>
     </v-sheet>
-    <v-sheet
-      v-else-if="noContent"
-      color="transparent"
-      class="d-flex flex-column mx-auto"
-      max-width="16rem"
-    >
-      <p class="text-white text-center mb-2">No content here. Please upload a release first.</p>
-      <v-btn
-        color="primary-darken-1"
-        @click="router.push('/upload')"
-      >
-        Go to Upload
-      </v-btn>
-    </v-sheet>
-    <template v-else>
+    <template v-if="!noContent">
       <featured-slider
         v-if="(promotedFeaturedReleases?.length || 0) > 0"
       />
@@ -144,6 +130,20 @@
         </v-col>
       </content-section>
     </template>
+    <v-sheet
+      v-else
+      color="transparent"
+      class="d-flex flex-column mx-auto"
+      max-width="16rem"
+    >
+      <p class="text-white text-center mb-2">No content here. Please upload a release first.</p>
+      <v-btn
+        color="primary-darken-1"
+        @click="router.push('/upload')"
+      >
+        Go to Upload
+      </v-btn>
+    </v-sheet>
   </v-container>
 </template>
 
