@@ -38,6 +38,11 @@
               :rules="endAtRules"
               label="End at"
             ></v-text-field>
+            <v-switch
+              v-model="newFeaturedRelease.promoted"
+              :color="newFeaturedRelease.promoted ? 'primary' : 'default'"
+              label="Promoted"
+            ></v-switch>
             <v-btn
               color="primary"
               type="submit"
@@ -72,20 +77,36 @@
                 <p class="text-subtitle-2 mx-2">{{ title }}</p>
               </template>
               <template #prepend>
-                <v-chip
-                  v-if="filterActivedFeature(featuredRelease)"
-                  color="green"
-                  size="small"
+                <v-sheet
+                  width="80"
+                  class="d-flex justify-center"
                 >
-                  Active
-                </v-chip>
-                <v-chip
-                  v-else
-                  color="red"
-                  size="small"
-                >
-                  Ended
-                </v-chip>
+                  <template v-if="filterActivedFeatured(featuredRelease)">
+                    <v-chip
+                      v-if="filterPromotedFeatured(featuredRelease)"
+                      color="yellow"
+                      size="small"
+                      class="w-100 d-flex justify-center"
+                    >
+                      Promoted
+                    </v-chip>
+                    <v-chip
+                      v-else
+                      color="green"
+                      size="small"
+                      class="w-100 d-flex justify-center"
+                    >
+                      Active
+                    </v-chip>
+                  </template>
+                  <v-chip
+                    v-else
+                    color="red"
+                    size="small"
+                  >
+                    Ended
+                  </v-chip>
+                </v-sheet>
               </template>
               <template #append>
                 <v-btn
@@ -145,6 +166,7 @@ const newFeaturedRelease: Ref<PartialFeaturedReleaseItem> = ref({
   releaseId: undefined,
   startAt: undefined,
   endAt: undefined,
+  promoted: undefined,
 });
 
 const formRef = ref();
@@ -209,6 +231,7 @@ const resetForm = () => {
     releaseId: undefined,
     startTime: undefined,
     endTime: undefined,
+    promoted: undefined,
   };
   formRef.value?.resetValidation();
   formRef.value?.reset();
@@ -219,6 +242,7 @@ const readyToSave = computed(() => {
     newFeaturedRelease.value.releaseId &&
     newFeaturedRelease.value.startTime &&
     newFeaturedRelease.value.endTime &&
+    newFeaturedRelease.value.promoted !== undefined &&
     formRef.value?.isValid
   ) {
     const startTime = new Date(newFeaturedRelease.value.startTime).toISOString();
@@ -228,6 +252,7 @@ const readyToSave = computed(() => {
       releaseId: newFeaturedRelease.value.releaseId,
       startTime,
       endTime,
+      promoted: newFeaturedRelease.value.promoted,
     };
   }
   return undefined;
@@ -262,6 +287,7 @@ const handleOnSubmit = async () => {
         cid: readyToSave.value.releaseId,
         startTime: readyToSave.value.startTime,
         endTime: readyToSave.value.endTime,
+        promoted: readyToSave.value.promoted,
       });
     }
   } catch (error) {

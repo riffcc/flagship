@@ -6,7 +6,7 @@
   >
     <template #prev="{props: prevProps}">
       <v-sheet
-        v-if="featuredItems.length > 1"
+        v-if="promotedFeaturedReleases.length > 1"
         color="transparent"
         width="64px"
         class="position-relative h-100"
@@ -31,7 +31,7 @@
     </template>
     <template #next="{props: nextProps}">
       <v-sheet
-        v-if="featuredItems.length > 1"
+        v-if="promotedFeaturedReleases.length > 1"
         color="transparent"
         width="64px"
         class="position-relative h-100"
@@ -55,7 +55,7 @@
       </v-sheet>
     </template>
     <v-carousel-item
-      v-for="featuredItem in featuredItems"
+      v-for="featuredItem in promotedFeaturedReleases"
       :key="featuredItem.id"
       :src="parseUrlOrCid(featuredItem.cover ?? featuredItem.thumbnail)"
       cover
@@ -175,26 +175,21 @@ import { useSiteColors } from '/@/composables/siteColors';
 import { useReleasesStore } from '/@/stores/releases';
 import { storeToRefs } from 'pinia';
 
-
 const router = useRouter();
 const {showDefederation} = useShowDefederation();
 const {xs} = useDisplay();
 const slide = ref(0);
 const releasesStore = useReleasesStore();
-const {releases, featuredReleases} = storeToRefs(releasesStore);
+const {promotedFeaturedReleases} = storeToRefs(releasesStore);
 
-const featuredItems = computed(() => {
-  const featuredReleasesIds = featuredReleases.value.map(fr => fr.releaseId);
-  return releases.value.filter(r => r.id && featuredReleasesIds.includes(r.id));
-});
 const previousSlideImage = computed(() => {
-  const previousIndex = slide.value === 0 ? featuredItems.value.length - 1 : slide.value - 1;
-  return featuredItems.value[previousIndex].cover ?? featuredItems.value[previousIndex].thumbnail;
+  const previousIndex = slide.value === 0 ? promotedFeaturedReleases.value.length - 1 : slide.value - 1;
+  return promotedFeaturedReleases.value[previousIndex].cover ?? promotedFeaturedReleases.value[previousIndex].thumbnail;
 });
 
 const nextSlideImage = computed(() => {
-  const nextIndex = slide.value === featuredItems.value.length - 1 ? 0 : slide.value + 1;
-  return featuredItems.value[nextIndex].cover ?? featuredItems.value[nextIndex].thumbnail;
+  const nextIndex = slide.value === promotedFeaturedReleases.value.length - 1 ? 0 : slide.value + 1;
+  return promotedFeaturedReleases.value[nextIndex].cover ?? promotedFeaturedReleases.value[nextIndex].thumbnail;
 });
 
 const {getSiteColor} = useSiteColors();

@@ -27,6 +27,7 @@ export type FeaturedReleaseItem = {
   releaseId: string;
   startTime: string;
   endTime: string;
+  promoted: boolean;
 };
 
 export type PartialFeaturedReleaseItem = Partial<FeaturedReleaseItem>;
@@ -38,6 +39,11 @@ export function filterActivedFeatured(featured: FeaturedReleaseItem) {
 
   return now >= startTime && now <= endTime;
 };
+
+export function filterPromotedFeatured(featured: FeaturedReleaseItem) {
+  return featured.promoted;
+};
+
 const determineTargetStatus = (
   currentStatus: ContentStatus,
   isStatic: boolean,
@@ -92,23 +98,34 @@ export const useReleasesStore = defineStore('releases', () => {
         releaseId: fr.featured.releaseId,
         startTime: fr.featured.startTime,
         endTime: fr.featured.endTime,
+        promoted: fr.featured.promoted,
       }));
     }
   });
 
-  const featuredReleases = computed<FeaturedReleaseItem[]>(() => {
-    return unfilteredFeaturedReleases.value.filter(filterActivedFeature);
+  const activedFeaturedReleases = computed<ReleaseItem[]>(() => {
+    const activedFeaturedReleasesIds = unfilteredFeaturedReleases.value
+      .filter(filterActivedFeatured)
+      .map(fr => fr.releaseId);
+    return releases.value.filter(r => r.id && activedFeaturedReleasesIds.includes(r.id));
+  });
+
+  const promotedFeaturedReleases = computed<ReleaseItem[]>(() => {
+    const promotedActivedFeaturedReleasesIds = unfilteredFeaturedReleases.value
+      .filter(filterActivedFeatured)
+      .filter(filterPromotedFeatured)
+      .map(fr => fr.releaseId);
+    return releases.value.filter(r => r.id && promotedActivedFeaturedReleasesIds.includes(r.id));
   });
 
   watch(
-    [releases, featuredReleases, staticStatus],
+    [orbiterReleases, orbiterFeaturedReleases, staticStatus],
     ([rels, featuredRels, staticMode]) => {
-      // Calculate inputs for status determination
       const isStatic = staticMode === 'static';
-      // For dynamic, both must be defined (not undefined). For static, it's always considered loaded.
       const isLoaded = isStatic || (rels !== undefined && featuredRels !== undefined);
-      // Check content based on mode
-      const hasContent = releases.value.length > 0 || featuredReleases.value.length > 0;
+
+      const hasContent = releases.value.length > 0 || unfilteredFeaturedReleases.value.length > 0;
+
       const targetStatus = determineTargetStatus(status.value, isStatic, isLoaded, hasContent);
 
       const shouldBeChecking = targetStatus === 'checking';
@@ -116,8 +133,8 @@ export const useReleasesStore = defineStore('releases', () => {
 
       if (shouldBeChecking && !timerIsRunning) {
         timerId.value = setTimeout(() => {
-          const stillEmpty = releases.value.length === 0 &&
-            featuredReleases.value.length === 0;
+          const stillEmpty = (rels?.length || 0) === 0 &&
+            (featuredRels?.length || 0) === 0;
           if (status.value === 'checking') {
             const finalStatus = stillEmpty ? 'empty' : 'idle';
             status.value = finalStatus;
@@ -149,7 +166,8 @@ export const useReleasesStore = defineStore('releases', () => {
   return {
     releases,
     unfilteredFeaturedReleases,
-    featuredReleases,
+    activedFeaturedReleases,
+    promotedFeaturedReleases,
     isLoading,
     noContent,
   };

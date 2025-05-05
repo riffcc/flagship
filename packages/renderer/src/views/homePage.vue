@@ -26,7 +26,7 @@
     </v-sheet>
     <template v-else>
       <featured-slider
-        v-if="featuredReleases && featuredReleases?.length > 0"
+        v-if="(promotedFeaturedReleases?.length || 0) > 0"
       />
       <content-section
         v-if="categorizedReleases['featured-various'].length > 0"
@@ -162,7 +162,7 @@ const router = useRouter();
 const {xs} = useDisplay();
 
 const releasesStore = useReleasesStore();
-const {releases, featuredReleases, isLoading, noContent} = storeToRefs(releasesStore);
+const {activedFeaturedReleases, promotedFeaturedReleases, isLoading, noContent} = storeToRefs(releasesStore);
 
 function categorizeItems(items: ReleaseItem[], limit: number = 8) {
   const result: Record<string, ReleaseItem[]> = {
@@ -208,7 +208,7 @@ function categorizeItems(items: ReleaseItem[], limit: number = 8) {
   return result;
 }
 
-const categorizedReleases = computed(() => categorizeItems(releases.value));
+const categorizedReleases = computed(() => categorizeItems(activedFeaturedReleases.value));
 </script>
 <!--
       {

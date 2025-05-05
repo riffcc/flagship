@@ -114,6 +114,7 @@ const handleFeatureReleaseRequest = async (releaseId: string) => {
     releaseId: releaseId,
     startTime: now.toISOString().substring(0, 16),
     endTime: tomorrow.toISOString().substring(0, 16),
+    promoted: true,
   };
   tab.value = 'featured';
 };
