@@ -1,5 +1,5 @@
 import {ref, type Ref} from 'vue';
-import type { ReleaseItem, FeaturedReleaseItem } from '/@/@types/release';
+import type { ReleaseItem, FeaturedReleaseItem } from '/@/stores/releases';
 
 const staticFeaturedReleases: Ref<FeaturedReleaseItem[]> = ref([
   {
@@ -7,24 +7,28 @@ const staticFeaturedReleases: Ref<FeaturedReleaseItem[]> = ref([
     releaseId: '5',
     startTime: '2025-01-01T00:00',
     endTime: '2026-01-01T00:00',
+    promoted: true,
   },
   {
     id: '2',
     releaseId: '10',
     startTime: '2025-01-01T00:00',
     endTime: '2026-01-01T00:00',
+    promoted: true,
   },
   {
     id: '3',
     releaseId: '11',
     startTime: '2025-01-01T00:00',
     endTime: '2026-01-01T00:00',
+    promoted: true,
   },
   {
     id: '4',
     releaseId: '7',
     startTime: '2025-01-01T00:00',
     endTime: '2026-01-01T00:00',
+    promoted: true,
   },
 ]);
 

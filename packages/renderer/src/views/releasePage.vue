@@ -54,7 +54,7 @@ import videoPlayer from '/@/components/releases/videoPlayer.vue';
 import { ref, watch } from 'vue';
 import { useReleasesStore } from '../stores/releases';
 import { storeToRefs } from 'pinia';
-import type { ReleaseItem } from '../@types/release';
+import type { ReleaseItem } from '/@/stores/releases';
 
 const props = defineProps<{
   id: string;

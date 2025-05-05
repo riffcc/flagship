@@ -125,7 +125,7 @@ import { suivre as follow } from '@constl/vue';
 import {cid} from 'is-ipfs';
 import {computed, onMounted, ref} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
-import type { ReleaseItem, PartialReleaseItem } from '/@/@types/release';
+import type { ReleaseItem, PartialReleaseItem } from '/@/stores/releases';
 
 const props = defineProps<{
   initialData?: PartialReleaseItem;

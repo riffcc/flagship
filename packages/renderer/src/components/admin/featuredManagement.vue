@@ -277,6 +277,7 @@ const handleOnSubmit = async () => {
           releaseId: targetRelease.id,
           startTime: readyToSave.value.startTime,
           endTime: readyToSave.value.endTime,
+          promoted: true,
         });
         console.log('Featured release added successfully to static list.');
         resetForm(); // Reset form on success
