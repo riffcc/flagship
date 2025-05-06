@@ -91,6 +91,7 @@
     "@vueuse/core": "^12.7.0",
     "ajv": "^8.17.1",
     "assert": "^2.1.0",
+    "axios": "^1.8.4",
     "change-case": "^5.4.4",
     "core-js": "^3.40.0",
     "crypto-browserify": "^3.12.1",

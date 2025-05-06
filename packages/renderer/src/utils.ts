@@ -4,7 +4,8 @@ import { inject } from 'vue';
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
 import {cid as isCID} from 'is-ipfs';
-import { IPFS_GATEWAY } from './constants/ipfs';
+import { IPFS_GATEWAY } from './constants/ipfs';  
+
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
 
@@ -42,7 +43,9 @@ export async function copyText(text: string | undefined) {
 
 export const RIFFCC_PROTOCOL = 'Riff.CC';
 
-export const useConstellation = (): {constl: Constellation} => {
+export const useConstellation = (): {
+   constl: Constellation
+} => {
   const constl = inject<Constellation>('constl');
   if (constl) return {constl};
   throw new Error("Constellation n'est pas trouvable.");
