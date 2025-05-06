@@ -17,7 +17,7 @@
     />
     <v-select
       v-model="releaseCategory"
-      :items="consts.CONTENT_CATEGORIES"
+      :items="consts.DEFAULT_CONTENT_CATEGORIES"
       :rules="[rules.required]"
       label="Category"
     />
@@ -197,7 +197,7 @@ const releaseName = ref<string>();
 const thumbnailCID = ref<string>();
 const coverCID = ref<string>(); // TODO - option to autogenerate this from movie files
 
-const releaseMetadata = ref<types.ReleaseMetadata>({});
+const releaseMetadata = ref<(typeof consts.DEFAULT_CONTENT_CATEGORIES[number])["metadataSchema"]>({});
 const musicReleaseMetadata = ref<types.MusicReleaseMetadata>({});
 const movieReleaseMetadata = ref<types.MovieReleaseMetadata>({});
 

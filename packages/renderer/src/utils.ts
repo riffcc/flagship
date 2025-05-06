@@ -41,6 +41,7 @@ export async function copyText(text: string | undefined) {
   await navigator.clipboard.writeText(text);
 }
 
+// Todo: make configurable with environmental variable and define in single location for main and renderer
 export const RIFFCC_PROTOCOL = 'Riff.CC';
 
 export const useConstellation = (): {

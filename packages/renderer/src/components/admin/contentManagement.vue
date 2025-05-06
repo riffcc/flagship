@@ -97,7 +97,7 @@
           <v-select
             v-model="editedRelease.category"
             label="Category"
-            :items="consts.CONTENT_CATEGORIES"
+            :items="consts.DEFAULT_CONTENT_CATEGORIES"
             variant="solo"
           ></v-select>
           <v-text-field
