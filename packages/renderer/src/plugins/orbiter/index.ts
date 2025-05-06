@@ -46,6 +46,7 @@ const getVariableIds = (): orbiterTypes.PossiblyIncompleteVariableIds => {
     VITE_BLOCKED_RELEASES_RELEASE_ID_VAR_ID,
     VITE_CONTENT_CATEGORIES_CATEGORY_ID_VAR_ID,
     VITE_CONTENT_CATEGORIES_DISPLAY_NAME_VAR_ID,
+    VITE_CONTENT_CATEGORIES_FEATURED_VAR_ID,
     VITE_CONTENT_CATEGORIES_METADATA_SCHEMA_VAR_ID,
   } = import.meta.env;
 
@@ -79,6 +80,7 @@ const getVariableIds = (): orbiterTypes.PossiblyIncompleteVariableIds => {
 
     contentCategoriesCategoryIdVar: VITE_CONTENT_CATEGORIES_CATEGORY_ID_VAR_ID,
     contentCategoriesDisplayNameVar: VITE_CONTENT_CATEGORIES_DISPLAY_NAME_VAR_ID,
+    contentCategoriesFeaturedVar: VITE_CONTENT_CATEGORIES_FEATURED_VAR_ID,
     contentCategoriesMetadataSchemaVar: VITE_CONTENT_CATEGORIES_METADATA_SCHEMA_VAR_ID,
   };
 

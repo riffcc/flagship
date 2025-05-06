@@ -16,6 +16,11 @@
       label="Display Name"
       :rules="[rules.required]"
     />
+    <v-switch
+      v-model="contentCategory.contentCategory.featured"
+      :color="contentCategory.contentCategory.featured ? 'primary' : 'default'"
+      label="Featured"
+    ></v-switch>
     <v-list-item
       title="Metadata Schema"
       class="pa-0"
@@ -239,6 +244,7 @@ const handleOnSubmit = async () => {
     const category = {
       [consts.CONTENT_CATEGORIES_CATEGORY_ID]: data.contentCategory.categoryId,
       [consts.CONTENT_CATEGORIES_DISPLAY_NAME]: data.contentCategory.displayName,
+      [consts.CONTENT_CATEGORIES_FEATURED]: data.contentCategory.featured,
       [consts.CONTENT_CATEGORIES_METADATA_SCHEMA]: JSON.stringify(data.contentCategory.metadataSchema),
     };
     if (props.mode === 'edit' && props.initialData?.id) {

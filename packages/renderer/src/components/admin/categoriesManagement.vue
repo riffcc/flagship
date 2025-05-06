@@ -43,6 +43,18 @@
           :title="category.contentCategory.displayName"
           lines="two"
         >
+          <template #prepend>
+            <v-sheet width="24">
+              <v-icon
+                v-if="category.contentCategory.featured"
+                :icon="'mdi-star'"
+                variant="text"
+                color="yellow"
+                size="small"
+                class="mr-1 mb-1"
+              ></v-icon>
+            </v-sheet>
+          </template>
           <template #append>
             <v-btn
               icon="mdi-pencil"
@@ -117,18 +129,22 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useOrbiter } from '/@/plugins/orbiter/utils';
-import { suivre as follow } from '@constl/vue';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
-import type { types as orbiterTypes } from '@riffcc/orbiter';
 import ContentCategoryForm from '/@/components/releases/contentCategoryForm.vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
+import { type ContentCategoryItem, useContentCategoriesStore } from '../../stores/contentCategories';
+import { storeToRefs } from 'pinia';
+import { useOrbiter } from '/@/plugins/orbiter/utils';
+
+const { orbiter } = useOrbiter();
+const contentCategoriesStore = useContentCategoriesStore();
+const { contentCategories } = storeToRefs(contentCategoriesStore);
 
 const createCategoryDialog = ref(false);
 const editCategoryDialog = ref(false);
 const confirmDeleteCategoryDialog = ref(false);
 
-const editedContentCategory = ref<orbiterTypes.ContentCategoryWithId<orbiterTypes.ContentCategoryMetadataField>>({
+const editedContentCategory = ref<ContentCategoryItem>({
   id: '',
   contentCategory: {
     categoryId: '',
@@ -137,8 +153,8 @@ const editedContentCategory = ref<orbiterTypes.ContentCategoryWithId<orbiterType
   },
 });
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
-const {orbiter} = useOrbiter();
-const contentCategories = follow(orbiter.listenForContentCategories.bind(orbiter));
+
+
 
 function editCategory (id?: string) {
   if (!id) return;
@@ -148,7 +164,7 @@ function editCategory (id?: string) {
       id: targetItem.id,
       contentCategory: {
         ...targetItem.contentCategory,
-        metadataSchema: JSON.parse(targetItem.contentCategory.metadataSchema),
+        metadataSchema: targetItem.contentCategory.metadataSchema,
       },
     };
   }

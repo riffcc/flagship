@@ -121,11 +121,12 @@
 
 <script setup lang="ts">
 import {consts, type types as orbiterTypes} from '@riffcc/orbiter';
-import { suivre as follow } from '@constl/vue';
 import {cid} from 'is-ipfs';
 import {computed, onMounted, ref} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import type { ReleaseItem, PartialReleaseItem } from '/@/stores/releases';
+import { useContentCategoriesStore } from '/@/stores/contentCategories';
+import { storeToRefs } from 'pinia';
 
 const props = defineProps<{
   initialData?: PartialReleaseItem;
@@ -139,6 +140,9 @@ const emit = defineEmits<{
 }>();
 
 const {orbiter} = useOrbiter();
+const contentCategoriesStore = useContentCategoriesStore();
+const { contentCategories } = storeToRefs(contentCategoriesStore);
+
 const formRef = ref();
 const openAdvanced = ref<boolean>();
 
@@ -156,7 +160,6 @@ const rules = {
 };
 const isLoading = ref(false);
 
-const contentCategories = follow(orbiter.listenForContentCategories.bind(orbiter));
 const contentCategoriesItems = computed(() => (contentCategories.value ?? []).map(item => ({
   id: item.id,
   value: item.contentCategory.categoryId,
@@ -168,7 +171,7 @@ const selectedContentCategory = computed(() => {
   if (contentCategories.value) {
     const targetItem = contentCategories.value.find(item => item.contentCategory.categoryId === releaseItem.value.category);
     if (targetItem) {
-      categoryMetadataData = JSON.parse(targetItem.contentCategory.metadataSchema);
+      categoryMetadataData = targetItem.contentCategory.metadataSchema;
     }
   }
   return categoryMetadataData;

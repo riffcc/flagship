@@ -32,12 +32,12 @@
           @click="router.push('/')"
         ></v-list-item>
         <v-list-item
-          v-for="item in contentCategories.filter((cc: ContentCategory) => cc.featured)"
+          v-for="item in featuredContentCategories"
           :key="item.id"
-          :title="pluralize(startCase(item.id))"
+          :title="item.contentCategory.displayName"
           active-class="text-primary-lighten-1"
           :active="route.path === item.id"
-          @click="router.push(`/featured/${item.id}`)"
+          @click="router.push(`/featured/${item.contentCategory.categoryId}`)"
         ></v-list-item>
         <template v-if="userData">
           <v-divider class="my-1"></v-divider>
@@ -84,13 +84,13 @@
         Home
       </router-link>
       <router-link
-        v-for="item in contentCategories.filter((cc: ContentCategory) => cc.featured)"
+        v-for="item in featuredContentCategories"
         :key="item.id"
-        :to="`/featured/${item.id}`"
+        :to="`/featured/${item.contentCategory.categoryId}`"
         class="text-decoration-none mx-2 text-subtitle-1 text-white"
         active-class="text-primary-lighten-1"
       >
-        {{ pluralize(startCase(item.id)) }}
+        {{ item.contentCategory.displayName }}
       </router-link>
 
       <template v-if="userData">
@@ -122,18 +122,18 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';
 import { suivre as follow } from '@constl/vue';
-import {startCase} from 'lodash';
-import pluralize from 'pluralize-esm';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
-import { type ContentCategory, useSiteSettings } from '/@/composables/siteSettings';
 import { useUserSession } from '/@/composables/userSession';
 import accountMenu from '/@/components/account/accountMenu.vue';
+import { useContentCategoriesStore } from '/@/stores/contentCategories';
+import { storeToRefs } from 'pinia';
 
 const {orbiter} = useOrbiter();
 const router = useRouter();
 const route = useRoute();
 const isAdmin = orbiter?.followIsModerator ? follow(orbiter.followIsModerator.bind(orbiter)) : false;
-const { contentCategories } = useSiteSettings();
+const contentCategoriesStore = useContentCategoriesStore();
+const { featuredContentCategories } = storeToRefs(contentCategoriesStore);
 const { userData } = useUserSession();
 
 function handleOnDisconnect(){
