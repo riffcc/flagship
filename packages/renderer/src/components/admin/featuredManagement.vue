@@ -138,6 +138,21 @@
       :on-confirm="confirmEndFeaturedRelease"
     ></confirmation-dialog>
   </v-container>
+  <v-snackbar
+    v-model="showSnackbar"
+    :color="snackbarMessage?.type ?? 'default'"
+  >
+    {{ snackbarMessage?.text }}
+    <template #actions>
+      <v-btn
+        color="white"
+        variant="text"
+        @click="closeSnackbar"
+      >
+        Close
+      </v-btn>
+    </template>
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
@@ -148,13 +163,14 @@ import { filterActivedFeatured, filterPromotedFeatured, useReleasesStore, type P
 import { storeToRefs } from 'pinia';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
 import { useStaticReleases } from '/@/composables/staticReleases';
+import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 
 const { orbiter } = useOrbiter();
 const { staticStatus } = useStaticStatus();
 const {staticFeaturedReleases} = useStaticReleases();
 const releasesStore = useReleasesStore();
 const {releases, unfilteredFeaturedReleases} = storeToRefs(releasesStore);
-
+const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 const props = defineProps<{
   initialFeatureData: PartialFeaturedReleaseItem | null;
 }>();
@@ -238,21 +254,22 @@ const resetForm = () => {
 };
 
 const readyToSave = computed(() => {
+  const data = newFeaturedRelease.value;
   if (
-    newFeaturedRelease.value.releaseId &&
-    newFeaturedRelease.value.startTime &&
-    newFeaturedRelease.value.endTime &&
-    newFeaturedRelease.value.promoted !== undefined &&
+    data.releaseId &&
+    data.startTime &&
+    data.endTime &&
+    data.promoted !== undefined &&
     formRef.value?.isValid
   ) {
-    const startTime = new Date(newFeaturedRelease.value.startTime).toISOString();
-    const endTime = new Date(newFeaturedRelease.value.endTime).toISOString();
+    const startTime = (new Date(data.startTime)).toISOString();
+    const endTime = (new Date(data.endTime)).toISOString();
 
     return {
-      releaseId: newFeaturedRelease.value.releaseId,
+      releaseId: data.releaseId,
       startTime,
       endTime,
-      promoted: newFeaturedRelease.value.promoted,
+      promoted: data.promoted,
     };
   }
   return undefined;
@@ -279,9 +296,11 @@ const handleOnSubmit = async () => {
           promoted: true,
         });
         console.log('Featured release added successfully to static list.');
+        openSnackbar('Featured release created succefully.', 'success');
         resetForm(); // Reset form on success
       } else {
         console.error('Target release not found.');
+        openSnackbar('Error creating featured release.', 'error');
       }
     } else {
       await orbiter.featureRelease({
@@ -290,9 +309,11 @@ const handleOnSubmit = async () => {
         endTime: readyToSave.value.endTime,
         promoted: readyToSave.value.promoted,
       });
+      openSnackbar('Featured release created succefully.', 'success');
     }
   } catch (error) {
     console.error('Error creating featured release:', error);
+    openSnackbar('Error creating featured release.', 'error');
   } finally {
     isLoading.value = false;
   }
@@ -308,9 +329,10 @@ const confirmEndFeaturedRelease = async () => {
             ...staticFeaturedReleases.value[index],
             endTime,
         };
-        console.log(`Static featured release ${id} ended.`);
+        openSnackbar('Featured release ended succefully.', 'success');
     } else {
-        console.warn(`Static featured release ${id} not found to end.`);
+        console.error(`Static featured release ${featuredItemIdToEnd.value} not found to end.`);
+        openSnackbar('Error on ending featured release.', 'error');
     }
   } else {
     try {
@@ -321,9 +343,10 @@ const confirmEndFeaturedRelease = async () => {
           promoted: false,
         },
       });
-      console.log(`Featured release ${id} ended successfully.`);
+      openSnackbar('Featured release ended succefully.', 'success');
     } catch (error) {
-      console.error(`Error on ending featured release ${id}:`, error);
+      console.error(`Error on ending featured release ${featuredItemIdToEnd.value}:`, error);
+      openSnackbar('Error on ending featured release.', 'error');
     }
   }
   featuredItemIdToEnd.value = null;
