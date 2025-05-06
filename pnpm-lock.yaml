@@ -8851,7 +8851,7 @@ snapshots:
       '@multiformats/mafmt': 12.1.6
       '@multiformats/multiaddr-matcher': 1.7.0
       '@noble/hashes': 1.8.0
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/60acc0c4c2c0f361db23f180e064f647c4c292a2
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
       '@orbitdb/feed-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.26.10)(@babel/preset-env@7.26.9(@babel/core@7.26.10))(bufferutil@4.0.9)(react@19.0.0))
       '@orbitdb/ordered-keyvalue-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.26.10)(@babel/preset-env@7.26.9(@babel/core@7.26.10))(bufferutil@4.0.9)(react@19.0.0))
       '@orbitdb/set-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.26.10)(@babel/preset-env@7.26.9(@babel/core@7.26.10))(bufferutil@4.0.9)(react@19.0.0))
@@ -9024,8 +9024,12 @@ snapshots:
       '@helia/block-brokers': 4.1.0
       '@libp2p/peer-id': 5.1.2
       '@libp2p/webrtc': 5.2.12(react-native@0.78.0(@babel/core@7.26.10)(@babel/preset-env@7.26.9(@babel/core@7.26.10))(bufferutil@4.0.9)(react@19.0.0))
+<<<<<<< HEAD
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/60acc0c4c2c0f361db23f180e064f647c4c292a2
 >>>>>>>  Veuillez saisir le message de validation pour vos modifications. Les lignes
+=======
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+>>>>>>> pnpm
       blockstore-core: 5.0.2
       blockstore-level: 2.0.1
       browserify-fs: 1.0.0
@@ -10065,6 +10069,7 @@ snapshots:
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
 =======
       '@constl/utils-ipa': 2.0.2
+<<<<<<< HEAD
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/60acc0c4c2c0f361db23f180e064f647c4c292a2
 >>>>>>>  Veuillez saisir le message de validation pour vos modifications. Les lignes
       deepcopy: 2.1.0
@@ -10073,6 +10078,8 @@ snapshots:
     dependencies:
 <<<<<<< HEAD
       '@constl/utils-ipa': 2.0.2
+=======
+>>>>>>> pnpm
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
       deepcopy: 2.1.0
 
@@ -11300,10 +11307,14 @@ snapshots:
   '@orbitdb/feed-db@1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
 <<<<<<< HEAD
+<<<<<<< HEAD
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
       helia: 5.2.1(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
 =======
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/60acc0c4c2c0f361db23f180e064f647c4c292a2
+=======
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+>>>>>>> pnpm
       helia: 5.3.0(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.26.10)(@babel/preset-env@7.26.9(@babel/core@7.26.10))(bufferutil@4.0.9)(react@19.0.0))
 >>>>>>>  Veuillez saisir le message de validation pour vos modifications. Les lignes
     transitivePeerDependencies:
@@ -11315,10 +11326,14 @@ snapshots:
   '@orbitdb/ordered-keyvalue-db@1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
 <<<<<<< HEAD
+<<<<<<< HEAD
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
       helia: 5.2.1(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
 =======
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/60acc0c4c2c0f361db23f180e064f647c4c292a2
+=======
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+>>>>>>> pnpm
       helia: 5.3.0(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.26.10)(@babel/preset-env@7.26.9(@babel/core@7.26.10))(bufferutil@4.0.9)(react@19.0.0))
 >>>>>>>  Veuillez saisir le message de validation pour vos modifications. Les lignes
     transitivePeerDependencies:
@@ -11330,10 +11345,14 @@ snapshots:
   '@orbitdb/set-db@1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
 <<<<<<< HEAD
+<<<<<<< HEAD
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
       helia: 5.2.1(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
 =======
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/60acc0c4c2c0f361db23f180e064f647c4c292a2
+=======
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+>>>>>>> pnpm
       helia: 5.3.0(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.26.10)(@babel/preset-env@7.26.9(@babel/core@7.26.10))(bufferutil@4.0.9)(react@19.0.0))
 >>>>>>>  Veuillez saisir le message de validation pour vos modifications. Les lignes
     transitivePeerDependencies:
