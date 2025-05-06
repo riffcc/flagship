@@ -120,36 +120,30 @@ export const useReleasesStore = defineStore('releases', () => {
 
   watch(
     [orbiterReleases, orbiterFeaturedReleases, staticStatus],
-    ([rels, featuredRels, staticMode]) => {
-      const isStatic = staticMode === 'static';
-      const isLoaded = isStatic || (rels !== undefined && featuredRels !== undefined);
+    ([currentOrbiterReleases, currentOrbiterFeaturedRels, currentStaticMode]) => {
+      const isStatic = currentStaticMode === 'static';
+      const isLoaded = isStatic || (currentOrbiterReleases !== undefined && currentOrbiterFeaturedRels !== undefined);
+      const hasContentNow = activedFeaturedReleases.value.length > 0 || promotedFeaturedReleases.value.length > 0;
+      const newTargetStatus = determineTargetStatus(status.value, isStatic, isLoaded, hasContentNow);
 
-      const hasContent = releases.value.length > 0 || unfilteredFeaturedReleases.value.length > 0;
+      if (newTargetStatus !== 'checking' && timerId.value !== null) {
+        clearTimeout(timerId.value);
+        timerId.value = null;
+      }
 
-      const targetStatus = determineTargetStatus(status.value, isStatic, isLoaded, hasContent);
-
-      const shouldBeChecking = targetStatus === 'checking';
-      const timerIsRunning = timerId.value !== null;
-
-      if (shouldBeChecking && !timerIsRunning) {
+      if (newTargetStatus === 'checking' && timerId.value === null) {
         timerId.value = setTimeout(() => {
-          const stillEmpty = (rels?.length || 0) === 0 &&
-            (featuredRels?.length || 0) === 0;
+          const stillNoContentAfterDelay = activedFeaturedReleases.value.length === 0 && promotedFeaturedReleases.value.length === 0;
+
           if (status.value === 'checking') {
-            const finalStatus = stillEmpty ? 'empty' : 'idle';
-            status.value = finalStatus;
+            status.value = stillNoContentAfterDelay ? 'empty' : 'idle';
           }
           timerId.value = null;
         }, NO_CONTENT_DELAY_MS);
-
-      } else if (!shouldBeChecking && timerIsRunning) {
-        if (timerId.value) {
-          clearTimeout(timerId.value);
-          timerId.value = null;
-        }
       }
-      if (status.value !== targetStatus) {
-        status.value = targetStatus;
+
+      if (status.value !== newTargetStatus) {
+        status.value = newTargetStatus;
       }
     },
     { immediate: true, deep: false },
