@@ -8,6 +8,7 @@
 import routeur from '../router';
 import vuetify from '../vuetify';
 import {loadFonts} from '../webfontloader';
+import taramandal from '../constellation/browser'
 
 import orbiter from '../orbiter/index';
 
@@ -21,4 +22,5 @@ export function registerPlugins(app: App) {
   app.use(vuetify);
   app.use(pinia);
   app.use(orbiter);
+  app.use(taramandal);
 }

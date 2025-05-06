@@ -33,7 +33,6 @@ import { computed, ref, watchEffect } from 'vue';
 import { selectTranslation } from '/@/utils';
 import activepage from '../components/activepage.vue';
 import Profilepage from '../components/profilepage.vue';
-import Userlistitem from '../components/userlistitem.vue';
 import { suivre as follow, obt } from '@constl/vue';
 import { useUserProfilePhoto } from '/@/components/users/utils';
 import { useStaticStatus } from '../composables/staticStatus';
