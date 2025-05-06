@@ -1,7 +1,11 @@
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
 import {cid as isCID} from 'is-ipfs';
+<<<<<<< HEAD
 import { IPFS_GATEWAY } from './constants/ipfs';
+=======
+import { IPFS_GATEWAY } from './constants/ipfs';  
+>>>>>>> Updated UI components and utils, added new components for profile and user list
 
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
@@ -38,6 +42,19 @@ export async function copyText(text: string | undefined) {
   await navigator.clipboard.writeText(text);
 }
 
+<<<<<<< HEAD
+=======
+export const RIFFCC_PROTOCOL = 'Riff.CC';
+
+export const useConstellation = (): {
+   constl: Constellation
+} => {
+  const constl = inject<Constellation>('constl');
+  if (constl) return {constl};
+  throw new Error("Constellation n'est pas trouvable.");
+};
+
+>>>>>>> Updated UI components and utils, added new components for profile and user list
 export const formatTime = (ms: number): string => {
   if (ms === 0 || isNaN(ms)) {
     return '00:00';
