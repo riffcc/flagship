@@ -14,7 +14,7 @@
           rounded
         >
           <v-img
-            :src="item.thumbnail"
+            :src="parseUrlOrCid(item.thumbnail)"
             height="64"
             width="113"
           ></v-img>
@@ -186,6 +186,7 @@ import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import { type PartialReleaseItem, useReleasesStore } from '/@/stores/releases';
 import { storeToRefs } from 'pinia';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
+import { parseUrlOrCid } from '/@/utils';
 
 const {staticStatus} = useStaticStatus();
 const {lgAndUp, smAndDown} = useDisplay();
