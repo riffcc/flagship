@@ -17,6 +17,7 @@
       <content-section
         v-if="categorizedReleases['featured-various'].length > 0"
         title="Featured"
+        @navigate="() => router.push('/featured')"
       >
         <v-col
           v-for="item in categorizedReleases['featured-various']"
@@ -37,6 +38,7 @@
       <content-section
         v-if="categorizedReleases['featured-music'].length > 0"
         title="Featured Music"
+        @navigate="() => router.push('/featured/music')"
       >
         <v-col
           v-for="item in categorizedReleases['featured-music']"
@@ -76,7 +78,7 @@
       <content-section
         v-if="categorizedReleases['tv-shows'].length > 0"
         title="TV Shows"
-        :navigation="true"
+        :pagination="categorizedReleases['tv-shows'].length > 4"
       >
         <v-col
           v-for="item in categorizedReleases['tv-shows']"

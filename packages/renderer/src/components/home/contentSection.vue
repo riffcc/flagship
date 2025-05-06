@@ -1,16 +1,18 @@
 <template>
   <div class="d-flex align-center justify-space-between w-100 mt-12 mb-4">
     <p class="text-h6 text-sm-h5 font-weight-bold">{{ title }}</p>
-    <div v-if="navigation">
+    <div v-if="pagination">
       <v-btn
         icon="mdi-menu-left"
         density="compact"
         variant="text"
+        @click="onPrevious"
       ></v-btn>
       <v-btn
         icon="mdi-menu-right"
         density="compact"
         variant="text"
+        @click="onNext"
       ></v-btn>
     </div>
     <v-btn
@@ -20,6 +22,7 @@
       density="comfortable"
       text="View All"
       class="text-none"
+      @click="onNavigate"
     ></v-btn>
   </div>
   <v-row>
@@ -30,7 +33,10 @@
 <script setup lang="ts">
 defineProps<{
   title: string;
-  navigation?: boolean;
+  pagination?: boolean;
+  onNavigate?: () => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
 }>();
 
 </script>
