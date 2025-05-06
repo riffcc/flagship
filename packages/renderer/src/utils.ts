@@ -1,11 +1,10 @@
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
 import {cid as isCID} from 'is-ipfs';
-<<<<<<< HEAD
 import { IPFS_GATEWAY } from './constants/ipfs';
-=======
-import { IPFS_GATEWAY } from './constants/ipfs';  
->>>>>>> Updated UI components and utils, added new components for profile and user list
+import {inject} from  'vue'
+import {Constellation} from '@constl/ipa'
+
 
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
@@ -42,12 +41,7 @@ export async function copyText(text: string | undefined) {
   await navigator.clipboard.writeText(text);
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
-// Todo: make configurable with environmental variable and define in single location for main and renderer
->>>>>>>  Veuillez saisir le message de validation pour vos modifications. Les lignes
+// Todo: make configurable with environmental variable and define in single location for main and renderer  Veuillez saisir le message de validation pour vos modifications. Les lignes
 export const RIFFCC_PROTOCOL = 'Riff.CC';
 
 export const useConstellation = (): {
@@ -58,7 +52,6 @@ export const useConstellation = (): {
   throw new Error("Constellation n'est pas trouvable.");
 };
 
->>>>>>> Updated UI components and utils, added new components for profile and user list
 export const formatTime = (ms: number): string => {
   if (ms === 0 || isNaN(ms)) {
     return '00:00';
