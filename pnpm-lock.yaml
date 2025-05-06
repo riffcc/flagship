@@ -1889,8 +1889,8 @@ packages:
   '@orbitdb/core-types@1.0.14':
     resolution: {integrity: sha512-Mq+o9zMw8n1kD3eMOQZZ/XG9TnQ8HqUInmduBfMidPXFSQVrvVtTAxyFpHk+2+FMf6BTj1xhrAUCEZlcvYebeQ==}
 
-  '@orbitdb/core@https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75':
-    resolution: {tarball: https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75}
+  '@orbitdb/core@https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f':
+    resolution: {tarball: https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f}
     version: 2.5.0
     engines: {node: '>=20.0.0'}
 
@@ -8022,7 +8022,7 @@ snapshots:
 
   '@constl/bohr-db@1.2.3(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
       '@orbitdb/core-types': 1.0.14
       '@orbitdb/feed-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@orbitdb/ordered-keyvalue-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
@@ -8069,7 +8069,7 @@ snapshots:
       '@multiformats/mafmt': 12.1.6
       '@multiformats/multiaddr-matcher': 1.6.0
       '@noble/hashes': 1.8.0
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
       '@orbitdb/feed-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@orbitdb/ordered-keyvalue-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@orbitdb/set-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
@@ -8207,7 +8207,7 @@ snapshots:
       '@helia/block-brokers': 4.0.4
       '@libp2p/peer-id': 5.0.16
       '@libp2p/webrtc': 5.2.7(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
       blockstore-core: 5.0.2
       blockstore-level: 2.0.1
       browserify-fs: 1.0.0
@@ -9035,19 +9035,19 @@ snapshots:
     dependencies:
       '@constl/ipa': 1.6.9(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@constl/utils-ipa': 1.0.5
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
       deepcopy: 2.1.0
 
   '@lassi-js/kili@0.4.1':
     dependencies:
       '@constl/utils-ipa': 1.0.5
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
       deepcopy: 2.1.0
 
   '@lassi-js/kili@0.4.4':
     dependencies:
       '@constl/utils-ipa': 2.0.2
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
       deepcopy: 2.1.0
 
   '@lassi-js/kilimukku@1.1.7(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
@@ -10088,7 +10088,7 @@ snapshots:
 
   '@orbitdb/core-types@1.0.14': {}
 
-  '@orbitdb/core@https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75':
+  '@orbitdb/core@https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f':
     dependencies:
       '@ipld/dag-cbor': 9.2.2
       '@libp2p/crypto': 5.1.1
@@ -10103,7 +10103,7 @@ snapshots:
 
   '@orbitdb/feed-db@1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
       helia: 5.2.1(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
     transitivePeerDependencies:
       - bufferutil
@@ -10113,7 +10113,7 @@ snapshots:
 
   '@orbitdb/ordered-keyvalue-db@1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
       helia: 5.2.1(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
     transitivePeerDependencies:
       - bufferutil
@@ -10123,7 +10123,7 @@ snapshots:
 
   '@orbitdb/set-db@1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
       helia: 5.2.1(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
     transitivePeerDependencies:
       - bufferutil
@@ -11867,7 +11867,7 @@ snapshots:
       '@multiformats/mafmt': 12.1.6
       '@multiformats/multiaddr-matcher': 1.7.0
       '@noble/hashes': 1.8.0
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/b8837e61af0effb5ceed376f1fd1d1605215df75
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
       '@orbitdb/feed-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@orbitdb/ordered-keyvalue-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@orbitdb/set-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
