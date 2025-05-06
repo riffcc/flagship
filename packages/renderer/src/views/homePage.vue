@@ -14,123 +14,95 @@
       <featured-slider
         v-if="(promotedFeaturedReleases?.length || 0) > 0"
       />
-      <content-section
-        v-if="categorizedReleases['featured-various'].length > 0"
-        title="Featured"
-        @navigate="() => router.push('/featured')"
+
+      <template
+        v-for="section in activeSections"
+        :key="section.id"
       >
-        <v-col
-          v-for="item in categorizedReleases['featured-various']"
-          :key="item.id"
+        <!-- Special TV Show Alert -->
+        <v-alert
+          v-if="section.categoryId === 'tvShow' && section.items.length > 0"
+          type="info"
+          class="mt-8 mb-n8"
+          color="black"
+          text-color="white"
         >
-          <content-card
-            :background-image="parseUrlOrCid(item.thumbnail)"
-            cursor-pointer
-            :subtitle="item.category === 'movie' ? item.metadata['releaseYear'] ? `(${item.metadata['releaseYear']})` : undefined : item.name"
-            :title="item.category === 'movie' ? item.name : item.author"
-            :width="xs ? '10.5rem' : '12rem'"
-            :source-site="item.sourceSite"
-            @click="router.push(`/release/${item.id}`)"
-          >
-          </content-card>
-        </v-col>
-      </content-section>
-      <content-section
-        v-if="categorizedReleases['featured-music'].length > 0"
-        title="Featured Music"
-        @navigate="() => router.push('/featured/music')"
-      >
-        <v-col
-          v-for="item in categorizedReleases['featured-music']"
-          :key="item.id"
+          Riff.CC: We're still adding UI support for TV shows, but below you can see what TV will look
+          like on this platform.
+        </v-alert>
+
+        <content-section
+          :title="section.title"
+          :pagination="section.categoryId === 'tvShow' && section.items.length > 4"
+          @navigate="() => router.push(section.navigationPath)"
         >
-          <content-card
-            :background-image="parseUrlOrCid(item.thumbnail)"
-            cursor-pointer
-            hovering-children
-            :subtitle="item.author ?? ''"
-            :title="item.name"
-            :width="xs ? '10.5rem' : '15rem'"
-            :source-site="item.sourceSite"
-            @click="router.push(`/release/${item.id}`)"
+          <v-col
+            v-for="item in section.items"
+            :key="item.id"
           >
-            <template #hovering>
-              <v-icon
-                size="4.5rem"
-                icon="mdi-play"
-                color="primary"
-                class="position-absolute top-0 left-0 right-0 bottom-0 ma-auto"
-              ></v-icon>
-            </template>
-          </content-card>
-        </v-col>
-      </content-section>
-      <v-alert
-        v-if="categorizedReleases['tv-shows'].length > 0"
-        type="info"
-        class="mt-8 mb-n8"
-        color="black"
-        text-color="white"
-      >
-        Riff.CC: We're still adding UI support for TV shows, but below you can see what TV will look
-        like on this platform.
-      </v-alert>
-      <content-section
-        v-if="categorizedReleases['tv-shows'].length > 0"
-        title="TV Shows"
-        :pagination="categorizedReleases['tv-shows'].length > 4"
-      >
-        <v-col
-          v-for="item in categorizedReleases['tv-shows']"
-          :key="item.id"
-        >
-          <content-card
-            background-gradient="to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)"
-            :background-image="parseUrlOrCid(item.thumbnail)"
-            height="10rem"
-            hovering-children
-            overlapping
-            :subtitle="item.metadata['seasons'] ? `${item.metadata['seasons']} Seasons` : undefined"
-            :title="item.name"
-            :source-site="item.sourceSite"
-            width="17rem"
-          >
-            <template #hovering>
-              <div class="position-absolute top-0 bottom-0 right-0 d-flex flex-column justify-center mr-2 ga-1">
+            <content-card
+              :background-image="parseUrlOrCid(item.thumbnail)"
+              cursor-pointer
+              :source-site="item.sourceSite"
+              :width="getContentCardWidth(item, section.categoryId)"
+              :height="getContentCardHeight(section.categoryId)"
+              :title="getContentCardTitle(item, section.categoryId)"
+              :subtitle="getContentCardSubtitle(item, section.categoryId)"
+              :hovering-children="getHoveringChildren(section.categoryId)"
+              :overlapping="section.categoryId === 'tvShow'"
+              :background-gradient="section.categoryId === 'tvShow' ? 'to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)' : undefined"
+              @click="router.push(`/release/${item.id}`)"
+            >
+              <template #hovering>
+                <v-icon
+                  v-if="section.categoryId === 'music'"
+                  size="4.5rem"
+                  icon="mdi-play"
+                  color="primary"
+                  class="position-absolute top-0 left-0 right-0 bottom-0 ma-auto"
+                ></v-icon>
+                <div
+                  v-else-if="section.categoryId === 'tvShow'"
+                  class="position-absolute top-0 bottom-0 right-0 d-flex flex-column justify-center mr-2 ga-1"
+                >
+                  <v-btn
+                    size="small"
+                    color="grey-lighten-3"
+                    density="comfortable"
+                    icon="mdi-share-variant"
+                  ></v-btn>
+                  <v-btn
+                    size="small"
+                    color="grey-lighten-3"
+                    density="comfortable"
+                    icon="mdi-heart"
+                  ></v-btn>
+                  <v-btn
+                    size="small"
+                    color="grey-lighten-3"
+                    density="comfortable"
+                    icon="mdi-plus"
+                  ></v-btn>
+                </div>
+              </template>
+              <template
+                v-if="section.categoryId === 'tvShow'"
+                #actions
+              >
                 <v-btn
+                  color="primary"
+                  rounded="0"
+                  prepend-icon="mdi-play"
                   size="small"
-                  color="grey-lighten-3"
-                  density="comfortable"
-                  icon="mdi-share-variant"
+                  class="position-absolute bottom-0 rigth-0 text-none ml-4 mb-10"
+                  text="Play now"
+                  @click="router.push(`/release/${item.id}`)"
                 ></v-btn>
-                <v-btn
-                  size="small"
-                  color="grey-lighten-3"
-                  density="comfortable"
-                  icon="mdi-heart"
-                ></v-btn>
-                <v-btn
-                  size="small"
-                  color="grey-lighten-3"
-                  density="comfortable"
-                  icon="mdi-plus"
-                ></v-btn>
-              </div>
-            </template>
-            <template #actions>
-              <v-btn
-                color="primary"
-                rounded="0"
-                prepend-icon="mdi-play"
-                size="small"
-                class="position-absolute bottom-0 rigth-0 text-none ml-4 mb-10"
-                text="Play now"
-                @click="router.push(`/release/${item.id}`)"
-              ></v-btn>
-            </template>
-          </content-card>
-        </v-col>
-      </content-section>
+              </template>
+            </content-card>
+          </v-col>
+        </content-section>
+      </template>
     </template>
     <v-sheet
       v-else
@@ -150,76 +122,129 @@
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue';
-import {useDisplay} from 'vuetify';
-import {useRouter} from 'vue-router';
+import { computed } from 'vue';
+import { useDisplay } from 'vuetify';
+import { useRouter } from 'vue-router';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import { parseUrlOrCid } from '/@/utils';
-import { type ReleaseItem, useReleasesStore } from '/@//stores/releases';
+import { type ReleaseItem, useReleasesStore } from '/@/stores/releases';
+import { useContentCategoriesStore, type ContentCategoryItem } from '/@/stores/contentCategories';
 import { storeToRefs } from 'pinia';
 
 const router = useRouter();
-const {xs} = useDisplay();
+const { xs } = useDisplay();
 
 const releasesStore = useReleasesStore();
-const {activedFeaturedReleases, promotedFeaturedReleases, isLoading, noContent} = storeToRefs(releasesStore);
+const { activedFeaturedReleases, promotedFeaturedReleases, isLoading, noContent } = storeToRefs(releasesStore);
 
-function categorizeItems(items: ReleaseItem[], limit: number = 8) {
-  const result: Record<string, ReleaseItem[]> = {
-    'featured-music': [],
-    'tv-shows': [],
-    'featured-various': [],
-  };
-  if (!(items.length > 0)) return result;
-  const addedItems = new Set<string>(); // Track all added items to avoid duplication
+const contentCategoriesStore = useContentCategoriesStore();
+const { featuredContentCategories } = storeToRefs(contentCategoriesStore);
 
-  // Helper to add items without duplicates and respect limits
-  function addToCategory(targetArray: ReleaseItem[], item: ReleaseItem, categoryLimit: number) {
-    if (
-      targetArray.length < categoryLimit && item.id &&
-      !addedItems.has(item.id)
-    ) {
-      targetArray.push(item);
-      addedItems.add(item.id);
-    }
-  }
+function categorizeReleasesByFeaturedCategories(
+  releases: ReleaseItem[],
+  featuredCats: ContentCategoryItem[],
+  limitPerCategory: number = 8,
+): Record<string, ReleaseItem[]> {
+  const result: Record<string, ReleaseItem[]> = {};
+  const addedReleaseIds = new Set<string>();
 
-  // Separate items by category
-  const musicItems = items.filter(item => item.category === 'music');
-  const tvShowItems = items.filter(item => item.category === 'tvShow');
-  const variousItems = items.filter(
-    item => item.category !== 'tvShow' && item.category !== 'music',
-  );
-
-  // Add items to "tv-shows"
-  tvShowItems.forEach(item => addToCategory(result['tv-shows'], item, limit));
-
-  // Add items to "featured-music"
-  musicItems.forEach(item => addToCategory(result['featured-music'], item, limit));
-
-  // Add items to "featured-various"
-  variousItems.forEach(item => addToCategory(result['featured-various'], item, limit));
-
-  // Fill "featured-various" with leftovers, ensuring no duplicates
-  musicItems.concat(tvShowItems).forEach(item => {
-    addToCategory(result['featured-various'], item, limit);
+  featuredCats.forEach(fc => {
+    result[fc.contentCategory.categoryId] = [];
   });
 
+  for (const release of releases) {
+    if (!release.id || addedReleaseIds.has(release.id)) {
+      continue;
+    }
+
+    for (const fc of featuredCats) {
+      const currentCategoryId = fc.contentCategory.categoryId;
+      if (release.category === currentCategoryId) {
+        if (result[currentCategoryId].length < limitPerCategory) {
+          result[currentCategoryId].push(release);
+          addedReleaseIds.add(release.id);
+        }
+        // A release is categorized, move to the next release.
+        // It won't be added to multiple sections by this logic as release.category is singular.
+        break;
+      }
+    }
+  }
   return result;
 }
 
-const categorizedReleases = computed(() => categorizeItems(activedFeaturedReleases.value));
+const categorizedReleases = computed(() => {
+  return categorizeReleasesByFeaturedCategories(activedFeaturedReleases.value, featuredContentCategories.value);
+});
+
+const activeSections = computed(() => {
+  return featuredContentCategories.value
+    .map(fc => {
+      const categoryId = fc.contentCategory.categoryId;
+      const items = categorizedReleases.value[categoryId] || [];
+      return {
+        id: fc.id,
+        categoryId: categoryId,
+        title: categoryId === 'tvShow' ? fc.contentCategory.displayName : `Featured ${fc.contentCategory.displayName}`,
+        items: items,
+        navigationPath: `/featured/${categoryId}`, // Generic path, adjust if specific paths needed
+      };
+    })
+    .filter(section => section.items.length > 0);
+});
+
+// Helper functions for ContentCard dynamic properties
+const getContentCardWidth = (item: ReleaseItem, categoryId: string): string => {
+  if (categoryId === 'music') {
+    return xs.value ? '10.5rem' : '15rem';
+  }
+  if (categoryId === 'tvShow') {
+    return '17rem';
+  }
+  // Default / former 'featured-various'
+  return xs.value ? '10.5rem' : '12rem';
+};
+
+const getContentCardHeight = (categoryId: string): string | undefined => {
+  if (categoryId === 'tvShow') {
+    return '10rem';
+  }
+  return undefined;
+};
+
+const getContentCardTitle = (item: ReleaseItem, categoryId: string): string => {
+  if (categoryId === 'music') {
+    return item.name;
+  }
+  if (categoryId === 'tvShow') {
+    return item.name;
+  }
+  // Default / former 'featured-various' logic (assuming item.category might be 'movie' within a general featured category)
+  if (item.category === 'movie') {
+    return item.name;
+  }
+  return item.author ?? '';
+};
+
+const getContentCardSubtitle = (item: ReleaseItem, categoryId: string): string | undefined => {
+  if (categoryId === 'music') {
+    return item.author ?? '';
+  }
+  if (categoryId === 'tvShow') {
+    return item.metadata?.['seasons'] ? `${item.metadata['seasons']} Seasons` : undefined;
+  }
+  // Default / former 'featured-various' logic
+  if (item.category === 'movie') {
+    return item.metadata?.['releaseYear'] ? `(${item.metadata['releaseYear']})` : undefined;
+  }
+  return item.name;
+};
+
+const getHoveringChildren = (categoryId: string): boolean => {
+  return categoryId === 'music' || categoryId === 'tvShow';
+};
+
 </script>
-<!--
-      {
-        id: '8',
-        category: 'audio',
-        metadata: {
-          author: 'Hello Madness',
-        },
-        name: 'Life and light after dusk',
-        thumbnail: '/mock/music-lightandlightafterdusk.webp',
-      },
--->
+
