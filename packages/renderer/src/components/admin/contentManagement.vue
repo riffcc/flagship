@@ -301,16 +301,16 @@ function deleteBlockRelease(id: string, contentCID: string, sourceSite: string) 
 }
 
 async function confirmDeleteBlockRelease() {
+  if (!editedRelease.value.id) return;
   if (staticStatus.value === 'static') {
-    const targetReleaseIndex = staticReleases.value.findIndex(r => r.id === editedRelease.value.id);
+    const targetReleaseIndex = releases.value.findIndex(r => r.id === editedRelease.value.id);
     if (targetReleaseIndex !== -1) {
-      staticReleases.value.splice(targetReleaseIndex, 1);
+      releases.value.splice(targetReleaseIndex, 1);
     }
   } else {
     try {
       if (editedRelease.value.sourceSite === orbiter.siteId) {
-        if (!editedRelease.value.id) throw Error('Target release id missing.');
-        await orbiter.removeRelease(editedRelease.value.id!);
+        await orbiter.removeRelease(editedRelease.value.id);
         openSnackbar('Release deleted successfully.', 'success');
       } else {
         if (!editedRelease.value.contentCID) throw Error('Target release content CID missing.');
@@ -330,6 +330,7 @@ async function confirmDeleteBlockRelease() {
     }
   }
   confirmDeleteBlockReleaseDialog.value = false;
+  resetEditedRelease();
 }
 
 function resetEditedRelease() {
