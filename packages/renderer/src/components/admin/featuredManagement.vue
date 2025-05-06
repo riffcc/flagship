@@ -68,8 +68,8 @@
           <h6 class="text-h6 font-weight-bold mb-4">Featured Releases</h6>
           <v-list v-if="unfilteredFeaturedReleases.length > 0">
             <v-list-item
-              v-for="featuredRelease, i in unfilteredFeaturedReleases"
-              :key="i"
+              v-for="featuredRelease in unfilteredFeaturedReleases"
+              :key="featuredRelease.id"
               class="px-0"
               :title="featuredRelease.releaseId"
             >
@@ -116,16 +116,10 @@
                   density="compact"
                   :disabled="!filterActivedFeatured(featuredRelease)"
                   :color="filterActivedFeatured(featuredRelease) ? 'blue' : 'default'"
-                  @click="confirmEndFeaturedReleaseDialog = true"
+                  @click="featuredItemIdToEnd = featuredRelease.id"
                 >
                 </v-btn>
               </template>
-              <confirmation-dialog
-                message="Are you sure you want to end this featured?"
-                :dialog-open="confirmEndFeaturedReleaseDialog"
-                @close="confirmEndFeaturedReleaseDialog = false"
-                @confirm="() => confirmEndFeaturedRelease(featuredRelease.id)"
-              ></confirmation-dialog>
             </v-list-item>
           </v-list>
           <div
@@ -137,6 +131,12 @@
         </v-sheet>
       </v-col>
     </v-row>
+    <confirmation-dialog
+      message="Are you sure you want to end this featured?"
+      :dialog-open="Boolean(featuredItemIdToEnd)"
+      :on-close="() => featuredItemIdToEnd = null"
+      :on-confirm="confirmEndFeaturedRelease"
+    ></confirmation-dialog>
   </v-container>
 </template>
 
@@ -172,6 +172,7 @@ const newFeaturedRelease: Ref<PartialFeaturedReleaseItem> = ref({
 
 const formRef = ref();
 const isLoading = ref(false);
+const featuredItemIdToEnd = ref<string | null>(null);
 
 const rules = [
   (value: string) => Boolean(value) || 'Required field.',
@@ -188,8 +189,6 @@ const endAtRules = [
 const minDate = ref<string | null>(null);
 const maxDate = ref<string | null>(null);
 const minEndDate = ref<string | null>(null);
-
-const confirmEndFeaturedReleaseDialog = ref(false);
 
 onMounted(() => {
   const now = new Date();
@@ -299,16 +298,15 @@ const handleOnSubmit = async () => {
   }
 };
 
-
-const confirmEndFeaturedRelease = async (id: string) => {
-  confirmEndFeaturedReleaseDialog.value = false;
-
+const confirmEndFeaturedRelease = async () => {
+  if (!featuredItemIdToEnd.value) return;
+  const endTime = (new Date()).toISOString();
   if (staticStatus.value === 'static') {
-    const index = staticFeaturedReleases.value.findIndex(fr => fr.id === id);
+    const index = staticFeaturedReleases.value.findIndex(fr => fr.id === featuredItemIdToEnd.value);
     if (index !== -1) {
         staticFeaturedReleases.value[index] = {
             ...staticFeaturedReleases.value[index],
-            endTime: new Date().toISOString(),
+            endTime,
         };
         console.log(`Static featured release ${id} ended.`);
     } else {
@@ -317,9 +315,10 @@ const confirmEndFeaturedRelease = async (id: string) => {
   } else {
     try {
       await orbiter.editFeaturedRelease({
-        elementId: id,
+        elementId: featuredItemIdToEnd.value,
         featuredRelease: {
-          endTime: new Date().toISOString(),
+          endTime,
+          promoted: false,
         },
       });
       console.log(`Featured release ${id} ended successfully.`);
@@ -327,6 +326,7 @@ const confirmEndFeaturedRelease = async (id: string) => {
       console.error(`Error on ending featured release ${id}:`, error);
     }
   }
+  featuredItemIdToEnd.value = null;
 };
 
 </script>
