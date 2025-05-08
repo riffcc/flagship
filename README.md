@@ -1,8 +1,8 @@
 [![Contributors](https://img.shields.io/opencollective/all/riffcc?style=flat-square)](https://opencollective.com/riffcc)
 [![Orbiter installable app](https://github.com/riffcc/orbiter/actions/workflows/ci.yml/badge.svg)](https://github.com/riffcc/orbiter/actions/workflows/ci.yml)
 
-# Riff.CC "Orbiter"
-Orbiter is the proof-of-concept version of Riff.CC, implemented using OrbitDB, Constellation, IPFS and other tools. This repository contains instructions on how to set up and install a Riff.CC instance through Orbiter, as well as the necessary code to do so. For more information about Orbiter as well as the Riff.CC project itself, [see the project's main page](https://riff.cc/riff-docs/).
+# Riff.CC "Flagship"
+Flagship is the proof-of-concept version of Riff.CC, implemented using OrbitDB, Constellation, IPFS and other tools. This repository contains instructions on how to set up and install a Riff.CC instance through Orbiter, as well as the necessary code to do so. For more information about Flagship as well as the Riff.CC project itself, [see the project's main page](https://riff.cc/riff-docs/).
 
 Funding provided via [OpenCollective](https://opencollective.com/riffcc).
 
