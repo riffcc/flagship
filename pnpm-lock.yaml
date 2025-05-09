@@ -43,7 +43,7 @@ importers:
         specifier: ^0.9.8
         version: 0.9.8(encoding@0.1.13)
       '@riffcc/orbiter':
-        specifier: ^0.2.29
+        specifier: ^0.2.27
         version: 0.2.29(@types/node@22.13.9)(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@vueuse/core':
         specifier: ^12.7.0
