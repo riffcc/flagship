@@ -57,6 +57,9 @@ importers:
       change-case:
         specifier: ^5.4.4
         version: 5.4.4
+      constl-ipa-fork:
+        specifier: ^1.8.5
+        version: 1.8.5(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       core-js:
         specifier: ^3.40.0
         version: 3.41.0
@@ -1606,9 +1609,6 @@ packages:
   '@libp2p/config@1.1.6':
     resolution: {integrity: sha512-vFS1mKkyZR+OsGk29rus/Hvzbqup+Eqd+F0kHb32QWl/fbTscnkA9xXcctgH/LI+jS6dEjU/7we5hd3aIm9Avw==}
 
-  '@libp2p/crypto@5.0.15':
-    resolution: {integrity: sha512-28xYMOn3fs8flsNgCVVxp27gEmDTtZHbz+qEVv3v7cWfGRipaVhNXFV9tQJHWXHQ8mN8v/PQvgcfCcWu5jkrTg==}
-
   '@libp2p/crypto@5.1.1':
     resolution: {integrity: sha512-feByJ5ypBfl7Dp+jLBmieHDY/249hqCiDn8u6DNSZrpDhefn2l/NE03fS2mW6pLOnY3QIqB372TfLtx3/EPU+w==}
 
@@ -1842,16 +1842,8 @@ packages:
     resolution: {integrity: sha512-2I0gnIVPtfnMw9ee9h1dJG7tp81+8Ob3OJb3Mv37rx5L40/b0i7djjCVvGOVqc9AEIQyvyu1i6ypKdFw8R8gQw==}
     engines: {node: ^14.21.3 || >=16}
 
-  '@noble/curves@1.8.1':
-    resolution: {integrity: sha512-warwspo+UYUPep0Q+vtdVB4Ugn8GGQj8iyB3gnRWsztmUHTI3S1nhdiWNsPUGL0vud7JlRRk1XEu7Lq1KGTnMQ==}
-    engines: {node: ^14.21.3 || >=16}
-
   '@noble/curves@1.9.0':
     resolution: {integrity: sha512-7YDlXiNMdO1YZeH6t/kvopHHbIZzlxrCV9WLqCY6QhcXOoXiNCMDqJIglZ9Yjx5+w7Dz30TITFrlTjnRg7sKEg==}
-    engines: {node: ^14.21.3 || >=16}
-
-  '@noble/hashes@1.7.1':
-    resolution: {integrity: sha512-B8XBPsn4vT/KJAGqDzbwztd+6Yte3P4V7iafm24bxgDe/mlRuK6xmWPuCNrKt2vDafZ8MfJLlchDG/vYafQEjQ==}
     engines: {node: ^14.21.3 || >=16}
 
   '@noble/hashes@1.8.0':
@@ -2559,9 +2551,6 @@ packages:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
     engines: {node: '>=6.5'}
 
-  abort-error@1.0.0:
-    resolution: {integrity: sha512-PMKqKW8CHeXFYW9GdeavZbOt2qE3/UTv5FKk8PGK583pRmvdGq/d8M9UpLBzAL95Ss3Fe3LvGjLhWeWo9d0QAg==}
-
   abort-error@1.0.1:
     resolution: {integrity: sha512-fxqCblJiIPdSXIUrxI0PL+eJG49QdP9SQ70qtB65MVAoMr2rASlOyAbJFOylfB467F/f+5BCLJJq58RYi7mGfg==}
 
@@ -3028,10 +3017,6 @@ packages:
     resolution: {integrity: sha512-ZVA0xrVn8uBfDJYgfKKZzB/93z/Uiz7YtRdBPsZi/gyHNyqFdHMLHURVEk9dejOHepaX0zhcMyNva2/vF972SA==}
     hasBin: true
 
-  cborg@4.2.8:
-    resolution: {integrity: sha512-z9M+TZCWQbf89Gl8ulpYThM9fqmkjBDdMiq+wS72OAK2zqDaXNquoAWFDrAKHQAukVtPspmadB9chuFC0ut7ew==}
-    hasBin: true
-
   chai@5.2.0:
     resolution: {integrity: sha512-mCuXncKXk5iCLhfhwTc0izo0gtEmpz5CtG2y8GiOINBlMVS6v8TMRc5TaLWKS6692m9+dVVfzgeVxR5UxWHTYw==}
     engines: {node: '>=12'}
@@ -3208,8 +3193,8 @@ packages:
   constants-browserify@1.0.0:
     resolution: {integrity: sha512-xFxOwqIzR/e1k1gLiWEophSCMqXcwVHIH7akf7b/vxcUeGunlj3hvZaaqxwHsTgn+IndtkQJgSztIDWeumWJDQ==}
 
-  constl-ipa-fork@1.8.3:
-    resolution: {integrity: sha512-UgDasdnCHK1h/O15nL0vnsiBN/OMYKTG60+Qb0ijr/Dxe3l84/r4zOE6n+vwxSQOixkOjZTDpOhi8PI0wsTuVw==}
+  constl-ipa-fork@1.8.5:
+    resolution: {integrity: sha512-5Sy6aIb8vpijmyb6eibcAiu2HzkLX/Ul4ZWgKKIJ/skl8kP7h0mBo6v0yni3+eOvXfOJdfcfKODSn4ygZw0Dpw==}
     engines: {node: '>=20'}
 
   content-disposition@0.5.4:
@@ -7005,8 +6990,8 @@ snapshots:
     dependencies:
       '@achingbrain/ssdp': 4.2.1
       '@chainsafe/is-ip': 2.1.0
-      '@libp2p/logger': 5.1.13
-      abort-error: 1.0.0
+      '@libp2p/logger': 5.1.15
+      abort-error: 1.0.1
       err-code: 3.0.1
       netmask: 2.0.2
       p-defer: 4.0.1
@@ -7015,7 +7000,7 @@ snapshots:
 
   '@achingbrain/ssdp@4.2.1':
     dependencies:
-      abort-error: 1.0.0
+      abort-error: 1.0.1
       freeport-promise: 2.0.0
       merge-options: 3.0.4
       xml2js: 0.6.2
@@ -7934,7 +7919,7 @@ snapshots:
       '@libp2p/crypto': 5.1.1
       '@libp2p/interface': 2.7.0
       '@libp2p/interface-internal': 2.3.8
-      '@libp2p/peer-id': 5.0.16
+      '@libp2p/peer-id': 5.1.2
       '@libp2p/pubsub': 10.1.7
       '@multiformats/multiaddr': 12.4.0
       denque: 2.1.0
@@ -7950,8 +7935,8 @@ snapshots:
     dependencies:
       '@libp2p/crypto': 5.1.1
       '@libp2p/interface': 2.9.0
-      '@libp2p/interface-internal': 2.3.8
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/interface-internal': 2.3.11
+      '@libp2p/peer-id': 5.1.2
       '@libp2p/pubsub': 10.1.7
       '@multiformats/multiaddr': 12.4.0
       denque: 2.1.0
@@ -7969,7 +7954,7 @@ snapshots:
       '@chainsafe/as-sha256': 1.0.0
       '@libp2p/crypto': 5.1.1
       '@libp2p/interface': 2.9.0
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/peer-id': 5.1.2
       '@noble/ciphers': 1.2.1
       '@noble/curves': 1.9.0
       '@noble/hashes': 1.8.0
@@ -8006,7 +7991,7 @@ snapshots:
   '@chainsafe/libp2p-yamux@7.0.1':
     dependencies:
       '@libp2p/interface': 2.9.0
-      '@libp2p/utils': 6.5.8
+      '@libp2p/utils': 6.6.2
       get-iterator: 2.0.1
       it-foreach: 2.1.2
       it-pushable: 3.2.3
@@ -8030,7 +8015,7 @@ snapshots:
       '@orbitdb/set-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       ajv: 8.17.1
       events: 3.3.0
-      helia: 5.2.1(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      helia: 5.3.0(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       uuid: 11.1.0
     transitivePeerDependencies:
       - bufferutil
@@ -8504,12 +8489,12 @@ snapshots:
 
   '@helia/bitswap@2.0.4':
     dependencies:
-      '@helia/interface': 5.2.0
-      '@helia/utils': 1.2.1
-      '@libp2p/interface': 2.7.0
-      '@libp2p/logger': 5.1.13
-      '@libp2p/peer-collections': 6.0.24
-      '@libp2p/utils': 6.5.8
+      '@helia/interface': 5.2.1
+      '@helia/utils': 1.2.2
+      '@libp2p/interface': 2.9.0
+      '@libp2p/logger': 5.1.15
+      '@libp2p/peer-collections': 6.0.27
+      '@libp2p/utils': 6.6.2
       '@multiformats/multiaddr': 12.4.0
       any-signal: 4.1.1
       interface-blockstore: 5.3.1
@@ -8564,7 +8549,7 @@ snapshots:
       '@libp2p/interface': 2.7.0
       '@libp2p/utils': 6.5.8
       '@multiformats/multiaddr': 12.4.0
-      '@multiformats/multiaddr-matcher': 1.6.0
+      '@multiformats/multiaddr-matcher': 1.7.0
       '@multiformats/multiaddr-to-uri': 11.0.0
       interface-blockstore: 5.3.1
       interface-store: 6.0.2
@@ -8588,9 +8573,9 @@ snapshots:
 
   '@helia/delegated-routing-v1-http-api-client@4.2.2':
     dependencies:
-      '@libp2p/interface': 2.7.0
-      '@libp2p/logger': 5.1.13
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/interface': 2.9.0
+      '@libp2p/logger': 5.1.15
+      '@libp2p/peer-id': 5.1.2
       '@multiformats/multiaddr': 12.4.0
       any-signal: 4.1.1
       browser-readablestream-to-it: 2.0.8
@@ -8622,7 +8607,7 @@ snapshots:
 
   '@helia/interface@5.2.0':
     dependencies:
-      '@libp2p/interface': 2.7.0
+      '@libp2p/interface': 2.9.0
       '@multiformats/dns': 1.0.6
       interface-blockstore: 5.3.1
       interface-datastore: 8.3.1
@@ -8643,9 +8628,9 @@ snapshots:
   '@helia/routers@3.0.0':
     dependencies:
       '@helia/delegated-routing-v1-http-api-client': 4.2.2
-      '@helia/interface': 5.2.0
-      '@libp2p/interface': 2.7.0
-      '@libp2p/peer-id': 5.1.0
+      '@helia/interface': 5.2.1
+      '@libp2p/interface': 2.9.0
+      '@libp2p/peer-id': 5.1.2
       '@multiformats/uri-to-multiaddr': 8.0.0
       ipns: 10.0.1
       it-first: 3.0.7
@@ -8718,24 +8703,24 @@ snapshots:
 
   '@helia/utils@1.2.1':
     dependencies:
-      '@helia/interface': 5.2.0
+      '@helia/interface': 5.2.1
       '@ipld/dag-cbor': 9.2.2
       '@ipld/dag-json': 10.2.3
       '@ipld/dag-pb': 4.1.3
-      '@libp2p/interface': 2.7.0
-      '@libp2p/logger': 5.1.13
-      '@libp2p/utils': 6.5.8
+      '@libp2p/interface': 2.9.0
+      '@libp2p/logger': 5.1.15
+      '@libp2p/utils': 6.6.2
       '@multiformats/dns': 1.0.6
       any-signal: 4.1.1
       blockstore-core: 5.0.2
-      cborg: 4.2.8
+      cborg: 4.2.10
       interface-blockstore: 5.3.1
       interface-datastore: 8.3.1
       interface-store: 6.0.2
       it-drain: 3.0.8
       it-filter: 3.1.2
       it-foreach: 2.1.2
-      it-merge: 3.0.7
+      it-merge: 3.0.9
       mortice: 3.0.6
       multiformats: 13.3.2
       p-defer: 4.0.1
@@ -8899,12 +8884,12 @@ snapshots:
 
   '@ipld/dag-cbor@9.2.2':
     dependencies:
-      cborg: 4.2.8
+      cborg: 4.2.10
       multiformats: 13.3.2
 
   '@ipld/dag-json@10.2.3':
     dependencies:
-      cborg: 4.2.8
+      cborg: 4.2.10
       multiformats: 13.3.2
 
   '@ipld/dag-pb@4.1.3':
@@ -8916,12 +8901,12 @@ snapshots:
       '@chainsafe/is-ip': 2.1.0
       '@libp2p/crypto': 5.1.1
       '@libp2p/http-fetch': 2.1.1
-      '@libp2p/interface': 2.7.0
-      '@libp2p/interface-internal': 2.3.8
-      '@libp2p/keychain': 5.1.3
-      '@libp2p/utils': 6.5.8
+      '@libp2p/interface': 2.9.0
+      '@libp2p/interface-internal': 2.3.11
+      '@libp2p/keychain': 5.2.1
+      '@libp2p/utils': 6.6.2
       '@multiformats/multiaddr': 12.4.0
-      '@multiformats/multiaddr-matcher': 1.6.0
+      '@multiformats/multiaddr-matcher': 1.7.0
       '@peculiar/x509': 1.12.3
       acme-client: 5.4.0
       any-signal: 4.1.1
@@ -9073,7 +9058,7 @@ snapshots:
       '@libp2p/interface': 2.9.0
       '@libp2p/interface-internal': 2.3.8
       '@libp2p/peer-collections': 6.0.24
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/peer-id': 5.1.2
       '@libp2p/utils': 6.5.8
       '@multiformats/multiaddr': 12.4.0
       any-signal: 4.1.1
@@ -9100,7 +9085,7 @@ snapshots:
     dependencies:
       '@libp2p/interface': 2.9.0
       '@libp2p/interface-internal': 2.3.8
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/peer-id': 5.1.2
       '@multiformats/mafmt': 12.1.6
       '@multiformats/multiaddr': 12.4.0
 
@@ -9140,11 +9125,11 @@ snapshots:
       '@libp2p/interface': 2.9.0
       '@libp2p/interface-internal': 2.3.8
       '@libp2p/peer-collections': 6.0.24
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/peer-id': 5.1.2
       '@libp2p/peer-record': 8.0.23
       '@libp2p/utils': 6.5.8
       '@multiformats/multiaddr': 12.4.0
-      '@multiformats/multiaddr-matcher': 1.6.0
+      '@multiformats/multiaddr-matcher': 1.7.0
       any-signal: 4.1.1
       it-protobuf-stream: 1.1.6
       it-stream-types: 2.0.2
@@ -9159,9 +9144,9 @@ snapshots:
   '@libp2p/config@1.1.3':
     dependencies:
       '@libp2p/crypto': 5.1.1
-      '@libp2p/interface': 2.7.0
-      '@libp2p/keychain': 5.1.3
-      '@libp2p/logger': 5.1.13
+      '@libp2p/interface': 2.9.0
+      '@libp2p/keychain': 5.2.1
+      '@libp2p/logger': 5.1.15
       interface-datastore: 8.3.1
 
   '@libp2p/config@1.1.6':
@@ -9171,16 +9156,6 @@ snapshots:
       '@libp2p/keychain': 5.2.1
       '@libp2p/logger': 5.1.15
       interface-datastore: 8.3.1
-
-  '@libp2p/crypto@5.0.15':
-    dependencies:
-      '@libp2p/interface': 2.7.0
-      '@noble/curves': 1.8.1
-      '@noble/hashes': 1.8.0
-      multiformats: 13.3.2
-      protons-runtime: 5.5.0
-      uint8arraylist: 2.4.8
-      uint8arrays: 5.1.0
 
   '@libp2p/crypto@5.1.1':
     dependencies:
@@ -9198,7 +9173,7 @@ snapshots:
       '@libp2p/interface-internal': 2.3.8
       '@libp2p/utils': 6.5.8
       '@multiformats/multiaddr': 12.4.0
-      '@multiformats/multiaddr-matcher': 1.6.0
+      '@multiformats/multiaddr-matcher': 1.7.0
       delay: 6.0.0
       it-protobuf-stream: 1.1.6
       protons-runtime: 5.5.0
@@ -9219,8 +9194,8 @@ snapshots:
   '@libp2p/http-fetch@2.1.1':
     dependencies:
       '@libp2p/crypto': 5.1.1
-      '@libp2p/interface': 2.7.0
-      '@libp2p/interface-internal': 2.3.8
+      '@libp2p/interface': 2.9.0
+      '@libp2p/interface-internal': 2.3.11
       '@libp2p/peer-id': 5.1.2
       '@multiformats/multiaddr': 12.4.0
       '@multiformats/multiaddr-to-uri': 11.0.0
@@ -9235,11 +9210,11 @@ snapshots:
       '@libp2p/crypto': 5.1.1
       '@libp2p/interface': 2.9.0
       '@libp2p/interface-internal': 2.3.8
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/peer-id': 5.1.2
       '@libp2p/peer-record': 8.0.23
       '@libp2p/utils': 6.5.8
       '@multiformats/multiaddr': 12.4.0
-      '@multiformats/multiaddr-matcher': 1.6.0
+      '@multiformats/multiaddr-matcher': 1.7.0
       it-drain: 3.0.8
       it-parallel: 3.0.9
       it-protobuf-stream: 1.1.6
@@ -9281,15 +9256,15 @@ snapshots:
 
   '@libp2p/interface-internal@2.3.7':
     dependencies:
-      '@libp2p/interface': 2.7.0
-      '@libp2p/peer-collections': 6.0.23
+      '@libp2p/interface': 2.9.0
+      '@libp2p/peer-collections': 6.0.27
       '@multiformats/multiaddr': 12.4.0
       progress-events: 1.0.1
 
   '@libp2p/interface-internal@2.3.8':
     dependencies:
-      '@libp2p/interface': 2.7.0
-      '@libp2p/peer-collections': 6.0.24
+      '@libp2p/interface': 2.9.0
+      '@libp2p/peer-collections': 6.0.27
       '@multiformats/multiaddr': 12.4.0
       progress-events: 1.0.1
 
@@ -9346,7 +9321,7 @@ snapshots:
       '@libp2p/interface': 2.9.0
       '@libp2p/interface-internal': 2.3.8
       '@libp2p/peer-collections': 6.0.24
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/peer-id': 5.1.2
       '@libp2p/record': 4.0.5
       '@libp2p/utils': 6.5.8
       '@multiformats/multiaddr': 12.4.0
@@ -9409,8 +9384,8 @@ snapshots:
   '@libp2p/keychain@5.1.3':
     dependencies:
       '@libp2p/crypto': 5.1.1
-      '@libp2p/interface': 2.7.0
-      '@noble/hashes': 1.7.1
+      '@libp2p/interface': 2.9.0
+      '@noble/hashes': 1.8.0
       asn1js: 3.0.5
       interface-datastore: 8.3.1
       merge-options: 3.0.4
@@ -9442,7 +9417,7 @@ snapshots:
 
   '@libp2p/logger@5.1.12':
     dependencies:
-      '@libp2p/interface': 2.7.0
+      '@libp2p/interface': 2.9.0
       '@multiformats/multiaddr': 12.4.0
       interface-datastore: 8.3.1
       multiformats: 13.3.2
@@ -9450,7 +9425,7 @@ snapshots:
 
   '@libp2p/logger@5.1.13':
     dependencies:
-      '@libp2p/interface': 2.7.0
+      '@libp2p/interface': 2.9.0
       '@multiformats/multiaddr': 12.4.0
       interface-datastore: 8.3.1
       multiformats: 13.3.2
@@ -9468,7 +9443,7 @@ snapshots:
     dependencies:
       '@libp2p/interface': 2.9.0
       '@libp2p/interface-internal': 2.3.8
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/peer-id': 5.1.2
       '@libp2p/utils': 6.5.8
       '@multiformats/multiaddr': 12.4.0
       '@types/multicast-dns': 7.2.4
@@ -9488,8 +9463,8 @@ snapshots:
 
   '@libp2p/mplex@11.0.30':
     dependencies:
-      '@libp2p/interface': 2.7.0
-      '@libp2p/utils': 6.5.8
+      '@libp2p/interface': 2.9.0
+      '@libp2p/utils': 6.6.2
       it-pipe: 3.0.1
       it-pushable: 3.2.3
       it-stream-types: 2.0.2
@@ -9510,7 +9485,7 @@ snapshots:
 
   '@libp2p/multistream-select@6.0.19':
     dependencies:
-      '@libp2p/interface': 2.7.0
+      '@libp2p/interface': 2.9.0
       it-length-prefixed: 10.0.1
       it-length-prefixed-stream: 1.2.1
       it-stream-types: 2.0.2
@@ -9534,16 +9509,16 @@ snapshots:
 
   '@libp2p/peer-collections@6.0.23':
     dependencies:
-      '@libp2p/interface': 2.7.0
-      '@libp2p/peer-id': 5.0.16
-      '@libp2p/utils': 6.5.7
+      '@libp2p/interface': 2.9.0
+      '@libp2p/peer-id': 5.1.2
+      '@libp2p/utils': 6.6.2
       multiformats: 13.3.2
 
   '@libp2p/peer-collections@6.0.24':
     dependencies:
-      '@libp2p/interface': 2.7.0
-      '@libp2p/peer-id': 5.1.0
-      '@libp2p/utils': 6.5.8
+      '@libp2p/interface': 2.9.0
+      '@libp2p/peer-id': 5.1.2
+      '@libp2p/utils': 6.6.2
       multiformats: 13.3.2
 
   '@libp2p/peer-collections@6.0.27':
@@ -9577,9 +9552,9 @@ snapshots:
   '@libp2p/peer-record@8.0.23':
     dependencies:
       '@libp2p/crypto': 5.1.1
-      '@libp2p/interface': 2.7.0
-      '@libp2p/peer-id': 5.1.0
-      '@libp2p/utils': 6.5.8
+      '@libp2p/interface': 2.9.0
+      '@libp2p/peer-id': 5.1.2
+      '@libp2p/utils': 6.6.2
       '@multiformats/multiaddr': 12.4.0
       multiformats: 13.3.2
       protons-runtime: 5.5.0
@@ -9603,9 +9578,9 @@ snapshots:
   '@libp2p/peer-store@11.1.0':
     dependencies:
       '@libp2p/crypto': 5.1.1
-      '@libp2p/interface': 2.7.0
-      '@libp2p/peer-id': 5.0.16
-      '@libp2p/peer-record': 8.0.23
+      '@libp2p/interface': 2.9.0
+      '@libp2p/peer-id': 5.1.2
+      '@libp2p/peer-record': 8.0.27
       '@multiformats/multiaddr': 12.4.0
       interface-datastore: 8.3.1
       it-all: 3.0.7
@@ -9652,8 +9627,8 @@ snapshots:
     dependencies:
       '@libp2p/crypto': 5.1.1
       '@libp2p/interface': 2.9.0
-      '@libp2p/interface-internal': 2.3.8
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/interface-internal': 2.3.11
+      '@libp2p/peer-id': 5.1.2
       '@multiformats/multiaddr': 12.4.0
       protons-runtime: 5.5.0
       uint8arraylist: 2.4.8
@@ -9661,12 +9636,12 @@ snapshots:
 
   '@libp2p/pubsub@10.1.7':
     dependencies:
-      '@libp2p/crypto': 5.0.15
-      '@libp2p/interface': 2.7.0
-      '@libp2p/interface-internal': 2.3.8
-      '@libp2p/peer-collections': 6.0.24
-      '@libp2p/peer-id': 5.1.0
-      '@libp2p/utils': 6.5.8
+      '@libp2p/crypto': 5.1.1
+      '@libp2p/interface': 2.9.0
+      '@libp2p/interface-internal': 2.3.11
+      '@libp2p/peer-collections': 6.0.27
+      '@libp2p/peer-id': 5.1.2
+      '@libp2p/utils': 6.6.2
       it-length-prefixed: 10.0.1
       it-pipe: 3.0.1
       it-pushable: 3.2.3
@@ -9710,8 +9685,8 @@ snapshots:
   '@libp2p/tls@2.1.0':
     dependencies:
       '@libp2p/crypto': 5.1.1
-      '@libp2p/interface': 2.7.0
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/interface': 2.9.0
+      '@libp2p/peer-id': 5.1.2
       '@peculiar/asn1-schema': 2.3.15
       '@peculiar/asn1-x509': 2.3.15
       '@peculiar/webcrypto': 1.5.0
@@ -9759,7 +9734,7 @@ snapshots:
       '@libp2p/interface-internal': 2.3.8
       '@libp2p/utils': 6.5.8
       '@multiformats/multiaddr': 12.4.0
-      '@multiformats/multiaddr-matcher': 1.6.0
+      '@multiformats/multiaddr-matcher': 1.7.0
       p-defer: 4.0.1
       race-signal: 1.1.3
 
@@ -9768,8 +9743,8 @@ snapshots:
       '@chainsafe/is-ip': 2.1.0
       '@chainsafe/netmask': 2.0.0
       '@libp2p/crypto': 5.1.1
-      '@libp2p/interface': 2.7.0
-      '@libp2p/logger': 5.1.12
+      '@libp2p/interface': 2.9.0
+      '@libp2p/logger': 5.1.15
       '@multiformats/multiaddr': 12.4.0
       '@sindresorhus/fnv1a': 3.1.0
       any-signal: 4.1.1
@@ -9791,9 +9766,9 @@ snapshots:
     dependencies:
       '@chainsafe/is-ip': 2.1.0
       '@chainsafe/netmask': 2.0.0
-      '@libp2p/crypto': 5.0.15
-      '@libp2p/interface': 2.7.0
-      '@libp2p/logger': 5.1.13
+      '@libp2p/crypto': 5.1.1
+      '@libp2p/interface': 2.9.0
+      '@libp2p/logger': 5.1.15
       '@multiformats/multiaddr': 12.4.0
       '@sindresorhus/fnv1a': 3.1.0
       any-signal: 4.1.1
@@ -9877,14 +9852,14 @@ snapshots:
   '@libp2p/webrtc@5.2.7(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
-      '@chainsafe/libp2p-noise': 16.0.3
+      '@chainsafe/libp2p-noise': 16.1.3
       '@ipshipyard/node-datachannel': 0.26.5
       '@libp2p/interface': 2.7.0
       '@libp2p/interface-internal': 2.3.8
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/peer-id': 5.1.2
       '@libp2p/utils': 6.5.8
       '@multiformats/multiaddr': 12.4.0
-      '@multiformats/multiaddr-matcher': 1.6.0
+      '@multiformats/multiaddr-matcher': 1.7.0
       '@peculiar/webcrypto': 1.5.0
       '@peculiar/x509': 1.12.3
       any-signal: 4.1.1
@@ -9933,7 +9908,7 @@ snapshots:
       '@libp2p/interface': 2.9.0
       '@libp2p/utils': 6.5.8
       '@multiformats/multiaddr': 12.4.0
-      '@multiformats/multiaddr-matcher': 1.6.0
+      '@multiformats/multiaddr-matcher': 1.7.0
       '@multiformats/multiaddr-to-uri': 11.0.0
       '@types/ws': 8.18.0
       it-ws: 6.1.5(bufferutil@4.0.9)
@@ -9948,12 +9923,12 @@ snapshots:
 
   '@libp2p/webtransport@5.0.35':
     dependencies:
-      '@chainsafe/libp2p-noise': 16.0.3
+      '@chainsafe/libp2p-noise': 16.1.3
       '@libp2p/interface': 2.9.0
-      '@libp2p/peer-id': 5.1.0
+      '@libp2p/peer-id': 5.1.2
       '@libp2p/utils': 6.5.8
       '@multiformats/multiaddr': 12.4.0
-      '@multiformats/multiaddr-matcher': 1.6.0
+      '@multiformats/multiaddr-matcher': 1.7.0
       it-stream-types: 2.0.2
       multiformats: 13.3.2
       progress-events: 1.0.1
@@ -10049,15 +10024,9 @@ snapshots:
 
   '@noble/ciphers@1.3.0': {}
 
-  '@noble/curves@1.8.1':
-    dependencies:
-      '@noble/hashes': 1.7.1
-
   '@noble/curves@1.9.0':
     dependencies:
       '@noble/hashes': 1.8.0
-
-  '@noble/hashes@1.7.1': {}
 
   '@noble/hashes@1.8.0': {}
 
@@ -10105,7 +10074,7 @@ snapshots:
   '@orbitdb/feed-db@1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
-      helia: 5.2.1(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      helia: 5.3.0(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
     transitivePeerDependencies:
       - bufferutil
       - react-native
@@ -10115,7 +10084,7 @@ snapshots:
   '@orbitdb/ordered-keyvalue-db@1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
-      helia: 5.2.1(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      helia: 5.3.0(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
     transitivePeerDependencies:
       - bufferutil
       - react-native
@@ -10125,7 +10094,7 @@ snapshots:
   '@orbitdb/set-db@1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
       '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
-      helia: 5.2.1(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      helia: 5.3.0(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
     transitivePeerDependencies:
       - bufferutil
       - react-native
@@ -10198,21 +10167,21 @@ snapshots:
       '@peculiar/asn1-schema': 2.3.15
       '@peculiar/asn1-x509': 2.3.15
       '@peculiar/asn1-x509-attr': 2.3.15
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       tslib: 2.8.1
 
   '@peculiar/asn1-csr@2.3.15':
     dependencies:
       '@peculiar/asn1-schema': 2.3.15
       '@peculiar/asn1-x509': 2.3.15
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       tslib: 2.8.1
 
   '@peculiar/asn1-ecc@2.3.15':
     dependencies:
       '@peculiar/asn1-schema': 2.3.15
       '@peculiar/asn1-x509': 2.3.15
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       tslib: 2.8.1
 
   '@peculiar/asn1-pfx@2.3.15':
@@ -10221,14 +10190,14 @@ snapshots:
       '@peculiar/asn1-pkcs8': 2.3.15
       '@peculiar/asn1-rsa': 2.3.15
       '@peculiar/asn1-schema': 2.3.15
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       tslib: 2.8.1
 
   '@peculiar/asn1-pkcs8@2.3.15':
     dependencies:
       '@peculiar/asn1-schema': 2.3.15
       '@peculiar/asn1-x509': 2.3.15
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       tslib: 2.8.1
 
   '@peculiar/asn1-pkcs9@2.3.15':
@@ -10239,19 +10208,19 @@ snapshots:
       '@peculiar/asn1-schema': 2.3.15
       '@peculiar/asn1-x509': 2.3.15
       '@peculiar/asn1-x509-attr': 2.3.15
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       tslib: 2.8.1
 
   '@peculiar/asn1-rsa@2.3.15':
     dependencies:
       '@peculiar/asn1-schema': 2.3.15
       '@peculiar/asn1-x509': 2.3.15
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       tslib: 2.8.1
 
   '@peculiar/asn1-schema@2.3.15':
     dependencies:
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       pvtsutils: 1.3.6
       tslib: 2.8.1
 
@@ -10259,13 +10228,13 @@ snapshots:
     dependencies:
       '@peculiar/asn1-schema': 2.3.15
       '@peculiar/asn1-x509': 2.3.15
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       tslib: 2.8.1
 
   '@peculiar/asn1-x509@2.3.15':
     dependencies:
       '@peculiar/asn1-schema': 2.3.15
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       pvtsutils: 1.3.6
       tslib: 2.8.1
 
@@ -10443,7 +10412,7 @@ snapshots:
       '@inquirer/prompts': 7.5.0(@types/node@22.13.9)
       chalk: 5.4.1
       change-case: 5.4.4
-      constl-ipa-fork: 1.8.3(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      constl-ipa-fork: 1.8.5(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       deepcopy: 2.1.0
       dotenv: 16.5.0
       lodash-es: 4.17.21
@@ -10639,7 +10608,7 @@ snapshots:
   '@types/multicast-dns@7.2.4':
     dependencies:
       '@types/dns-packet': 5.6.5
-      '@types/node': 22.15.2
+      '@types/node': 22.15.14
 
   '@types/node-forge@1.3.11':
     dependencies:
@@ -10981,8 +10950,6 @@ snapshots:
     dependencies:
       event-target-shim: 5.0.1
 
-  abort-error@1.0.0: {}
-
   abort-error@1.0.1: {}
 
   abortable-iterator@5.1.0:
@@ -11012,7 +10979,7 @@ snapshots:
   acme-client@5.4.0:
     dependencies:
       '@peculiar/x509': 1.12.3
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       axios: 1.9.0(debug@4.4.0)
       debug: 4.4.0
       node-forge: 1.3.1
@@ -11649,8 +11616,6 @@ snapshots:
 
   cborg@4.2.10: {}
 
-  cborg@4.2.8: {}
-
   chai@5.2.0:
     dependencies:
       assertion-error: 2.0.1
@@ -11836,7 +11801,7 @@ snapshots:
 
   constants-browserify@1.0.0: {}
 
-  constl-ipa-fork@1.8.3(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0)):
+  constl-ipa-fork@1.8.5(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0)):
     dependencies:
       '@chainsafe/libp2p-gossipsub': 14.1.1
       '@chainsafe/libp2p-noise': 16.1.3
@@ -12030,13 +11995,13 @@ snapshots:
 
   datastore-core@10.0.2:
     dependencies:
-      '@libp2p/logger': 5.1.12
+      '@libp2p/logger': 5.1.15
       interface-datastore: 8.3.1
       interface-store: 6.0.2
       it-drain: 3.0.8
       it-filter: 3.1.2
       it-map: 3.1.2
-      it-merge: 3.0.7
+      it-merge: 3.0.9
       it-pipe: 3.0.1
       it-pushable: 3.2.3
       it-sort: 3.0.7
@@ -12981,38 +12946,38 @@ snapshots:
 
   helia@5.2.1(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0)):
     dependencies:
-      '@chainsafe/libp2p-noise': 16.0.3
+      '@chainsafe/libp2p-noise': 16.1.3
       '@chainsafe/libp2p-yamux': 7.0.1
-      '@helia/block-brokers': 4.0.4
+      '@helia/block-brokers': 4.1.0
       '@helia/delegated-routing-v1-http-api-client': 4.2.2
       '@helia/interface': 5.2.0
       '@helia/routers': 3.0.0
       '@helia/utils': 1.2.1
       '@ipshipyard/libp2p-auto-tls': 1.0.0
-      '@libp2p/autonat': 2.0.26
-      '@libp2p/bootstrap': 11.0.30
-      '@libp2p/circuit-relay-v2': 3.2.6
+      '@libp2p/autonat': 2.0.30
+      '@libp2p/bootstrap': 11.0.35
+      '@libp2p/circuit-relay-v2': 3.2.11
       '@libp2p/config': 1.1.3
-      '@libp2p/dcutr': 2.0.25
-      '@libp2p/identify': 3.0.25
+      '@libp2p/dcutr': 2.0.29
+      '@libp2p/identify': 3.0.29
       '@libp2p/interface': 2.7.0
-      '@libp2p/kad-dht': 14.2.13
+      '@libp2p/kad-dht': 14.2.15
       '@libp2p/keychain': 5.1.3
-      '@libp2p/mdns': 11.0.30
+      '@libp2p/mdns': 11.0.35
       '@libp2p/mplex': 11.0.30
-      '@libp2p/ping': 2.0.25
-      '@libp2p/tcp': 10.1.6
+      '@libp2p/ping': 2.0.29
+      '@libp2p/tcp': 10.1.10
       '@libp2p/tls': 2.1.0
-      '@libp2p/upnp-nat': 3.1.9
-      '@libp2p/webrtc': 5.2.7(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
-      '@libp2p/websockets': 9.2.6(bufferutil@4.0.9)
+      '@libp2p/upnp-nat': 3.1.13
+      '@libp2p/webrtc': 5.2.12(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      '@libp2p/websockets': 9.2.10(bufferutil@4.0.9)
       '@multiformats/dns': 1.0.6
       blockstore-core: 5.0.2
       datastore-core: 10.0.2
       interface-blockstore: 5.3.1
       interface-datastore: 8.3.1
       ipns: 10.0.1
-      libp2p: 2.8.0
+      libp2p: 2.8.5
       multiformats: 13.3.2
     transitivePeerDependencies:
       - bufferutil
@@ -13279,9 +13244,9 @@ snapshots:
   ipns@10.0.1:
     dependencies:
       '@libp2p/crypto': 5.1.1
-      '@libp2p/interface': 2.7.0
-      '@libp2p/logger': 5.1.13
-      cborg: 4.2.8
+      '@libp2p/interface': 2.9.0
+      '@libp2p/logger': 5.1.15
+      cborg: 4.2.10
       interface-datastore: 8.3.1
       multiformats: 13.3.2
       protons-runtime: 5.5.0
@@ -13610,7 +13575,7 @@ snapshots:
 
   it-pipe@3.0.1:
     dependencies:
-      it-merge: 3.0.7
+      it-merge: 3.0.9
       it-pushable: 3.2.3
       it-stream-types: 2.0.2
 
@@ -13661,11 +13626,11 @@ snapshots:
 
   it-ws@6.1.5(bufferutil@4.0.9):
     dependencies:
-      '@types/ws': 8.18.0
+      '@types/ws': 8.18.1
       event-iterator: 2.0.0
       it-stream-types: 2.0.2
       uint8arrays: 5.1.0
-      ws: 8.18.1(bufferutil@4.0.9)
+      ws: 8.18.2(bufferutil@4.0.9)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -13941,12 +13906,12 @@ snapshots:
       '@libp2p/logger': 5.1.12
       '@libp2p/multistream-select': 6.0.19
       '@libp2p/peer-collections': 6.0.23
-      '@libp2p/peer-id': 5.0.16
+      '@libp2p/peer-id': 5.1.2
       '@libp2p/peer-store': 11.1.0
       '@libp2p/utils': 6.5.7
       '@multiformats/dns': 1.0.6
       '@multiformats/multiaddr': 12.4.0
-      '@multiformats/multiaddr-matcher': 1.6.0
+      '@multiformats/multiaddr-matcher': 1.7.0
       any-signal: 4.1.1
       datastore-core: 10.0.2
       interface-datastore: 8.3.1
@@ -16180,7 +16145,7 @@ snapshots:
     dependencies:
       '@peculiar/asn1-schema': 2.3.15
       '@peculiar/json-schema': 1.1.12
-      asn1js: 3.0.5
+      asn1js: 3.0.6
       pvtsutils: 1.3.6
       tslib: 2.8.1
 
