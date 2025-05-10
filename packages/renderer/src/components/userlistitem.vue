@@ -30,7 +30,7 @@ function getStatusColor(lastActive: number | undefined) {
         return 'white'
     const now = Date.now()
     const diff = (now - lastActive) / 60000
-    if (diff <= 1) return 'lime';
+    if (diff <= 1) return 'green';
     else if (diff <= 5) return 'yellow';
     else return 'white';
 }
