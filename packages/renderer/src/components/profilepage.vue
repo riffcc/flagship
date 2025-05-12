@@ -7,7 +7,7 @@
 
           <div class="pic-section d-flex flex-column align-center pa-4">
             <v-avatar size="150" class="mb-2">
-              <img :src="profilePicUrl || placeholder" class="profile-pic" alt="Profile" />
+              <img :src="orbiterprofilepic ||placeholder" class="profile-pic" alt="Profile" />
             </v-avatar>
             <v-btn icon class="camera-icon-btn" @click="triggerFileInput">
               <v-icon color="white">mdi-camera</v-icon>
@@ -25,18 +25,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useOrbiter } from '/@/plugins/orbiter/utils';
 import { suivre as follow } from '@constl/vue';
+import { url } from 'inspector';
 
 const { orbiter } = useOrbiter();
 const accountName = follow(orbiter.listenForNameChange.bind(orbiter));
 
 const name = ref('')
 const bio = ref('')
-const profilePic = ref<File | null>(null)
+const photo = follow(orbiter.listenForProfilePhotoChange.bind(orbiter));
+const orbiterprofilepic = computed(() => {
+  if (photo.value)
+    return URL.createObjectURL(new Blob([photo.value]))
+  else { return undefined }
+})
 const profilePicUrl = ref<string | null>(null)
-
+const profilePic = ref<File | null>(null)
 const placeholder = '/@/assets/undraw/undraw_profile_pic_re_iwgo.svg'
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -53,13 +59,11 @@ const handleFileChange = (event: Event) => {
 }
 
 const saveProfile = () => {
-  orbiter.changeName({ name: name.value, language: 'english' }) 
+  orbiter.changeName({ name: name.value, language: 'english' })
 }
 const savePhoto = async () => {
   if (!profilePic.value) return
-
   const file = profilePic.value
-
   const arrayBuffer = await file.arrayBuffer()
   const uint8Array = new Uint8Array(arrayBuffer)
 
@@ -68,9 +72,11 @@ const savePhoto = async () => {
       contenu: uint8Array,
       nomFichier: file.name,
     },
+    
   })
+  console.log("hello")
 }
-watch(profilePic,savePhoto)
+watch(profilePic, savePhoto)
 </script>
 
 <style scoped>
