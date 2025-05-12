@@ -8,40 +8,79 @@
       v-bind="hoveringProps"
       :class="cursorPointer ? 'cursor-pointer mx-auto' : 'mx-auto'"
       color="transparent"
-      :height="height"
-      :width="width"
+      :height="cardHeight"
+      :width="cardWidth"
       :style="showDefederation && sourceSite ? `border: 1px solid ${getSiteColor(sourceSite)};` : ''"
       @click="onClick"
     >
-      <template v-if="overlapping">
+      <template v-if="isOverlapping">
         <v-img
-          :src="backgroundImage ?? '/no-image-icon.png'"
+          :src="parseUrlOrCid(props.item.thumbnail) ?? '/no-image-icon.png'"
           width="100%"
           cover
           aspect-ratio="1"
-          :gradient="backgroundGradient"
+          :gradient="cardBackgroundGradient"
         >
           <p class="ml-4 mt-2 text-subtitle-1">
-            {{ title }}
+            {{ cardTitle }}
           </p>
           <p
-            v-if="subtitle"
+            v-if="cardSubtitle"
             class="ml-4 text-subtitle-2"
           >
-            {{ subtitle }}
+            {{ cardSubtitle }}
           </p>
-          <slot
-            v-if="isHovering"
-            name="hovering"
-          ></slot>
-          <slot
-            name="actions"
-          ></slot>
+          <template v-if="isHovering">
+            <v-icon
+              v-if="item.category === 'music'"
+              size="4.5rem"
+              icon="mdi-play"
+              color="primary"
+              class="position-absolute top-0 left-0 right-0 bottom-0 ma-auto"
+            ></v-icon>
+            <div
+              v-else-if="item.category === 'tvShow'"
+              class="position-absolute top-0 bottom-0 right-0 d-flex flex-column justify-center mr-2 ga-1"
+            >
+              <v-btn
+                size="small"
+                color="grey-lighten-3"
+                density="comfortable"
+                icon="mdi-share-variant"
+              ></v-btn>
+              <v-btn
+                size="small"
+                color="grey-lighten-3"
+                density="comfortable"
+                icon="mdi-heart"
+              ></v-btn>
+              <v-btn
+                size="small"
+                color="grey-lighten-3"
+                density="comfortable"
+                icon="mdi-plus"
+              ></v-btn>
+            </div>
+          </template>
+          <!-- Actions slot content (e.g., TV show buttons, play button) -->
+          <template
+            v-if="item.category === 'tvShow'"
+          >
+            <v-btn
+              color="primary"
+              rounded="0"
+              prepend-icon="mdi-play"
+              size="small"
+              class="position-absolute bottom-0 rigth-0 text-none ml-4 mb-10"
+              text="Play now"
+              @click="router.push(`/release/${item.id}`)"
+            ></v-btn>
+          </template>
         </v-img>
       </template>
       <template v-else>
         <v-img
-          :src="backgroundImage ?? '/no-image-icon.png'"
+          :src="parseUrlOrCid(props.item.thumbnail) ?? '/no-image-icon.png'"
           width="100%"
           cover
           aspect-ratio="1"
@@ -52,13 +91,13 @@
           ></slot>
         </v-img>
         <p class="text-caption text-sm-subtitle-1 text-center mt-1">
-          {{ title }}
+          {{ cardTitle }}
         </p>
         <p
-          v-if="subtitle"
+          v-if="cardSubtitle"
           class="text-caption text-sm-subtitle-1 text-center text-medium-emphasis"
         >
-          {{ subtitle }}
+          {{ cardSubtitle }}
         </p>
       </template>
     </v-sheet>
@@ -66,24 +105,82 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useDisplay } from 'vuetify';
 import { useShowDefederation } from '/@/composables/showDefed';
 import { useSiteColors } from '/@/composables/siteColors';
+import { type ReleaseItem } from '/@/stores/releases';
+import { parseUrlOrCid } from '/@/utils';
+import { useRouter } from 'vue-router';
 
 
-const {showDefederation} = useShowDefederation();
-const {getSiteColor} = useSiteColors();
+const { showDefederation } = useShowDefederation();
+const { getSiteColor } = useSiteColors();
+const { xs } = useDisplay();
+const router = useRouter();
 
-
-defineProps<{
-  backgroundGradient?: string;
-  backgroundImage?: string;
+const props = defineProps<{
+  item: ReleaseItem;
   cursorPointer?: boolean;
-  height?: string | number;
-  overlapping?: boolean;
-  subtitle?: string;
-  title: string;
   sourceSite?: string;
-  width?: string | number;
   onClick?: () => void;
 }>();
+
+const cardWidth = computed(() => {
+  const categoryId = props.item.category;
+  if (categoryId === 'music') {
+    return xs.value ? '10.5rem' : '15rem';
+  }
+  if (categoryId === 'tvShow') {
+    return '17rem';
+  }
+  return xs.value ? '10.5rem' : '12rem';
+});
+
+const cardHeight = computed(() => {
+  const categoryId = props.item.category;
+  if (categoryId === 'tvShow') {
+    return '10rem';
+  }
+  return undefined;
+});
+
+const cardTitle = computed(() => {
+  const categoryId = props.item.category;
+  if (categoryId === 'music') {
+    return props.item.name;
+  }
+  if (categoryId === 'tvShow') {
+    return props.item.name;
+  }
+  if (props.item.category === 'movie') {
+    return props.item.name;
+  }
+  return props.item.author ?? '';
+});
+
+const cardSubtitle = computed(() => {
+  const categoryId = props.item.category;
+  if (categoryId === 'music') {
+    return props.item.author ?? '';
+  }
+  if (categoryId === 'tvShow') {
+    return props.item.metadata?.['seasons'] ? `${props.item.metadata['seasons']} Seasons` : undefined;
+  }
+  // Default
+  if (props.item.category === 'movie') {
+    return props.item.metadata?.['releaseYear'] ? `(${props.item.metadata['releaseYear']})` : undefined;
+  }
+  return props.item.name;
+});
+
+const isOverlapping = computed(() => {
+  return props.item.category === 'tvShow';
+});
+
+const cardBackgroundGradient = computed(() => {
+  return props.item.category === 'tvShow' ? 'to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)' : undefined;
+});
+
+
 </script>
