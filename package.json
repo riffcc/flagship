@@ -92,7 +92,7 @@
     "ajv": "^8.17.1",
     "assert": "^2.1.0",
     "change-case": "^5.4.4",
-    "constl-ipa-fork": "^1.8.5",
+    "constl-ipa-fork": "^1.8.66",
     "core-js": "^3.40.0",
     "crypto-browserify": "^3.12.1",
     "electron-updater": "^6.3.9",
