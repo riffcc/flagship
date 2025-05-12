@@ -4,12 +4,12 @@ import {useStaticStatus} from '../composables/staticStatus';
 import AdminPage from '../views/adminPage.vue';
 import AboutPage from '/@/views/aboutPage.vue';
 import AccountPage from '/@/views/accountPage.vue';
-import BuildingPage from '/@/views/buildingPage.vue';
 import HomePage from '/@/views/homePage.vue';
 import PrivacyPolicyPage from '/@/views/privacyPolicyPage.vue';
 import ReleasePage from '/@/views/releasePage.vue';
 import TermsPage from '/@/views/termsPage.vue';
 import UploadPage from '/@/views/uploadPage.vue';
+import CategoryPage from '../views/categoryPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -51,7 +51,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/featured/:category',
-    component: BuildingPage,
+    component: CategoryPage,
     props: true,
 
   },

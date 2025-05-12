@@ -16,7 +16,7 @@
       ></v-btn>
     </div>
     <v-btn
-      v-else
+      v-else-if="onNavigate"
       variant="text"
       slim
       density="comfortable"
