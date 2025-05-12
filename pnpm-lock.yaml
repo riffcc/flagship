@@ -43,8 +43,8 @@ importers:
         specifier: ^0.9.8
         version: 0.9.8(encoding@0.1.13)
       '@riffcc/orbiter':
-        specifier: ^0.2.27
-        version: 0.2.29(@types/node@22.13.9)(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+        specifier: ^0.2.32
+        version: 0.2.32(@types/node@22.13.9)(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@vueuse/core':
         specifier: ^12.7.0
         version: 12.8.2(typescript@5.8.2)
@@ -2095,12 +2095,8 @@ packages:
       '@types/react':
         optional: true
 
-  '@riffcc/constl-ipa-fork@1.8.5':
-    resolution: {integrity: sha512-fLtYHWD1kB3QGnMM5FLrEF/kdXZvIVn8/rF+qg93h+PNtBPNuomibQvLDXvLwtw2HvEqu4MPonSKAh7I0TfmWQ==}
-    engines: {node: '>=20'}
-
-  '@riffcc/orbiter@0.2.29':
-    resolution: {integrity: sha512-GTU8NsgsEUq17o9oyHBi3iYD2DuRdlKBICi5yd4NiJhLfUc3tR5CyCTtRUQnT6jpbbfnqS3DWa/a6vvB+zoZCw==}
+  '@riffcc/orbiter@0.2.32':
+    resolution: {integrity: sha512-OCi+py4Ien7i35X2dCISAo237E9g3ty7PhukGTOp2U5xpojfzIlOSV0WPzvsveF0fJ2J67+np6OS6dTOjXKUhQ==}
     hasBin: true
 
   '@rollup/plugin-inject@5.0.5':
@@ -3208,6 +3204,10 @@ packages:
     resolution: {integrity: sha512-5Sy6aIb8vpijmyb6eibcAiu2HzkLX/Ul4ZWgKKIJ/skl8kP7h0mBo6v0yni3+eOvXfOJdfcfKODSn4ygZw0Dpw==}
     engines: {node: '>=20'}
 
+  constl-ipa-fork@1.8.65:
+    resolution: {integrity: sha512-pJFjL0huIMuiYvKaav+l1Q1hOOOjqvdbfEooxcRsjr3tXL3wG+Ad/zGQSAwu8ctlqIYgaG+PuCOrHPrwE9Bmuw==}
+    engines: {node: '>=20'}
+
   content-disposition@0.5.4:
     resolution: {integrity: sha512-FveZTNuGw04cxlAiWbzi6zTAL/lhehaWbTtgluJh4/E95DqMwTmha3KZN1aAWA8cFIhHzMZUvLevkw5Rqk+tSQ==}
     engines: {node: '>= 0.6'}
@@ -3482,8 +3482,8 @@ packages:
   electron-publish@26.0.7:
     resolution: {integrity: sha512-zSCBtAXnLi1QhCDEomIEu22mjKgsf17VYW3fMyZ4Y9Q7s+Ftu9dqbTMaM/e/FBCn9VthnG7C/zPCr1yKpkI+dg==}
 
-  electron-to-chromium@1.5.151:
-    resolution: {integrity: sha512-Rl6uugut2l9sLojjS4H4SAr3A4IgACMLgpuEMPYCVcKydzfyPrn5absNRju38IhQOf/NwjJY8OGWjlteqYeBCA==}
+  electron-to-chromium@1.5.152:
+    resolution: {integrity: sha512-xBOfg/EBaIlVsHipHl2VdTPJRSvErNUaqW8ejTq5OlOlIYx1wOllCHsAvAIrr55jD1IYEfdR86miUEt8H5IeJg==}
 
   electron-updater@6.3.9:
     resolution: {integrity: sha512-2PJNONi+iBidkoC5D1nzT9XqsE8Q1X28Fn6xRQhO3YX8qRRyJ3mkV4F1aQsuRnYPqq6Hw+E51y27W75WgDoofw==}
@@ -6042,6 +6042,11 @@ packages:
 
   semver@7.7.1:
     resolution: {integrity: sha512-hlq8tAfn0m/61p4BVRcPzIGr6LKiMwo4VM6dGi6pt4qcRkmNzTcWq6eCEjEh+qXjkMDvPlOFFSGwQjoEa6gyMA==}
+    engines: {node: '>=10'}
+    hasBin: true
+
+  semver@7.7.2:
+    resolution: {integrity: sha512-RF0Fw+rO5AMf9MAyaRXI4AV0Ulj5lMHqVxxdSgiVbixSCXoEmmX/jk0CuJw4+3SqroYO9VoUh+HcuJivvtJemA==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -10082,7 +10087,7 @@ snapshots:
 
   '@orbitdb/core@https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f':
     dependencies:
-      '@ipld/dag-cbor': 9.2.3
+      '@ipld/dag-cbor': 9.2.2
       '@libp2p/crypto': 5.1.1
       it-pipe: 3.0.1
       level: 8.0.1
@@ -10376,7 +10381,7 @@ snapshots:
       metro-config: 0.81.5(bufferutil@4.0.9)
       metro-core: 0.81.5
       readline: 1.3.0
-      semver: 7.7.1
+      semver: 7.7.2
     transitivePeerDependencies:
       - '@babel/core'
       - '@babel/preset-env'
@@ -10428,102 +10433,13 @@ snapshots:
       react: 19.0.0
       react-native: 0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0)
 
-  '@riffcc/constl-ipa-fork@1.8.5(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
-    dependencies:
-      '@chainsafe/libp2p-gossipsub': 14.1.1
-      '@chainsafe/libp2p-noise': 16.1.3
-      '@chainsafe/libp2p-yamux': 7.0.1
-      '@chriscdn/promise-semaphore': 2.0.12
-      '@constl/bohr-db': 1.2.3(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
-      '@constl/mandataire': 3.0.3
-      '@constl/utils-ipa': 2.0.2
-      '@helia/block-brokers': 4.1.0
-      '@helia/unixfs': 4.0.3(encoding@0.1.13)
-      '@ipld/dag-cbor': 9.2.3
-      '@lassi-js/kili': 0.4.4
-      '@libp2p/autonat': 2.0.30
-      '@libp2p/bootstrap': 11.0.35
-      '@libp2p/circuit-relay-v2': 3.2.11
-      '@libp2p/dcutr': 2.0.29
-      '@libp2p/identify': 3.0.29
-      '@libp2p/interface-transport': 4.0.3
-      '@libp2p/kad-dht': 14.2.15
-      '@libp2p/mdns': 11.0.35
-      '@libp2p/peer-id': 5.1.2
-      '@libp2p/ping': 2.0.29
-      '@libp2p/pubsub-peer-discovery': 11.0.1
-      '@libp2p/tcp': 10.1.10
-      '@libp2p/upnp-nat': 3.1.13
-      '@libp2p/webrtc': 5.2.12(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
-      '@libp2p/websockets': 9.2.10(bufferutil@4.0.9)
-      '@libp2p/webtransport': 5.0.40
-      '@multiformats/mafmt': 12.1.6
-      '@multiformats/multiaddr-matcher': 1.7.0
-      '@noble/hashes': 1.8.0
-      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
-      '@orbitdb/feed-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
-      '@orbitdb/ordered-keyvalue-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
-      '@orbitdb/set-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
-      ajv: 8.17.1
-      any-signal: 4.1.1
-      approx-string-match: 2.0.0
-      axios: 1.9.0(debug@4.4.0)
-      blockstore-fs: 2.0.2
-      blockstore-idb: 2.0.1
-      browser-fs-access: 0.35.0
-      bs58: 6.0.0
-      chokidar: 4.0.3
-      crypto-js: 4.2.0
-      datastore-fs: 10.0.2
-      datastore-idb: 3.0.1
-      deep-equal: 2.2.3
-      deepcopy: 2.1.0
-      detect-browser: 5.3.0
-      ennikkai: 2.3.4
-      env-paths: 3.0.0
-      events: 3.3.0
-      file-saver: 2.0.5
-      genversion: 3.2.0
-      geojson-validation: 1.0.2
-      helia: 5.3.0(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
-      indexed-db-stream: 1.0.0
-      iso-constants: https://codeload.github.com/inverted-capital/iso-constants/tar.gz/2af6fdfb2cacaa03ebd58543703918783e62649f
-      it-drain: 3.0.8
-      it-pipe: 3.0.1
-      it-pushable: 3.2.3
-      it-to-buffer: 4.0.8
-      jszip: 3.10.1
-      libp2p: 2.8.5
-      lodash-es: 4.17.21
-      merge-options: 3.0.4
-      multiformats: 13.3.3
-      p-queue: 8.1.0
-      p-retry: 6.2.1
-      platform: 1.3.6
-      prom-client: 15.1.3
-      ssim: 0.0.0
-      timeout-abort-controller: 3.0.0
-      tiny-typed-emitter: 2.1.0
-      tslib: 2.8.1
-      uint8arrays: 5.1.0
-      uuid: 11.1.0
-      wherearewe: 2.0.1
-      xlsx: https://cdn.sheetjs.com/xlsx-0.19.1/xlsx-0.19.1.tgz
-    transitivePeerDependencies:
-      - bufferutil
-      - debug
-      - encoding
-      - react-native
-      - supports-color
-      - utf-8-validate
-
-  '@riffcc/orbiter@0.2.29(@types/node@22.13.9)(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
+  '@riffcc/orbiter@0.2.32(@types/node@22.13.9)(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
     dependencies:
       '@constl/utils-ipa': 2.0.2
       '@inquirer/prompts': 7.5.0(@types/node@22.13.9)
-      '@riffcc/constl-ipa-fork': 1.8.5(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       chalk: 5.4.1
       change-case: 5.4.4
+      constl-ipa-fork: 1.8.65(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       deepcopy: 2.1.0
       dotenv: 16.5.0
       lodash-es: 4.17.21
@@ -11581,7 +11497,7 @@ snapshots:
   browserslist@4.24.5:
     dependencies:
       caniuse-lite: 1.0.30001717
-      electron-to-chromium: 1.5.151
+      electron-to-chromium: 1.5.152
       node-releases: 2.0.19
       update-browserslist-db: 1.1.3(browserslist@4.24.5)
 
@@ -12005,6 +11921,95 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  constl-ipa-fork@1.8.65(bufferutil@4.0.9)(encoding@0.1.13)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0)):
+    dependencies:
+      '@chainsafe/libp2p-gossipsub': 14.1.1
+      '@chainsafe/libp2p-noise': 16.1.3
+      '@chainsafe/libp2p-yamux': 7.0.1
+      '@chriscdn/promise-semaphore': 2.0.12
+      '@constl/bohr-db': 1.2.3(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      '@constl/mandataire': 3.0.3
+      '@constl/utils-ipa': 2.0.2
+      '@helia/block-brokers': 4.1.0
+      '@helia/unixfs': 4.0.3(encoding@0.1.13)
+      '@ipld/dag-cbor': 9.2.3
+      '@lassi-js/kili': 0.4.4
+      '@libp2p/autonat': 2.0.30
+      '@libp2p/bootstrap': 11.0.35
+      '@libp2p/circuit-relay-v2': 3.2.11
+      '@libp2p/dcutr': 2.0.29
+      '@libp2p/identify': 3.0.29
+      '@libp2p/interface-transport': 4.0.3
+      '@libp2p/kad-dht': 14.2.15
+      '@libp2p/mdns': 11.0.35
+      '@libp2p/peer-id': 5.1.2
+      '@libp2p/ping': 2.0.29
+      '@libp2p/pubsub-peer-discovery': 11.0.1
+      '@libp2p/tcp': 10.1.10
+      '@libp2p/upnp-nat': 3.1.13
+      '@libp2p/webrtc': 5.2.12(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      '@libp2p/websockets': 9.2.10(bufferutil@4.0.9)
+      '@libp2p/webtransport': 5.0.40
+      '@multiformats/mafmt': 12.1.6
+      '@multiformats/multiaddr-matcher': 1.7.0
+      '@noble/hashes': 1.8.0
+      '@orbitdb/core': https://codeload.github.com/benya7/orbitdb/tar.gz/c07e42740e68708f81222ccfff368717e890fe9f
+      '@orbitdb/feed-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      '@orbitdb/ordered-keyvalue-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      '@orbitdb/set-db': 1.1.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      ajv: 8.17.1
+      any-signal: 4.1.1
+      approx-string-match: 2.0.0
+      axios: 1.9.0(debug@4.4.0)
+      blockstore-fs: 2.0.2
+      blockstore-idb: 2.0.1
+      browser-fs-access: 0.35.0
+      bs58: 6.0.0
+      chokidar: 4.0.3
+      crypto-js: 4.2.0
+      datastore-fs: 10.0.2
+      datastore-idb: 3.0.1
+      deep-equal: 2.2.3
+      deepcopy: 2.1.0
+      detect-browser: 5.3.0
+      ennikkai: 2.3.4
+      env-paths: 3.0.0
+      events: 3.3.0
+      file-saver: 2.0.5
+      genversion: 3.2.0
+      geojson-validation: 1.0.2
+      helia: 5.3.0(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      indexed-db-stream: 1.0.0
+      iso-constants: https://codeload.github.com/inverted-capital/iso-constants/tar.gz/2af6fdfb2cacaa03ebd58543703918783e62649f
+      it-drain: 3.0.8
+      it-pipe: 3.0.1
+      it-pushable: 3.2.3
+      it-to-buffer: 4.0.8
+      jszip: 3.10.1
+      libp2p: 2.8.5
+      lodash-es: 4.17.21
+      merge-options: 3.0.4
+      multiformats: 13.3.3
+      p-queue: 8.1.0
+      p-retry: 6.2.1
+      platform: 1.3.6
+      prom-client: 15.1.3
+      ssim: 0.0.0
+      timeout-abort-controller: 3.0.0
+      tiny-typed-emitter: 2.1.0
+      tslib: 2.8.1
+      uint8arrays: 5.1.0
+      uuid: 11.1.0
+      wherearewe: 2.0.1
+      xlsx: https://cdn.sheetjs.com/xlsx-0.19.1/xlsx-0.19.1.tgz
+    transitivePeerDependencies:
+      - bufferutil
+      - debug
+      - encoding
+      - react-native
+      - supports-color
+      - utf-8-validate
+
   content-disposition@0.5.4:
     dependencies:
       safe-buffer: 5.2.1
@@ -12352,7 +12357,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron-to-chromium@1.5.151: {}
+  electron-to-chromium@1.5.152: {}
 
   electron-updater@6.3.9:
     dependencies:
@@ -15171,7 +15176,7 @@ snapshots:
       react-refresh: 0.14.2
       regenerator-runtime: 0.13.11
       scheduler: 0.25.0
-      semver: 7.7.1
+      semver: 7.7.2
       stacktrace-parser: 0.1.11
       whatwg-fetch: 3.6.20
       ws: 6.2.3(bufferutil@4.0.9)
@@ -15479,6 +15484,8 @@ snapshots:
   semver@6.3.1: {}
 
   semver@7.7.1: {}
+
+  semver@7.7.2: {}
 
   send@0.19.0:
     dependencies:
