@@ -103,7 +103,7 @@ test('messages ipa constellation', async () => {
 
   const message: MessagePourIpa = {
     type: 'action',
-    id: uuidv4(),
+    idRequête: uuidv4(),
     fonction: ['on', 'test', 'une', 'fonction'],
     args: {qui: 'nexiste', pas: 'vraiment'},
   };
