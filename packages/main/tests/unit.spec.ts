@@ -8,7 +8,7 @@ import {BrowserWindow} from 'electron';
 /**
  * Mock real electron BrowserWindow API
  */
-vi.mock('electron', () => {
+vi.mock('electron', async () => {
   // Use "as unknown as" because vi.fn() does not have static methods
   const bw = vi.fn() as unknown as MockedClass<typeof BrowserWindow>;
   bw.getAllWindows = vi.fn(() => bw.mock.instances);
@@ -48,7 +48,12 @@ vi.mock('electron', () => {
     },
   };
 
-  return {BrowserWindow: bw, app, ipcMain};
+  const mockExports = {BrowserWindow: bw, app, ipcMain};
+  
+  return {
+    ...mockExports,
+    default: mockExports,
+  };
 });
 
 vi.mock('@constl/mandataire-electron-principal', () => {
