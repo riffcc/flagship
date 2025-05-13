@@ -72,6 +72,7 @@ export const useReleasesStore = defineStore('releases', () => {
   
   const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
   
+  
   const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
 
   const status: Ref<ContentStatus> = ref('loading');

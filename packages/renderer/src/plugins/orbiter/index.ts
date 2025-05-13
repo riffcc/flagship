@@ -17,6 +17,7 @@ export default {
         siteId,
         constellation,
       });
+      
     } else {
       throw new Error('VITE_SITE_ID is missing, please check the .env or generate a new one with orb export-config');
     }
