@@ -72,6 +72,11 @@ export const useReleasesStore = defineStore('releases', () => {
   
   const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
   
+  setTimeout(() => {
+    partialSync.value = false;
+    syncComplete.value = true;
+  }, 5000);
+  
   
   const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
 
