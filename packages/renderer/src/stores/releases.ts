@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { suivre as follow } from '@constl/vue';
 import { useOrbiter } from '../plugins/orbiter/utils';
-import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
+import { computed, ref, watch, type Ref } from 'vue';
 import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
 
@@ -70,15 +70,7 @@ export const useReleasesStore = defineStore('releases', () => {
   const syncComplete = ref(false);
   const partialSync = ref(false);
   
-  const orbiterReleases = follow((f) => 
-    orbiter.listenForReleases({
-      f: (releases, isPartial) => {
-        partialSync.value = isPartial;
-        syncComplete.value = !isPartial;
-        f(releases);
-      }
-    })
-  );
+  const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
   
   const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
 
@@ -131,7 +123,7 @@ export const useReleasesStore = defineStore('releases', () => {
 
   watch(
     [orbiterReleases, orbiterFeaturedReleases, staticStatus, syncComplete, partialSync],
-    ([currentOrbiterReleases, currentOrbiterFeaturedRels, currentStaticMode]) => {
+    ([_currentOrbiterReleases, _currentOrbiterFeaturedRels, currentStaticMode]) => {
       const isStatic = currentStaticMode === 'static';
       const isLoaded = isStatic || syncComplete.value;
       const isPartiallyLoaded = partialSync.value;
@@ -142,7 +134,7 @@ export const useReleasesStore = defineStore('releases', () => {
         isStatic, 
         isLoaded, 
         isPartiallyLoaded, 
-        hasContentNow
+        hasContentNow,
       );
       
       if (status.value !== newTargetStatus) {
