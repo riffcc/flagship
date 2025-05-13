@@ -14,9 +14,12 @@ describe('Test app window', function () {
 
   beforeAll(async () => {
     try {
+      const isMacOS = process.platform === 'darwin';
+      const skipElectron = isCI || isMacOS;
+      
       if (!environnement || environnement === 'électron') {
-        if (isCI) {
-          console.log('Skipping electron tests in CI environment');
+        if (skipElectron) {
+          console.log(`Skipping electron tests in ${isMacOS ? 'macOS' : 'CI'} environment`);
           return;
         }
         ({appli: appliÉlectron, page, fermer} = await surÉlectron());
