@@ -5,8 +5,7 @@ import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
 import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
 
-const NO_CONTENT_DELAY_MS = 20000;
-type ContentStatus = 'loading' | 'checking' | 'idle' | 'empty';
+type ContentStatus = 'loading' | 'idle' | 'empty' | 'partial';
 
 export type ReleaseItem = {
   id?: string;
@@ -48,18 +47,19 @@ const determineTargetStatus = (
   currentStatus: ContentStatus,
   isStatic: boolean,
   isLoaded: boolean,
+  isPartiallyLoaded: boolean,
   hasContent: boolean,
 ): ContentStatus => {
   if (isStatic) {
     return hasContent ? 'idle' : 'empty';
   }
-  if (!isLoaded) {
+  if (!isLoaded && !isPartiallyLoaded) {
     return 'loading';
   }
   if (hasContent) {
-    return 'idle';
+    return isLoaded ? 'idle' : 'partial';
   }
-  return currentStatus === 'empty' ? 'empty' : 'checking';
+  return isLoaded ? 'empty' : 'loading';
 };
 
 export const useReleasesStore = defineStore('releases', () => {
@@ -67,11 +67,22 @@ export const useReleasesStore = defineStore('releases', () => {
   const { staticReleases, staticFeaturedReleases } = useStaticReleases();
   const { staticStatus } = useStaticStatus();
 
-  const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
+  const syncComplete = ref(false);
+  const partialSync = ref(false);
+  
+  const orbiterReleases = follow((f) => 
+    orbiter.listenForReleases({
+      f: (releases, isPartial) => {
+        partialSync.value = isPartial;
+        syncComplete.value = !isPartial;
+        f(releases);
+      }
+    })
+  );
+  
   const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
 
   const status: Ref<ContentStatus> = ref('loading');
-  const timerId = ref<ReturnType<typeof setTimeout> | null>(null);
 
   const releases = computed<ReleaseItem[]>(() => {
     if (staticStatus.value === 'static') return staticReleases.value;
@@ -119,42 +130,31 @@ export const useReleasesStore = defineStore('releases', () => {
   });
 
   watch(
-    [orbiterReleases, orbiterFeaturedReleases, staticStatus],
+    [orbiterReleases, orbiterFeaturedReleases, staticStatus, syncComplete, partialSync],
     ([currentOrbiterReleases, currentOrbiterFeaturedRels, currentStaticMode]) => {
       const isStatic = currentStaticMode === 'static';
-      const isLoaded = isStatic || (currentOrbiterReleases !== undefined && currentOrbiterFeaturedRels !== undefined);
+      const isLoaded = isStatic || syncComplete.value;
+      const isPartiallyLoaded = partialSync.value;
       const hasContentNow = activedFeaturedReleases.value.length > 0 || promotedFeaturedReleases.value.length > 0;
-      const newTargetStatus = determineTargetStatus(status.value, isStatic, isLoaded, hasContentNow);
-
-      if (newTargetStatus !== 'checking' && timerId.value !== null) {
-        clearTimeout(timerId.value);
-        timerId.value = null;
-      }
-
-      if (newTargetStatus === 'checking' && timerId.value === null) {
-        timerId.value = setTimeout(() => {
-          const stillNoContentAfterDelay = activedFeaturedReleases.value.length === 0 && promotedFeaturedReleases.value.length === 0;
-
-          if (status.value === 'checking') {
-            status.value = stillNoContentAfterDelay ? 'empty' : 'idle';
-          }
-          timerId.value = null;
-        }, NO_CONTENT_DELAY_MS);
-      }
-
+      
+      const newTargetStatus = determineTargetStatus(
+        status.value, 
+        isStatic, 
+        isLoaded, 
+        isPartiallyLoaded, 
+        hasContentNow
+      );
+      
       if (status.value !== newTargetStatus) {
         status.value = newTargetStatus;
       }
     },
     { immediate: true, deep: false },
   );
-  onScopeDispose(() => {
-    if (timerId.value !== null) {
-      clearTimeout(timerId.value);
-    }
-  });
+  
 
-  const isLoading = computed(() => status.value === 'loading' || status.value === 'checking');
+  const isLoading = computed(() => status.value === 'loading');
+  const isPartiallyLoaded = computed(() => status.value === 'partial');
   const noContent = computed(() => status.value === 'empty');
 
   return {
@@ -163,6 +163,7 @@ export const useReleasesStore = defineStore('releases', () => {
     activedFeaturedReleases,
     promotedFeaturedReleases,
     isLoading,
+    isPartiallyLoaded,
     noContent,
   };
 });
