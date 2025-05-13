@@ -1,7 +1,10 @@
 <template>
   <v-app>
     <app-bar />
-    <v-main min-height="100vh">
+    <v-main
+      min-height="100vh"
+      class="overflow-auto"
+    >
       <router-view />
     </v-main>
     <audio-player v-if="activeTrack"></audio-player>
