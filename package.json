@@ -35,8 +35,7 @@
     "typecheck:main": "tsc --noEmit -p packages/main/tsconfig.json",
     "typecheck:preload": "tsc --noEmit -p packages/preload/tsconfig.json",
     "typecheck:renderer": "vue-tsc --noEmit -p packages/renderer/tsconfig.json",
-    "typecheck:peerbit-adapter": "tsc --noEmit -p packages/peerbit-adapter/tsconfig.json",
-    "typecheck": "pnpm run typecheck:main && pnpm run typecheck:preload && pnpm run typecheck:renderer && pnpm run typecheck:peerbit-adapter",
+    "typecheck": "pnpm run typecheck:main && pnpm run typecheck:preload && pnpm run typecheck:renderer",
     "postinstall": "cross-env ELECTRON_RUN_AS_NODE=1 electron scripts/update-electron-vendors.mjs",
     "format": "npx prettier --write \"**/*.{js,mjs,cjs,ts,mts,cts,vue,json}\""
   },
@@ -88,7 +87,6 @@
     "@peerbit/document": "^4.1.36",
     "@peerbit/program": "^4.1.36",
     "@riffcc/orbiter": "^0.2.32",
-    "@riffcc/peerbit-adapter": "workspace:*",
     "@vueuse/core": "^12.7.0",
     "ajv": "^8.17.1",
     "assert": "^2.1.0",

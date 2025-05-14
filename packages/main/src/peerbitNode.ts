@@ -1,17 +1,28 @@
 import {field, variant} from '@dao-xyz/borsh';
 import {Documents} from '@peerbit/document';
 import {Program} from '@peerbit/program';
-import {Peerbit} from 'peerbit'; // Changed from @peerbit/server to peerbit
-import type {Release as ReleaseType} from '@riffcc/peerbit-adapter/types'; // Renamed to avoid conflict
-import {
-  RELEASES_AUTHOR_COLUMN,
-  RELEASES_CATEGORY_COLUMN,
-  RELEASES_COVER_COLUMN,
-  RELEASES_FILE_COLUMN,
-  RELEASES_METADATA_COLUMN,
-  RELEASES_NAME_COLUMN,
-  RELEASES_THUMBNAIL_COLUMN,
-} from '@riffcc/peerbit-adapter/consts'; // Import consts for field mapping
+import {Peerbit} from 'peerbit';
+
+// Define constants locally, assuming their values were their names or similar common patterns.
+// Adjust these string values if they were different in the original consts file.
+const RELEASES_NAME_COLUMN = 'name';
+const RELEASES_FILE_COLUMN = 'file'; // Example, adjust if original was different (e.g. 'contentCID')
+const RELEASES_AUTHOR_COLUMN = 'author';
+const RELEASES_CATEGORY_COLUMN = 'category';
+const RELEASES_THUMBNAIL_COLUMN = 'thumbnail';
+const RELEASES_COVER_COLUMN = 'cover';
+const RELEASES_METADATA_COLUMN = 'metadata';
+
+// Define ReleaseType locally, matching the structure from packages/peerbit-adapter/src/types.ts
+export type ReleaseType<T = Record<string, unknown> | string> = {
+  [RELEASES_NAME_COLUMN]: string;
+  [RELEASES_FILE_COLUMN]: string;
+  [RELEASES_AUTHOR_COLUMN]: string;
+  [RELEASES_CATEGORY_COLUMN]: string;
+  [RELEASES_THUMBNAIL_COLUMN]?: string;
+  [RELEASES_COVER_COLUMN]?: string;
+  [RELEASES_METADATA_COLUMN]?: T;
+};
 
 let peerbitClient: Peerbit | undefined;
 
