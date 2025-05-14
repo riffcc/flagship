@@ -52,6 +52,11 @@ export async function stopPeerbitNode() {
 
 // Ensure Peerbit node is stopped gracefully on app exit
 import {app} from 'electron';
-app.on('will-quit', async () => {
-  await stopPeerbitNode();
-});
+
+// Conditionally attach the 'will-quit' listener
+// This prevents errors in test environments where `app.on` might not be defined on a mocked `app` object
+if (typeof app.on === 'function') {
+  app.on('will-quit', async () => {
+    await stopPeerbitNode();
+  });
+}
