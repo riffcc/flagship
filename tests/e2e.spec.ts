@@ -35,6 +35,25 @@ describe('Test app window', function () {
     } else {
       throw new Error(`Unsupported test environment: ${environnement}. Must be 'firefox', 'chromium', or 'webkit'.`);
     }
+
+    // Listen for console messages from the page to aid debugging
+    page.on('console', msg => {
+      const msgType = msg.type().toUpperCase();
+      const msgText = msg.text();
+      console.log(`E2E BROWSER CONSOLE [${msgType}]: ${msgText}`);
+      // Log arguments if any, useful for complex objects or multiple args
+      if (msg.args().length > 0) {
+        for (let i = 0; i < msg.args().length; ++i) {
+          // Attempt to get a string representation of the argument
+          msg.args()[i].jsonValue().then(value => {
+            console.log(`  ARG ${i}:`, value);
+          }).catch(() => {
+            // Fallback if jsonValue fails (e.g., for non-serializable objects like functions)
+            console.log(`  ARG ${i}: (Could not serialize)`);
+          });
+        }
+      }
+    });
   });
 
   afterAll(async () => {
@@ -61,9 +80,18 @@ describe('Test app window', function () {
 
     // Ensure the page is fully loaded and peerbitAPI is available
     try {
-      await page.waitForFunction(() => (window as any).peerbitAPI !== undefined, {timeout: 10000});
+      await page.waitForFunction(() => {
+        // This console.log runs in the browser context, captured by page.on('console')
+        console.log('E2E polling: typeof window.peerbitAPI =', typeof (window as any).peerbitAPI);
+        return (window as any).peerbitAPI !== undefined;
+      }, {timeout: 15000}); // Slightly increased timeout for debugging
+      console.log('E2E Test: window.peerbitAPI became available.');
     } catch (e) {
-      throw new Error('window.peerbitAPI did not become available within 10 seconds.');
+      const apiType = await page.evaluate(() => typeof (window as any).peerbitAPI);
+      // Attempt to get more info about what is on the window object
+      const windowKeys = await page.evaluate(() => Object.keys(window));
+      console.error(`E2E Test Error: window.peerbitAPI (last known type: ${apiType}) did not become available. Window keys: ${windowKeys.join(', ')}`);
+      throw new Error(`window.peerbitAPI did not become available within 15 seconds. Last known type: ${apiType}. Original error: ${e}`);
     }
 
     const result = await page.evaluate(

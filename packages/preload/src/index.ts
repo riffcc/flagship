@@ -1,6 +1,8 @@
 /**
  * @module preload
  */
+console.log('[Preload] Script starting...'); // Added for debugging
+
 import {contextBridge, ipcRenderer} from 'electron';
 
 // Define the type for the release data to be sent to the main process
@@ -27,6 +29,7 @@ contextBridge.exposeInMainWorld('peerbitAPI', {
   addRelease: (releaseData: ReleaseDataType): Promise<AddReleaseResponseType> =>
     ipcRenderer.invoke('peerbit:addRelease', releaseData),
 });
+console.log('[Preload] peerbitAPI exposed via contextBridge.'); // Added for debugging
 
 export {plateforme, surLinux, surMac, surWindows} from './so.js';
 
