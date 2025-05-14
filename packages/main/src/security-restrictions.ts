@@ -140,68 +140,53 @@ app.on('web-contents-created', (_, contents) => {
       const originalCspHeader = details.responseHeaders['content-security-policy'] || details.responseHeaders['Content-Security-Policy'];
       console.log('[CSP Modifier] Original CSP Header from details:', originalCspHeader);
 
-      const cspHeaderKeys = Object.keys(details.responseHeaders).filter(
-        key => key.toLowerCase() === 'content-security-policy',
-      );
+      let newCspString;
 
-      let currentCsp = '';
-      if (cspHeaderKeys.length > 0 && details.responseHeaders[cspHeaderKeys[0]]) {
-        const cspValue = details.responseHeaders[cspHeaderKeys[0]];
-        currentCsp = Array.isArray(cspValue) ? cspValue.join(';') : cspValue;
-      }
+      if (import.meta.env.PROD) {
+        // For PROD, attempt to cautiously add 'unsafe-eval' if a script-src exists,
+        // or add a script-src with it. This maintains more of the original CSP.
+        const cspHeaderKeys = Object.keys(details.responseHeaders).filter(
+          key => key.toLowerCase() === 'content-security-policy',
+        );
+        let currentCsp = '';
+        if (cspHeaderKeys.length > 0 && details.responseHeaders[cspHeaderKeys[0]]) {
+          const cspValue = details.responseHeaders[cspHeaderKeys[0]];
+          currentCsp = Array.isArray(cspValue) ? cspValue.join(';') : cspValue;
+        }
+        let newCspDirectives = [];
+        if (currentCsp) {
+          newCspDirectives = currentCsp.split(';').map(d => d.trim()).filter(d => d);
+        }
 
-      let newCspDirectives = [];
-      if (currentCsp) {
-        newCspDirectives = currentCsp.split(';').map(d => d.trim()).filter(d => d);
-      }
-
-      let scriptSrcFound = false;
-      for (let i = 0; i < newCspDirectives.length; i++) {
-        if (newCspDirectives[i].toLowerCase().startsWith('script-src')) {
-          scriptSrcFound = true;
-          if (!newCspDirectives[i].includes("'unsafe-eval'")) {
-            newCspDirectives[i] += " 'unsafe-eval'";
+        let scriptSrcFound = false;
+        for (let i = 0; i < newCspDirectives.length; i++) {
+          if (newCspDirectives[i].toLowerCase().startsWith('script-src')) {
+            scriptSrcFound = true;
+            if (!newCspDirectives[i].includes("'unsafe-eval'")) {
+              newCspDirectives[i] += " 'unsafe-eval'";
+            }
+            break;
           }
-          break;
         }
-      }
-
-      if (!scriptSrcFound) {
-        // Based on the error message, 'self' and 'blob:' are already part of the effective CSP.
-        // Add 'unsafe-eval' to it.
-        newCspDirectives.push("script-src 'self' blob: 'unsafe-eval'");
-      }
-
-      let objectSrcFound = false;
-      for (let i = 0; i < newCspDirectives.length; i++) {
-        if (newCspDirectives[i].toLowerCase().startsWith('object-src')) {
-          objectSrcFound = true;
-          // Example: ensure it's restrictive like 'self' or 'none'
-          // For now, just ensuring it exists if we add it.
-          if (!newCspDirectives[i].includes("'self'")) {
-            // This logic could be more nuanced if object-src exists but is too permissive.
-            // For simplicity, if it exists, we leave it; if not, we add a restrictive one.
-          }
-          break;
+        if (!scriptSrcFound) {
+          newCspDirectives.push("script-src 'self' blob: 'unsafe-eval'"); // Default based on error
         }
-      }
-      if (!objectSrcFound) {
-        newCspDirectives.push("object-src 'self'");
-      }
-      
-      let baseUriFound = false;
-      for (let i = 0; i < newCspDirectives.length; i++) {
-        if (newCspDirectives[i].toLowerCase().startsWith('base-uri')) {
-          baseUriFound = true;
-          break;
+        // Ensure object-src and base-uri are present and restrictive
+        if (!newCspDirectives.some(d => d.toLowerCase().startsWith('object-src'))) {
+          newCspDirectives.push("object-src 'self'");
         }
+        if (!newCspDirectives.some(d => d.toLowerCase().startsWith('base-uri'))) {
+          newCspDirectives.push("base-uri 'self'");
+        }
+        newCspString = newCspDirectives.join('; ');
+      } else {
+        // For non-PROD (DEV, TEST), set a more baseline CSP that includes necessary directives for testing.
+        // The error message "script-src 'self' blob:" suggests these are desired.
+        // We add 'unsafe-inline' and 'unsafe-eval' for dev/test tools.
+        newCspString = "default-src 'self'; script-src 'self' blob: 'unsafe-inline' 'unsafe-eval'; object-src 'self'; style-src 'self' 'unsafe-inline'; connect-src *;";
+        // Added style-src 'unsafe-inline' as it's often needed. connect-src * for broad dev flexibility.
+        console.log('[CSP Modifier] Applying non-PROD override CSP.');
       }
-      if(!baseUriFound) {
-        newCspDirectives.push("base-uri 'self'");
-      }
-
-
-      const newCspString = newCspDirectives.join('; ');
 
       // Remove all existing CSP headers (case-insensitive)
       Object.keys(details.responseHeaders).forEach(key => {
