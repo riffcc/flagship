@@ -5,13 +5,18 @@ import EventEmitter from 'events';
 // Minimal mock for ipcRenderer if other preload functions use it.
 // This can be expanded if other tests require more specific IPC behavior.
 vi.mock('electron', () => {
-  const mockIpcRenderer = {
-    on: vi.fn(),
-    once: vi.fn(),
-    send: vi.fn(),
-    // Add other methods if needed by non-constl preload functions
+  return {
+    contextBridge: {
+      exposeInMainWorld: vi.fn(),
+    },
+    ipcRenderer: {
+      on: vi.fn(),
+      once: vi.fn(),
+      send: vi.fn(),
+      invoke: vi.fn(), // Added invoke
+      // Add other methods if needed by non-constl preload functions
+    },
   };
-  return {ipcRenderer: mockIpcRenderer};
 });
 
 import {plateforme, surLinux, surMac, surWindows} from '../src';
