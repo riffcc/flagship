@@ -20,6 +20,13 @@ vi.mock('@constl/utils-ipa', () => ({
   // they can be added here as well, e.g., anotherFunction: vi.fn()
 }));
 
+// Mock for Peerbit node functions
+vi.mock('../src/peerbitNode', () => ({
+  startPeerbitNode: vi.fn().mockResolvedValue({}), // Mocked peerbitClient, adjust if tests need specific properties
+  stopPeerbitNode: vi.fn().mockResolvedValue(undefined),
+  // Add mocks for other exported functions from peerbitNode.ts if they are called by the code under test
+}));
+
 /**
  * Mock real electron BrowserWindow API
  */
