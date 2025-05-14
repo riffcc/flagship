@@ -1,6 +1,7 @@
-import {app} from 'electron';
+import {app, ipcMain} from 'electron';
 import './security-restrictions';
 import {restoreOrCreateWindow} from '/@/mainWindow';
+import {addRelease, ReleaseType as PeerbitReleaseType} from './peerbitNode';
 
 /**
  * Prevent electron from running multiple instances.
@@ -37,6 +38,17 @@ app.on('activate', restoreOrCreateWindow);
 app
   .whenReady()
   .then(restoreOrCreateWindow)
+  .then(() => {
+    ipcMain.handle('peerbit:addRelease', async (_event, releaseData: PeerbitReleaseType) => {
+      try {
+        const result = await addRelease(releaseData);
+        return result;
+      } catch (error: any) {
+        console.error('IPC peerbit:addRelease error:', error);
+        return {success: false, error: error.message || 'Failed to process release.'};
+      }
+    });
+  })
   .catch(e => console.error('Failed create window:', e));
 
 /**

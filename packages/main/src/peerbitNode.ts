@@ -25,6 +25,7 @@ export type ReleaseType<T = Record<string, unknown> | string> = {
 };
 
 let peerbitClient: Peerbit | undefined;
+let releasesProgram: ReleasesDB | undefined;
 
 // Define the Release class for borsh serialization, mapping to existing type fields
 @variant(0) // Example version, adjust if needed
@@ -90,9 +91,9 @@ class ReleasesDB extends Program {
 }
 
 export async function startPeerbitNode() {
-  if (peerbitClient) {
-    console.log('Peerbit client already started.');
-    return peerbitClient;
+  if (peerbitClient && releasesProgram) {
+    console.log('Peerbit client and ReleasesDB already started.');
+    return {peerbitClient, releasesProgram};
   }
 
   try {
@@ -102,7 +103,7 @@ export async function startPeerbitNode() {
     console.log('Peerbit client started. Peer ID:', peerbitClient.peerId.toString());
 
     // Open the ReleasesDB program
-    const releasesProgram = await peerbitClient.open(new ReleasesDB());
+    releasesProgram = await peerbitClient.open(new ReleasesDB());
     console.log('ReleasesDB program opened at address:', releasesProgram.address?.toString());
 
     // Example: Listen for updates on the releases store (optional, for debugging)
@@ -110,7 +111,7 @@ export async function startPeerbitNode() {
       console.log('Releases store changed:', event.detail);
     });
 
-    return peerbitClient;
+    return {peerbitClient, releasesProgram};
   } catch (error) {
     console.error('Failed to start Peerbit client:', error);
     throw error;
@@ -122,7 +123,28 @@ export async function stopPeerbitNode() {
     console.log('Stopping Peerbit client...');
     await peerbitClient.stop();
     peerbitClient = undefined;
+    releasesProgram = undefined;
     console.log('Peerbit client stopped.');
+  }
+}
+
+export async function addRelease(
+  releaseData: ReleaseType,
+): Promise<{success: boolean; message?: string; error?: string}> {
+  if (!peerbitClient || !releasesProgram) {
+    return {success: false, error: 'Peerbit client or ReleasesDB not initialized.'};
+  }
+
+  try {
+    const release = new Release(releaseData);
+    await releasesProgram.releases.put(release);
+    // TODO: Consider if we need to wait for replication or get a more specific confirmation.
+    // For now, `put` resolving without error is considered success.
+    console.log(`Release "${releaseData[RELEASES_NAME_COLUMN]}" added to Peerbit DB.`);
+    return {success: true, message: `Release "${releaseData[RELEASES_NAME_COLUMN]}" added successfully.`};
+  } catch (error: any) {
+    console.error('Failed to add release to Peerbit DB:', error);
+    return {success: false, error: error.message || 'Unknown error adding release.'};
   }
 }
 
