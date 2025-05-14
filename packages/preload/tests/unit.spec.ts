@@ -19,21 +19,21 @@ vi.mock('electron', () => {
   };
 });
 
-// import {plateforme, surLinux, surMac, surWindows} from '../src'; // COMMENTED OUT as these are no longer exported by minimal preload
+import {plateforme, surLinux, surMac, surWindows} from '../src'; // RE-ENABLED import
 
-test.skip('plateforme', async () => { // MODIFIED to test.skip
+test('plateforme', async () => { // RE-ENABLED test (no longer .skip)
   // The following lines would cause errors as plateforme, etc. are undefined.
-  // expect(plateforme).toBe(process.platform);
-  // 
-  // const plateformes: Partial<Record<NodeJS.Platform, boolean>> = {
-  //   darwin: surMac,
-  //   linux: surLinux,
-  //   win32: surWindows,
-  // };
-  // 
-  // expect(plateformes[process.platform]).toBe(true);
-  // 
-  // for (const p of Object.keys(plateformes).filter(p => p !== process.platform)) {
-  //   expect(plateformes[p]).toBe(false);
-  // }
+  expect(plateforme).toBe(process.platform); // RE-ENABLED
+  
+  const plateformes: Partial<Record<NodeJS.Platform, boolean>> = { // RE-ENABLED
+    darwin: surMac, // RE-ENABLED
+    linux: surLinux, // RE-ENABLED
+    win32: surWindows, // RE-ENABLED
+  }; // RE-ENABLED
+  
+  expect(plateformes[process.platform]).toBe(true); // RE-ENABLED
+  
+  for (const p of Object.keys(plateformes).filter(p => p !== process.platform)) { // RE-ENABLED
+    expect(plateformes[p]).toBe(false); // RE-ENABLED
+  } // RE-ENABLED
 });

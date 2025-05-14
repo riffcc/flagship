@@ -1,11 +1,23 @@
 import {app, BrowserWindow} from 'electron';
-import {join} from 'path';
+import {join, resolve as pathResolve} from 'path';
 import {fileURLToPath, URL} from 'url';
 import {connecterHttp} from './http';
 import {connecterSystèmeFichiers} from './systèmeFichiers';
 import {startPeerbitNode} from './peerbitNode';
 
 async function createWindow() {
+  console.log('[MainWindow] createWindow called.');
+
+  // Determine the project root relative to app.getAppPath()
+  // If app.getAppPath() is /Users/wings/projects/flagship/packages/main/dist,
+  // then going up THREE levels should be the project root.
+  const projectRootGuess = pathResolve(app.getAppPath(), '..', '..', '..');
+  const preloadScriptPath = join(projectRootGuess, 'packages/preload/dist/index.cjs');
+  
+  console.log(`[MainWindow] app.getAppPath() resolved to: ${app.getAppPath()}`);
+  console.log(`[MainWindow] Guessed project root: ${projectRootGuess}`);
+  console.log(`[MainWindow] Attempting to use preload script path: ${preloadScriptPath}`);
+
   const browserWindow = new BrowserWindow({
     show: false, // Use the 'ready-to-show' event to show the instantiated BrowserWindow.
     webPreferences: {
@@ -13,22 +25,36 @@ async function createWindow() {
       contextIsolation: true,
       sandbox: false, // Sandbox disabled because the demo of preload script depend on the Node.js api
       webviewTag: false, // The webview tag is not recommended. Consider alternatives like an iframe or Electron's BrowserView. @see https://www.electronjs.org/docs/latest/api/webview-tag#warning
-      preload: '/Users/wings/projects/flagship/packages/preload/dist/index.cjs', // TEMP: ABSOLUTE PATH
+      preload: preloadScriptPath, // Use the resolved dynamic path
     },
   });
+  console.log('[MainWindow] new BrowserWindow() returned.');
 
-  // Safely access getWebPreferences for logging, accommodating mocks in unit tests
+  // Safely access getWebPreferences for logging
   const webPrefs =
     browserWindow.webContents && typeof browserWindow.webContents.getWebPreferences === 'function'
       ? browserWindow.webContents.getWebPreferences()
-      : undefined;
-  const actualPreloadPath = webPrefs ? webPrefs.preload : undefined;
+      : {preload: '[WebPreferences not available]'}; // Fallback for mock or early access
+  const actualPreloadPath = webPrefs ? webPrefs.preload : '[Could not determine]';
 
   console.log(`[MainWindow] app.getAppPath() resolved to: ${app.getAppPath()}`);
-  console.log(`[MainWindow] Preload script path configured as: ${actualPreloadPath}`);
-  if (!actualPreloadPath) {
-    // This might be normal in some unit test scenarios if webContents or getWebPreferences is not fully mocked
-    console.warn('[MainWindow] Preload script path could not be determined (might be a mock environment).');
+  console.log(`[MainWindow] Preload script path configured in webPreferences: ${actualPreloadPath}`);
+  if (actualPreloadPath !== preloadScriptPath && actualPreloadPath !== '[WebPreferences not available]') {
+    console.warn('[MainWindow] MISMATCH: Preload path used does not match path read from webPreferences!');
+  }
+
+  // Only attach these listeners if webContents and its .on method exist (i.e., not in a heavily mocked unit test env)
+  if (browserWindow.webContents && typeof browserWindow.webContents.on === 'function') {
+    browserWindow.webContents.on('did-fail-load', 
+      (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
+      console.error(`[MainWindow] WebContents did-fail-load: ${errorDescription} (URL: ${validatedURL}, Code: ${errorCode}, isMainFrame: ${isMainFrame})`);
+    });
+
+    browserWindow.webContents.on('preload-error', (event, path, error) => {
+      console.error(`[MainWindow] WebContents preload-error: Path: ${path}, Error: ${error.name} - ${error.message}`);
+    });
+  } else {
+    console.warn('[MainWindow] browserWindow.webContents.on is not a function, skipping attachment of did-fail-load and preload-error listeners. (Likely unit test environment)');
   }
 
   /**

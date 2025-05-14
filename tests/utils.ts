@@ -20,7 +20,7 @@ export const onBrowser = async ({
     console.log(`[E2E Utils] Electron project root for CWD: ${projectRoot}`);
     
     const electronApp = await electron.launch({ 
-        args: [path.join(projectRoot, 'tests', 'minimal-main.js')],
+        args: ['packages/main/dist/index.js'],
         cwd: projectRoot,
         env: { 
             ...process.env, 
@@ -30,9 +30,9 @@ export const onBrowser = async ({
             ELECTRON_ENABLE_STACK_DUMPING: 'false', 
         }
     });
-    console.log('[E2E Utils] Electron app launched with minimal-main.js. Waiting for first window...');
+    console.log('[E2E Utils] Electron app launched with original main.js. Waiting for first window...');
 
-    // Temporarily commented out stdio listeners
+    // Ensure stdio listeners are active to capture main process logs
     electronApp.process().stdout?.on('data', (data) => {
       console.log(`[Electron App STDOUT]: ${data.toString()}`);
     });

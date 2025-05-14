@@ -27,24 +27,26 @@ const config = {
     minify: process.env.MODE !== 'development',
     lib: {
       entry: 'src/index.ts',
-      formats: ['cjs'],
+      formats: ['es'],
     },
     rollupOptions: {
       output: {
-        entryFileNames: '[name].cjs',
+        entryFileNames: '[name].js',
       },
     },
     emptyOutDir: true,
     reportCompressedSize: false,
   },
   ssr: {
-    noExternal: [
+    external: [
       '@helia/json',
       'helia',
       'peerbit',
       '@peerbit/document',
       '@peerbit/program',
       '@dao-xyz/borsh',
+      '@dao-xyz/datastore-level',
+      '@peerbit/keychain',
       '@peerbit/crypto',
       '@peerbit/blocks',
       '@peerbit/stream',
@@ -52,8 +54,9 @@ const config = {
       '@peerbit/time',
       '@peerbit/logger',
       '@peerbit/trusted-network',
-      // Add other @helia or @peerbit packages if similar errors occur
-    ],
+      'better-sqlite3',
+      'bindings'
+    ]
   },
   // server: { // server.deps.external was not the correct fix, removing.
   //   deps: {
@@ -68,18 +71,7 @@ const config = {
     deps: {
       optimizer: {
         ssr: {
-          include: [
-            '@helia/json',
-            'helia',
-            'peerbit',
-            '@peerbit/document',
-            '@peerbit/program',
-            '@dao-xyz/borsh',
-            'multiformats', // Often a core part of the ecosystem that might need inlining
-            // You might need to add more entries here if other similar errors appear
-            // For example, if specific sub-dependencies of these packages cause issues.
-          ],
-          exclude: [ // Using exclude as per the deprecation message alternative
+          exclude: [
             'better-sqlite3',
             'bindings',
           ],
