@@ -41,8 +41,10 @@ const config = {
     noExternal: [
       '@helia/json',
       'helia',
-      '@peerbit/server',
+      'peerbit', // Changed from @peerbit/server
       '@peerbit/document',
+      '@peerbit/program',
+      '@dao-xyz/borsh',
       // Add other @helia or @peerbit packages if similar errors occur
     ],
   },
@@ -54,12 +56,13 @@ const config = {
           include: [
             '@helia/json',
             'helia',
-            '@peerbit/server',
+            'peerbit', // Changed from @peerbit/server
             '@peerbit/document',
+            '@peerbit/program',
+            '@dao-xyz/borsh',
             'multiformats', // Often a core part of the ecosystem that might need inlining
             // You might need to add more entries here if other similar errors appear
             // For example, if specific sub-dependencies of these packages cause issues.
-            // Using regex like /@helia\// or /@peerbit\// can also work if you prefer.
           ],
         },
       },
