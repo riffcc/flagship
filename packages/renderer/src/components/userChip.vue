@@ -11,7 +11,7 @@
 import {computed} from 'vue';
 
 import {suivre as follow} from '@constl/vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useOrbiter} from '/@/plugins/flagship/utils';
 import {selectTranslation} from '/@/utils';
 
 const {orbiter} = useOrbiter();

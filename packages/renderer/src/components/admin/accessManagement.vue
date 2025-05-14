@@ -93,7 +93,7 @@
 <script setup lang="ts">
 import { computed, type Ref, ref } from 'vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import { useOrbiter } from '/@/plugins/orbiter/utils';
+import { useOrbiter } from '/@/plugins/flagship/utils';
 type Admin = {
   id: string;
   super: boolean;

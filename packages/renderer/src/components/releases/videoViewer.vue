@@ -13,7 +13,7 @@
 </template>
 <script setup lang="ts">
 import {onMounted, ref} from 'vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useOrbiter} from '/@/plugins/flagship/utils';
 // import Hls from 'hls.js';
 // import HlsjsIpfsLoader from 'hlsjs-ipfs-loader';
 

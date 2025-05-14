@@ -1,4 +1,4 @@
-import type {Page, Browser} from 'playwright';
+import type {Browser, Page, ElectronApplication} from 'playwright';
 import {afterAll, beforeAll, describe, expect, test} from 'vitest';
 import {onBrowser} from './utils';
 
@@ -24,16 +24,22 @@ const environnement = process.env.ENVIRONNEMENT_TESTS;
 
 describe('Test app window', function () {
   let browser: Browser | undefined = undefined;
+  let electronApp: ElectronApplication | undefined = undefined;
   let page: Page;
 
   beforeAll(async () => {
-    const browserType = (environnement || 'chromium') as 'firefox' | 'chromium' | 'webkit';
-    if (['firefox', 'chromium', 'webkit'].includes(browserType)) {
-      ({page, browser} = await onBrowser({
-        typeNavigateur: browserType,
-      }));
+    const testEnvironment = (environnement || 'electron') as 'firefox' | 'chromium' | 'webkit' | 'electron';
+    
+    if (testEnvironment === 'electron') {
+      const result = await onBrowser({ typeNavigateur: 'electron' });
+      page = result.page;
+      electronApp = result.electronApp;
+    } else if (['firefox', 'chromium', 'webkit'].includes(testEnvironment)) {
+      const result = await onBrowser({ typeNavigateur: testEnvironment as 'firefox' | 'chromium' | 'webkit' });
+      page = result.page;
+      browser = result.browser; 
     } else {
-      throw new Error(`Unsupported test environment: ${environnement}. Must be 'firefox', 'chromium', or 'webkit'.`);
+      throw new Error(`Unsupported test environment: ${environnement}. Must be 'firefox', 'chromium', 'webkit', or 'electron'.`);
     }
 
     // Listen for console messages from the page to aid debugging
@@ -57,7 +63,9 @@ describe('Test app window', function () {
   });
 
   afterAll(async () => {
-    if (browser) {
+    if (electronApp) {
+      await electronApp.close();
+    } else if (browser) {
       await browser.close();
     }
   });

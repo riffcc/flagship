@@ -9,7 +9,7 @@ import {selectTranslation} from '/@/utils';
 
 import {suivre as follow} from '@constl/vue';
 import {useUserProfilePhoto} from './utils';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useOrbiter} from '/@/plugins/flagship/utils';
 
 const {orbiter} = useOrbiter();
 

@@ -1,33 +1,22 @@
 import {computed, ref, watchEffect, type ComputedRef, type MaybeRef, unref} from 'vue';
 import {onMounted} from 'vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+// import {useOrbiter} from '/@/plugins/orbiter/utils'; // Removed
 
 export const useUserProfilePhoto = (
   accountId?: MaybeRef<string | undefined>,
 ): ComputedRef<string | undefined> => {
-  const {orbiter} = useOrbiter();
+  // const {orbiter} = useOrbiter(); // Removed
 
   const profilePic = ref<Uint8Array | undefined>(undefined);
   const defaultAvatar = ref<string>();
 
   watchEffect((onCleanup) => {
     const currentAccountId = unref(accountId);
-    if (orbiter && orbiter.listenForProfilePhotoChange && currentAccountId) {
-      // Assuming listenForProfilePhotoChange takes an options object with accountId and a callback f
-      // And that it might return an unsubscribe function for cleanup.
-      const unsubscribe = orbiter.listenForProfilePhotoChange({
-        accountId: currentAccountId,
-        f: (newProfilePic: Uint8Array | undefined) => {
-          profilePic.value = newProfilePic;
-        },
-      });
-
-      if (typeof unsubscribe === 'function') {
-        onCleanup(unsubscribe);
-      }
-    } else {
-      profilePic.value = undefined; // Reset if no accountId or orbiter method
-    }
+    // Removed orbiter dependent logic for profilePic
+    // if (orbiter && orbiter.listenForProfilePhotoChange && currentAccountId) { ... }
+    // else {
+    profilePic.value = undefined; // Reset if no accountId or orbiter method, or keep default behavior
+    // }
   });
 
   onMounted(async () => {

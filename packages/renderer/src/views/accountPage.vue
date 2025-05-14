@@ -88,7 +88,7 @@ import {selectTranslation} from '/@/utils';
 
 import {useUserProfilePhoto} from '/@/components/users/utils';
 import {useStaticStatus} from '../composables/staticStatus';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useOrbiter} from '/@/plugins/flagship/utils';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
 
 const {orbiter} = useOrbiter();

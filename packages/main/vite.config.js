@@ -45,6 +45,13 @@ const config = {
       '@peerbit/document',
       '@peerbit/program',
       '@dao-xyz/borsh',
+      '@peerbit/crypto',
+      '@peerbit/blocks',
+      '@peerbit/stream',
+      '@peerbit/rpc',
+      '@peerbit/time',
+      '@peerbit/logger',
+      '@peerbit/trusted-network',
       // Add other @helia or @peerbit packages if similar errors occur
     ],
   },

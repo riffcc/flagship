@@ -35,33 +35,20 @@
 <script setup lang="ts">
 import { ref, onScopeDispose } from 'vue';
 import {useUserProfilePhoto} from '/@/components/users/utils';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+// import {useOrbiter} from '/@/plugins/orbiter/utils'; // Removed
 import { useRouter } from 'vue-router';
 import { useUserSession } from '/@/composables/userSession';
 
-const {orbiter} = useOrbiter();
+// const {orbiter} = useOrbiter(); // Removed
 
 // User avatar
-const accountId = ref<string | undefined>();
+const accountId = ref<string | undefined>(); // Will remain undefined for now
 
-if (orbiter && typeof orbiter.listenForAccountId === 'function') {
-  // Prefer a listening mechanism if available
-  const unsubscribe = orbiter.listenForAccountId({
-    f: (newAccountId: string | undefined) => {
-      accountId.value = newAccountId;
-    },
-  });
-  if (typeof unsubscribe === 'function') {
-    onScopeDispose(unsubscribe);
-  }
-} else if (orbiter && typeof orbiter.getAccountId === 'function') {
-  // Fallback to a one-time fetch if listenForAccountId is not available
-  orbiter.getAccountId()
-    .then(id => { accountId.value = id; })
-    .catch(err => console.error("Failed to get account ID for account menu:", err));
-}
+// Removed orbiter dependent logic for accountId
+// if (orbiter && typeof orbiter.listenForAccountId === 'function') { ... }
+// else if (orbiter && typeof orbiter.getAccountId === 'function') { ... }
 
-const userAvatar = useUserProfilePhoto(accountId);
+const userAvatar = useUserProfilePhoto(accountId); // May not work correctly without accountId
 
 const router = useRouter();
 

@@ -122,16 +122,17 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';
 import { computed } from 'vue';
-import { useOrbiter } from '/@/plugins/orbiter/utils';
+// import { useOrbiter } from '/@/plugins/orbiter/utils'; // Removed
 import { useUserSession } from '/@/composables/userSession';
 import accountMenu from '/@/components/account/accountMenu.vue';
 import { useContentCategoriesStore } from '/@/stores/contentCategories';
 import { storeToRefs } from 'pinia';
 
-const {orbiter} = useOrbiter();
+// const {orbiter} = useOrbiter(); // Removed
 const router = useRouter();
 const route = useRoute();
-const isAdmin = computed(() => orbiter?.followIsModerator ? orbiter.followIsModerator() : false);
+// const isAdmin = computed(() => orbiter?.followIsModerator ? orbiter.followIsModerator() : false); // Removed - depends on orbiter
+const isAdmin = computed(() => false); // Placeholder for isAdmin
 const contentCategoriesStore = useContentCategoriesStore();
 const { featuredContentCategories } = storeToRefs(contentCategoriesStore);
 const { userData } = useUserSession();

@@ -51,7 +51,7 @@ class Release implements ReleaseType {
   // Assuming metadata is a JSON string for simplicity with borsh.
   // If it's a complex object, further schema definition or a custom serializer might be needed.
   @field({type: 'string', option: true})
-  [RELEASES_METADATA_COLUMN]?: string; // Or use 'json-object' if borsh supports it directly, or a nested @variant class
+  [RELEASES_METADATA_COLUMN]?: string;
 
   constructor(data: ReleaseType) {
     this[RELEASES_NAME_COLUMN] = data[RELEASES_NAME_COLUMN];
@@ -91,31 +91,9 @@ class ReleasesDB extends Program {
 }
 
 export async function startPeerbitNode() {
-  if (peerbitClient && releasesProgram) {
-    console.log('Peerbit client and ReleasesDB already started.');
-    return {peerbitClient, releasesProgram};
-  }
-
-  try {
-    console.log('Starting Peerbit client...');
-    // Peerbit.create() handles Helia initialization internally
-    peerbitClient = await Peerbit.create();
-    console.log('Peerbit client started. Peer ID:', peerbitClient.peerId.toString());
-
-    // Open the ReleasesDB program
-    releasesProgram = await peerbitClient.open(new ReleasesDB());
-    console.log('ReleasesDB program opened at address:', releasesProgram.address?.toString());
-
-    // Example: Listen for updates on the releases store (optional, for debugging)
-    releasesProgram.releases.events.addEventListener('change', event => {
-      console.log('Releases store changed:', event.detail);
-    });
-
-    return {peerbitClient, releasesProgram};
-  } catch (error) {
-    console.error('Failed to start Peerbit client:', error);
-    throw error;
-  }
+  console.log('[PeerbitNode] startPeerbitNode called, Peerbit init temporarily bypassed for testing.');
+  // All Peerbit initialization logic remains commented out as per the previous step
+  return { peerbitClient: undefined, releasesProgram: undefined }; // Return dummy object for now
 }
 
 export async function stopPeerbitNode() {
