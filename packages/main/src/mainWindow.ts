@@ -1,7 +1,6 @@
 import {app, BrowserWindow} from 'electron';
 import {join} from 'path';
 import {fileURLToPath, URL} from 'url';
-import {gestionnaireFenêtres} from './constellation';
 import {connecterHttp} from './http';
 import {connecterSystèmeFichiers} from './systèmeFichiers';
 
@@ -16,7 +15,6 @@ async function createWindow() {
       preload: join(app.getAppPath(), 'packages/preload/dist/index.cjs'),
     },
   });
-  gestionnaireFenêtres.connecterFenêtreÀConstellation(browserWindow);
 
   /**
    * If the 'show' property of the BrowserWindow's constructor is omitted from the initialization options,
