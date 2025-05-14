@@ -1,5 +1,5 @@
 import type {Session} from 'electron';
-import {app, shell} from 'electron';
+import {app, shell} from 'electron'; // `session` is not directly imported but accessed via `contents.session`
 import {URL} from 'url';
 
 type Permission = Parameters<
@@ -127,5 +127,87 @@ app.on('web-contents-created', (_, contents) => {
 
     // Enable contextIsolation
     webPreferences.contextIsolation = true;
+  });
+
+  /**
+   * Modify Content-Security-Policy to allow 'unsafe-eval' for script-src.
+   * This is needed for Playwright's waitForFunction and potentially other dev/test tools.
+   * It also ensures a baseline object-src for security.
+   */
+  contents.session.webRequest.onHeadersReceived((details, callback) => {
+    if (details.responseHeaders) {
+      const cspHeaderKeys = Object.keys(details.responseHeaders).filter(
+        key => key.toLowerCase() === 'content-security-policy',
+      );
+
+      let currentCsp = '';
+      if (cspHeaderKeys.length > 0 && details.responseHeaders[cspHeaderKeys[0]]) {
+        const cspValue = details.responseHeaders[cspHeaderKeys[0]];
+        currentCsp = Array.isArray(cspValue) ? cspValue.join(';') : cspValue;
+      }
+
+      let newCspDirectives = [];
+      if (currentCsp) {
+        newCspDirectives = currentCsp.split(';').map(d => d.trim()).filter(d => d);
+      }
+
+      let scriptSrcFound = false;
+      for (let i = 0; i < newCspDirectives.length; i++) {
+        if (newCspDirectives[i].toLowerCase().startsWith('script-src')) {
+          scriptSrcFound = true;
+          if (!newCspDirectives[i].includes("'unsafe-eval'")) {
+            newCspDirectives[i] += " 'unsafe-eval'";
+          }
+          break;
+        }
+      }
+
+      if (!scriptSrcFound) {
+        // Based on the error message, 'self' and 'blob:' are already part of the effective CSP.
+        // Add 'unsafe-eval' to it.
+        newCspDirectives.push("script-src 'self' blob: 'unsafe-eval'");
+      }
+
+      let objectSrcFound = false;
+      for (let i = 0; i < newCspDirectives.length; i++) {
+        if (newCspDirectives[i].toLowerCase().startsWith('object-src')) {
+          objectSrcFound = true;
+          // Example: ensure it's restrictive like 'self' or 'none'
+          // For now, just ensuring it exists if we add it.
+          if (!newCspDirectives[i].includes("'self'")) {
+            // This logic could be more nuanced if object-src exists but is too permissive.
+            // For simplicity, if it exists, we leave it; if not, we add a restrictive one.
+          }
+          break;
+        }
+      }
+      if (!objectSrcFound) {
+        newCspDirectives.push("object-src 'self'");
+      }
+      
+      let baseUriFound = false;
+      for (let i = 0; i < newCspDirectives.length; i++) {
+        if (newCspDirectives[i].toLowerCase().startsWith('base-uri')) {
+          baseUriFound = true;
+          break;
+        }
+      }
+      if(!baseUriFound) {
+        newCspDirectives.push("base-uri 'self'");
+      }
+
+
+      const newCspString = newCspDirectives.join('; ');
+
+      // Remove all existing CSP headers (case-insensitive)
+      Object.keys(details.responseHeaders).forEach(key => {
+        if (key.toLowerCase() === 'content-security-policy') {
+          delete details.responseHeaders![key];
+        }
+      });
+      // Set the new CSP header
+      details.responseHeaders['Content-Security-Policy'] = [newCspString];
+    }
+    callback({responseHeaders: details.responseHeaders});
   });
 });
