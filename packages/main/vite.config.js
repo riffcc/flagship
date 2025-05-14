@@ -48,13 +48,18 @@ const config = {
       // Add other @helia or @peerbit packages if similar errors occur
     ],
   },
-  plugins: [injectAppVersion()],
-  test: {
+  server: { // Added server config block
     deps: {
       external: [
         'better-sqlite3',
         'bindings',
       ],
+    },
+  },
+  plugins: [injectAppVersion()],
+  test: {
+    deps: {
+      // external array removed as per deprecation warning, moved to server.deps.external
       optimizer: {
         ssr: {
           include: [
