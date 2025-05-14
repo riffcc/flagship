@@ -1,22 +1,22 @@
-import type {ElectronApplication, Page} from 'playwright';
+import type {ElectronApplication, Page, Browser} from 'playwright';
 
 import {afterAll, beforeAll, describe, expect, test} from 'vitest';
 
-import {surNavig, surÉlectron} from './utils';
+import {onBrowser, onElectron} from './utils';
 
 const environnement = process.env.ENVIRONNEMENT_TESTS;
 
 describe('Test app window', function () {
   let appliÉlectron: ElectronApplication | undefined = undefined;
+  let browser: Browser | undefined = undefined;
   let page: Page;
-  let fermer: () => Promise<void>;
 
   beforeAll(async () => {
     if (!environnement || environnement === 'électron') {
-      ({appli: appliÉlectron, page, fermer} = await surÉlectron());
+      ({appli: appliÉlectron, page} = await onElectron());
     } else if (['firefox', 'chromium', 'webkit'].includes(environnement)) {
-      ({page, fermer} = await surNavig({
-        typeNavigateur: environnement as 'webkit' | 'chromium' | 'webkit',
+      ({page, browser} = await onBrowser({
+        typeNavigateur: environnement as 'firefox' | 'chromium' | 'webkit',
       }));
     } else {
       throw new Error(environnement);
@@ -24,7 +24,12 @@ describe('Test app window', function () {
   });
 
   afterAll(async () => {
-    await fermer();
+    if (appliÉlectron) {
+      await appliÉlectron.close();
+    }
+    if (browser) {
+      await browser.close();
+    }
   });
 
   test('Main window state', async context => {

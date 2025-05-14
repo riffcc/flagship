@@ -5,10 +5,9 @@ import path, {dirname} from 'path';
 import {fileURLToPath} from 'url';
 
 
-export const surÉlectron = async (): Promise<{
+export const onElectron = async (): Promise<{
   appli: ElectronApplication;
   page: Page;
-  fermer: () => Promise<void>;
 }> => {
   // Inclure {...process.env} est nécessaire pour les tests sur Linux
   const appli = await electron.launch({
@@ -17,22 +16,18 @@ export const surÉlectron = async (): Promise<{
   });
   const page = await appli.firstWindow();
 
-  const fermer = async () => {
-    await appli.close();
-  };
-
-  return {appli, page, fermer};
+  return {appli, page};
 };
 
-export const surNavig = async ({
+export const onBrowser = async ({
   typeNavigateur,
 }: {
   typeNavigateur: 'webkit' | 'chromium' | 'firefox';
 }): Promise<{
   page: Page;
-  fermer: () => Promise<void>;
+  browser: Browser;
 }> => {
-  let navigateur: Browser;
+  let browser: Browser;
   switch (typeNavigateur) {
     case 'chromium':
       navigateur = await chromium.launch({
@@ -52,7 +47,7 @@ export const surNavig = async ({
       throw new Error(typeNavigateur);
   }
 
-  const page = await navigateur.newPage();
+  const page = await browser.newPage();
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const fichierHtml = path.join(
     __dirname,
@@ -66,10 +61,5 @@ export const surNavig = async ({
 
   await page.goto(`file://${fichierHtml}`);
 
-  const fermer = async () => {
-    await page.close();
-    await navigateur.close();
-  };
-
-  return {page, fermer};
+  return {page, browser};
 };
