@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
-import { suivre as follow } from '@constl/vue';
 import { useOrbiter } from '../plugins/orbiter/utils';
 import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
+import type { types as orbiterTypes } from '@riffcc/orbiter';
 import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
 
@@ -67,8 +67,25 @@ export const useReleasesStore = defineStore('releases', () => {
   const { staticReleases, staticFeaturedReleases } = useStaticReleases();
   const { staticStatus } = useStaticStatus();
 
-  const orbiterReleases = follow(orbiter.listenForReleases.bind(orbiter));
-  const orbiterFeaturedReleases = follow(orbiter.listenForSiteFeaturedReleases.bind(orbiter));
+  const orbiterReleases = ref<orbiterTypes.ReleaseWithId<string>[]>([]);
+  const orbiterFeaturedReleases = ref<orbiterTypes.FeaturedReleaseWithId[]>([]);
+
+  if (orbiter) {
+    if (orbiter.listenForReleases) {
+      orbiter.listenForReleases({
+        f: (releases: orbiterTypes.ReleaseWithId<string>[]) => {
+          orbiterReleases.value = releases;
+        },
+      });
+    }
+    if (orbiter.listenForSiteFeaturedReleases) {
+      orbiter.listenForSiteFeaturedReleases({
+        f: (featuredReleases: orbiterTypes.FeaturedReleaseWithId[]) => {
+          orbiterFeaturedReleases.value = featuredReleases;
+        },
+      });
+    }
+  }
 
   const status: Ref<ContentStatus> = ref('loading');
   const timerId = ref<ReturnType<typeof setTimeout> | null>(null);
