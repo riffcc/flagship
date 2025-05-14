@@ -5,6 +5,22 @@ import {restoreOrCreateWindow} from '../src/mainWindow';
 import {GestionnaireFenêtres} from '@constl/mandataire-electron-principal';
 import {BrowserWindow} from 'electron';
 
+// Mock import.meta.env to ensure stability for Vite-specific environment variables
+vi.mock('import.meta', () => ({
+  env: {
+    DEV: false, // Simulates a production or test build environment
+    VITE_DEV_SERVER_URL: undefined,
+    // Add any other VITE_ variables used by mainWindow.ts or its dependencies here
+  },
+}));
+
+// Mock for @constl/utils-ipa to provide the missing 'suivreBdDeFonction'
+vi.mock('@constl/utils-ipa', () => ({
+  suivreBdDeFonction: vi.fn(),
+  // If other exports from this module are needed by the code under test,
+  // they can be added here as well, e.g., anotherFunction: vi.fn()
+}));
+
 /**
  * Mock real electron BrowserWindow API
  */
