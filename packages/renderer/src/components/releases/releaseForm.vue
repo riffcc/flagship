@@ -211,45 +211,41 @@ const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
   isLoading.value = true;
   try {
-    const data = readyToSave.value;
-    const data = readyToSave.value; // data is releaseItem.value
-    if (props.mode === 'edit' && props.initialData?.id) {
-      // Keep existing Orbiter logic for editing
-      const releaseForOrbiter = {
-        [consts.RELEASES_AUTHOR_COLUMN]: data.author,
-        [consts.RELEASES_CATEGORY_COLUMN]: data.category,
-        [consts.RELEASES_FILE_COLUMN]: data.contentCID,
-        [consts.RELEASES_METADATA_COLUMN]: JSON.stringify(data.metadata), // Orbiter might expect stringified metadata
-        [consts.RELEASES_NAME_COLUMN]: data.name,
-        [consts.RELEASES_THUMBNAIL_COLUMN]: data.thumbnail,
-        [consts.RELEASES_COVER_COLUMN]: data.cover,
-      };
-      await orbiter.editRelease({
-        releaseId: props.initialData.id,
-        release: releaseForOrbiter,
-      });
-      emit('submit', data);
-      emit('update:success', 'Release updated successfully!');
-      clearForm(); // Consider if form should clear on edit, or if parent handles navigation
-    } else {
-      // Use Peerbit for creating new releases
-      const peerbitReleaseData = {
-        name: data.name,
-        file: data.contentCID, // Map contentCID to 'file' as expected by peerbitNode.ts ReleaseType
-        author: data.author,
-        category: data.category,
-        thumbnail: data.thumbnail,
-        cover: data.cover,
-        metadata: data.metadata, // Send metadata as an object; peerbitNode.ts handles stringification
-      };
+    const data = readyToSave.value; // Single declaration of data
 
-      // It's good practice to declare window.peerbitAPI in a .d.ts file for global type safety
-      // For example, in packages/renderer/src/@types/preload.d.ts
-      // For now, using 'as any' or assuming it's declared.
-      const response = await (window as any).peerbitAPI.addRelease(peerbitReleaseData);
+    // Prepare data for Peerbit (common for add and update)
+    // The 'id' field from 'data' (which comes from releaseItem.value) will be used by updateRelease.
+    // releaseItem.value.id is populated from props.initialData.id on mount for edit mode.
+    const peerbitReleaseData = {
+      id: data.id, // Pass existing ID for updates; will be undefined for new releases
+      name: data.name,
+      file: data.contentCID, // Map contentCID to 'file' as expected by peerbitNode.ts ReleaseType
+      author: data.author,
+      category: data.category,
+      thumbnail: data.thumbnail,
+      cover: data.cover,
+      metadata: data.metadata, // Send metadata as an object; peerbitNode.ts handles stringification
+    };
 
+    if (props.mode === 'edit' && data.id) {
+      // Update existing release using Peerbit
+      const response = await (window as any).peerbitAPI.updateRelease(data.id, peerbitReleaseData);
       if (response.success) {
-        emit('submit', data);
+        emit('submit', data); // data here includes the id
+        emit('update:success', response.message || 'Release updated in Peerbit successfully!');
+        // clearForm(); // Decide on UX: clear form or navigate away after edit
+      } else {
+        console.error('Error updating release in Peerbit:', response.error);
+        emit('update:error', response.error || 'Error updating release in Peerbit. Please try again later.');
+      }
+    } else {
+      // Create new release using Peerbit
+      // peerbitReleaseData.id will be undefined here, backend generates it.
+      const response = await (window as any).peerbitAPI.addRelease(peerbitReleaseData);
+      if (response.success) {
+        // Update the local data with the ID returned from the backend
+        const submittedData = { ...data, id: response.id };
+        emit('submit', submittedData);
         emit('update:success', response.message || 'Release saved to Peerbit successfully!');
         clearForm();
       } else {
@@ -258,7 +254,6 @@ const handleOnSubmit = async () => {
       }
     }
   } catch (error) {
-    // This catch block will now primarily handle errors from the 'edit' path or unexpected issues
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error in submission process:', errorMessage);
     emit('update:error', `Submission error: ${errorMessage}`);
