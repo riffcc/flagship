@@ -1,4 +1,4 @@
-import type {App} from 'vue';
+import type { App } from 'vue';
 import { Peerbit } from 'peerbit';
 import { Documents } from '@peerbit/document';
 import { TrustedNetwork } from '@peerbit/trusted-network';
@@ -29,7 +29,7 @@ export default {
       }
     }
     // 3. Open Documents store
-    const documentsInstance = new Documents({ 
+    const documentsInstance = new Documents({
       id: textEncoder.encode(`site-${siteId}-documents`)
     });
     const documents = await peerbitClient.open(documentsInstance);
@@ -37,17 +37,17 @@ export default {
     // 4. Open TrustedNetwork program
     const trustedNetworkInstance = new TrustedNetwork({
       id: textEncoder.encode(`site-${siteId}-trusted-network`),
-      rootTrust: peerbitClient.identity.publicKey 
+      rootTrust: peerbitClient.identity.publicKey
     });
     const network = await peerbitClient.open(trustedNetworkInstance);
 
     // 5. Initialize utilities
-    const timeUtility = hrtime(); 
+    const timeUtility = hrtime();
     const logInstance = peerbitLogger({ module: 'peerbit-plugin' });
 
     // 6. Provide to Vue app
     app.config.globalProperties.$peerbit = peerbitClient;
-    app.config.globalProperties.$program = peerbitClient; 
+    app.config.globalProperties.$program = peerbitClient;
     app.config.globalProperties.$documents = documents;
     app.config.globalProperties.$network = network;
     app.config.globalProperties.$time = timeUtility;
@@ -60,4 +60,4 @@ export default {
     app.provide('time', timeUtility);
     app.provide('logger', logInstance);
   },
-}; 
+};
