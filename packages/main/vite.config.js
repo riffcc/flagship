@@ -37,6 +37,15 @@ const config = {
     emptyOutDir: true,
     reportCompressedSize: false,
   },
+  ssr: {
+    noExternal: [
+      '@helia/json',
+      'helia',
+      '@peerbit/node',
+      '@peerbit/document',
+      // Add other @helia or @peerbit packages if similar errors occur
+    ],
+  },
   plugins: [injectAppVersion()],
   test: {
     coverage: {
