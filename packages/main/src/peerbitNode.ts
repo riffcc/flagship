@@ -1,6 +1,6 @@
 import {createHelia} from 'helia';
 import {json} from '@helia/json';
-import {Peerbit} from '@peerbit/node';
+import {Peerbit} from '@peerbit/server';
 import {DocumentStore} from '@peerbit/document';
 import type {Release} from '@riffcc/peerbit-adapter/types';
 

@@ -41,7 +41,7 @@ const config = {
     noExternal: [
       '@helia/json',
       'helia',
-      '@peerbit/node',
+      '@peerbit/server',
       '@peerbit/document',
       // Add other @helia or @peerbit packages if similar errors occur
     ],
@@ -49,12 +49,20 @@ const config = {
   plugins: [injectAppVersion()],
   test: {
     deps: {
-      inline: [
-        /@helia\//, // Matches @helia/json and other @helia scoped packages
-        /^helia$/, // Matches the helia package itself
-        /@peerbit\//, // Matches @peerbit/node, @peerbit/document, etc.
-        /multiformats/, // Common dependency for IPFS/Helia
-      ],
+      optimizer: {
+        ssr: {
+          include: [
+            '@helia/json',
+            'helia',
+            '@peerbit/server',
+            '@peerbit/document',
+            'multiformats', // Often a core part of the ecosystem that might need inlining
+            // You might need to add more entries here if other similar errors appear
+            // For example, if specific sub-dependencies of these packages cause issues.
+            // Using regex like /@helia\// or /@peerbit\// can also work if you prefer.
+          ],
+        },
+      },
     },
     coverage: {
       provider: 'istanbul',
