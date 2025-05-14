@@ -1,15 +1,15 @@
 import {createHelia} from 'helia';
 import {json} from '@helia/json';
-import {Peerbit} from '@peerbit/server';
+import {Peer} from '@peerbit/server'; // Changed Peerbit to Peer
 import {DocumentStore} from '@peerbit/document';
 import type {Release} from '@riffcc/peerbit-adapter/types';
 
-let peerbitNode: Peerbit | undefined;
+let peerInstance: Peer | undefined; // Renamed for clarity
 
 export async function startPeerbitNode() {
-  if (peerbitNode) {
+  if (peerInstance) {
     console.log('Peerbit node already started.');
-    return peerbitNode;
+    return peerInstance;
   }
 
   try {
@@ -19,14 +19,13 @@ export async function startPeerbitNode() {
     console.log('Helia started.');
 
     console.log('Starting Peerbit node...');
-    peerbitNode = await Peerbit.create({
-      helia: heliaJson,
-    });
-    console.log('Peerbit node started. Peer ID:', peerbitNode.peerId.toString());
+    peerInstance = await Peer.create(); // Create Peer instance
+    await peerInstance.connect(heliaJson); // Connect Helia instance
+    console.log('Peerbit node started. Peer ID:', peerInstance.peerId.toString());
 
     // Open a document store for releases
     // The type argument `Release` is used to ensure type safety
-    const releasesStore = await peerbitNode.open(new DocumentStore<Release>({id: 'releases'}));
+    const releasesStore = await peerInstance.open(new DocumentStore<Release>({id: 'releases'}));
     console.log('Releases store opened:', releasesStore.address?.toString());
 
     // Example: Listen for updates (optional, for debugging)
@@ -34,7 +33,7 @@ export async function startPeerbitNode() {
       console.log('Releases store changed:', event.detail);
     });
 
-    return peerbitNode;
+    return peerInstance;
   } catch (error) {
     console.error('Failed to start Peerbit node:', error);
     throw error;
@@ -42,10 +41,10 @@ export async function startPeerbitNode() {
 }
 
 export async function stopPeerbitNode() {
-  if (peerbitNode) {
+  if (peerInstance) {
     console.log('Stopping Peerbit node...');
-    await peerbitNode.stop();
-    peerbitNode = undefined;
+    await peerInstance.stop();
+    peerInstance = undefined;
     console.log('Peerbit node stopped.');
   }
 }
