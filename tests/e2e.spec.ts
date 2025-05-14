@@ -118,5 +118,33 @@ describe('Test app window', function () {
     );
     expect(typedResult.message).toContain('Release "Test Release E2E" added successfully.');
   });
+
+  test('Ping __verySimpleAPI', async () => {
+    // Ensure the page is fully loaded and the minimal API is available
+    try {
+      await page.waitForFunction(() => {
+        // This console.log runs in the browser context, captured by page.on('console')
+        console.log('E2E polling: typeof window.__verySimpleAPI =', typeof (window as any).__verySimpleAPI);
+        return (window as any).__verySimpleAPI !== undefined && typeof (window as any).__verySimpleAPI.ping === 'function';
+      }, {timeout: 15000}); 
+      console.log('E2E Test: window.__verySimpleAPI became available.');
+    } catch (e) {
+      const apiType = await page.evaluate(() => typeof (window as any).__verySimpleAPI);
+      const windowKeys = await page.evaluate(() => Object.keys(window));
+      console.error(`E2E Test Error: window.__verySimpleAPI (last known type: ${apiType}) did not become available. Window keys: ${windowKeys.join(', ')}`);
+      throw new Error(`window.__verySimpleAPI did not become available within 15 seconds. Last known type: ${apiType}. Original error: ${e}`);
+    }
+
+    const result = await page.evaluate(async () => {
+        // @ts-expect-error __verySimpleAPI is exposed by preload and should be on window
+        return (window as any).__verySimpleAPI.ping();
+      },
+    );
+
+    expect(result, 'API call result should be defined').toBeDefined();
+    expect(result).toBe('pong'); // Check if the ping was successful
+    console.log('E2E Test: __verySimpleAPI.ping() returned pong successfully!');
+
+  });
 });
 

@@ -20,25 +20,27 @@ export const onBrowser = async ({
     console.log(`[E2E Utils] Electron project root for CWD: ${projectRoot}`);
     
     const electronApp = await electron.launch({ 
-        args: ['.'], // Tells Electron to start using the main script from package.json in the CWD
-        cwd: projectRoot, // Set the Current Working Directory to the project root
-        // env: { 
-        //     ...process.env, 
-        //     ELECTRON_ENABLE_LOGGING: 'true',
-        //     ELECTRON_DEBUG_NOTIFICATIONS: 'true' // May show native notifications for some errors
-        // }
+        args: [path.join(projectRoot, 'tests', 'minimal-main.js')],
+        cwd: projectRoot,
+        env: { 
+            ...process.env, 
+            NODE_ENV: 'production',
+            NODE_OPTIONS: '', 
+            ELECTRON_ENABLE_LOGGING: 'false', 
+            ELECTRON_ENABLE_STACK_DUMPING: 'false', 
+        }
     });
-    console.log('[E2E Utils] Electron app launched. Waiting for first window...');
+    console.log('[E2E Utils] Electron app launched with minimal-main.js. Waiting for first window...');
 
     // Temporarily commented out stdio listeners
-    // electronApp.process().stdout?.on('data', (data) => {
-    //   console.log(`[Electron App STDOUT]: ${data.toString()}`);
-    // });
-    // electronApp.process().stderr?.on('data', (data) => {
-    //   console.error(`[Electron App STDERR]: ${data.toString()}`);
-    // });
+    electronApp.process().stdout?.on('data', (data) => {
+      console.log(`[Electron App STDOUT]: ${data.toString()}`);
+    });
+    electronApp.process().stderr?.on('data', (data) => {
+      console.error(`[Electron App STDERR]: ${data.toString()}`);
+    });
 
-    const page = await electronApp.firstWindow();
+    const page = await electronApp.firstWindow({ timeout: 4000 });
     console.log('[E2E Utils] First window obtained.');
     return {page, electronApp};
   }

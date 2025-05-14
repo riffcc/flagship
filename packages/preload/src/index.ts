@@ -1,38 +1,9 @@
-/**
- * @module preload
- */
-console.log('[Preload] Script starting...'); // Added for debugging
+console.log('[Preload Minimal] Script successfully loaded and executing.');
 
-import {contextBridge, ipcRenderer} from 'electron';
+import {contextBridge} from 'electron';
 
-// Define the type for the release data to be sent to the main process
-// This should match the structure expected by `addRelease` in `peerbitNode.ts`
-// and the `ReleaseType` definition there (effectively, an object with these properties).
-type ReleaseDataType = {
-  name: string;
-  file: string; // Corresponds to contentCID from the form
-  author: string;
-  category: string;
-  thumbnail?: string;
-  cover?: string;
-  metadata?: Record<string, unknown> | string; // Peerbit's Release class constructor handles object stringification
-};
-
-// Define the expected response structure from the IPC call
-type AddReleaseResponseType = {
-  success: boolean;
-  message?: string;
-  error?: string;
-};
-
-contextBridge.exposeInMainWorld('peerbitAPI', {
-  addRelease: (releaseData: ReleaseDataType): Promise<AddReleaseResponseType> =>
-    ipcRenderer.invoke('peerbit:addRelease', releaseData),
+contextBridge.exposeInMainWorld('__verySimpleAPI', {
+  ping: () => 'pong',
 });
-console.log('[Preload] peerbitAPI exposed via contextBridge.'); // Added for debugging
 
-export {plateforme, surLinux, surMac, surWindows} from './so.js';
-
-export {requêteHttp} from './http.js';
-
-export {choisirDossier} from './systèmeFichiers.js';
+console.log('[Preload Minimal] __verySimpleAPI exposed.');
