@@ -1,7 +1,6 @@
 import type {Browser, ElectronApplication, Page} from 'playwright';
 import {chromium, _electron as electron, firefox, webkit} from 'playwright';
 
-import {dossiers} from '@constl/utils-tests';
 import path, {dirname} from 'path';
 import {fileURLToPath} from 'url';
 
@@ -11,22 +10,15 @@ export const surÉlectron = async (): Promise<{
   page: Page;
   fermer: () => Promise<void>;
 }> => {
-  // Utiliser un dossier temporaire pour le compte Constellation dans les tests
-  const {dossier, fEffacer} = await dossiers.dossierTempo();
-
   // Inclure {...process.env} est nécessaire pour les tests sur Linux
   const appli = await electron.launch({
     args: ['.'],
-    env: {...process.env, DOSSIER_CONSTL: dossier},
+    env: {...process.env},
   });
   const page = await appli.firstWindow();
 
   const fermer = async () => {
-    try {
-      await appli.close();
-    } finally {
-      fEffacer?.();
-    }
+    await appli.close();
   };
 
   return {appli, page, fermer};
