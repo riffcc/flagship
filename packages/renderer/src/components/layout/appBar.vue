@@ -121,7 +121,7 @@
 
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';
-import { suivre as follow } from '@constl/vue';
+import { computed } from 'vue';
 import { useOrbiter } from '/@/plugins/orbiter/utils';
 import { useUserSession } from '/@/composables/userSession';
 import accountMenu from '/@/components/account/accountMenu.vue';
@@ -131,7 +131,7 @@ import { storeToRefs } from 'pinia';
 const {orbiter} = useOrbiter();
 const router = useRouter();
 const route = useRoute();
-const isAdmin = orbiter?.followIsModerator ? follow(orbiter.followIsModerator.bind(orbiter)) : false;
+const isAdmin = computed(() => orbiter?.followIsModerator ? orbiter.followIsModerator() : false);
 const contentCategoriesStore = useContentCategoriesStore();
 const { featuredContentCategories } = storeToRefs(contentCategoriesStore);
 const { userData } = useUserSession();
