@@ -9,6 +9,9 @@
   "version": "0.2.0",
   "type": "module",
   "main": "packages/main/dist/index.cjs",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "build": "pnpm run build:main && pnpm run build:preload && pnpm run build:renderer",
     "build:main": "cd ./packages/main && vite build",
@@ -32,7 +35,8 @@
     "typecheck:main": "tsc --noEmit -p packages/main/tsconfig.json",
     "typecheck:preload": "tsc --noEmit -p packages/preload/tsconfig.json",
     "typecheck:renderer": "vue-tsc --noEmit -p packages/renderer/tsconfig.json",
-    "typecheck": "pnpm run typecheck:main && pnpm run typecheck:preload && pnpm run typecheck:renderer",
+    "typecheck:peerbit-adapter": "tsc --noEmit -p packages/peerbit-adapter/tsconfig.json",
+    "typecheck": "pnpm run typecheck:main && pnpm run typecheck:preload && pnpm run typecheck:renderer && pnpm run typecheck:peerbit-adapter",
     "postinstall": "cross-env ELECTRON_RUN_AS_NODE=1 electron scripts/update-electron-vendors.mjs",
     "format": "npx prettier --write \"**/*.{js,mjs,cjs,ts,mts,cts,vue,json}\""
   },
@@ -87,6 +91,7 @@
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@ffmpeg/core": "^0.9.0",
     "@ffmpeg/ffmpeg": "^0.9.8",
+    "@riffcc/peerbit-adapter": "workspace:*",
     "@riffcc/orbiter": "^0.2.32",
     "@vueuse/core": "^12.7.0",
     "ajv": "^8.17.1",
