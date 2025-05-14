@@ -48,18 +48,17 @@ const config = {
       // Add other @helia or @peerbit packages if similar errors occur
     ],
   },
-  server: { // Added server config block
-    deps: {
-      external: [
-        'better-sqlite3',
-        'bindings',
-      ],
-    },
-  },
+  // server: { // server.deps.external was not the correct fix, removing.
+  //   deps: {
+  //     external: [
+  //       'better-sqlite3',
+  //       'bindings',
+  //     ],
+  //   },
+  // },
   plugins: [injectAppVersion()],
   test: {
     deps: {
-      // external array removed as per deprecation warning, moved to server.deps.external
       optimizer: {
         ssr: {
           include: [
@@ -72,6 +71,10 @@ const config = {
             'multiformats', // Often a core part of the ecosystem that might need inlining
             // You might need to add more entries here if other similar errors appear
             // For example, if specific sub-dependencies of these packages cause issues.
+          ],
+          exclude: [ // Using exclude as per the deprecation message alternative
+            'better-sqlite3',
+            'bindings',
           ],
         },
       },
