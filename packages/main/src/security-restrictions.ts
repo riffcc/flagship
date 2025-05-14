@@ -135,7 +135,11 @@ app.on('web-contents-created', (_, contents) => {
    * It also ensures a baseline object-src for security.
    */
   contents.session.webRequest.onHeadersReceived((details, callback) => {
-    if (details.responseHeaders) {
+    if (details.responseHeaders && (details.resourceType === 'mainFrame' || details.resourceType === 'subFrame')) {
+      console.log(`[CSP Modifier] Intercepting headers for URL: ${details.url}, ResourceType: ${details.resourceType}`);
+      const originalCspHeader = details.responseHeaders['content-security-policy'] || details.responseHeaders['Content-Security-Policy'];
+      console.log('[CSP Modifier] Original CSP Header from details:', originalCspHeader);
+
       const cspHeaderKeys = Object.keys(details.responseHeaders).filter(
         key => key.toLowerCase() === 'content-security-policy',
       );
@@ -207,6 +211,7 @@ app.on('web-contents-created', (_, contents) => {
       });
       // Set the new CSP header
       details.responseHeaders['Content-Security-Policy'] = [newCspString];
+      console.log('[CSP Modifier] New CSP Header Set:', newCspString);
     }
     callback({responseHeaders: details.responseHeaders});
   });

@@ -17,6 +17,13 @@ async function createWindow() {
     },
   });
 
+  const actualPreloadPath = browserWindow.webContents.getWebPreferences().preload;
+  console.log(`[MainWindow] app.getAppPath() resolved to: ${app.getAppPath()}`);
+  console.log(`[MainWindow] Preload script path configured as: ${actualPreloadPath}`);
+  if (!actualPreloadPath) {
+    console.error('[MainWindow] CRITICAL: Preload script path is undefined or empty!');
+  }
+
   /**
    * If the 'show' property of the BrowserWindow's constructor is omitted from the initialization options,
    * it then defaults to 'true'. This can cause flickering as the window loads the html content,
