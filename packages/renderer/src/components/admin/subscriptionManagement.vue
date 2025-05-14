@@ -101,11 +101,10 @@
 </template>
 
 <script setup lang="ts">
-import {adresseOrbiteValide} from '@constl/utils-ipa';
-import {suivre as follow} from '@constl/vue';
-import {computed, ref} from 'vue';
+import {computed, ref, onScopeDispose} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { useSiteColors } from '/@/composables/siteColors';
+import type { types as orbiterTypes } from '@riffcc/orbiter';
 import { useShowDefederation } from '/@/composables/showDefed';
 
 const {orbiter} = useOrbiter();
@@ -117,7 +116,7 @@ const trustedSiteName = ref<string>();
 const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
   isValidSiteAddress: (v: string) =>
-    adresseOrbiteValide(v) || 'Please enter a valid site address (`/orbitdb/...`).',
+    /^\/orbitdb\/[a-zA-Z0-9]+\/[a-zA-Z0-9]+$/.test(v) || 'Please enter a valid site address (e.g., `/orbitdb/zd.../siteName`).',
 };
 
 const readyToSave = computed(() => {
@@ -151,7 +150,19 @@ const clearForm = () => {
 // const siteConfig = obt(orbiter.siteConfigured.bind(orbiter));
 // const siteId = computed(() => siteConfig.value?.siteId);
 
-const trustedSites = follow(orbiter.followTrustedSites.bind(orbiter));
+const trustedSites = ref<orbiterTypes.TrustedSiteWithId[]>([]);
+
+if (orbiter && orbiter.followTrustedSites) {
+  const unsubscribe = orbiter.followTrustedSites({
+    f: (sites: orbiterTypes.TrustedSiteWithId[]) => {
+      trustedSites.value = sites;
+    },
+  });
+  if (typeof unsubscribe === 'function') {
+    onScopeDispose(unsubscribe);
+  }
+}
+
 
 // const siteDomainName = computed(() => {
 //   return document.location.hostname;
