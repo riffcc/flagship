@@ -85,7 +85,7 @@
     "@ffmpeg/ffmpeg": "^0.9.8",
     "@helia/json": "^4.0.5",
     "@peerbit/document": "^9.6.2",
-    "@peerbit/server": "^5.4.1",
+    "@peerbit/server": "^9.6.2",
     "@riffcc/orbiter": "^0.2.32",
     "@riffcc/peerbit-adapter": "workspace:*",
     "@vueuse/core": "^12.7.0",
