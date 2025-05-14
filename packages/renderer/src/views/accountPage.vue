@@ -83,10 +83,9 @@
   </v-container>
 </template>
 <script setup lang="ts">
-import {computed, ref, watchEffect} from 'vue';
+import {computed, ref, watchEffect, onMounted} from 'vue';
 import {selectTranslation} from '/@/utils';
 
-import {suivre as follow, obt} from '@constl/vue';
 import {useUserProfilePhoto} from '/@/components/users/utils';
 import {useStaticStatus} from '../composables/staticStatus';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
@@ -94,7 +93,7 @@ import { useCopyToClipboard } from '/@/composables/copyToClipboard';
 
 const {orbiter} = useOrbiter();
 // User name
-const names = follow(orbiter.listenForNameChange.bind(orbiter));
+const names = computed(() => orbiter?.listenForNameChange ? orbiter.listenForNameChange() : {});
 
 const displayName = computed(() => {
   return selectTranslation(names.value) || 'Anonymous';
@@ -113,18 +112,30 @@ watchEffect(() => {
 });
 
 // Account and device ids
-const accountId = follow(orbiter.constellation.suivreIdCompte);
-const deviceId = obt(orbiter.constellation.obtIdDispositif);
-const peerId = obt(orbiter.constellation.obtIdLibp2p);
+const accountId = ref<string | undefined>();
+const deviceId = ref<string | undefined>();
+const peerId = ref<string | undefined>();
+
+onMounted(async () => {
+  if (orbiter) {
+    try {
+      accountId.value = await orbiter.getAccountId();
+      deviceId.value = await orbiter.getDeviceId();
+      peerId.value = await orbiter.getPeerId();
+    } catch (error) {
+      console.error("Error fetching account/device/peer IDs:", error);
+    }
+  }
+});
 
 const { copy, isCopied } = useCopyToClipboard();
 
 // User avatar
-const userAvatar = useUserProfilePhoto(accountId.value);
+const userAvatar = useUserProfilePhoto(accountId); // useUserProfilePhoto might need adjustment if it expects a direct value not a ref
 
 // Account status
-const moderator = follow(orbiter.followIsModerator.bind(orbiter));
-const canUpload = follow(orbiter.followCanUpload.bind(orbiter));
+const moderator = computed(() => orbiter?.followIsModerator ? orbiter.followIsModerator() : false);
+const canUpload = computed(() => orbiter?.followCanUpload ? orbiter.followCanUpload() : false);
 const accountStatus = computed(()=>{
   return moderator.value || (canUpload.value ? 'MEMBER' : 'GUEST');
 });
@@ -144,9 +155,9 @@ const statusExplanation = computed(()=>{
 });
 
 // Connectivity
-const ipfsConnections = follow(orbiter.constellation.réseau.suivreConnexionsPostesSFIP);
-const orbiterDevices = follow(orbiter.constellation.réseau.suivreConnexionsDispositifs);
-const orbiterAccounts = follow(orbiter.constellation.réseau.suivreConnexionsMembres);
+const ipfsConnections = computed(() => orbiter?.constellation?.réseau?.suivreConnexionsPostesSFIP ? orbiter.constellation.réseau.suivreConnexionsPostesSFIP() : []);
+const orbiterDevices = computed(() => orbiter?.constellation?.réseau?.suivreConnexionsDispositifs ? orbiter.constellation.réseau.suivreConnexionsDispositifs() : []);
+const orbiterAccounts = computed(() => orbiter?.constellation?.réseau?.suivreConnexionsMembres ? orbiter.constellation.réseau.suivreConnexionsMembres() : []);
 const nOrbiterDevices = computed(()=>{
   return orbiterDevices.value?.filter(d => d.infoDispositif.idDispositif !== deviceId.value).length || 0;
 });
