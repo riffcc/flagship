@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import {suivre as follow} from '@constl/vue';
+import { ref, onScopeDispose } from 'vue';
 import {useUserProfilePhoto} from '/@/components/users/utils';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { useRouter } from 'vue-router';
@@ -42,7 +42,24 @@ import { useUserSession } from '/@/composables/userSession';
 const {orbiter} = useOrbiter();
 
 // User avatar
-const accountId = follow(orbiter.listenForAccountId.bind(orbiter));
+const accountId = ref<string | undefined>();
+
+if (orbiter && typeof orbiter.listenForAccountId === 'function') {
+  // Prefer a listening mechanism if available
+  const unsubscribe = orbiter.listenForAccountId({
+    f: (newAccountId: string | undefined) => {
+      accountId.value = newAccountId;
+    },
+  });
+  if (typeof unsubscribe === 'function') {
+    onScopeDispose(unsubscribe);
+  }
+} else if (orbiter && typeof orbiter.getAccountId === 'function') {
+  // Fallback to a one-time fetch if listenForAccountId is not available
+  orbiter.getAccountId()
+    .then(id => { accountId.value = id; })
+    .catch(err => console.error("Failed to get account ID for account menu:", err));
+}
 
 const userAvatar = useUserProfilePhoto(accountId);
 
