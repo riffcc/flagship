@@ -48,6 +48,14 @@ const config = {
   },
   plugins: [injectAppVersion()],
   test: {
+    deps: {
+      inline: [
+        /@helia\//, // Matches @helia/json and other @helia scoped packages
+        /^helia$/, // Matches the helia package itself
+        /@peerbit\//, // Matches @peerbit/node, @peerbit/document, etc.
+        /multiformats/, // Common dependency for IPFS/Helia
+      ],
+    },
     coverage: {
       provider: 'istanbul',
     },
