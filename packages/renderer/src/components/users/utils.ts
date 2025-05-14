@@ -1,6 +1,4 @@
-import {computed, ref, type ComputedRef, type MaybeRef} from 'vue';
-
-import {suivre as follow} from '@constl/vue';
+import {computed, ref, watchEffect, type ComputedRef, type MaybeRef, unref} from 'vue';
 import {onMounted} from 'vue';
 import {useOrbiter} from '/@/plugins/orbiter/utils';
 
@@ -9,8 +7,29 @@ export const useUserProfilePhoto = (
 ): ComputedRef<string | undefined> => {
   const {orbiter} = useOrbiter();
 
-  const profilePic = follow(orbiter.listenForProfilePhotoChange.bind(orbiter), {accountId});
+  const profilePic = ref<Uint8Array | undefined>(undefined);
   const defaultAvatar = ref<string>();
+
+  watchEffect((onCleanup) => {
+    const currentAccountId = unref(accountId);
+    if (orbiter && orbiter.listenForProfilePhotoChange && currentAccountId) {
+      // Assuming listenForProfilePhotoChange takes an options object with accountId and a callback f
+      // And that it might return an unsubscribe function for cleanup.
+      const unsubscribe = orbiter.listenForProfilePhotoChange({
+        accountId: currentAccountId,
+        f: (newProfilePic: Uint8Array | undefined) => {
+          profilePic.value = newProfilePic;
+        },
+      });
+
+      if (typeof unsubscribe === 'function') {
+        onCleanup(unsubscribe);
+      }
+    } else {
+      profilePic.value = undefined; // Reset if no accountId or orbiter method
+    }
+  });
+
   onMounted(async () => {
     const svg = await [
       import('/@/assets/undraw/undraw_pic_profile_re_7g2h.svg'),
