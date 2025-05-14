@@ -1,6 +1,5 @@
 import {app} from 'electron';
 import './security-restrictions';
-import {gestionnaireFenêtres} from '/@/constellation';
 import {restoreOrCreateWindow} from '/@/mainWindow';
 
 /**
@@ -25,13 +24,6 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
-});
-
-/**
- * Fermer Constellation lorsqu'on a fini
- */
-app.on('will-quit', async () => {
-  await gestionnaireFenêtres.fermerConstellation();
 });
 
 /**
