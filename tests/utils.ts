@@ -1,23 +1,8 @@
-import type {Browser, ElectronApplication, Page} from 'playwright';
-import {chromium, _electron as electron, firefox, webkit} from 'playwright';
+import type {Browser, Page} from 'playwright';
+import {chromium, firefox, webkit} from 'playwright';
 
 import path, {dirname} from 'path';
 import {fileURLToPath} from 'url';
-
-
-export const onElectron = async (): Promise<{
-  appli: ElectronApplication;
-  page: Page;
-}> => {
-  // Inclure {...process.env} est nécessaire pour les tests sur Linux
-  const appli = await electron.launch({
-    args: ['.'],
-    env: {...process.env},
-  });
-  const page = await appli.firstWindow();
-
-  return {appli, page};
-};
 
 export const onBrowser = async ({
   typeNavigateur,
