@@ -3,6 +3,7 @@ import {join} from 'path';
 import {fileURLToPath, URL} from 'url';
 import {connecterHttp} from './http';
 import {connecterSystèmeFichiers} from './systèmeFichiers';
+import {startPeerbitNode} from './peerbitNode';
 
 async function createWindow() {
   const browserWindow = new BrowserWindow({
@@ -70,6 +71,8 @@ export async function restoreOrCreateWindow() {
     window = await createWindow();
     connecterHttp();
     connecterSystèmeFichiers();
+    // Start the local Peerbit node for testing
+    await startPeerbitNode();
   }
 
   if (window.isMinimized()) {

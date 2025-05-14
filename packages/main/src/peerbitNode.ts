@@ -1,0 +1,57 @@
+import {createHelia} from 'helia';
+import {json} from '@helia/json';
+import {Peerbit} from '@peerbit/node';
+import {DocumentStore} from '@peerbit/document';
+import type {Release} from '@riffcc/peerbit-adapter/types';
+
+let peerbitNode: Peerbit | undefined;
+
+export async function startPeerbitNode() {
+  if (peerbitNode) {
+    console.log('Peerbit node already started.');
+    return peerbitNode;
+  }
+
+  try {
+    console.log('Starting Helia...');
+    const helia = await createHelia();
+    const heliaJson = json(helia);
+    console.log('Helia started.');
+
+    console.log('Starting Peerbit node...');
+    peerbitNode = await Peerbit.create({
+      helia: heliaJson,
+    });
+    console.log('Peerbit node started. Peer ID:', peerbitNode.peerId.toString());
+
+    // Open a document store for releases
+    // The type argument `Release` is used to ensure type safety
+    const releasesStore = await peerbitNode.open(new DocumentStore<Release>({id: 'releases'}));
+    console.log('Releases store opened:', releasesStore.address?.toString());
+
+    // Example: Listen for updates (optional, for debugging)
+    releasesStore.events.addEventListener('change', event => {
+      console.log('Releases store changed:', event.detail);
+    });
+
+    return peerbitNode;
+  } catch (error) {
+    console.error('Failed to start Peerbit node:', error);
+    throw error;
+  }
+}
+
+export async function stopPeerbitNode() {
+  if (peerbitNode) {
+    console.log('Stopping Peerbit node...');
+    await peerbitNode.stop();
+    peerbitNode = undefined;
+    console.log('Peerbit node stopped.');
+  }
+}
+
+// Ensure Peerbit node is stopped gracefully on app exit
+import {app} from 'electron';
+app.on('will-quit', async () => {
+  await stopPeerbitNode();
+});
