@@ -93,7 +93,9 @@
 <script setup lang="ts">
 import { computed, type Ref, ref } from 'vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import { useOrbiter } from '/@/plugins/flagship/utils';
+import { useOrbiter } from '/@/plugins/peerbit/utils';
+import type { types as orbiterTypes } from '@riffcc/orbiter';
+
 type Admin = {
   id: string;
   super: boolean;

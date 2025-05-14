@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
-import { useOrbiter } from '../plugins/orbiter/utils';
+import { useOrbiter } from '../plugins/peerbit/utils';
 import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
-import type { types as orbiterTypes } from '@riffcc/orbiter';
+import type { types as orbiterTypes } from '../plugins/peerbit/orbiter-types';
 import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
 

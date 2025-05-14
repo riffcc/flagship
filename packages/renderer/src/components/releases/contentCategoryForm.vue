@@ -133,10 +133,10 @@
 </template>
 
 <script setup lang="ts">
-import type { types as orbiterTypes } from '@riffcc/orbiter';
-import {consts } from '@riffcc/orbiter';
+import type { types as orbiterTypes } from '/@/plugins/peerbit/orbiter-types';
+import {consts } from '/@/plugins/peerbit/orbiter-types';
 import {computed, onMounted, ref} from 'vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useOrbiter} from '/@/plugins/peerbit/utils';
 import MetadataFieldForm from '/@/components/releases/metadataFieldForm.vue';
 
 const props = defineProps<{

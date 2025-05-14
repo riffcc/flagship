@@ -102,10 +102,12 @@
 
 <script setup lang="ts">
 import {computed, ref, onScopeDispose} from 'vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useOrbiter} from '/@/plugins/peerbit/utils';
 import { useSiteColors } from '/@/composables/siteColors';
-import type { types as orbiterTypes } from '@riffcc/orbiter';
 import { useShowDefederation } from '/@/composables/showDefed';
+import {useForm} from 'vuetify/lib/composables/form.mjs';
+import type { types as orbiterTypes } from '/@/plugins/peerbit/orbiter-types';
+import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 
 const {orbiter} = useOrbiter();
 const formRef = ref();
@@ -147,9 +149,6 @@ const clearForm = () => {
   trustedSiteName.value = undefined;
 };
 
-// const siteConfig = obt(orbiter.siteConfigured.bind(orbiter));
-// const siteId = computed(() => siteConfig.value?.siteId);
-
 const trustedSites = ref<orbiterTypes.TrustedSiteWithId[]>([]);
 
 if (orbiter && orbiter.followTrustedSites) {
@@ -162,11 +161,6 @@ if (orbiter && orbiter.followTrustedSites) {
     onScopeDispose(unsubscribe);
   }
 }
-
-
-// const siteDomainName = computed(() => {
-//   return document.location.hostname;
-// });
 
 const untrustSite = async ({siteId}: {siteId: string}) => {
   await orbiter.untrustSite({siteId});

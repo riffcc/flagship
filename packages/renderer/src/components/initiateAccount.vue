@@ -57,7 +57,7 @@
 <script setup lang="ts">
 import {Nuchabäl} from 'nuchabal';
 import {computed, ref} from 'vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useOrbiter} from '/@/plugins/peerbit/utils';
 
 const {orbiter} = useOrbiter();
 const nuchabäl = new Nuchabäl({});

@@ -54,7 +54,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import {useOrbiter} from '/@/plugins/flagship/utils';
+import {useRouter} from 'vue-router';
+import {useOrbiter} from '/@/plugins/peerbit/utils';
 import releaseForm from '/@/components/releases/releaseForm.vue';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 

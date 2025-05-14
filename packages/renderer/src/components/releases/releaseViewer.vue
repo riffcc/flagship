@@ -35,7 +35,7 @@
   </v-dialog>
 </template>
 <script setup lang="ts">
-import type {types as orbiterTypes} from '@riffcc/orbiter';
+import type {types as orbiterTypes} from '/@/plugins/peerbit/orbiter-types';
 import {ref} from 'vue';
 
 import AudioViewer from './audioViewer.vue';

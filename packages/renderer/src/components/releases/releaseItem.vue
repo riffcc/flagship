@@ -60,15 +60,17 @@
 </template>
 
 <script setup lang="ts">
-import type {types as orbiterTypes} from '@riffcc/orbiter';
+import type {types as orbiterTypes} from '/@/plugins/peerbit/orbiter-types';
 
 import {computed, ref, watchEffect} from 'vue';
 
 import {suivre as follow} from '@constl/vue';
 import ReleaseViewer from './releaseViewer.vue';
 import UserChip from '/@/components/userChip.vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useOrbiter} from '/@/plugins/peerbit/utils';
 import {downloadFile} from '/@/utils';
+import {useDisplay} from 'vuetify';
+import {useRouter} from 'vue-router';
 
 const {orbiter} = useOrbiter();
 

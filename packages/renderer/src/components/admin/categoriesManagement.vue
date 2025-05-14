@@ -134,7 +134,7 @@ import ContentCategoryForm from '/@/components/releases/contentCategoryForm.vue'
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { type ContentCategoryItem, useContentCategoriesStore } from '../../stores/contentCategories';
 import { storeToRefs } from 'pinia';
-import { useOrbiter } from '/@/plugins/orbiter/utils';
+import { useOrbiter } from '/@/plugins/peerbit/utils';
 
 const { orbiter } = useOrbiter();
 const contentCategoriesStore = useContentCategoriesStore();

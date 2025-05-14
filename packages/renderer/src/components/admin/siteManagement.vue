@@ -99,7 +99,7 @@
 
 <script setup lang="ts">
 import { type Ref, ref, watch } from 'vue';
-import { useOrbiter } from '/@/plugins/orbiter/utils';
+import { useOrbiter } from '/@/plugins/peerbit/utils';
 import { useSiteColors } from '/@/composables/siteColors';
 import { parseUrlOrCid } from '/@/utils';
 import { useShowDefederation } from '/@/composables/showDefed';

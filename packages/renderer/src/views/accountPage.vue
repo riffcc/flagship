@@ -72,7 +72,6 @@
           <v-list-item
             v-for="conn in ipfsConnections"
             :key="conn.pair"
-            v-list
             :title="conn.pair"
             :subtitle="conn.adresses.join(',\n')"
           >
@@ -88,8 +87,9 @@ import {selectTranslation} from '/@/utils';
 
 import {useUserProfilePhoto} from '/@/components/users/utils';
 import {useStaticStatus} from '../composables/staticStatus';
-import {useOrbiter} from '/@/plugins/flagship/utils';
+import {useOrbiter} from '/@/plugins/peerbit/utils';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
+import UserAvatarComponent from '/@/components/userAvatar.vue';
 
 const {orbiter} = useOrbiter();
 // User name
@@ -131,7 +131,7 @@ onMounted(async () => {
 const { copy, isCopied } = useCopyToClipboard();
 
 // User avatar
-const userAvatar = useUserProfilePhoto(accountId); // useUserProfilePhoto might need adjustment if it expects a direct value not a ref
+const userAvatar = useUserProfilePhoto(accountId);
 
 // Account status
 const moderator = computed(() => orbiter?.followIsModerator ? orbiter.followIsModerator() : false);

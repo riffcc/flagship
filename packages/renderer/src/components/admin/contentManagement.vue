@@ -177,7 +177,7 @@
 import {computed, ref, type Ref} from 'vue';
 import {useDisplay} from 'vuetify';
 import {useStaticReleases} from '/@/composables/staticReleases';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useOrbiter} from '/@/plugins/peerbit/utils';
 // import { getStatusColor } from '/@/utils';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import ReleaseForm from '/@/components/releases/releaseForm.vue';
@@ -187,6 +187,7 @@ import { type PartialReleaseItem, useReleasesStore } from '/@/stores/releases';
 import { storeToRefs } from 'pinia';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
 import { parseUrlOrCid } from '/@/utils';
+import {useRouter} from 'vue-router';
 
 const {staticStatus} = useStaticStatus();
 const {lgAndUp, smAndDown} = useDisplay();

@@ -3,8 +3,10 @@
 import vue from '@vitejs/plugin-vue';
 import {copyFileSync} from 'fs';
 import {join} from 'node:path';
-import {renderer} from 'unplugin-auto-expose';
+// import {renderer} from 'unplugin-auto-expose'; // Removed unplugin-auto-expose
 import vuetify from 'vite-plugin-vuetify';
+// import topLevelAwait from 'vite-plugin-top-level-await'; // Replaced with vite-plugin-wasm
+import wasm from 'vite-plugin-wasm'; // Added import
 import {chrome} from '../../.electron-vendors.cache.json';
 import {injectAppVersion} from '../../version/inject-app-version-plugin.mjs';
 
@@ -25,6 +27,8 @@ if (forElectron) {
 
 const générerExtentions = () => {
   const extentions = [
+    // topLevelAwait(), // Replaced with vite-plugin-wasm
+    wasm(), // Added plugin
     vue(),
     // https://github.com/vuetifyjs/vuetify-loader/tree/next/packages/vite-plugin
     vuetify({
@@ -36,11 +40,11 @@ const générerExtentions = () => {
     nodePolyfills(),
   ];
   if (forElectron) {
-    extentions.push(
-      renderer.vite({
-        preloadEntry: join(PACKAGE_ROOT, '../preload/src/index.ts'),
-      }),
-    );
+    // extentions.push( // Usage of unplugin-auto-expose renderer.vite() removed
+    //   renderer.vite({
+    //     preloadEntry: join(PACKAGE_ROOT, '../preload/src/index.ts'),
+    //   }),
+    // );
   }
   extentions.push(injectAppVersion());
   return extentions;

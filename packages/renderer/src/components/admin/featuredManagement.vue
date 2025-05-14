@@ -161,7 +161,7 @@ import { useStaticStatus } from '/@/composables/staticStatus';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { filterActivedFeatured, filterPromotedFeatured, useReleasesStore, type PartialFeaturedReleaseItem } from '/@/stores/releases';
 import { storeToRefs } from 'pinia';
-import { useOrbiter } from '/@/plugins/orbiter/utils';
+import { useOrbiter } from '/@/plugins/peerbit/utils';
 import { useStaticReleases } from '/@/composables/staticReleases';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 

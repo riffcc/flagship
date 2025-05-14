@@ -71,8 +71,8 @@
 </template>
 
 <script lang="ts" setup>
-import type { types as orbiterTypes } from '@riffcc/orbiter';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, type Ref } from 'vue';
+import type { types as orbiterTypes } from '/@/plugins/peerbit/orbiter-types';
 
 const props = defineProps<{
   initialData?: Partial<orbiterTypes.ContentCategoryMetadataField[string] & { fieldKey: string; }>;

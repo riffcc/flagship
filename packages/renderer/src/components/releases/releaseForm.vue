@@ -120,10 +120,10 @@
 </template>
 
 <script setup lang="ts">
-import {consts, type types as orbiterTypes} from '@riffcc/orbiter';
+import {consts, type types as orbiterTypes} from '/@/plugins/peerbit/orbiter-types';
 import {cid} from 'is-ipfs';
 import {computed, onMounted, ref} from 'vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import {useOrbiter} from '/@/plugins/peerbit/utils';
 import type { ReleaseItem, PartialReleaseItem } from '/@/stores/releases';
 import { useContentCategoriesStore } from '/@/stores/contentCategories';
 import { storeToRefs } from 'pinia';
