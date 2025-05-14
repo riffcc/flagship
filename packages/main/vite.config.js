@@ -51,6 +51,10 @@ const config = {
   plugins: [injectAppVersion()],
   test: {
     deps: {
+      external: [
+        'better-sqlite3',
+        'bindings',
+      ],
       optimizer: {
         ssr: {
           include: [
