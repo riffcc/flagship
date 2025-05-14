@@ -40,7 +40,6 @@ export const onBrowser = async ({
     'packages',
     'renderer',
     'dist',
-    'web',
     'index.html',
   );
 
