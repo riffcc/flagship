@@ -15,16 +15,16 @@ export const onBrowser = async ({
   let browser: Browser;
   switch (typeNavigateur) {
     case 'chromium':
-      navigateur = await chromium.launch({
+      browser = await chromium.launch({
         args: ['--disable-web-security'],
         //        headless: false,
       });
       break;
     case 'firefox':
-      navigateur = await firefox.launch();
+      browser = await firefox.launch();
       break;
     case 'webkit':
-      navigateur = await webkit.launch({
+      browser = await webkit.launch({
         args: ['--disable-web-security'],
       });
       break;
