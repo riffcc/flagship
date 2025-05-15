@@ -1,7 +1,7 @@
 /* eslint-env node */
 
 import vue from '@vitejs/plugin-vue';
-import {copyFileSync} from 'fs';
+import {copyFileSync, mkdirSync} from 'fs';
 import {join} from 'node:path';
 // import {renderer} from 'unplugin-auto-expose'; // Removed unplugin-auto-expose
 import vuetify from 'vite-plugin-vuetify';
@@ -23,6 +23,21 @@ if (forElectron) {
   copyFileSync(join(PACKAGE_ROOT, 'indexElectron.html'), join(PACKAGE_ROOT, 'index.html'));
 } else {
   copyFileSync(join(PACKAGE_ROOT, 'indexBrowser.html'), join(PACKAGE_ROOT, 'index.html'));
+}
+
+// Ensure the target directory exists and copy the wasm file
+const wasmTargetDir = join(PACKAGE_ROOT, 'public/peerbit');
+const wasmSourcePath = join(PROJECT_ROOT, 'node_modules/@peerbit/riblt/dist/rateless_iblt_bg.wasm');
+const wasmDestPath = join(wasmTargetDir, 'rateless_iblt_bg.wasm');
+
+try {
+  mkdirSync(wasmTargetDir, { recursive: true });
+  copyFileSync(wasmSourcePath, wasmDestPath);
+  console.log(`Copied rateless_iblt_bg.wasm to ${wasmDestPath}`);
+} catch (error) {
+  console.error('Error copying WASM file:', error);
+  // Decide if you want to throw the error or let Vite continue
+  // For now, let's log and continue, but this might hide issues
 }
 
 const générerExtentions = () => {
