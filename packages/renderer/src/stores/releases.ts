@@ -214,7 +214,7 @@ export const useReleasesStore = defineStore('releases', () => {
         status.value = 'loading'; // Reset status
       }
     },
-    { immediate: false }, // immediate:false ensures it only runs on change after setup
+    { immediate: true }, // immediate:true ensures it runs on setup and on change
   );
 
   // The onMounted hook calling fetchReleasesFromPeerbit() was removed.
