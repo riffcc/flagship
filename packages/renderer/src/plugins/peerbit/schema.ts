@@ -162,7 +162,7 @@ enum AccounType {
   GUEST = 0,
   USER = 1,
   MODERATOR = 2,
-  ADMIN = 4,
+  ADMIN = 3,
 }
 
 @variant(0)
