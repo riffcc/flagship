@@ -40,6 +40,20 @@ try {
   // For now, let's log and continue, but this might hide issues
 }
 
+// Copy the any-store-opfs worker
+const opfsWorkerSourcePath = join(PROJECT_ROOT, 'node_modules/@peerbit/any-store-opfs/dist/peerbit/anystore-opfs-worker.min.js');
+const opfsWorkerDestPath = join(wasmTargetDir, 'anystore-opfs-worker.min.js'); // wasmTargetDir is public/peerbit
+
+try {
+  // The directory should already be created by the wasm copy step, 
+  // but calling mkdirSync again with recursive:true is safe.
+  mkdirSync(wasmTargetDir, { recursive: true }); 
+  copyFileSync(opfsWorkerSourcePath, opfsWorkerDestPath);
+  console.log(`Copied anystore-opfs-worker.min.js to ${opfsWorkerDestPath}`);
+} catch (error) {
+  console.error('Error copying OPFS worker file:', error);
+}
+
 const générerExtentions = () => {
   const extentions = [
     // topLevelAwait(), // Replaced with vite-plugin-wasm
@@ -97,6 +111,10 @@ const config = {
   server: {
     fs: {
       strict: true,
+    },
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
     },
   },
   build: {

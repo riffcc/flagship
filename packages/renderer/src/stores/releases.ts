@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia';
 import { useOrbiter } from '../plugins/peerbit/utils';
-import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
+import { computed, onScopeDispose, ref, watch, type Ref, inject } from 'vue';
 import type { types as orbiterTypes } from '../plugins/peerbit/orbiter-types';
 import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
+import { type Documents, SearchRequest } from '@peerbit/document';
+import type { Release as PeerbitRelease } from '../plugins/peerbit/schema';
 
 const NO_CONTENT_DELAY_MS = 20000;
 type ContentStatus = 'loading' | 'checking' | 'idle' | 'empty';
@@ -67,32 +69,60 @@ export const useReleasesStore = defineStore('releases', () => {
   const { staticReleases, staticFeaturedReleases } = useStaticReleases();
   const { staticStatus } = useStaticStatus();
 
+  const peerbitReleaseStore = inject<Documents<PeerbitRelease>>('peerbitReleaseStore');
+  const peerbitReleasesRaw = ref<PeerbitRelease[]>([]);
+
   const orbiterReleases = ref<orbiterTypes.ReleaseWithId<string>[]>([]);
   const orbiterFeaturedReleases = ref<orbiterTypes.FeaturedReleaseWithId[]>([]);
 
-  if (orbiter) {
-    if (orbiter.listenForReleases) {
-      orbiter.listenForReleases({
-        f: (releases: orbiterTypes.ReleaseWithId<string>[]) => {
-          orbiterReleases.value = releases;
-        },
-      });
-    }
-    if (orbiter.listenForSiteFeaturedReleases) {
-      orbiter.listenForSiteFeaturedReleases({
-        f: (featuredReleases: orbiterTypes.FeaturedReleaseWithId[]) => {
-          orbiterFeaturedReleases.value = featuredReleases;
-        },
-      });
-    }
+  // Commenting out Orbiter listeners to focus on Peerbit integration
+  /*
+  if (orbiter.value && orbiter.value.listenForReleases && !peerbitReleaseStore) { 
+    orbiter.value.listenForReleases({
+      f: (releases: orbiterTypes.ReleaseWithId<string>[]) => {
+        orbiterReleases.value = releases;
+      },
+    });
   }
+  if (orbiter.value && orbiter.value.listenForSiteFeaturedReleases && !peerbitReleaseStore) { 
+    orbiter.value.listenForSiteFeaturedReleases({
+      f: (featuredReleases: orbiterTypes.FeaturedReleaseWithId[]) => {
+        orbiterFeaturedReleases.value = featuredReleases;
+      },
+    });
+  }
+  */
 
   const status: Ref<ContentStatus> = ref('loading');
   const timerId = ref<ReturnType<typeof setTimeout> | null>(null);
 
   const releases = computed<ReleaseItem[]>(() => {
+    if (peerbitReleaseStore && peerbitReleasesRaw.value.length > 0) {
+      console.log('[ReleasesStore] Using Peerbit releases. Count:', peerbitReleasesRaw.value.length);
+      return peerbitReleasesRaw.value.map((pr) => {
+        let parsedMetadata: Record<string, unknown> = {};
+        try {
+          if (pr.metadata) {
+            parsedMetadata = JSON.parse(pr.metadata);
+          }
+        } catch (e) {
+          console.error('Failed to parse release metadata from Peerbit:', e);
+        }
+        return {
+          id: pr.id,
+          name: pr.name,
+          contentCID: pr.contentCID,
+          category: pr.categoryId,
+          author: parsedMetadata.author as string || 'N/A',
+          thumbnail: pr.thumbnailCID,
+          cover: parsedMetadata.cover as string,
+          metadata: parsedMetadata,
+        };
+      });
+    }
     if (staticStatus.value === 'static') return staticReleases.value;
     else {
+      console.log('[ReleasesStore] Falling back to Orbiter releases.');
       return (orbiterReleases.value || []).map((r) => ({
         id: r.release.id,
         name: r.release.release.contentName,
@@ -136,11 +166,13 @@ export const useReleasesStore = defineStore('releases', () => {
   });
 
   watch(
-    [orbiterReleases, orbiterFeaturedReleases, staticStatus],
-    ([currentOrbiterReleases, currentOrbiterFeaturedRels, currentStaticMode]) => {
+    [orbiterReleases, orbiterFeaturedReleases, staticStatus, peerbitReleasesRaw],
+    ([currentOrbiterReleases, currentOrbiterFeaturedRels, currentStaticMode, currentPeerbitReleases]) => {
       const isStatic = currentStaticMode === 'static';
-      const isLoaded = isStatic || (currentOrbiterReleases !== undefined && currentOrbiterFeaturedRels !== undefined);
-      const hasContentNow = activedFeaturedReleases.value.length > 0 || promotedFeaturedReleases.value.length > 0;
+      const hasPeerbitContent = currentPeerbitReleases && currentPeerbitReleases.length > 0;
+      const isLoaded = isStatic || hasPeerbitContent || (currentOrbiterReleases !== undefined && currentOrbiterFeaturedRels !== undefined);
+      const hasContentNow = hasPeerbitContent || activedFeaturedReleases.value.length > 0 || promotedFeaturedReleases.value.length > 0;
+      
       const newTargetStatus = determineTargetStatus(status.value, isStatic, isLoaded, hasContentNow);
 
       if (newTargetStatus !== 'checking' && timerId.value !== null) {
@@ -174,8 +206,38 @@ export const useReleasesStore = defineStore('releases', () => {
   const isLoading = computed(() => status.value === 'loading' || status.value === 'checking');
   const noContent = computed(() => status.value === 'empty');
 
+  async function fetchReleasesFromPeerbit() {
+    if (!peerbitReleaseStore) {
+      console.log('[ReleasesStore] Peerbit release store not available for fetching.');
+      return;
+    }
+    try {
+      console.log('[ReleasesStore] Fetching releases from Peerbit...');
+      const results = await peerbitReleaseStore.index.search(new SearchRequest({ query: [] }));
+      console.log('[ReleasesStore] Fetched from Peerbit, raw results:', results);
+      peerbitReleasesRaw.value = results as PeerbitRelease[];
+      console.log('[ReleasesStore] Parsed Peerbit releases:', peerbitReleasesRaw.value);
+    } catch (error) {
+      console.error('[ReleasesStore] Error fetching releases from Peerbit:', error);
+      peerbitReleasesRaw.value = [];
+    }
+  }
+
+  watch(
+    () => peerbitReleaseStore,
+    (newStore) => {
+      if (newStore) {
+        fetchReleasesFromPeerbit();
+      } else {
+        peerbitReleasesRaw.value = [];
+      }
+    },
+    { immediate: true }
+  );
+
   return {
     releases,
+    fetchReleasesFromPeerbit,
     unfilteredFeaturedReleases,
     activedFeaturedReleases,
     promotedFeaturedReleases,

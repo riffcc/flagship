@@ -95,10 +95,12 @@
     <v-chip variant="text">
       <template #prepend>
         <img
-          src="https://mirrors.creativecommons.org/presskit/icons/cc.svg"
+          src="/assets/cc.svg"
           alt="Creative Commons License"
-          width="17em"
-          class="mr-2"
+          class="mr-1"
+          style="filter: invert(100%) sepia(0%) saturate(7438%) hue-rotate(78deg) brightness(109%) contrast(95%)"
+          width="20"
+          height="20"
         />
       </template>
       e cinere surgemus.

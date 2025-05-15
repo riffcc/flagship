@@ -61,12 +61,18 @@ export class Release {
     categoryId: string,
     contentCID: string,
     thumbnailCID?: string,
+    metadata?: string
   ) {
-    this.id = uuid();
-    this.name = name;
-    this.categoryId = categoryId;
-    this.contentCID = contentCID;
-    this.thumbnailCID = thumbnailCID;
+    this[RELEASE_ID_PROPERTY] = uuid();
+    this[RELEASE_NAME_PROPERTY] = name;
+    this[RELEASE_CATEGORY_ID_PROPERTY] = categoryId;
+    this[RELEASE_CONTENT_CID_PROPERTY] = contentCID;
+    if (thumbnailCID) {
+      this[RELEASE_THUMBNAIL_CID_PROPERTY] = thumbnailCID;
+    }
+    if (metadata) {
+      this[RELEASE_METADATA_PROPERTY] = metadata;
+    }
   }
 }
 
