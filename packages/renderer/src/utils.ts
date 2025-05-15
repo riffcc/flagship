@@ -43,7 +43,7 @@ export const formatTime = (ms: number): string => {
     return '00:00';
   }
 
-  let totalSeconds = Math.floor(ms);
+  let totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   totalSeconds %= 3600;
   const minutes = Math.floor(totalSeconds / 60);
