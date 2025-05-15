@@ -3,22 +3,18 @@
 import vue from '@vitejs/plugin-vue';
 import {copyFileSync, mkdirSync} from 'fs';
 import {join} from 'node:path';
-// import {renderer} from 'unplugin-auto-expose'; // Removed unplugin-auto-expose
 import vuetify from 'vite-plugin-vuetify';
-// import topLevelAwait from 'vite-plugin-top-level-await'; // Replaced with vite-plugin-wasm
-import wasm from 'vite-plugin-wasm'; // Added import
+import wasm from 'vite-plugin-wasm';
 import {chrome} from '../../.electron-vendors.cache.json';
 import {injectAppVersion} from '../../version/inject-app-version-plugin.mjs';
-
 import {nodePolyfills} from 'vite-plugin-node-polyfills';
 
 const PACKAGE_ROOT = __dirname;
 const PROJECT_ROOT = join(PACKAGE_ROOT, '../..');
+const PACKAGES_ROOT = join(PACKAGE_ROOT, '..');
 
 const forElectron = !process.env.WEB;
 
-// This is really ugly, but nothing else works with Vite as I can't figure out where to
-// change the default index.html location...
 if (forElectron) {
   copyFileSync(join(PACKAGE_ROOT, 'indexElectron.html'), join(PACKAGE_ROOT, 'index.html'));
 } else {
@@ -45,9 +41,9 @@ const opfsWorkerSourcePath = join(PROJECT_ROOT, 'node_modules/@peerbit/any-store
 const opfsWorkerDestPath = join(wasmTargetDir, 'anystore-opfs-worker.min.js'); // wasmTargetDir is public/peerbit
 
 try {
-  // The directory should already be created by the wasm copy step, 
+  // The directory should already be created by the wasm copy step,
   // but calling mkdirSync again with recursive:true is safe.
-  mkdirSync(wasmTargetDir, { recursive: true }); 
+  mkdirSync(wasmTargetDir, { recursive: true });
   copyFileSync(opfsWorkerSourcePath, opfsWorkerDestPath);
   console.log(`Copied anystore-opfs-worker.min.js to ${opfsWorkerDestPath}`);
 } catch (error) {
@@ -56,10 +52,8 @@ try {
 
 const générerExtentions = () => {
   const extentions = [
-    // topLevelAwait(), // Replaced with vite-plugin-wasm
-    wasm(), // Added plugin
+    wasm(),
     vue(),
-    // https://github.com/vuetifyjs/vuetify-loader/tree/next/packages/vite-plugin
     vuetify({
       autoImport: true,
       styles: {
@@ -68,31 +62,26 @@ const générerExtentions = () => {
     }),
     nodePolyfills(),
   ];
-  if (forElectron) {
-    // extentions.push( // Usage of unplugin-auto-expose renderer.vite() removed
-    //   renderer.vite({
-    //     preloadEntry: join(PACKAGE_ROOT, '../preload/src/index.ts'),
-    //   }),
-    // );
-  }
+  // No specific renderer plugin for auto-expose needed here with manual contextBridge
   extentions.push(injectAppVersion());
   return extentions;
 };
 
 const générerAliasRésolution = () => {
   const common = {
+    '/@/lib/': join(PACKAGES_ROOT, 'lib', 'src') + '/',
     '/@/': join(PACKAGE_ROOT, 'src') + '/',
   };
   if (forElectron) {
     return common;
   } else {
-    return Object.assign({}, common, {
-      '#preload': join(PACKAGE_ROOT, 'src') + '/polyfillPreload',
-    });
+    return {
+      ...common,
+      '#preload': join(PACKAGE_ROOT, 'src') + '/polyfillPreload', // Ensure this polyfillPreload.ts exists if used for web
+    };
   }
 };
 
-// Same for Electron or web, since this is for the renderer process GUI
 const dépendsÀExclure = ['chokidar', '@libp2p/tcp', '@libp2p/mdns', 'env-paths', 'datastore-fs', 'blockstore-fs'];
 
 /**
@@ -107,7 +96,7 @@ const config = {
     alias: générerAliasRésolution(),
     extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
   },
-  base: '', // forElectron ? '' : '/github-repo/', // Only necessary if on non-root url, such as github pages at org.github.io/repo
+  base: '',
   server: {
     fs: {
       strict: true,
@@ -134,6 +123,10 @@ const config = {
     esbuildOptions: {
       target: 'esnext',
     },
+  },
+  // Define IS_ELECTRON for renderer code
+  define: {
+    'import.meta.env.IS_ELECTRON': forElectron,
   },
   test: {
     environment: 'happy-dom',

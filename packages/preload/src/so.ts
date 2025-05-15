@@ -1,4 +1,4 @@
-export const surMac = process.platform === 'darwin';
-export const surLinux = process.platform === 'linux';
-export const surWindows = process.platform === 'win32';
-export const plateforme = process.platform;
+export const isMac = process.platform === 'darwin';
+export const isLinux = process.platform === 'linux';
+export const isWindows = process.platform === 'win32';
+export const platform = process.platform;

@@ -49,24 +49,6 @@
           </v-col>
         </content-section>
       </template>
-
-      <!-- Test Section for Peerbit Release -->
-      <template v-if="testPeerbitSection && testPeerbitSection.items.length > 0">
-        <content-section
-          :title="testPeerbitSection.title"
-        >
-          <v-col
-            v-for="item in testPeerbitSection.items"
-            :key="item.id"
-          >
-            <content-card
-              :item="item"
-              cursor-pointer
-              @click="item.id && router.push(`/release/${item.id}`)"
-            />
-          </v-col>
-        </content-section>
-      </template>
     </template>
     <v-sheet
       v-else
@@ -86,26 +68,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import { type ReleaseItem, useReleasesStore } from '/@/stores/releases';
-import { useContentCategoriesStore, type ContentCategoryItem } from '/@/stores/contentCategories';
+import { useContentCategoriesStore, type ContentCategoryMetadataField, type ContentCategoryWithId} from '/@/stores/contentCategories';
 import { storeToRefs } from 'pinia';
 
 const router = useRouter();
 
 const releasesStore = useReleasesStore();
-const { releases, activedFeaturedReleases, promotedFeaturedReleases, isLoading, noContent } = storeToRefs(releasesStore);
+const { releases, promotedFeaturedReleases, isLoading, noContent } = storeToRefs(releasesStore);
 
 const contentCategoriesStore = useContentCategoriesStore();
 const { featuredContentCategories } = storeToRefs(contentCategoriesStore);
 
 function categorizeReleasesByFeaturedCategories(
   releases: ReleaseItem[],
-  featuredCats: ContentCategoryItem[],
+  featuredCats: ContentCategoryWithId<ContentCategoryMetadataField>[],
   limitPerCategory: number = 8,
 ): Record<string, ReleaseItem[]> {
   const result: Record<string, ReleaseItem[]> = {};
@@ -137,7 +119,7 @@ function categorizeReleasesByFeaturedCategories(
 }
 
 const categorizedReleases = computed(() => {
-  return categorizeReleasesByFeaturedCategories(activedFeaturedReleases.value, featuredContentCategories.value);
+  return categorizeReleasesByFeaturedCategories(releases.value.slice(1), featuredContentCategories.value);
 });
 
 const activeSections = computed(() => {
@@ -154,26 +136,6 @@ const activeSections = computed(() => {
       };
     })
     .filter(section => section.items.length > 0);
-});
-
-// New Test Section for Peerbit Data
-const testPeerbitSection = computed(() => {
-  if (releases.value.length > 0) {
-    // Let's take the first release from the main `releases` computed property
-    // This `releases.value` should now be populated from Peerbit by `useReleasesStore`
-    const peerbitItem = releases.value[0]; 
-    console.log('[HomePage] Test Peerbit Item for section:', peerbitItem);
-    if (peerbitItem && peerbitItem.id) { // Ensure item and id exist
-      return {
-        id: 'peerbit-test-section',
-        categoryId: peerbitItem.category || 'unknown',
-        title: 'From Peerbit Store',
-        items: [peerbitItem],
-        navigationPath: '/', // Dummy path
-      };
-    }
-  }
-  return null; // Return null if no peerbit item to display
 });
 
 </script>

@@ -1,32 +1,23 @@
 /**
  * @module preload
  */
-console.log('[Preload] Script starting...');
 
-import {contextBridge, ipcRenderer} from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
+import * as so from './so';
+import type { Release } from '/@/lib/schema';
 
-// Define the type for the release data to be sent to the main process
-type ReleaseDataType = {
-  name: string;
-  file: string; // Corresponds to contentCID from the form
-  author: string;
-  category: string;
-  thumbnail?: string;
-  cover?: string;
-  metadata?: Record<string, unknown> | string;
-};
-
-// Define the expected response structure from the IPC call
-type AddReleaseResponseType = {
-  success: boolean;
-  message?: string;
-  error?: string;
-};
-
-contextBridge.exposeInMainWorld('peerbitAPI', {
-  addRelease: (releaseData: ReleaseDataType): Promise<AddReleaseResponseType> =>
-    ipcRenderer.invoke('peerbit:addRelease', releaseData),
+contextBridge.exposeInMainWorld('osInfo', {
+  isMac: so.isMac,
+  isLinux: so.isLinux,
+  isWindows: so.isWindows,
+  platform: so.platform,
 });
-console.log('[Preload] peerbitAPI exposed via contextBridge.');
 
-console.log('[Preload] Original exports restored.');
+contextBridge.exposeInMainWorld('electronPeerbit', {
+  getPublicKey: (): Promise<string> => ipcRenderer.invoke('peerbit:get-public-key'),
+  getPeerId: (): Promise<string> => ipcRenderer.invoke('peerbit:get-peer-id'),
+  dial: (address: string): Promise<boolean> => ipcRenderer.invoke('peerbit:dial', address),
+  addRelease: (release: Release): Promise<boolean> => ipcRenderer.invoke('peerbit:add-release', release),
+  getRelease: (id: string): Promise<Release> => ipcRenderer.invoke('peerbit:get-release', id),
+  getLatestReleases: (size?: number): Promise<Release[]> => ipcRenderer.invoke('peerbit:get-latest-releases', size),
+});

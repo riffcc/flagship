@@ -1,6 +1,6 @@
 import {dialog, ipcMain, type IpcMainInvokeEvent} from 'electron';
 
-const choisirDossier = async (_événement: IpcMainInvokeEvent): Promise<string | undefined> => {
+const chooseDirectory = async (_event: IpcMainInvokeEvent): Promise<string | undefined> => {
   return (
     await dialog.showOpenDialog({
       properties: ['openDirectory', 'promptToCreate'],
@@ -8,6 +8,6 @@ const choisirDossier = async (_événement: IpcMainInvokeEvent): Promise<string 
   ).filePaths[0];
 };
 
-export const connecterSystèmeFichiers = () => {
-  ipcMain.handle('choisirDossier', choisirDossier);
+export const connectFileSystem = () => {
+  ipcMain.handle('chooseDirectory', chooseDirectory);
 };

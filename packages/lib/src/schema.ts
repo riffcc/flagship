@@ -1,4 +1,5 @@
-import { deserialize, field, option, serialize, variant } from '@dao-xyz/borsh';
+import { SearchRequest, Sort, SortDirection } from '@peerbit/document';
+import { deserialize, field, option, variant } from '@dao-xyz/borsh';
 import { PublicSignKey } from '@peerbit/crypto';
 import { sha256Sync } from '@peerbit/crypto';
 import {
@@ -56,22 +57,22 @@ export class Release {
   @field({ type: option('string') })
   [RELEASE_METADATA_PROPERTY]?: string;
 
-  constructor(
-    name: string,
-    categoryId: string,
-    contentCID: string,
-    thumbnailCID?: string,
-    metadata?: string
-  ) {
+  constructor(props: {
+    [RELEASE_NAME_PROPERTY]: string;
+    [RELEASE_CATEGORY_ID_PROPERTY]: string;
+    [RELEASE_CONTENT_CID_PROPERTY]: string;
+    [RELEASE_THUMBNAIL_CID_PROPERTY]?: string;
+    [RELEASE_METADATA_PROPERTY]?: string;
+  }) {
     this[RELEASE_ID_PROPERTY] = uuid();
-    this[RELEASE_NAME_PROPERTY] = name;
-    this[RELEASE_CATEGORY_ID_PROPERTY] = categoryId;
-    this[RELEASE_CONTENT_CID_PROPERTY] = contentCID;
-    if (thumbnailCID) {
-      this[RELEASE_THUMBNAIL_CID_PROPERTY] = thumbnailCID;
+    this[RELEASE_NAME_PROPERTY] = props[RELEASE_NAME_PROPERTY];
+    this[RELEASE_CATEGORY_ID_PROPERTY] = props[RELEASE_CATEGORY_ID_PROPERTY];
+    this[RELEASE_CONTENT_CID_PROPERTY] = props[RELEASE_CONTENT_CID_PROPERTY];
+    if (props[RELEASE_THUMBNAIL_CID_PROPERTY]) {
+      this[RELEASE_THUMBNAIL_CID_PROPERTY] = props[RELEASE_THUMBNAIL_CID_PROPERTY];
     }
-    if (metadata) {
-      this[RELEASE_METADATA_PROPERTY] = metadata;
+    if (props[RELEASE_METADATA_PROPERTY]) {
+      this[RELEASE_METADATA_PROPERTY] = props[RELEASE_METADATA_PROPERTY];
     }
   }
 }
@@ -104,19 +105,22 @@ export class IndexableRelease {
   @field({ type: Uint8Array })
   author: Uint8Array;
 
-
   constructor(
     release: Release,
     createdAt: bigint,
     modified: bigint,
     author: PublicSignKey,
   ) {
-    this.id = release.id;
-    this.name = release.name;
-    this.categoryId = release.categoryId;
-    this.contentCID = release.contentCID;
-    this.thumbnailCID = release.thumbnailCID;
-    this.metadata = release.metadata;
+    this[RELEASE_ID_PROPERTY] = release[RELEASE_ID_PROPERTY];
+    this[RELEASE_NAME_PROPERTY] = release[RELEASE_NAME_PROPERTY];
+    this[RELEASE_CATEGORY_ID_PROPERTY] = release[RELEASE_CATEGORY_ID_PROPERTY];
+    this[RELEASE_CONTENT_CID_PROPERTY] = release[RELEASE_CONTENT_CID_PROPERTY];
+    if (release[RELEASE_THUMBNAIL_CID_PROPERTY]) {
+      this[RELEASE_THUMBNAIL_CID_PROPERTY] = release[RELEASE_THUMBNAIL_CID_PROPERTY];
+    }
+    if (release[RELEASE_METADATA_PROPERTY]) {
+      this[RELEASE_METADATA_PROPERTY] = release[RELEASE_METADATA_PROPERTY];
+    }
     this.created = createdAt;
     this.modified = modified;
     this.author = author.bytes;
@@ -140,17 +144,17 @@ export class FeaturedRelease {
   @field({ type: 'bool' })
   [FEATURED_PROMOTED_PROPERTY]: boolean;
 
-  constructor(
-    releaseId: string,
-    startTime: string,
-    endTime: string,
-    promoted: boolean,
-  ) {
+  constructor(props: {
+    releaseId: string;
+    startTime: string;
+    endTime: string;
+    promoted: boolean;
+  }) {
     this.id = uuid();
-    this.releaseId = releaseId;
-    this.startTime = startTime;
-    this.endTime = endTime;
-    this.promoted = promoted;
+    this.releaseId = props[FEATURED_RELEASE_ID_PROPERTY];
+    this.startTime = props[FEATURED_START_TIME_PROPERTY];
+    this.endTime = props[FEATURED_END_TIME_PROPERTY];
+    this.promoted = props[FEATURED_PROMOTED_PROPERTY];
   }
 }
 
@@ -171,19 +175,58 @@ export class ContentCategory {
   @field({ type: option('string') })
   [CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY]?: string;
 
-  constructor(
-    name: string,
-    featured: boolean,
-    description?: string,
-    metadataSchema?: string,
-  ) {
-    this.id = uuid();
-    this.name = name;
-    this.featured = featured;
-    this.description = description;
-    this.metadataSchema = metadataSchema;
+  constructor(props: {
+    name: string;
+    featured: boolean;
+    description?: string;
+    metadataSchema?: string;
+  }) {
+    this[CONTENT_CATEGORY_ID_PROPERTY] = uuid();
+    this[CONTENT_CATEGORY_NAME_PROPERTY] = props[CONTENT_CATEGORY_NAME_PROPERTY];
+    this[CONTENT_CATEGORY_FEATURED_PROPERTY] = props[CONTENT_CATEGORY_FEATURED_PROPERTY];
+    if (props[CONTENT_CATEGORY_DESCRIPTION_PROPERTY]) {
+      this[CONTENT_CATEGORY_DESCRIPTION_PROPERTY] = props[CONTENT_CATEGORY_DESCRIPTION_PROPERTY];
+    }
+    if (props[CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY]) {
+      this[CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY] = props[CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY];
+    }
   }
 }
+
+@variant(0)
+export class Subscription {
+  @field({ type: 'string' })
+  [SUBSCRIPTION_ID_PROPERTY]: string;
+
+  @field({ type: 'string' })
+  [SUBSCRIPTION_SITE_ID_PROPERTY]: string;
+
+  @field({ type: option('string') })
+  [SUBSCRIPTION_NAME_PROPERTY]?: string;
+
+  constructor(props: { siteId: string, name?: string }) {
+    this[SUBSCRIPTION_ID_PROPERTY] = uuid();
+    this[SUBSCRIPTION_SITE_ID_PROPERTY] = props[SUBSCRIPTION_SITE_ID_PROPERTY];
+    if (props[SUBSCRIPTION_NAME_PROPERTY]) {
+      this[SUBSCRIPTION_NAME_PROPERTY] = props[SUBSCRIPTION_NAME_PROPERTY];
+    }
+  }
+}
+
+@variant(0)
+export class BlockedContent {
+  @field({ type: 'string' })
+  [BLOCKED_CONTENT_ID_PROPERTY]: string;
+
+  @field({ type: 'string' })
+  [BLOCKED_CONTENT_CID_PROPERTY]: string;
+
+  constructor(cid: string) {
+    this[BLOCKED_CONTENT_ID_PROPERTY] = uuid();
+    this[BLOCKED_CONTENT_CID_PROPERTY] = cid;
+  }
+}
+
 
 export enum AccountType {
   GUEST = 0,
@@ -212,38 +255,6 @@ export class Account {
 
   get publicKey() {
     return deserialize(this.id, PublicSignKey);
-  }
-}
-
-@variant(0)
-export class Subscription {
-  @field({ type: 'string' })
-  [SUBSCRIPTION_ID_PROPERTY]: string;
-
-  @field({ type: 'string' })
-  [SUBSCRIPTION_SITE_ID_PROPERTY]: string;
-
-  @field({ type: option('string') })
-  [SUBSCRIPTION_NAME_PROPERTY]?: string;
-
-  constructor(siteId: string, name: string) {
-    this.id = uuid();
-    this.siteId = siteId;
-    this.name = name;
-  }
-}
-
-@variant(0)
-export class BlockedContent {
-  @field({ type: 'string' })
-  [BLOCKED_CONTENT_ID_PROPERTY]: string;
-
-  @field({ type: 'string' })
-  [BLOCKED_CONTENT_CID_PROPERTY]: string;
-
-  constructor(cid: string) {
-    this.id = uuid();
-    this.cid = cid;
   }
 }
 
@@ -408,5 +419,25 @@ export class Site extends Program<SiteArgs> {
         max: undefined,
       },
     });
+  }
+
+  async addRelease(release: Release): Promise<string> {
+    const result = await this.releases.put(release);
+    return result.entry.hash;
+  }
+
+  async getRelease(id: string): Promise<Release> {
+    return this.releases.index.get(id);
+  }
+
+  async getLatestReleases(size = 30): Promise<Release[]> {
+    return this.releases.index.search(
+      new SearchRequest({
+        sort: [
+          new Sort({ key: 'created', direction: SortDirection.DESC }),
+        ],
+        fetch: size,
+      }),
+    );
   }
 }
