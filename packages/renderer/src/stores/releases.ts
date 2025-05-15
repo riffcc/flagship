@@ -179,20 +179,46 @@ export const useReleasesStore = defineStore('releases', () => {
   const noContent = computed(() => status.value === 'empty');
 
   async function fetchReleasesFromPeerbit() {
+    // Ensure the peerbitService Ref itself was injected AND its .value (the service instance) is available
+    if (!peerbitService || !peerbitService.value) {
+      console.warn('[ReleasesStore] fetchReleasesFromPeerbit: Peerbit service Ref not injected or service instance not available.');
+      // Set to empty array or null, depending on how "no service" should be represented.
+      // Empty array is consistent with error handling below.
+      releasesRaw.value = [];
+      return;
+    }
+
+    const serviceInstance = peerbitService.value; // Safe to use now
     try {
-      console.log('[ReleasesStore] Fetching releases from Peerbit...');
-      const results = await peerbitService.getLatestReleases();
+      console.log('[ReleasesStore] Fetching releases from Peerbit service instance...');
+      const results = await serviceInstance.getLatestReleases();
       console.log('[ReleasesStore] Fetched from Peerbit, raw results:', results);
       releasesRaw.value = results;
-      console.log('[ReleasesStore] Parsed Peerbit releases:', releasesRaw.value);
+      // console.log('[ReleasesStore] Parsed Peerbit releases:', releasesRaw.value); // Already logged by computed if needed
     } catch (error) {
       console.error('[ReleasesStore] Error fetching releases from Peerbit:', error);
-      releasesRaw.value = [];
+      releasesRaw.value = []; // Set to empty on error
     }
   }
 
-  // The onMounted hook calling fetchReleasesFromPeerbit() is removed.
-  // The fetch is already initiated from src/index.ts after Peerbit plugin install and before app mount.
+  // Watch for the Peerbit service to become available
+  watch(
+    () => peerbitService?.value, // Safely access .value from the potentially undefined ref
+    (newServiceInstance, oldServiceInstance) => {
+      if (newServiceInstance && !oldServiceInstance) {
+        console.log('[ReleasesStore] Peerbit service became available. Fetching initial releases.');
+        fetchReleasesFromPeerbit();
+      } else if (!newServiceInstance && oldServiceInstance) {
+        console.log('[ReleasesStore] Peerbit service became unavailable.');
+        releasesRaw.value = null; // Or [], to clear data if service disappears
+        status.value = 'loading'; // Reset status
+      }
+    },
+    { immediate: false }, // immediate:false ensures it only runs on change after setup
+  );
+
+  // The onMounted hook calling fetchReleasesFromPeerbit() was removed.
+  // Fetching is now triggered by the watcher when the peerbitService becomes available.
 
   return {
     releases,
