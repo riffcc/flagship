@@ -77,42 +77,7 @@ export default {
       console.log('[Peerbit Plugin Install] No bootstrappers defined.');
     }
 
-    // Run Release put/get test asynchronously without blocking plugin installation
-    (async () => {
-      try {
-        console.log('[Peerbit Plugin Install] Starting async Release put/get test...');
-        const newRelease = new Release({
-          name: 'RiP!: A Remix Manifesto',
-          categoryId: 'movie',
-          contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
-          thumbnailCID: 'Qmb3eeESRoX5L6NhTYLEtFFUS1FZgqe1e7hdBk2f57DUGh',
-          metadata: JSON.stringify({
-            classification: 'PG',
-            description: 'Join filmmaker Brett Gaylor and mashup artist Girl Talk as they explore copyright and content creation in the digital age. In the process they dissect the media landscape of the 21st century and shatter the wall between users and producers.',
-            duration: '1h 26m',
-            author: 'Brett Gaylor',
-            cover: 'QmcD4R3Qj8jBWY73H9LQWESgonNB1AMN3of23ubjDhJVSm',
-          }),
-        });
-
-        const result = await peerbitServiceInstance.addRelease(newRelease);
-        console.log(`[Peerbit Plugin Install] Async Test: Successfully put Release: ${newRelease.id} - ${newRelease.name}`);
-        console.log(`[Peerbit Plugin Install] Async Test: Entry hash: ${result}`);
-
-        const retrievedRelease = await peerbitServiceInstance.getRelease(newRelease.id);
-        if (retrievedRelease) {
-          console.log(`[Peerbit Plugin Install] Async Test: Successfully retrieved Release: ${retrievedRelease.id} - ${retrievedRelease.name}`);
-          const replacer = (_key: string, value: unknown) =>
-            typeof value === 'bigint' ? value.toString() : value;
-          console.log('[Peerbit Plugin Install] Async Test: Retrieved Release Data:', JSON.stringify(retrievedRelease, replacer, 2));
-        } else {
-          console.error(`[Peerbit Plugin Install] Async Test: Failed to retrieve Release by ID: ${newRelease.id}`);
-        }
-      } catch (error) {
-        console.error('[Peerbit Plugin Install] Error during async Release put/get test:', error);
-      }
-    })();
-    // --- End Async Test ---
+    // The async Release put/get test has been moved to src/index.ts to run after app mount.
 
     // console.log('[Peerbit Plugin Install] Attempting to open TrustedNetwork...');
     // const trustedNetworkInstance = new TrustedNetwork({
@@ -152,5 +117,7 @@ export default {
     app.provide('time', timeUtility);
     app.provide('logger', logInstance);
     console.log('[Peerbit Plugin Install] Peerbit, SiteProgram, stores, and utilities provided. Install function ending.');
+
+    return peerbitServiceInstance; // Return the instance
   },
 };
