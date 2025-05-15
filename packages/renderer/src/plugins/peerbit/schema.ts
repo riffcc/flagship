@@ -65,6 +65,45 @@ export class Release {
   }
 }
 
+export class IndexableRelease {
+  @field({ type: 'string' })
+  [RELEASE_ID_PROPERTY]: string;
+  @field({ type: 'string' })
+  [RELEASE_NAME_PROPERTY]: string;
+  @field({ type: 'string' })
+  [RELEASE_CATEGORY_ID_PROPERTY]: string;
+  @field({ type: 'string' })
+  [RELEASE_CONTENT_CID_PROPERTY]: string;
+  @field({ type: option('string') })
+  [RELEASE_THUMBNAIL_CID_PROPERTY]?: string;
+  @field({ type: option('string') })
+  [RELEASE_METADATA_PROPERTY]?: string;
+  @field({ type: 'u64' })
+  created: bigint;
+  @field({ type: 'u64' })
+  modified: bigint;
+  @field({ type: Uint8Array })
+  author: Uint8Array;
+
+
+  constructor(
+    release: Release,
+    createdAt: bigint,
+    modified: bigint,
+    author: PublicSignKey,
+  ) {
+    this.id = release.id;
+    this.name = release.name;
+    this.categoryId = release.categoryId;
+    this.contentCID = release.contentCID;
+    this.thumbnailCID = release.thumbnailCID;
+    this.metadata = release.metadata;
+    this.created = createdAt;
+    this.modified = modified;
+    this.author = author.bytes;
+  }
+}
+
 @variant(0)
 export class FeaturedRelease {
   @field({ type: 'string' })
@@ -184,7 +223,7 @@ type SiteArgs = { replicate?: ReplicationOptions };
 export class Site extends Program<SiteArgs> {
 
   @field({ type: Documents })
-  releases: Documents<Release>;
+  releases: Documents<Release, IndexableRelease>;
 
   @field({ type: Documents })
   featuredReleases: Documents<FeaturedRelease>;
@@ -235,6 +274,22 @@ export class Site extends Program<SiteArgs> {
       canPerform: async () => {
         //TODO: implement access control
         return true;
+      },
+      index: {
+          canRead: async () => {
+              return true;
+          },
+          type: IndexableRelease,
+          transform: async (release, ctx) => {
+              return new IndexableRelease(
+                  release,
+                  ctx.created,
+                  ctx.modified,
+                  (await this.releases.log.log.get(
+                      ctx.head,
+                  ))!.signatures[0].publicKey,
+              );
+          },
       },
       replicas: {
         min: 2,
