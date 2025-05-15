@@ -191,9 +191,8 @@ export const useReleasesStore = defineStore('releases', () => {
     }
   }
 
-  onMounted(() => {
-    fetchReleasesFromPeerbit();
-  });
+  // The onMounted hook calling fetchReleasesFromPeerbit() is removed.
+  // The fetch is already initiated from src/index.ts after Peerbit plugin install and before app mount.
 
   return {
     releases,

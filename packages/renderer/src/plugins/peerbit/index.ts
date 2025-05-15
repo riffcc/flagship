@@ -62,52 +62,57 @@ export default {
 
     if (bootstrappersRaw) {
       const bootstrappers = bootstrappersRaw.split(',').map((b) => b.trim());
-      console.log('[Peerbit Plugin Install] Dialing bootstrappers:', bootstrappers);
-      for (const bootstrapper of bootstrappers) {
+      console.log('[Peerbit Plugin Install] Dialing bootstrappers in parallel:', bootstrappers);
+      const dialPromises = bootstrappers.map(async (bootstrapper) => {
         try {
           await peerbitServiceInstance.dial(bootstrapper);
           console.log(`[Peerbit Plugin Install] Dialed ${bootstrapper} successfully`);
         } catch (dialError) {
           console.error(`[Peerbit Plugin Install] Error dialing bootstrapper ${bootstrapper}:`, dialError);
         }
-      }
+      });
+      await Promise.allSettled(dialPromises);
+      console.log('[Peerbit Plugin Install] Finished dialing bootstrappers.');
     } else {
       console.log('[Peerbit Plugin Install] No bootstrappers defined.');
     }
-    try {
-      console.log('[Peerbit Plugin Install] Attempting to put a new Release...');
-      const newRelease = new Release({
-        name: 'RiP!: A Remix Manifesto',
-        categoryId: 'movie',
-        contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
-        thumbnailCID: 'Qmb3eeESRoX5L6NhTYLEtFFUS1FZgqe1e7hdBk2f57DUGh',
-        metadata: JSON.stringify({
-          classification: 'PG',
-          description: 'Join filmmaker Brett Gaylor and mashup artist Girl Talk as they explore copyright and content creation in the digital age. In the process they dissect the media landscape of the 21st century and shatter the wall between users and producers.',
-          duration: '1h 26m',
-          author: 'Brett Gaylor',
-          cover: 'QmcD4R3Qj8jBWY73H9LQWESgonNB1AMN3of23ubjDhJVSm',
-        }),
-      });
 
-      const result = await peerbitServiceInstance.addRelease(newRelease);
-      console.log(`[Peerbit Plugin Install] Successfully put Release: ${newRelease.id} - ${newRelease.name}`);
-      console.log(`[Peerbit Plugin Install] Entry hash: ${result}`);
+    // Run Release put/get test asynchronously without blocking plugin installation
+    (async () => {
+      try {
+        console.log('[Peerbit Plugin Install] Starting async Release put/get test...');
+        const newRelease = new Release({
+          name: 'RiP!: A Remix Manifesto',
+          categoryId: 'movie',
+          contentCID: 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q',
+          thumbnailCID: 'Qmb3eeESRoX5L6NhTYLEtFFUS1FZgqe1e7hdBk2f57DUGh',
+          metadata: JSON.stringify({
+            classification: 'PG',
+            description: 'Join filmmaker Brett Gaylor and mashup artist Girl Talk as they explore copyright and content creation in the digital age. In the process they dissect the media landscape of the 21st century and shatter the wall between users and producers.',
+            duration: '1h 26m',
+            author: 'Brett Gaylor',
+            cover: 'QmcD4R3Qj8jBWY73H9LQWESgonNB1AMN3of23ubjDhJVSm',
+          }),
+        });
 
-      // --- Test: Get the Release document ---
-      const retrievedRelease = await peerbitServiceInstance.getRelease(newRelease.id);
-      if (retrievedRelease) {
-        console.log(`[Peerbit Plugin Install] Successfully retrieved Release: ${retrievedRelease.id} - ${retrievedRelease.name}`);
-        const replacer = (_key: string, value: unknown) =>
-          typeof value === 'bigint' ? value.toString() : value;
-        console.log('[Peerbit Plugin Install] Retrieved Release Data:', JSON.stringify(retrievedRelease, replacer, 2));
-      } else {
-        console.error(`[Peerbit Plugin Install] Failed to retrieve Release by ID: ${newRelease.id}`);
+        const result = await peerbitServiceInstance.addRelease(newRelease);
+        console.log(`[Peerbit Plugin Install] Async Test: Successfully put Release: ${newRelease.id} - ${newRelease.name}`);
+        console.log(`[Peerbit Plugin Install] Async Test: Entry hash: ${result}`);
+
+        const retrievedRelease = await peerbitServiceInstance.getRelease(newRelease.id);
+        if (retrievedRelease) {
+          console.log(`[Peerbit Plugin Install] Async Test: Successfully retrieved Release: ${retrievedRelease.id} - ${retrievedRelease.name}`);
+          const replacer = (_key: string, value: unknown) =>
+            typeof value === 'bigint' ? value.toString() : value;
+          console.log('[Peerbit Plugin Install] Async Test: Retrieved Release Data:', JSON.stringify(retrievedRelease, replacer, 2));
+        } else {
+          console.error(`[Peerbit Plugin Install] Async Test: Failed to retrieve Release by ID: ${newRelease.id}`);
+        }
+      } catch (error) {
+        console.error('[Peerbit Plugin Install] Error during async Release put/get test:', error);
       }
-    } catch (error) {
-      console.error('[Peerbit Plugin Install] Error during Release put/get test:', error);
-    }
-    // --- End Test ---
+    })();
+    // --- End Async Test ---
 
     // console.log('[Peerbit Plugin Install] Attempting to open TrustedNetwork...');
     // const trustedNetworkInstance = new TrustedNetwork({
