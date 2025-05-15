@@ -270,7 +270,9 @@ export class Site extends Program<SiteArgs> {
   async open(): Promise<void> {
     await this.releases.open({
       type: Release,
-      replicate: 1,
+      replicate: {
+        factor: 1,
+      },
       canPerform: async () => {
         //TODO: implement access control
         return true;
@@ -302,7 +304,9 @@ export class Site extends Program<SiteArgs> {
         //TODO: implement access control
         return true;
       },
-      replicate: 1,
+      replicate: {
+        factor: 1,
+      },
       replicas: {
         min: 2,
         max: undefined,
@@ -314,7 +318,9 @@ export class Site extends Program<SiteArgs> {
         //TODO: implement access control
         return true;
       },
-      replicate: 1,
+      replicate: {
+        factor: 1,
+      },
       replicas: {
         min: 2,
         max: undefined,
@@ -326,7 +332,9 @@ export class Site extends Program<SiteArgs> {
         //TODO: implement access control
         return true;
       },
-      replicate: 1,
+      replicate: {
+        factor: 1,
+      },
       replicas: {
         min: 2,
         max: undefined,
@@ -338,7 +346,9 @@ export class Site extends Program<SiteArgs> {
         //TODO: implement access control
         return true;
       },
-      replicate: 1,
+      replicate: {
+        factor: 1,
+      },
       replicas: {
         min: 2,
         max: undefined,
@@ -350,7 +360,9 @@ export class Site extends Program<SiteArgs> {
         //TODO: implement access control
         return true;
       },
-      replicate: 1,
+      replicate: {
+        factor: 1,
+      },
       replicas: {
         min: 2,
         max: undefined,
