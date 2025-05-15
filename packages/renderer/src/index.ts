@@ -4,6 +4,7 @@ import routeur from './plugins/router';
 import vuetify from './plugins/vuetify';
 import {pinia} from './plugins/pinia';
 import peerbitPlugin from './plugins/peerbit';
+import { useReleasesStore } from './stores/releases';
 // import { registerPlugins } from './plugins/inscription/common'; // Removed
 
 async function initializeAndMountApp() {
@@ -20,6 +21,9 @@ async function initializeAndMountApp() {
       console.log('[AppInit] Manually invoking and awaiting Peerbit plugin install method...');
       await peerbitPlugin.install(app); // Call install directly
       console.log('[AppInit] Peerbit plugin install method completed.');
+      // Pre-fetch releases before mounting to reduce flash
+      const releasesStore = useReleasesStore();
+      releasesStore.fetchReleasesFromPeerbit();
       // If the plugin also needs to be registered for other Vue functionalities (e.g. global components)
       // and app.use() is idempotent or guarded against re-execution of install logic,
       // you might call it here. For now, assuming install handles all setup including provide.
