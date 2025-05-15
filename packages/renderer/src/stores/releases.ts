@@ -97,32 +97,38 @@ export const useReleasesStore = defineStore('releases', () => {
   const timerId = ref<ReturnType<typeof setTimeout> | null>(null);
 
   const releases = computed<ReleaseItem[]>(() => {
-    if (peerbitReleaseStore && peerbitReleasesRaw.value.length > 0) {
-      console.log('[ReleasesStore] Using Peerbit releases. Count:', peerbitReleasesRaw.value.length);
-      return peerbitReleasesRaw.value.map((pr) => {
-        let parsedMetadata: Record<string, unknown> = {};
-        try {
-          if (pr.metadata) {
-            parsedMetadata = JSON.parse(pr.metadata);
+    if (peerbitReleaseStore) {
+      if (peerbitReleasesRaw.value.length > 0) {
+        console.log('[ReleasesStore] Using Peerbit releases. Count:', peerbitReleasesRaw.value.length);
+        return peerbitReleasesRaw.value.map((pr) => {
+          let parsedMetadata: Record<string, unknown> = {};
+          try {
+            if (pr.metadata) {
+              parsedMetadata = JSON.parse(pr.metadata);
+            }
+          } catch (e) {
+            console.error('Failed to parse release metadata from Peerbit:', e);
           }
-        } catch (e) {
-          console.error('Failed to parse release metadata from Peerbit:', e);
-        }
-        return {
-          id: pr.id,
-          name: pr.name,
-          contentCID: pr.contentCID,
-          category: pr.categoryId,
-          author: parsedMetadata.author as string || 'N/A',
-          thumbnail: pr.thumbnailCID,
-          cover: parsedMetadata.cover as string,
-          metadata: parsedMetadata,
-        };
-      });
-    }
-    if (staticStatus.value === 'static') return staticReleases.value;
-    else {
-      console.log('[ReleasesStore] Falling back to Orbiter releases.');
+          return {
+            id: pr.id,
+            name: pr.name,
+            contentCID: pr.contentCID,
+            category: pr.categoryId,
+            author: parsedMetadata.author as string || 'N/A',
+            thumbnail: pr.thumbnailCID,
+            cover: parsedMetadata.cover as string,
+            metadata: parsedMetadata,
+          };
+        });
+      } else {
+        console.log('[ReleasesStore] Peerbit store active, but no releases loaded yet or store is empty.');
+        return [];
+      }
+    } else if (staticStatus.value === 'static') {
+      console.log('[ReleasesStore] Using static releases.');
+      return staticReleases.value;
+    } else {
+      console.log('[ReleasesStore] Peerbit not configured. Falling back to Orbiter releases.');
       return (orbiterReleases.value || []).map((r) => ({
         id: r.release.id,
         name: r.release.release.contentName,

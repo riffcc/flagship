@@ -87,11 +87,27 @@ export function parseUrlOrCid(urlOrCid?: string): string | undefined {
   if (!isCID(urlOrCid)) {
     return urlOrCid;
   }
-  // Use HTTPS for gateways
-  const gatewayBase = `https://${IPFS_GATEWAY}`;
-  const codexGatewayBase = `https://codex-${IPFS_GATEWAY}`;
+
+  // Load optional gateway override from environment variable
+  const gatewayOverride = import.meta.env.VITE_IPFS_GATEWAY as string | undefined;
+  const selectedGateway = gatewayOverride || IPFS_GATEWAY;
+
+  // Use HTTPS for gateways, unless the override specifies a protocol
+  const gatewayBase = selectedGateway.startsWith('http://') || selectedGateway.startsWith('https://')
+    ? selectedGateway
+    : `https://${selectedGateway}`;
+  
+  // For codex gateway, we'll maintain the 'codex-' prefix logic if the base gateway doesn't already include it.
+  // If the override is a full URL, we might need a more sophisticated way to derive the codex variant.
+  // For now, let's assume the override is a domain or IP:port.
+  const codexGatewayBase = gatewayOverride
+    ? (gatewayOverride.startsWith('http://') || gatewayOverride.startsWith('https://') ? gatewayOverride.replace(/^(https?:\/\/)/, '$1codex-') : `https://codex-${gatewayOverride}`)
+    : `https://codex-${IPFS_GATEWAY}`;
+
 
   if (urlOrCid.startsWith('zD')) {
+    // If the gateway override is a full URL, we might not want to append /api/codex...
+    // This logic assumes the override is a base gateway.
     return `${codexGatewayBase}/api/codex/v1/data/${urlOrCid}/network/stream`;
   } else {
     return `${gatewayBase}/ipfs/${urlOrCid}`;
