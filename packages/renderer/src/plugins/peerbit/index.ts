@@ -1,10 +1,10 @@
 import type { App } from 'vue';
 import { Peerbit } from 'peerbit';
-import { Documents } from '@peerbit/document';
+// import { Documents } from '@peerbit/document'; // No longer needed directly here
 import { TrustedNetwork } from '@peerbit/trusted-network';
-import { Program } from '@peerbit/program';
-import { variant, field, option } from '@dao-xyz/borsh';
-import { Release } from './schema'; // Import Release schema
+// import { Program } from '@peerbit/program'; // No longer needed directly here
+// import { variant, field, option } from '@dao-xyz/borsh'; // No longer needed directly here
+import { Release, Site, Account, AccountType } from './schema'; // Import Site, Account, AccountType
 
 // Utilities
 import { hrtime } from '@peerbit/time';
@@ -12,43 +12,24 @@ import { logger as peerbitLogger } from '@peerbit/logger';
 
 console.log('[Peerbit Plugin File] Loaded');
 
-// MyDocumentsProgram now uses Release schema
-@variant("releases_program") // Changed variant name for clarity
-class MyDocumentsProgram extends Program {
-  @field({ type: Documents })
-  store: Documents<Release>; // Store is now Documents<Release>
-
-  constructor() {
-    super();
-    // Initialize with a specific type argument for Release
-    this.store = new Documents<Release>();
-  }
-
-  async open(args?: any): Promise<void> {
-    await this.store.open({
-      type: Release, // Use Release schema type
-      // No `index` field here, aligning with flagship's Site.releases.open() and to avoid linter error.
-      // Default indexing (e.g., by document ID) will apply, or other options can be added if needed.
-      // Example options from flagship that could be relevant if defaults aren't enough:
-      // idProperty: RELEASE_ID_PROPERTY, (If 'id' is not the default primary key for queries)
-      // canPerform: async () => true, (For access control)
-      // replicate: true or specific replication options from ReplicationOptions
-    });
-  }
-}
+// MyDocumentsProgram is removed as Site program will handle releases and users
 
 export default {
   install: async (app: App) => {
     console.log('[Peerbit Plugin Install] Starting');
-    const siteId = import.meta.env.VITE_SITE_ID as string;
+    const siteIdFromEnv = import.meta.env.VITE_SITE_ID as string;
     const bootstrappersRaw = import.meta.env.VITE_BOOTSTRAPPERS as string | undefined;
 
-    if (!siteId) {
-      console.error('[Peerbit Plugin Install] VITE_SITE_ID is missing.');
+    if (!siteIdFromEnv) {
+      console.warn('[Peerbit Plugin Install] VITE_SITE_ID is missing. Using a default or allowing Site program to handle.');
+      // The Site program constructor in schema.ts expects a siteId, 
+      // but we can default it there or pass a generic one if not critical for anonymous browsing.
+      // For now, we will pass 'default_site_id' if VITE_SITE_ID is not present.
     }
+    const siteId = siteIdFromEnv || 'default_site_id'; // Ensure siteId has a value for Peerbit dir and Site program
 
     const peerbitClient = await Peerbit.create({
-      directory: `./.peerbit/${siteId || 'default_site_id'}`,
+      directory: `./.peerbit/${siteId}`,
     });
     console.log('[Peerbit Plugin Install] Peerbit.create finished.');
 
@@ -67,21 +48,22 @@ export default {
       console.log('[Peerbit Plugin Install] No bootstrappers defined.');
     }
 
-    console.log('[Peerbit Plugin Install] Attempting to open MyDocumentsProgram (for Releases)...');
-    const myDocumentsProgramInstance = new MyDocumentsProgram();
-    const openedReleaseProgram = await peerbitClient.open(myDocumentsProgramInstance);
-    const releaseStore = openedReleaseProgram.store;
+    console.log('[Peerbit Plugin Install] Attempting to open SiteProgram...');
+    const siteProgramInstance = new Site(siteId); // Pass siteId to Site program constructor
+    const openedSiteProgram = await peerbitClient.open(siteProgramInstance);
+    
+    const releaseStore = openedSiteProgram.releases;
+    const usersStore = openedSiteProgram.users;
 
-    console.log(`[Peerbit Plugin Install] MyDocumentsProgram opened. Release store address: ${releaseStore.address?.toString()}`);
+    console.log(`[Peerbit Plugin Install] SiteProgram opened. Release store address: ${releaseStore.address?.toString()}, Users store address: ${usersStore.address?.toString()}`);
+
     if (!releaseStore || releaseStore.closed) {
-      console.error('[Peerbit Plugin Install] CRITICAL: Release store is not open or undefined!');
-      // throw new Error("Failed to open release store"); // Option to halt if critical
+      console.error('[Peerbit Plugin Install] CRITICAL: Release store from SiteProgram is not open or undefined!');
     } else {
-      console.log('[Peerbit Plugin Install] Release store seems to be open.');
-
-      // --- Test: Put a Release document ---
+      console.log('[Peerbit Plugin Install] Release store (from SiteProgram) seems to be open.');
+      // Existing Release put/get test can remain, using 'releaseStore'
       try {
-        console.log('[Peerbit Plugin Install] Attempting to put a new Release...');
+        console.log('[Peerbit Plugin Install] Attempting to put a new Release (via SiteProgram)...');
         const newRelease = new Release(
           'RiP!: A Remix Manifesto',
           'movie',
@@ -98,13 +80,10 @@ export default {
         await releaseStore.put(newRelease);
         console.log(`[Peerbit Plugin Install] Successfully put Release: ${newRelease.id} - ${newRelease.name}`);
 
-        // --- Test: Get the Release document ---
         const retrievedRelease = await releaseStore.index.get(newRelease.id);
         if (retrievedRelease) {
           console.log(`[Peerbit Plugin Install] Successfully retrieved Release: ${retrievedRelease.id} - ${retrievedRelease.name}`);
-          // Custom JSON.stringify replacer to handle BigInt
-          const replacer = (key: string, value: any) => 
-            typeof value === 'bigint' ? value.toString() : value;
+          const replacer = (key: string, value: any) => typeof value === 'bigint' ? value.toString() : value;
           console.log('[Peerbit Plugin Install] Retrieved Release Data:', JSON.stringify(retrievedRelease, replacer, 2));
         } else {
           console.error(`[Peerbit Plugin Install] Failed to retrieve Release by ID: ${newRelease.id}`);
@@ -112,36 +91,59 @@ export default {
       } catch (error) {
         console.error('[Peerbit Plugin Install] Error during Release put/get test:', error);
       }
-      // --- End Test ---
+    }
+
+    if (!usersStore || usersStore.closed) {
+      console.error('[Peerbit Plugin Install] CRITICAL: Users store from SiteProgram is not open or undefined!');
+    } else {
+      console.log('[Peerbit Plugin Install] Users store (from SiteProgram) seems to be open.');
+      // TODO: Add a test for putting/getting an Account if desired
+      // Example: 
+      // try {
+      //   const newAccount = new Account(peerbitClient.identity.publicKey, 'Test User', AccountType.USER);
+      //   await usersStore.put(newAccount);
+      //   const retrievedAccount = await usersStore.index.get(newAccount.id);
+      //   if(retrievedAccount) console.log('Successfully put and got test account:', retrievedAccount.name);
+      // } catch (e) { console.error('Error testing user store:', e); }
     }
 
     console.log('[Peerbit Plugin Install] Attempting to open TrustedNetwork...');
     const trustedNetworkInstance = new TrustedNetwork({
       rootTrust: peerbitClient.identity.publicKey
     });
-    const network = await peerbitClient.open(trustedNetworkInstance, {}); // Pass empty options for now
+    const network = await peerbitClient.open(trustedNetworkInstance, {});
     console.log(`[Peerbit Plugin Install] TrustedNetwork opened. Network address: ${network.address?.toString()}`);
 
     console.log('[Peerbit Plugin Install] Initializing utilities...');
     const timeUtility = hrtime();
     const logInstance = peerbitLogger({ module: 'peerbit-plugin' });
 
-    console.log('[Peerbit Plugin Install] Providing Peerbit, programs, and utilities to Vue app...');
+    console.log('[Peerbit Plugin Install] Providing Peerbit, SiteProgram, stores, and utilities to Vue app...');
     app.config.globalProperties.$peerbit = peerbitClient;
-    app.config.globalProperties.$program = openedReleaseProgram; // Provide the releases program
-    app.config.globalProperties.$documents = releaseStore; // Provide the actual release store
-    app.config.globalProperties.$peerbitReleaseStore = releaseStore; // Specifically provide the release store
+    app.config.globalProperties.$site = openedSiteProgram; // Provide the main Site program
+    app.config.globalProperties.$releasesStore = releaseStore; // Provide the releases store from Site
+    app.config.globalProperties.$usersStore = usersStore; // Provide the users store from Site
+    // For backwards compatibility, if some components still use $program or $documents
+    app.config.globalProperties.$program = openedSiteProgram; 
+    app.config.globalProperties.$documents = releaseStore; 
+    app.config.globalProperties.$peerbitReleaseStore = releaseStore; 
+
     app.config.globalProperties.$network = network;
     app.config.globalProperties.$time = timeUtility;
     app.config.globalProperties.$logger = logInstance;
 
     app.provide('peerbit', peerbitClient);
-    app.provide('program', openedReleaseProgram);
+    app.provide('site', openedSiteProgram); // Provide the main Site program
+    app.provide('releasesStore', releaseStore);
+    app.provide('usersStore', usersStore);
+    // For backwards compatibility
+    app.provide('program', openedSiteProgram);
     app.provide('documents', releaseStore);
-    app.provide('peerbitReleaseStore', releaseStore); // Specifically provide the release store
+    app.provide('peerbitReleaseStore', releaseStore);
+
     app.provide('network', network);
     app.provide('time', timeUtility);
     app.provide('logger', logInstance);
-    console.log('[Peerbit Plugin Install] Peerbit, programs, and utilities provided. Install function ending.');
+    console.log('[Peerbit Plugin Install] Peerbit, SiteProgram, stores, and utilities provided. Install function ending.');
   },
 };

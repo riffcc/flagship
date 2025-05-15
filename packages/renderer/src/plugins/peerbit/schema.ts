@@ -185,7 +185,7 @@ export class ContentCategory {
   }
 }
 
-enum AccounType {
+export enum AccountType {
   GUEST = 0,
   USER = 1,
   MODERATOR = 2,
@@ -201,11 +201,11 @@ export class Account {
   name: string;
 
   @field({ type: 'u8' })
-  type: AccounType;
+  type: AccountType;
 
 
-  constructor(publicKey: PublicSignKey, name: string, type: AccounType) {
-    this.id = serialize(publicKey);
+  constructor(publicKey: PublicSignKey, name: string, type: AccountType) {
+    this.id = publicKey.bytes;
     this.name = name;
     this.type = type;
   }
@@ -270,30 +270,40 @@ export class Site extends Program<SiteArgs> {
   @field({ type: Documents })
   blockedContent: Documents<BlockedContent>;
 
-  constructor(siteId: string) {
+  constructor(siteIdString: string) {
     super();
+    const textEncoder = new TextEncoder();
+    const siteIdBytes = textEncoder.encode(siteIdString);
+
+    const releasesSuffix = textEncoder.encode('releases');
+    const featuredReleasesSuffix = textEncoder.encode('featuredReleases');
+    const contentCategoriesSuffix = textEncoder.encode('contentCategories');
+    const usersSuffix = textEncoder.encode('users');
+    const subscriptionsSuffix = textEncoder.encode('subscriptions');
+    const blockedContentSuffix = textEncoder.encode('blockedContent');
+
     this.releases = new Documents({
-      id: sha256Sync(concat(siteId, new TextEncoder().encode('releases'))),
+      id: sha256Sync(concat([siteIdBytes, releasesSuffix])),
     });
 
     this.featuredReleases = new Documents({
-      id: sha256Sync(concat(siteId, new TextEncoder().encode('featuredReleases'))),
+      id: sha256Sync(concat([siteIdBytes, featuredReleasesSuffix])),
     });
 
     this.contentCategories = new Documents({
-      id: sha256Sync(concat(siteId, new TextEncoder().encode('contentCategories'))),
+      id: sha256Sync(concat([siteIdBytes, contentCategoriesSuffix])),
     });
 
     this.users = new Documents({
-      id: sha256Sync(concat(siteId, new TextEncoder().encode('users'))),
+      id: sha256Sync(concat([siteIdBytes, usersSuffix])),
     });
 
     this.subscriptions = new Documents({
-      id: sha256Sync(concat(siteId, new TextEncoder().encode('subscriptions'))),
+      id: sha256Sync(concat([siteIdBytes, subscriptionsSuffix])),
     });
 
     this.blockedContent = new Documents({
-      id: sha256Sync(concat(siteId, new TextEncoder().encode('blockedContent'))),
+      id: sha256Sync(concat([siteIdBytes, blockedContentSuffix])),
     });
   }
 
