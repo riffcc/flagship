@@ -40,14 +40,19 @@ const BLOCKED_CONTENT_CID_PROPERTY = 'cid';
 export class Release {
   @field({ type: 'string' })
   [RELEASE_ID_PROPERTY]: string;
+
   @field({ type: 'string' })
   [RELEASE_NAME_PROPERTY]: string;
+
   @field({ type: 'string' })
   [RELEASE_CATEGORY_ID_PROPERTY]: string;
+
   @field({ type: 'string' })
   [RELEASE_CONTENT_CID_PROPERTY]: string;
+
   @field({ type: option('string') })
   [RELEASE_THUMBNAIL_CID_PROPERTY]?: string;
+
   @field({ type: option('string') })
   [RELEASE_METADATA_PROPERTY]?: string;
 
@@ -68,20 +73,28 @@ export class Release {
 export class IndexableRelease {
   @field({ type: 'string' })
   [RELEASE_ID_PROPERTY]: string;
+
   @field({ type: 'string' })
   [RELEASE_NAME_PROPERTY]: string;
+
   @field({ type: 'string' })
   [RELEASE_CATEGORY_ID_PROPERTY]: string;
+
   @field({ type: 'string' })
   [RELEASE_CONTENT_CID_PROPERTY]: string;
+
   @field({ type: option('string') })
   [RELEASE_THUMBNAIL_CID_PROPERTY]?: string;
+
   @field({ type: option('string') })
   [RELEASE_METADATA_PROPERTY]?: string;
+
   @field({ type: 'u64' })
   created: bigint;
+
   @field({ type: 'u64' })
   modified: bigint;
+
   @field({ type: Uint8Array })
   author: Uint8Array;
 
@@ -108,12 +121,16 @@ export class IndexableRelease {
 export class FeaturedRelease {
   @field({ type: 'string' })
   [FEATURED_ID_PROPERTY]: string;
+
   @field({ type: 'string' })
   [FEATURED_RELEASE_ID_PROPERTY]: string;
+
   @field({ type: 'string' })
   [FEATURED_START_TIME_PROPERTY]: string;
+
   @field({ type: 'string' })
   [FEATURED_END_TIME_PROPERTY]: string;
+
   @field({ type: 'bool' })
   [FEATURED_PROMOTED_PROPERTY]: boolean;
 
@@ -135,12 +152,16 @@ export class FeaturedRelease {
 export class ContentCategory {
   @field({ type: 'string' })
   [CONTENT_CATEGORY_ID_PROPERTY]: string;
+
   @field({ type: 'string' })
   [CONTENT_CATEGORY_NAME_PROPERTY]: string;
+
   @field({ type: 'bool' })
   [CONTENT_CATEGORY_FEATURED_PROPERTY]: boolean;
+
   @field({ type: option('string') })
   [CONTENT_CATEGORY_DESCRIPTION_PROPERTY]?: string;
+
   @field({ type: option('string') })
   [CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY]?: string;
 
@@ -167,33 +188,35 @@ enum AccounType {
 
 @variant(0)
 export class Account {
-    @field({ type: Uint8Array })
-    id: Uint8Array;
+  @field({ type: Uint8Array })
+  id: Uint8Array;
 
-    @field({ type: 'string' })
-    name: string;
+  @field({ type: 'string' })
+  name: string;
 
-    @field({ type: 'u8' })
-    type: AccounType;
+  @field({ type: 'u8' })
+  type: AccounType;
 
 
-    constructor(publicKey: PublicSignKey, name: string, type: AccounType) {
-      this.id = serialize(publicKey);
-      this.name = name;
-      this.type = type;
-    }
+  constructor(publicKey: PublicSignKey, name: string, type: AccounType) {
+    this.id = serialize(publicKey);
+    this.name = name;
+    this.type = type;
+  }
 
-    get publicKey() {
-        return deserialize(this.id, PublicSignKey);
-    }
+  get publicKey() {
+    return deserialize(this.id, PublicSignKey);
+  }
 }
 
 @variant(0)
 export class Subscription {
   @field({ type: 'string' })
   [SUBSCRIPTION_ID_PROPERTY]: string;
+
   @field({ type: 'string' })
   [SUBSCRIPTION_SITE_ID_PROPERTY]: string;
+
   @field({ type: option('string') })
   [SUBSCRIPTION_NAME_PROPERTY]?: string;
 
@@ -208,6 +231,7 @@ export class Subscription {
 export class BlockedContent {
   @field({ type: 'string' })
   [BLOCKED_CONTENT_ID_PROPERTY]: string;
+
   @field({ type: 'string' })
   [BLOCKED_CONTENT_CID_PROPERTY]: string;
 
@@ -278,20 +302,20 @@ export class Site extends Program<SiteArgs> {
         return true;
       },
       index: {
-          canRead: async () => {
-              return true;
-          },
-          type: IndexableRelease,
-          transform: async (release, ctx) => {
-              return new IndexableRelease(
-                  release,
-                  ctx.created,
-                  ctx.modified,
-                  (await this.releases.log.log.get(
-                      ctx.head,
-                  ))!.signatures[0].publicKey,
-              );
-          },
+        canRead: async () => {
+          return true;
+        },
+        type: IndexableRelease,
+        transform: async (release, ctx) => {
+          return new IndexableRelease(
+            release,
+            ctx.created,
+            ctx.modified,
+            (await this.releases.log.log.get(
+              ctx.head,
+            ))!.signatures[0].publicKey,
+          );
+        },
       },
       replicas: {
         min: 2,
