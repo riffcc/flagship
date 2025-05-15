@@ -16,8 +16,9 @@
 
 <script setup lang="ts">
 import {onKeyStroke} from '@vueuse/core';
-import {ref, watchEffect} from 'vue';
+import {ref, watchEffect, onMounted} from 'vue';
 
+import { initializePeerbitService } from '/@/plugins/peerbit';
 import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
 import appBar from '/@/components/layout/appBar.vue';
@@ -58,5 +59,18 @@ onKeyStroke(e => {
 });
 watchEffect(() => {
   if (!yetToTypeCurtain.value.length) showDefederation.value = false;
+});
+
+onMounted(async () => {
+  try {
+    console.log('[App.vue onMounted] Initializing Peerbit service...');
+    await initializePeerbitService();
+    console.log('[App.vue onMounted] Peerbit service initialized successfully.');
+    // At this point, peerbitServiceRef.value should be populated.
+    // Stores or components relying on Peerbit can now safely access it,
+    // ideally by watching peerbitServiceRef or being triggered by an event/callback.
+  } catch (error) {
+    console.error('[App.vue onMounted] Failed to initialize Peerbit service:', error);
+  }
 });
 </script>
