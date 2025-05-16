@@ -3,8 +3,8 @@
     "allowSyntheticDefaultImports": true,
     "module": "esnext",
     "target": "esnext",
-    "sourceMap": false,
-    "moduleResolution": "Node",
+    "sourceMap": true,
+    "moduleResolution": "node",
     "skipLibCheck": true,
     "strict": true,
     "isolatedModules": true,
@@ -16,6 +16,12 @@
       "/@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts", "../../types/**/*.d.ts"],
-  "exclude": ["**/*.spec.ts", "**/*.test.ts"]
+  "include": [
+    "src/**/*.ts",
+    "../../types/**/*.d.ts",
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
