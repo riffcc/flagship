@@ -40,6 +40,13 @@ import type {
   BlockedContentData,
 } from './types';
 
+export enum AccountType {
+  ADMIN = 'ADMIN',
+  MODERATOR = 'MODERATOR',
+  USER = 'USER',
+  GUEST = 'GUEST'
+}
+
 
 @variant(0)
 export class Release {
