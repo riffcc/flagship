@@ -35,6 +35,9 @@ importers:
       '@peerbit/document':
         specifier: ^9.6.2
         version: 9.6.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      '@peerbit/identity-access-controller':
+        specifier: ^5.0.79
+        version: 5.0.79(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@peerbit/logger':
         specifier: 1.0.3
         version: 1.0.3
@@ -147,6 +150,9 @@ importers:
       '@mdi/font':
         specifier: ^7.4.47
         version: 7.4.47
+      '@peerbit/test-utils':
+        specifier: ^2.1.46
+        version: 2.1.46(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
       '@rollup/plugin-node-resolve':
         specifier: ^16.0.0
         version: 16.0.0(rollup@4.34.9)
@@ -1936,6 +1942,12 @@ packages:
   '@peerbit/document@9.6.2':
     resolution: {integrity: sha512-4DUOr3Li5TtnI4NLWX3GvE1T3ibXMdFUqw7Cc+73iRJ+hj9Zu0uN8p/+ZR1RCr69M8030BXinvKu1PnyAqk9oQ==}
 
+  '@peerbit/document@9.6.3':
+    resolution: {integrity: sha512-md4WZgHizSYms8rbGXG5mvRkQ9QnyP4pbef9yTsvgkFRyMuxVnUi2t2o6WLBUpXRCqLIMWzt0UYGwnzq3EC44Q==}
+
+  '@peerbit/identity-access-controller@5.0.79':
+    resolution: {integrity: sha512-2HiCbCjMMfJ/ZNBP4xw+ps/7VCOiKUNknyE9oWWFfbUG0JU+FySbSKMWVKEVx5TmKzFAl7t/vmNupNoiSQMkYQ==}
+
   '@peerbit/indexer-cache@0.0.1':
     resolution: {integrity: sha512-2GkgHDc7B6gSBwtX+bal40BFDYD5LrEUvhARx/jYm8NkzWnoK4k2AG5hnDKWm0I5r9V/lfyaIV2K/c07fmiBdg==}
 
@@ -1982,6 +1994,9 @@ packages:
   '@peerbit/shared-log@11.2.2':
     resolution: {integrity: sha512-xZsrDrNRJKGGccvqn3C043aMzDcrALquxa6eiemkZ4dOorN87zi3hYFnURgky48fv4Cj1cgjj3BVezYjbdWC5Q==}
 
+  '@peerbit/shared-log@11.2.3':
+    resolution: {integrity: sha512-jv9iIjB4HzJqKnFpqPgJIuv/SzOcLVfeVUaZ9KVj/CBDKdK+kQjZ8jmuzLAGWPLudCRiJH8WB1Q7fu1BYkajdw==}
+
   '@peerbit/stream-interface@5.2.2':
     resolution: {integrity: sha512-ZpvDRTCvwW/yqR+10G8PLcMlHST/7eDupb5Jito/NBJKa1lRy6mpSq7X59ed5hRMQZAHEFDCexq8+DZhd7jlAg==}
     engines: {node: '>=16.15.1'}
@@ -1990,11 +2005,18 @@ packages:
     resolution: {integrity: sha512-tVhgfrzUOtCxzGDc3Y/ff6AOIARhJYbbteCXfk12dFOW19hPy8O98HZCDG7JNAgtymrWA9ptdpTjPUig7RR+ag==}
     engines: {node: '>=16.15.1'}
 
+  '@peerbit/test-utils@2.1.46':
+    resolution: {integrity: sha512-HGK2sz8DN+Ni8yFszA62LEQyR3LfmA7pJ+drCmwZAG1VN7fOSsglTf/hvoYI2I9PWXgXFLELO3gV+nYi4UwPvg==}
+    engines: {node: '>=16.15.1'}
+
   '@peerbit/time@2.1.0':
     resolution: {integrity: sha512-wClS4raEoDBZ7mcGrzFowRroXw9FfW0uyjzljNdQnZpHzEn/RQ10Potd4p/937CAJp0s/KxUJ22uQyyAf9H8nQ==}
 
   '@peerbit/trusted-network@4.1.95':
     resolution: {integrity: sha512-Rjv0hYemIowkkCrFYfgB08m+o9VoxM/ho1+lRBzqDNJnZhWxey8N6a4LhspKIj3+2PD0kIF2J4TuIXk73nzWog==}
+
+  '@peerbit/trusted-network@4.1.96':
+    resolution: {integrity: sha512-+hzUsEbmH6pBuF1cMZsJUtA+sSACBMIh8EVnGrcMvplfcZGoaiVA4Ml/eOFWd6Gh+s9A8RX2oPfi+bioONIBhQ==}
 
   '@perseveranza-pets/milo@0.2.1':
     resolution: {integrity: sha512-Q96Q1cdYfofu5Rbaj3z5HYzkhlDS+pljh/g+GX/JHr/TlodpDDxFZ1sVuQI6O3+rFdfrU5ScgD1kx4NyCYebbw==}
@@ -10120,6 +10142,34 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@peerbit/document@9.6.3(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
+    dependencies:
+      '@dao-xyz/borsh': 5.2.3
+      '@peerbit/document-interface': 2.1.4
+      '@peerbit/indexer-cache': 0.0.1
+      '@peerbit/indexer-interface': 2.0.9
+      '@peerbit/indexer-simple': 1.1.14
+      '@peerbit/indexer-sqlite3': 1.2.19
+      '@peerbit/program': 5.2.11(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      '@peerbit/rpc': 5.3.3(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      '@peerbit/shared-log': 11.2.3(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+    transitivePeerDependencies:
+      - bufferutil
+      - react-native
+      - supports-color
+      - utf-8-validate
+
+  '@peerbit/identity-access-controller@5.0.79(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
+    dependencies:
+      '@dao-xyz/borsh': 5.2.3
+      '@peerbit/document': 9.6.3(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      '@peerbit/trusted-network': 4.1.96(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+    transitivePeerDependencies:
+      - bufferutil
+      - react-native
+      - supports-color
+      - utf-8-validate
+
   '@peerbit/indexer-cache@0.0.1':
     dependencies:
       '@dao-xyz/borsh': 5.2.3
@@ -10237,6 +10287,21 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@peerbit/shared-log@11.2.3(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
+    dependencies:
+      '@dao-xyz/borsh': 5.2.3
+      '@peerbit/log': 4.0.58
+      '@peerbit/logger': 1.0.3
+      '@peerbit/program': 5.2.11(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      '@peerbit/riblt': 1.0.6
+      '@peerbit/rpc': 5.3.3(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      '@peerbit/time': 2.1.0
+    transitivePeerDependencies:
+      - bufferutil
+      - react-native
+      - supports-color
+      - utf-8-validate
+
   '@peerbit/stream-interface@5.2.2':
     dependencies:
       '@dao-xyz/borsh': 5.2.3
@@ -10256,6 +10321,16 @@ snapshots:
       p-queue: 8.1.0
       yallist: 4.0.0
 
+  '@peerbit/test-utils@2.1.46(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
+    dependencies:
+      '@peerbit/libp2p-test-utils': 2.1.16(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+      peerbit: 4.1.36(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+    transitivePeerDependencies:
+      - bufferutil
+      - react-native
+      - supports-color
+      - utf-8-validate
+
   '@peerbit/time@2.1.0': {}
 
   '@peerbit/trusted-network@4.1.95(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
@@ -10263,6 +10338,17 @@ snapshots:
       '@dao-xyz/borsh': 5.2.3
       '@peerbit/crypto': 2.3.8
       '@peerbit/document': 9.6.2(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
+    transitivePeerDependencies:
+      - bufferutil
+      - react-native
+      - supports-color
+      - utf-8-validate
+
+  '@peerbit/trusted-network@4.1.96(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))':
+    dependencies:
+      '@dao-xyz/borsh': 5.2.3
+      '@peerbit/crypto': 2.3.8
+      '@peerbit/document': 9.6.3(bufferutil@4.0.9)(react-native@0.78.0(@babel/core@7.27.1)(@babel/preset-env@7.26.9(@babel/core@7.27.1))(bufferutil@4.0.9)(react@19.0.0))
     transitivePeerDependencies:
       - bufferutil
       - react-native

@@ -1,9 +1,14 @@
 import { Documents, SearchRequest, Sort, SortDirection } from '@peerbit/document';
-import { deserialize, field, option, variant } from '@dao-xyz/borsh';
-import { PublicSignKey } from '@peerbit/crypto';
-import { sha256Sync } from '@peerbit/crypto';
+import { field, option, variant } from '@dao-xyz/borsh';
+import { type PublicSignKey, sha256Sync } from '@peerbit/crypto';
 import { Program } from '@peerbit/program';
 import type { ReplicationOptions } from '@peerbit/shared-log';
+import {
+  IdentityAccessController,
+  Access,
+  AccessType,
+  PublicKeyAccessCondition,
+} from '@peerbit/identity-access-controller';
 import { v4 as uuid } from 'uuid';
 import { concat } from 'uint8arrays';
 import {
@@ -34,6 +39,7 @@ import type {
   SubcriptionData,
   BlockedContentData,
 } from './types';
+
 
 @variant(0)
 export class Release {
@@ -209,37 +215,6 @@ export class BlockedContent {
   }
 }
 
-
-export enum AccountType {
-  GUEST = 0,
-  USER = 1,
-  MODERATOR = 2,
-  ADMIN = 3,
-}
-
-@variant(0)
-export class Account {
-  @field({ type: Uint8Array })
-  id: Uint8Array;
-
-  @field({ type: 'string' })
-  name: string;
-
-  @field({ type: 'u8' })
-  type: AccountType;
-
-
-  constructor(publicKey: PublicSignKey, name: string, type: AccountType) {
-    this.id = publicKey.bytes;
-    this.name = name;
-    this.type = type;
-  }
-
-  get publicKey() {
-    return deserialize(this.id, PublicSignKey);
-  }
-}
-
 type Args = {
   replicate?: ReplicationOptions
 };
@@ -257,25 +232,30 @@ export class Site extends Program<Args> {
   contentCategories: Documents<ContentCategory>;
 
   @field({ type: Documents })
-  users: Documents<Account>;
-
-  @field({ type: Documents })
   subscriptions: Documents<Subscription>;
 
   @field({ type: Documents })
   blockedContent: Documents<BlockedContent>;
 
-  constructor(siteIdString: string) {
+  @field({ type: IdentityAccessController })
+  acl: IdentityAccessController;
+
+  constructor(siteIdString: string, rootTrust: PublicSignKey) {
     super();
     const textEncoder = new TextEncoder();
     const siteIdBytes = textEncoder.encode(siteIdString);
 
+    const aclIdSuffix = textEncoder.encode('acl');
     const releasesSuffix = textEncoder.encode('releases');
     const featuredReleasesSuffix = textEncoder.encode('featuredReleases');
     const contentCategoriesSuffix = textEncoder.encode('contentCategories');
-    const usersSuffix = textEncoder.encode('users');
     const subscriptionsSuffix = textEncoder.encode('subscriptions');
     const blockedContentSuffix = textEncoder.encode('blockedContent');
+
+    this.acl = new IdentityAccessController({
+      id: sha256Sync(concat([siteIdBytes, aclIdSuffix])),
+      rootTrust: rootTrust,
+    });
 
     this.releases = new Documents({
       id: sha256Sync(concat([siteIdBytes, releasesSuffix])),
@@ -289,10 +269,6 @@ export class Site extends Program<Args> {
       id: sha256Sync(concat([siteIdBytes, contentCategoriesSuffix])),
     });
 
-    this.users = new Documents({
-      id: sha256Sync(concat([siteIdBytes, usersSuffix])),
-    });
-
     this.subscriptions = new Documents({
       id: sha256Sync(concat([siteIdBytes, subscriptionsSuffix])),
     });
@@ -303,15 +279,19 @@ export class Site extends Program<Args> {
   }
 
   async open(args: Args): Promise<void> {
+
+    const defaultReplicationOptions = args?.replicate || { factor: 1 };
+    const defaultReplicaSettings = { min: 2, max: undefined };
+
+    await this.acl.open({ replicate: args?.replicate || { factor: 1 } });
+
+    const commonCanPerform = this.acl.canPerform.bind(this.acl);
+
     await this.releases.open({
       type: Release,
-      replicate: args?.replicate || {
-        factor: 1,
-      },
-      canPerform: async () => {
-        //TODO: implement access control
-        return true;
-      },
+      replicate: defaultReplicationOptions,
+      replicas: defaultReplicaSettings,
+      canPerform: commonCanPerform,
       index: {
         canRead: async () => {
           return true;
@@ -328,80 +308,44 @@ export class Site extends Program<Args> {
           );
         },
       },
-      replicas: {
-        min: 2,
-        max: undefined,
-      },
     });
+
     await this.featuredReleases.open({
       type: FeaturedRelease,
-      replicate: args?.replicate || {
-        factor: 1,
-      },
-      canPerform: async () => {
-        //TODO: implement access control
-        return true;
-      },
-      replicas: {
-        min: 2,
-        max: undefined,
+      replicate: defaultReplicationOptions,
+      replicas: defaultReplicaSettings,
+      canPerform: commonCanPerform,
+      index: {
+        canRead: async () => {
+          return true;
+        },
       },
     });
+
     await this.contentCategories.open({
       type: ContentCategory,
-      replicate: args?.replicate || {
-        factor: 1,
-      },
-      canPerform: async () => {
-        //TODO: implement access control
-        return true;
-      },
-      replicas: {
-        min: 2,
-        max: undefined,
+      replicate: defaultReplicationOptions,
+      replicas: defaultReplicaSettings,
+      canPerform: commonCanPerform,
+      index: {
+        canRead: async () => {
+          return true;
+        },
       },
     });
-    await this.users.open({
-      type: Account,
-      replicate: args?.replicate || {
-        factor: 1,
-      },
-      canPerform: async () => {
-        //TODO: implement access control
-        return true;
-      },
-      replicas: {
-        min: 2,
-        max: undefined,
-      },
-    });
+
     await this.subscriptions.open({
       type: Subscription,
-      replicate: args?.replicate || {
-        factor: 1,
-      },
-      canPerform: async () => {
-        //TODO: implement access control
-        return true;
-      },
-      replicas: {
-        min: 2,
-        max: undefined,
-      },
+      replicate: defaultReplicationOptions,
+      replicas: defaultReplicaSettings,
+      canPerform: commonCanPerform,
     });
+
     await this.blockedContent.open({
       type: BlockedContent,
-      replicate: args?.replicate || {
-        factor: 1,
-      },
-      canPerform: async () => {
-        //TODO: implement access control
-        return true;
-      },
-      replicas: {
-        min: 2,
-        max: undefined,
-      },
+      replicate: defaultReplicationOptions,
+      replicas: defaultReplicaSettings,
+      canPerform: commonCanPerform,
     });
   }
 
@@ -423,5 +367,40 @@ export class Site extends Program<Args> {
         fetch: size,
       }),
     );
+  }
+  // --- ACL Management Methods ---
+  async grantWriteAccess(identity: PublicSignKey): Promise<void> {
+    const access = new Access({
+      accessCondition: new PublicKeyAccessCondition({ key: identity }),
+      accessTypes: [AccessType.Write, AccessType.Read],
+    });
+    await this.acl.access.put(access.initialize());
+  }
+
+  async grantAdminAccess(identity: PublicSignKey): Promise<void> {
+    const access = new Access({
+      accessCondition: new PublicKeyAccessCondition({ key: identity }),
+      accessTypes: [AccessType.Any],
+    });
+    await this.acl.access.put(access.initialize());
+  }
+
+  async grantReadAccess(identity: PublicSignKey): Promise<void> {
+    const access = new Access({
+      accessCondition: new PublicKeyAccessCondition({ key: identity }),
+      accessTypes: [AccessType.Read],
+    });
+    await this.acl.access.put(access.initialize());
+  }
+
+  async addTrustedIdentity(identity: PublicSignKey): Promise<void> {
+    await this.acl.trustedNetwork.add(identity);
+  }
+
+  async addIdentityRelation(from: PublicSignKey, to: PublicSignKey): Promise<void> {
+    if (!this.node.identity.publicKey.equals(from)) {
+        throw new Error("addIdentityRelation must be called by the 'from' identity's peer, or the ACL for IdentityGraph needs to allow this peer to act on behalf of 'from'.");
+    }
+    await this.acl.identityGraphController.addRelation(to);
   }
 }
