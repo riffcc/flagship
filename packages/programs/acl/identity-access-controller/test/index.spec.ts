@@ -1,18 +1,23 @@
+import "reflect-metadata";
 import { field, serialize, variant } from "@dao-xyz/borsh";
 import { type PeerId } from "@libp2p/interface";
 import { AccessError, Ed25519Keypair, PublicSignKey } from "@peerbit/crypto";
-import { Documents, SearchRequest } from "@peerbit/document";
+import { Documents, SearchRequest, type CanPerformOperations as CanPerformDocumentOperations } from "@peerbit/document";
 import { Program } from "@peerbit/program";
 import { type ReplicationOptions, SharedLog } from "@peerbit/shared-log";
 import { TestSession } from "@peerbit/test-utils";
 import { waitFor, waitForResolved } from "@peerbit/time";
+import * as chai from "chai";
 import { expect } from "chai";
-import { Access, AccessType } from "../src/access.js";
+import chaiAsPromised from "chai-as-promised";
+import { Access, AccessType, UserRole } from "../src/access.js";
 import { IdentityAccessController } from "../src/acl-db.js";
 import {
 	AnyAccessCondition,
 	PublicKeyAccessCondition,
 } from "../src/condition.js";
+
+chai.use(chaiAsPromised);
 
 @variant("document")
 class Document {
@@ -46,7 +51,18 @@ class TestStore extends Program<{ replicate: ReplicationOptions }> {
 		await this.accessController.open();
 		await this.store.open({
 			type: Document,
-			canPerform: (properties) => this.accessController.canPerform(properties),
+			canPerform: async (operation: CanPerformDocumentOperations<Document>) => {
+				const publicKeys = await operation.entry.getPublicKeys();
+				if (publicKeys.length === 0) {
+					return false;
+				}
+				for (const publicKey of publicKeys) {
+					if (await this.accessController.hasPermission(publicKey, [UserRole.ADMIN, UserRole.WRITER])) {
+						return true;
+					}
+				}
+				return false;
+			},
 			index: {
 				canRead: this.accessController.canRead.bind(this.accessController),
 			},
@@ -129,11 +145,29 @@ describe("index", () => {
 		await waitFor(
 			() => l0b.accessController.trustedNetwork.trustGraph.log.log.length === 1,
 		);
+
+		// Grant WRITER role to peer1 from peer0 (admin)
+		await l0a.accessController.setRole(
+			session.peers[1].identity.publicKey, 
+			UserRole.WRITER, 
+			session.peers[0].identity.publicKey 
+		);
+
+		// Sync ACL change to peer1
+		await l0b.accessController.access.log.log.join(
+			await l0a.accessController.access.log.log.getHeads().all()
+		);
+
+		// Wait for peer1 to acknowledge the new role
+		await waitForResolved(async () =>
+			expect(await l0b.accessController.getRole(session.peers[1].identity.publicKey)).equal(UserRole.WRITER)
+		);
+
 		await l0b.store.put(
 			new Document({
 				id: "2",
 			}),
-		); // Now trusted
+		); // Now trusted AND has WRITER role
 
 		await l0a.store.log.log.join(await l0b.store.log.log.getHeads().all());
 		await l0b.store.log.log.join(await l0a.store.log.log.getHeads().all());
@@ -182,6 +216,7 @@ describe("index", () => {
 						key: session.peers[1].peerId,
 					}),
 					accessTypes: [AccessType.Any],
+					role: UserRole.WRITER
 				}),
 			);
 
@@ -222,14 +257,27 @@ describe("index", () => {
 						id: "id",
 					}),
 				),
-			).eventually.rejectedWith(AccessError); // Not trusted
+			).eventually.rejectedWith(AccessError); // Not trusted initially, and no role
 
+			// l0a (admin) grants WRITER role to peer1
 			await l0a.accessController.access.put(
 				new Access({
 					accessCondition: new PublicKeyAccessCondition({
-						key: session.peers[1].peerId,
+						key: session.peers[1].identity.publicKey,
 					}),
 					accessTypes: [AccessType.Any],
+					role: UserRole.WRITER
+				}),
+			);
+
+			// l0a (admin) grants WRITER role to peer2
+			await l0a.accessController.access.put(
+				new Access({
+					accessCondition: new PublicKeyAccessCondition({
+						key: session.peers[2].identity.publicKey,
+					}),
+					accessTypes: [AccessType.Any],
+					role: UserRole.WRITER
 				}),
 			);
 
@@ -240,20 +288,29 @@ describe("index", () => {
 				await l0a.accessController.access.log.log.getHeads().all(),
 			);
 
-			await expect(
-				l0c.store.put(
-					new Document({
-						id: "id",
-					}),
-				),
-			).eventually.rejectedWith(AccessError); // Not trusted
-
-			await waitForResolved(async () =>
-				expect(await l0b.accessController.access.index.getSize()).equal(1),
+			// l0c attempts to write "id-before-role-sync-check". 
+			// This is now expected to succeed as l0c has synced the ACL granting it WRITER role.
+			await l0c.store.put(
+				new Document({
+					id: "id-before-role-sync-check", 
+				}),
 			);
 
+			// Wait for ACLs to be processed and roles to be effective
+			await waitForResolved(async () => // Expect 3: admin, peer1 writer, peer2 writer
+				expect(await l0b.accessController.access.index.getSize()).equal(3),
+			);
+			await waitForResolved(async () =>
+				expect(await l0c.accessController.access.index.getSize()).equal(3),
+			);
+			await waitForResolved(async () =>
+				expect(await l0c.accessController.getRole(session.peers[2].identity.publicKey)).equal(UserRole.WRITER),
+			);
+
+
+			// Peer1 trusts Peer2 (forms identity graph link)
 			await l0b.accessController.identityGraphController.addRelation(
-				session.peers[2].peerId,
+				session.peers[2].identity.publicKey,
 			);
 			await l0c.accessController.identityGraphController.relationGraph.log.log.join(
 				await l0b.accessController.identityGraphController.relationGraph.log.log
@@ -267,6 +324,7 @@ describe("index", () => {
 				).equal(1),
 			);
 
+			// Now l0c (peer2) should be able to write because it has the WRITER role directly
 			await l0c.store.put(
 				new Document({
 					id: "2",
@@ -397,6 +455,7 @@ describe("index", () => {
 			new Access({
 				accessCondition: new AnyAccessCondition(),
 				accessTypes: [AccessType.Any],
+				role: UserRole.WRITER
 			}).initialize(),
 		);
 
@@ -412,10 +471,10 @@ describe("index", () => {
 		);
 
 		await waitForResolved(async () =>
-			expect(await l0a.accessController.access.index.getSize()).equal(1),
+			expect(await l0a.accessController.access.index.getSize()).equal(2),
 		);
 		await waitForResolved(async () =>
-			expect(await l0b.accessController.access.index.getSize()).equal(1),
+			expect(await l0b.accessController.access.index.getSize()).equal(2),
 		);
 
 		await l0b.accessController.access.log.waitForReplicator(
