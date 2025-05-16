@@ -28,7 +28,7 @@
       <v-divider></v-divider>
       <v-list lines="two">
         <v-list-item
-          title="Publick Key"
+          title="Public Key"
           :subtitle="isCopied(accountId!) ? 'Copied!' : accountId"
           :ripple="false"
           @click="copy(accountId!, accountId!)"

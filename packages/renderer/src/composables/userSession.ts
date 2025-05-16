@@ -17,8 +17,8 @@ export const useUserSession = () => {
     ][Math.floor(Math.random() * 2)];
     userData.value = {
       id: '1',
-      name: 'Jhon Doe',
-      email: 'jhondoe@test.com',
+      name: 'Test User',
+      email: 'testing@riff.cc',
       avatar: svg.default,
     };
   });
