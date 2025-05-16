@@ -7,18 +7,22 @@
     @submit.prevent="handleOnSubmit"
   >
     <v-text-field
-      v-model="contentCategory.contentCategory.categoryId"
+      v-model="contentCategory.id"
       label="Category ID"
       :rules="[rules.required]"
     />
     <v-text-field
-      v-model="contentCategory.contentCategory.displayName"
+      v-model="contentCategory.displayName"
       label="Display Name"
       :rules="[rules.required]"
     />
+    <v-text-field
+      v-model="contentCategory.description"
+      label="Description (Optional)"
+    />
     <v-switch
-      v-model="contentCategory.contentCategory.featured"
-      :color="contentCategory.contentCategory.featured ? 'primary' : 'default'"
+      v-model="contentCategory.featured"
+      :color="contentCategory.featured ? 'primary' : 'default'"
       label="Featured"
     ></v-switch>
     <v-list-item
@@ -59,11 +63,11 @@
     </v-list-item>
     <v-divider></v-divider>
     <v-list
-      v-if="Object.entries(contentCategory.contentCategory.metadataSchema).length > 0"
+      v-if="Object.entries(contentCategory.metadataSchema ?? {}).length > 0"
       max-height="10rem"
     >
       <v-list-item
-        v-for="[fieldKey] in Object.entries(contentCategory.contentCategory.metadataSchema)"
+        v-for="[fieldKey] in Object.entries(contentCategory.metadataSchema ?? {})"
         :key="fieldKey"
         :title="fieldKey"
       >
@@ -133,14 +137,12 @@
 </template>
 
 <script setup lang="ts">
-import type { types as orbiterTypes } from '/@/plugins/peerbit/orbiter-types';
-import {consts } from '/@/plugins/peerbit/orbiter-types';
 import {computed, onMounted, ref} from 'vue';
-import {useOrbiter} from '/@/plugins/peerbit/utils';
 import MetadataFieldForm from '/@/components/releases/metadataFieldForm.vue';
+import type { ContentCategoryData, ContentCategoryMetadata } from '/@/lib/types';
 
 const props = defineProps<{
-  initialData?: orbiterTypes.ContentCategoryWithId<orbiterTypes.ContentCategoryMetadataField>;
+  initialData?: ContentCategoryData<ContentCategoryMetadata>;
   mode?: 'create' | 'edit';
 }>();
 
@@ -150,16 +152,13 @@ const emit = defineEmits<{
   (e: 'update:error', message: string): void;
 }>();
 
-const {orbiter} = useOrbiter();
 const formRef = ref();
 
-const contentCategory = ref<orbiterTypes.ContentCategoryWithId<orbiterTypes.ContentCategoryMetadataField>>({
+const contentCategory = ref<ContentCategoryData<ContentCategoryMetadata>>({
   id: '',
-  contentCategory: {
-    categoryId: '',
-    displayName: '',
-    metadataSchema: {},
-  },
+  displayName: '',
+  featured: false,
+  metadataSchema: {},
 });
 
 const rules = {
@@ -169,7 +168,7 @@ const isLoading = ref(false);
 const createMetadataFieldDialog = ref(false);
 const editMetadataFieldDialog = ref(false);
 
-const editedMetadataField = ref<orbiterTypes.ContentCategoryMetadataField[string] & { fieldKey: string; }>({
+const editedMetadataField = ref<ContentCategoryMetadata[string] & { fieldKey: string; }>({
   fieldKey: '',
   description: '',
   type: 'string',
@@ -177,7 +176,7 @@ const editedMetadataField = ref<orbiterTypes.ContentCategoryMetadataField[string
 });
 
 function editMetadataField(fieldKey: string) {
-  const targetField = Object.entries(contentCategory.value.contentCategory.metadataSchema).find(
+  const targetField = Object.entries(contentCategory.value.metadataSchema ?? {}).find(
     ([k]) => k === fieldKey,
   );
   if(targetField) {
@@ -192,43 +191,35 @@ function editMetadataField(fieldKey: string) {
   }
 }
 
-function handleSubmitMetadataField(data: orbiterTypes.ContentCategoryMetadataField[string] & { fieldKey: string; }) {
-  const metadataField: orbiterTypes.ContentCategoryMetadataField[string] = {
+function handleSubmitMetadataField(data: ContentCategoryMetadata[string] & { fieldKey: string; }) {
+  if (!contentCategory.value.metadataSchema) return;
+  const metadataField: ContentCategoryMetadata[string] = {
     description: data.description,
     type: data.type,
     options: data.options && data.options.length > 0 ? data.options : undefined,
   };
-  contentCategory.value.contentCategory.metadataSchema[data.fieldKey] = metadataField;
+  contentCategory.value.metadataSchema[data.fieldKey] = metadataField;
   if (createMetadataFieldDialog.value) createMetadataFieldDialog.value = false;
   if (editMetadataFieldDialog.value) editMetadataFieldDialog.value = false;
 };
 
 function deleteMetadataField(fieldKey: string) {
-  contentCategory.value.contentCategory.metadataSchema = Object.fromEntries(
-    Object.entries(contentCategory.value.contentCategory.metadataSchema).filter((field) => field[0] !== fieldKey),
+  contentCategory.value.metadataSchema = Object.fromEntries(
+    Object.entries(contentCategory.value.metadataSchema ?? {}).filter((field) => field[0] !== fieldKey),
   );
 };
 
 onMounted(() => {
   if(props.initialData) {
-    contentCategory.value = {
-      ...contentCategory.value,
-      id: props.initialData.id,
-      contentCategory: {
-        ...props.initialData.contentCategory,
-        metadataSchema: {
-          ...props.initialData.contentCategory.metadataSchema,
-        },
-      },
-    };
+    contentCategory.value = props.initialData;
   }
 });
 
 const readyToSave = computed(() => {
   if (
-    contentCategory.value.contentCategory.categoryId &&
-    contentCategory.value.contentCategory.displayName &&
-    contentCategory.value.contentCategory.metadataSchema &&
+    contentCategory.value.id &&
+    contentCategory.value.displayName &&
+    contentCategory.value.metadataSchema &&
     formRef.value.isValid
   ) {
     return contentCategory.value;
@@ -239,41 +230,16 @@ const readyToSave = computed(() => {
 const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
   isLoading.value = true;
-  try {
-    const data = readyToSave.value;
-    const category = {
-      [consts.CONTENT_CATEGORIES_CATEGORY_ID]: data.contentCategory.categoryId,
-      [consts.CONTENT_CATEGORIES_DISPLAY_NAME]: data.contentCategory.displayName,
-      [consts.CONTENT_CATEGORIES_FEATURED]: data.contentCategory.featured,
-      [consts.CONTENT_CATEGORIES_METADATA_SCHEMA]: JSON.stringify(data.contentCategory.metadataSchema),
-    };
-    if (props.mode === 'edit' && props.initialData?.id) {
-      await orbiter.editCategory({
-        elementId: props.initialData.id,
-        category,
-      });
-    } else {
-      await orbiter.addCategory(category);
-    }
-    emit('submit', data);
-    emit('update:success', 'Category saved successfully!');
-    clearForm();
-  } catch (error) {
-    console.error('Error saving category:', error);
-    emit('update:error', 'Error saving category. Please try again later.');
-  } finally {
-    isLoading.value = false;
-  }
+  emit('update:error', 'Not implemented');
+  clearForm();
 };
 
 const clearForm = () => {
   contentCategory.value = {
     id: '',
-    contentCategory: {
-      categoryId: '',
-      displayName: '',
-      metadataSchema: {},
-    },
+    displayName: '',
+    featured: false,
+    metadataSchema: {},
   };
 };
 </script>

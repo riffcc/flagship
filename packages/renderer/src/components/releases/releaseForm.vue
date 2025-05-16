@@ -16,25 +16,14 @@
       :rules="[rules.required, rules.isValidCid]"
     />
     <v-select
-      v-model="releaseItem.category"
+      v-model="releaseItem.categoryId"
       :items="contentCategoriesItems"
       :rules="[rules.required]"
       label="Category"
-      @update:model-value="() => releaseItem.metadata = {}"
     />
     <v-text-field
-      v-model="releaseItem.author"
-      label="Author"
-      :rules="[rules.required]"
-    />
-    <v-text-field
-      v-model="releaseItem.thumbnail"
+      v-model="releaseItem.thumbnailCID"
       label="Thumbnail CID (Optional)"
-      :rules="[rules.isValidCid]"
-    />
-    <v-text-field
-      v-model="releaseItem.cover"
-      label="Cover Image CID (Optional)"
       :rules="[rules.isValidCid]"
     />
     <v-dialog
@@ -53,7 +42,7 @@
         ></v-btn>
       </template>
       <v-sheet
-        v-if="selectedContentCategory"
+        v-if="selectedContentCategory && releaseItem.metadata"
         width="480px"
         max-height="620px"
         class="pa-8 ma-auto"
@@ -77,7 +66,7 @@
           <v-text-field
             v-else
             :label="categoryId"
-            :model-value="releaseItem.metadata[categoryId]"
+            :model-value="releaseItem.metadata?.[categoryId]"
             :type="type"
             @update:model-value="(v) => handleChangeMetadataField(categoryId, v)"
           >
@@ -120,17 +109,15 @@
 </template>
 
 <script setup lang="ts">
-import {consts, type types as orbiterTypes} from '/@/plugins/peerbit/orbiter-types';
 import {cid} from 'is-ipfs';
 import {computed, onMounted, ref, inject, type Ref} from 'vue';
-import {useOrbiter} from '/@/plugins/peerbit/utils';
 import type { ReleaseItem, PartialReleaseItem } from '/@/stores/releases';
 import { useContentCategoriesStore } from '/@/stores/contentCategories';
 import { storeToRefs } from 'pinia';
-import type { IPeerbitService } from '/@/lib/types';
+import type { IPeerbitService, ContentCategoryMetadata, ReleaseData, AnyObject } from '/@/lib/types';
 
 const props = defineProps<{
-  initialData?: PartialReleaseItem;
+  initialData?: PartialReleaseItem<AnyObject>;
   mode?: 'create' | 'edit';
 }>();
 
@@ -140,18 +127,17 @@ const emit = defineEmits<{
   (e: 'update:error', message: string): void;
 }>();
 
-const {orbiter} = useOrbiter();
 const contentCategoriesStore = useContentCategoriesStore();
 const { contentCategories } = storeToRefs(contentCategoriesStore);
 
 const formRef = ref();
 const openAdvanced = ref<boolean>();
 
-const releaseItem = ref<ReleaseItem>({
+const releaseItem = ref<ReleaseItem<AnyObject>>({
+  id: '',
   name: '',
   contentCID: '',
-  category: '',
-  author: '',
+  categoryId: '',
   metadata: {},
 });
 
@@ -165,16 +151,16 @@ const peerbitService = inject<Ref<IPeerbitService | undefined>>('peerbitService'
 
 const contentCategoriesItems = computed(() => (contentCategories.value ?? []).map(item => ({
   id: item.id,
-  value: item.contentCategory.categoryId,
-  title: item.contentCategory.displayName,
+  value: item.id,
+  title: item.displayName,
 })));
 
 const selectedContentCategory = computed(() => {
-  let categoryMetadataData: orbiterTypes.ContentCategoryMetadataField | undefined = undefined;
+  let categoryMetadataData: ContentCategoryMetadata | undefined = undefined;
   if (contentCategories.value) {
-    const targetItem = contentCategories.value.find(item => item.contentCategory.categoryId === releaseItem.value.category);
+    const targetItem = contentCategories.value.find(item => item.id === releaseItem.value.categoryId);
     if (targetItem) {
-      categoryMetadataData = targetItem.contentCategory.metadataSchema;
+      categoryMetadataData = targetItem.metadataSchema;
     }
   }
   return categoryMetadataData;
@@ -192,7 +178,7 @@ onMounted(() => {
     releaseItem.value = {
       ...releaseItem.value,
       ...props.initialData,
-      metadata: props.initialData.metadata ? { ...props.initialData.metadata } : {},
+      metadata: props.initialData.metadata,
     };
   }
 });
@@ -201,8 +187,7 @@ const readyToSave = computed(() => {
   if (
     releaseItem.value.name &&
     releaseItem.value.contentCID &&
-    releaseItem.value.category &&
-    releaseItem.value.author &&
+    releaseItem.value.categoryId &&
     formRef.value.isValid
   ) {
     return releaseItem.value;
@@ -222,27 +207,23 @@ const handleOnSubmit = async () => {
 
   try {
     const data = readyToSave.value;
-    const peerbitReleaseData = {
-      id: data.id,
+    const peerbitReleaseData: ReleaseData = {
       name: data.name,
-      file: data.contentCID,
-      author: data.author,
-      category: data.category,
-      thumbnail: data.thumbnail,
-      cover: data.cover,
-      metadata: data.metadata,
+      categoryId: data.categoryId,
+      contentCID: data.contentCID,
+      thumbnailCID: data.thumbnailCID,
+      metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
     };
-
     if (props.mode === 'edit' && data.id) {
-      console.log('[ReleaseForm] Updating existing release with ID:', data.id, peerbitReleaseData);
-      const response = await peerbitService.value.updateRelease(data.id, peerbitReleaseData);
-      console.log('[ReleaseForm] Update release response:', response);
-      if (response.success) {
-        emit('submit', data);
-        emit('update:success', response.message || 'Release updated successfully!');
-      } else {
-        emit('update:error', response.error || 'Error updating release.');
-      }
+      // console.log('[ReleaseForm] Updating existing release with ID:', data.id, peerbitReleaseData);
+      // const response = await peerbitService.value.updateRelease(data.id, peerbitReleaseData);
+      // console.log('[ReleaseForm] Update release response:', response);
+      // if (response.success) {
+      //   emit('submit', data);
+      //   emit('update:success', response.message || 'Release updated successfully!');
+      // } else {
+      // }
+      emit('update:error', 'Not implemented');
     } else {
       console.log('[ReleaseForm] Creating new release:', peerbitReleaseData);
       const response = await peerbitService.value.addRelease(peerbitReleaseData);
@@ -267,10 +248,10 @@ const handleOnSubmit = async () => {
 
 const clearForm = () => {
   releaseItem.value = {
+    id: '',
     name: '',
     contentCID: '',
-    category: '',
-    author: '',
+    categoryId: '',
     metadata: {},
   };
   formRef.value?.resetValidation();

@@ -1,8 +1,9 @@
-import {app, ipcMain, BrowserWindow} from 'electron';
+import {app, ipcMain} from 'electron';
 import '/@/security-restrictions';
 import {restoreOrCreateWindow} from '/@/main-window';
 import { getPeerbitNode, getSiteProgram } from './peerbit-node';
 import { Release } from '/@/lib/schema';
+import type { ReleaseData } from '/@/lib/types';
 
 const isSingleInstance = app.requestSingleInstanceLock();
 if (!isSingleInstance) {
@@ -51,42 +52,21 @@ app
       }
     });
 
-    ipcMain.handle('peerbit:add-release', async (_event, releaseDataFromRenderer: any) => {
+    ipcMain.handle('peerbit:add-release', async (_event, releaseData: ReleaseData) => {
       const node = getPeerbitNode();
       const siteProgram = getSiteProgram();
       if (!node) throw new Error('Peerbit node not initialized in main process');
       if (!siteProgram) throw new Error('Site program not initialized in main process');
 
       try {
-        // Map data from renderer to Release constructor properties
-        const releaseConstructorProps = {
-          name: releaseDataFromRenderer.name,
-          categoryId: releaseDataFromRenderer.category, // Map 'category' to 'categoryId'
-          contentCID: releaseDataFromRenderer.file,     // Map 'file' to 'contentCID'
-          thumbnailCID: releaseDataFromRenderer.thumbnail, // Map 'thumbnail' to 'thumbnailCID'
-          // 'author' and 'cover' from renderer are not in Release constructor, so they are omitted here.
-          // If they need to be stored, the Release class definition needs to include them.
-          metadata: releaseDataFromRenderer.metadata ? JSON.stringify(releaseDataFromRenderer.metadata) : undefined,
-        };
-
-        // Validate required fields before constructing
-        if (!releaseConstructorProps.name || !releaseConstructorProps.categoryId || !releaseConstructorProps.contentCID) {
-            throw new Error('Missing required fields (name, categoryId, or contentCID) for Release constructor.');
-        }
-
-        const releaseInstance = new Release(releaseConstructorProps);
-
-        if (!releaseInstance.id) {
-          console.error('[Main IPC] Critical: Release instance created without an ID. Data:', releaseConstructorProps);
-          throw new Error('Release instance created without an ID. Check Release class constructor.');
-        }
+        const releaseInstance = new Release(releaseData);
 
         console.log(`[Main IPC] Adding release - ID: ${releaseInstance.id}, Name: ${releaseInstance.name}`);
         const resultHash = await siteProgram.addRelease(releaseInstance);
 
-        return { success: true, id: releaseInstance.id, hash: resultHash, message: "Release added successfully" };
+        return { success: true, id: releaseInstance.id, hash: resultHash, message: 'Release added successfully' };
       } catch (error) {
-        console.error(`[Main IPC] Error adding release. Initial data from renderer (ID: ${releaseDataFromRenderer.id}):`, releaseDataFromRenderer, "Mapped props:", /*releaseConstructorProps cannot be logged here if error was before its definition*/ error);
+        console.error('[Main IPC] Error adding release. Initial data from renderer', releaseData, 'Mapped props:', /*releaseConstructorProps cannot be logged here if error was before its definition*/ error);
         // Ensure a structured error is returned if the component expects it, or rethrow for a generic error.
         // For now, rethrowing the original error as the component might not be robustly handling {success: false}
         throw error;

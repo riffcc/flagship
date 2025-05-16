@@ -28,7 +28,7 @@
           <v-img
             :height="xs ? '148px' : '160px'"
             aspect-ratio="1/1"
-            :src="parseUrlOrCid(props.thumbnail)"
+            :src="parseUrlOrCid(props.release.thumbnailCID)"
           ></v-img>
         </v-col>
 
@@ -37,10 +37,10 @@
           md="9"
           class="text-center text-md-start"
         >
-          <p class="text-h5 text-md-h4 font-weight-medium">{{ props.title }}</p>
-          <p>{{ props.description }}</p>
+          <p class="text-h5 text-md-h4 font-weight-medium">{{ props.release.name }}</p>
+          <p>{{ props.release.metadata?.['description'] }}</p>
           <p>{{ albumFiles.length }} Songs</p>
-          <p>{{ props.author }} - {{ props.releaseYear }}</p>
+          <p>{{ props.release.metadata?.['author'] }} - {{ props.release.metadata?.['releaseYear'] }}</p>
         </v-col>
       </v-row>
       <v-row>
@@ -80,7 +80,7 @@
                 <div class="ml-4">
                   <p class="text-subtitle-2 text-md-subtitle-1">{{ file.title }}</p>
                   <p class="text-caption text-md-subtitle-2 text-medium-emphasis">
-                    {{ props.author }}
+                    {{ props.release.metadata?.['author'] }}
                   </p>
                 </div>
               </div>
@@ -133,17 +133,12 @@ import type {AudioTrack} from '/@/composables/audioAlbum';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {useFloatingVideo} from '/@/composables/floatingVideo';
 import { parseUrlOrCid } from '/@/utils';
+import type { ReleaseItem } from '/@/stores/releases';
+import type { AnyObject } from '/@/lib/types';
 
-type Props = {
-  contentCid: string;
-  title: string;
-  thumbnail?: string;
-  author?: string;
-  description?: string;
-  releaseYear?: number | string;
-};
-
-const props = defineProps<Props>();
+const props = defineProps<{
+  release: ReleaseItem<AnyObject>
+}>();
 
 const router = useRouter();
 const canBack = computed(() => Boolean(window.history.state.back));
@@ -189,7 +184,7 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
         if (file.cid && file.title && file.size) {
             ipfsFiles.push({
                 index: index,
-                album: props.title,
+                album: props.release.name,
                 cid: file.cid,
                 title: file.title.split('.')[0],
                 size: file.size,
@@ -226,7 +221,7 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
             if (['flac', 'mp3', 'ogg'].includes(fileName.split('.')[1])) {
               ipfsFiles.push({
                 index: key,
-                album: props.title,
+                album: props.release.name,
                 cid,
                 title: fileName.split('.')[0],
                 size: fileSize,
@@ -250,10 +245,10 @@ function setTrackToDownload(track: AudioTrack) {
 onMounted(async () => {
   closeFloatingVideo();
   // Only load the audio tracks if they are not currently playing or if the active track's album is different from the browsed album.
-  if (!activeTrack.value || (activeTrack.value && activeTrack.value.album !== props.title)) {
+  if (!activeTrack.value || (activeTrack.value && activeTrack.value.album !== props.release.name)) {
     albumFiles.value = [];
     activeTrack.value = undefined;
-    const ipfsFiles = await fetchIPFSFiles(props.contentCid);
+    const ipfsFiles = await fetchIPFSFiles(props.release.contentCID);
     albumFiles.value = ipfsFiles;
   }
   isLoading.value = false;

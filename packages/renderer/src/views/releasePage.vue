@@ -5,17 +5,12 @@
   >
     <template v-if="targetRelease">
       <video-player
-        v-if="['video', 'movie'].includes(targetRelease.category)"
+        v-if="['video', 'movie'].includes(targetRelease.categoryId)"
         :content-cid="targetRelease.contentCID"
       />
       <album-viewer
-        v-else-if="['audio', 'music'].includes(targetRelease.category)"
-        :content-cid="targetRelease.contentCID"
-        :title="targetRelease.name"
-        :thumbnail="targetRelease.thumbnail"
-        :author="targetRelease.author"
-        :description="(targetRelease.metadata['description'] as string | undefined)"
-        :release-year="(targetRelease.metadata['releaseYear'] as string | number | undefined)"
+        v-else-if="['audio', 'music'].includes(targetRelease.categoryId)"
+        :release="targetRelease"
       ></album-viewer>
     </template>
     <div
@@ -55,6 +50,7 @@ import { ref, watch } from 'vue';
 import { useReleasesStore } from '../stores/releases';
 import { storeToRefs } from 'pinia';
 import type { ReleaseItem } from '/@/stores/releases';
+import type { AnyObject } from '/@/lib/types';
 
 const props = defineProps<{
   id: string;
@@ -64,7 +60,7 @@ const router = useRouter();
 const releasesStore = useReleasesStore();
 const { releases, isLoading } = storeToRefs(releasesStore);
 
-const targetRelease = ref<ReleaseItem | null>(null);
+const targetRelease = ref<ReleaseItem<AnyObject> | null>(null);
 
 
 watch(
@@ -96,11 +92,11 @@ watch(targetRelease, (r) => {
       try {
         navigator.mediaSession.metadata = new MediaMetadata({
           title: r.name,
-          artist: r.author,
+          artist: r.metadata?.['author'] as string | undefined,
           album: r.metadata?.albumName as string || '',
-          artwork: r.thumbnail ? [
+          artwork: r.thumbnailCID ? [
             {
-              src: r.thumbnail,
+              src: r.thumbnailCID,
             },
           ] : undefined,
         });

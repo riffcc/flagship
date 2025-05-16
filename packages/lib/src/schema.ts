@@ -10,37 +10,39 @@ import { Program } from '@peerbit/program';
 import { type ReplicationOptions } from '@peerbit/shared-log';
 import { v4 as uuid } from 'uuid';
 import { concat } from 'uint8arrays';
+import {
+  ID_PROPERTY,
+  RELEASE_NAME_PROPERTY,
+  RELEASE_CATEGORY_ID_PROPERTY,
+  RELEASE_CONTENT_CID_PROPERTY,
+  RELEASE_THUMBNAIL_CID_PROPERTY,
+  RELEASE_METADATA_PROPERTY,
+  FEATURED_RELEASE_ID_PROPERTY,
+  FEATURED_START_TIME_PROPERTY,
+  FEATURED_END_TIME_PROPERTY,
+  FEATURED_PROMOTED_PROPERTY,
+  CONTENT_CATEGORY_DISPLAY_NAME_PROPERTY,
+  CONTENT_CATEGORY_DESCRIPTION_PROPERTY,
+  CONTENT_CATEGORY_FEATURED_PROPERTY,
+  CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY,
+  SUBSCRIPTION_SITE_ID_PROPERTY,
+  SUBSCRIPTION_NAME_PROPERTY,
+  BLOCKED_CONTENT_CID_PROPERTY,
+} from './constants';
 
-const RELEASE_ID_PROPERTY = 'id';
-const RELEASE_NAME_PROPERTY = 'name';
-const RELEASE_CATEGORY_ID_PROPERTY = 'categoryId';
-const RELEASE_CONTENT_CID_PROPERTY = 'contentCID';
-const RELEASE_THUMBNAIL_CID_PROPERTY = 'thumbnailCID';
-const RELEASE_METADATA_PROPERTY = 'metadata';
-
-const FEATURED_ID_PROPERTY = 'id';
-const FEATURED_RELEASE_ID_PROPERTY = 'releaseId';
-const FEATURED_START_TIME_PROPERTY = 'startTime';
-const FEATURED_END_TIME_PROPERTY = 'endTime';
-const FEATURED_PROMOTED_PROPERTY = 'promoted';
-
-const CONTENT_CATEGORY_ID_PROPERTY = 'id';
-const CONTENT_CATEGORY_NAME_PROPERTY = 'name';
-const CONTENT_CATEGORY_DESCRIPTION_PROPERTY = 'description';
-const CONTENT_CATEGORY_FEATURED_PROPERTY = 'featured';
-const CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY = 'metadataSchema';
-
-const SUBSCRIPTION_ID_PROPERTY = 'id';
-const SUBSCRIPTION_SITE_ID_PROPERTY = 'siteId';
-const SUBSCRIPTION_NAME_PROPERTY = 'name';
-
-const BLOCKED_CONTENT_ID_PROPERTY = 'id';
-const BLOCKED_CONTENT_CID_PROPERTY = 'cid';
+import type {
+  IdData,
+  ReleaseData,
+  FeaturedReleaseData,
+  ContentCategoryData,
+  SubcriptionData,
+  BlockedContentData,
+} from './types';
 
 @variant(0)
 export class Release {
   @field({ type: 'string' })
-  [RELEASE_ID_PROPERTY]: string;
+  [ID_PROPERTY]: string;
 
   @field({ type: 'string' })
   [RELEASE_NAME_PROPERTY]: string;
@@ -57,14 +59,8 @@ export class Release {
   @field({ type: option('string') })
   [RELEASE_METADATA_PROPERTY]?: string;
 
-  constructor(props: {
-    [RELEASE_NAME_PROPERTY]: string;
-    [RELEASE_CATEGORY_ID_PROPERTY]: string;
-    [RELEASE_CONTENT_CID_PROPERTY]: string;
-    [RELEASE_THUMBNAIL_CID_PROPERTY]?: string;
-    [RELEASE_METADATA_PROPERTY]?: string;
-  }) {
-    this[RELEASE_ID_PROPERTY] = uuid();
+  constructor(props: ReleaseData) {
+    this[ID_PROPERTY] = uuid();
     this[RELEASE_NAME_PROPERTY] = props[RELEASE_NAME_PROPERTY];
     this[RELEASE_CATEGORY_ID_PROPERTY] = props[RELEASE_CATEGORY_ID_PROPERTY];
     this[RELEASE_CONTENT_CID_PROPERTY] = props[RELEASE_CONTENT_CID_PROPERTY];
@@ -79,7 +75,7 @@ export class Release {
 
 export class IndexableRelease {
   @field({ type: 'string' })
-  [RELEASE_ID_PROPERTY]: string;
+  [ID_PROPERTY]: string;
 
   @field({ type: 'string' })
   [RELEASE_NAME_PROPERTY]: string;
@@ -106,12 +102,12 @@ export class IndexableRelease {
   author: Uint8Array;
 
   constructor(
-    release: Release,
+    release: IdData & ReleaseData,
     createdAt: bigint,
     modified: bigint,
     author: PublicSignKey,
   ) {
-    this[RELEASE_ID_PROPERTY] = release[RELEASE_ID_PROPERTY];
+    this[ID_PROPERTY] = release[ID_PROPERTY];
     this[RELEASE_NAME_PROPERTY] = release[RELEASE_NAME_PROPERTY];
     this[RELEASE_CATEGORY_ID_PROPERTY] = release[RELEASE_CATEGORY_ID_PROPERTY];
     this[RELEASE_CONTENT_CID_PROPERTY] = release[RELEASE_CONTENT_CID_PROPERTY];
@@ -130,7 +126,7 @@ export class IndexableRelease {
 @variant(0)
 export class FeaturedRelease {
   @field({ type: 'string' })
-  [FEATURED_ID_PROPERTY]: string;
+  [ID_PROPERTY]: string;
 
   @field({ type: 'string' })
   [FEATURED_RELEASE_ID_PROPERTY]: string;
@@ -144,27 +140,22 @@ export class FeaturedRelease {
   @field({ type: 'bool' })
   [FEATURED_PROMOTED_PROPERTY]: boolean;
 
-  constructor(props: {
-    releaseId: string;
-    startTime: string;
-    endTime: string;
-    promoted: boolean;
-  }) {
-    this.id = uuid();
-    this.releaseId = props[FEATURED_RELEASE_ID_PROPERTY];
-    this.startTime = props[FEATURED_START_TIME_PROPERTY];
-    this.endTime = props[FEATURED_END_TIME_PROPERTY];
-    this.promoted = props[FEATURED_PROMOTED_PROPERTY];
+  constructor(props: FeaturedReleaseData) {
+    this[ID_PROPERTY] = uuid();
+    this[FEATURED_RELEASE_ID_PROPERTY] = props[FEATURED_RELEASE_ID_PROPERTY];
+    this[FEATURED_START_TIME_PROPERTY] = props[FEATURED_START_TIME_PROPERTY];
+    this[FEATURED_END_TIME_PROPERTY] = props[FEATURED_END_TIME_PROPERTY];
+    this[FEATURED_PROMOTED_PROPERTY] = props[FEATURED_PROMOTED_PROPERTY];
   }
 }
 
 @variant(0)
 export class ContentCategory {
   @field({ type: 'string' })
-  [CONTENT_CATEGORY_ID_PROPERTY]: string;
+  [ID_PROPERTY]: string;
 
   @field({ type: 'string' })
-  [CONTENT_CATEGORY_NAME_PROPERTY]: string;
+  [CONTENT_CATEGORY_DISPLAY_NAME_PROPERTY]: string;
 
   @field({ type: 'bool' })
   [CONTENT_CATEGORY_FEATURED_PROPERTY]: boolean;
@@ -175,14 +166,9 @@ export class ContentCategory {
   @field({ type: option('string') })
   [CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY]?: string;
 
-  constructor(props: {
-    name: string;
-    featured: boolean;
-    description?: string;
-    metadataSchema?: string;
-  }) {
-    this[CONTENT_CATEGORY_ID_PROPERTY] = uuid();
-    this[CONTENT_CATEGORY_NAME_PROPERTY] = props[CONTENT_CATEGORY_NAME_PROPERTY];
+  constructor(props: ContentCategoryData) {
+    this[ID_PROPERTY] = props[ID_PROPERTY];
+    this[CONTENT_CATEGORY_DISPLAY_NAME_PROPERTY] = props[CONTENT_CATEGORY_DISPLAY_NAME_PROPERTY];
     this[CONTENT_CATEGORY_FEATURED_PROPERTY] = props[CONTENT_CATEGORY_FEATURED_PROPERTY];
     if (props[CONTENT_CATEGORY_DESCRIPTION_PROPERTY]) {
       this[CONTENT_CATEGORY_DESCRIPTION_PROPERTY] = props[CONTENT_CATEGORY_DESCRIPTION_PROPERTY];
@@ -196,7 +182,7 @@ export class ContentCategory {
 @variant(0)
 export class Subscription {
   @field({ type: 'string' })
-  [SUBSCRIPTION_ID_PROPERTY]: string;
+  [ID_PROPERTY]: string;
 
   @field({ type: 'string' })
   [SUBSCRIPTION_SITE_ID_PROPERTY]: string;
@@ -204,8 +190,8 @@ export class Subscription {
   @field({ type: option('string') })
   [SUBSCRIPTION_NAME_PROPERTY]?: string;
 
-  constructor(props: { siteId: string, name?: string }) {
-    this[SUBSCRIPTION_ID_PROPERTY] = uuid();
+  constructor(props: SubcriptionData) {
+    this[ID_PROPERTY] = uuid();
     this[SUBSCRIPTION_SITE_ID_PROPERTY] = props[SUBSCRIPTION_SITE_ID_PROPERTY];
     if (props[SUBSCRIPTION_NAME_PROPERTY]) {
       this[SUBSCRIPTION_NAME_PROPERTY] = props[SUBSCRIPTION_NAME_PROPERTY];
@@ -216,14 +202,14 @@ export class Subscription {
 @variant(0)
 export class BlockedContent {
   @field({ type: 'string' })
-  [BLOCKED_CONTENT_ID_PROPERTY]: string;
+  [ID_PROPERTY]: string;
 
   @field({ type: 'string' })
   [BLOCKED_CONTENT_CID_PROPERTY]: string;
 
-  constructor(cid: string) {
-    this[BLOCKED_CONTENT_ID_PROPERTY] = uuid();
-    this[BLOCKED_CONTENT_CID_PROPERTY] = cid;
+  constructor(props: BlockedContentData) {
+    this[ID_PROPERTY] = uuid();
+    this[BLOCKED_CONTENT_CID_PROPERTY] = props[BLOCKED_CONTENT_CID_PROPERTY];
   }
 }
 

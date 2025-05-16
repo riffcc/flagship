@@ -12,7 +12,7 @@
     </v-sheet>
     <template v-else-if="filteredReleases.length > 0">
       <content-section
-        :title="pageCategory?.contentCategory.displayName ?? ''"
+        :title="pageCategory?.displayName ?? ''"
       >
         <v-col
           v-for="item in filteredReleases"
@@ -21,7 +21,7 @@
           <content-card
             :item="item"
             cursor-pointer
-            :source-site="item.sourceSite"
+            :source-site="(item.metadata?.['sourceSite'] as string | undefined)"
             @click="router.push(`/release/${item.id}`)"
           />
         </v-col>
@@ -59,13 +59,13 @@ const { contentCategories } = storeToRefs(contentCategoriesStore);
 
 const filteredReleases = computed(() => {
   return releases.value.filter((release) => {
-    return release.category === props.category;
+    return release.categoryId === props.category;
   });
 });
 
 const pageCategory = computed(() => {
   const categoryId = props.category;
-  const category = contentCategories.value.find((cat) => cat.contentCategory.categoryId === categoryId);
+  const category = contentCategories.value.find((cat) => cat.id === categoryId);
   return category;
 });
 

@@ -57,13 +57,13 @@
     <v-carousel-item
       v-for="featuredItem in promotedFeaturedReleases"
       :key="featuredItem.id"
-      :src="parseUrlOrCid(featuredItem.cover ?? featuredItem.thumbnail)"
+      :src="parseUrlOrCid(featuredItem.metadata?.['cover'] as string | undefined ?? featuredItem.thumbnailCID)"
       cover
       gradient="to right, rgba(0,0,0,.8), rgba(0,0,0,.01)"
     >
       <v-container
         class="fill-height"
-        :style="showDefederation && featuredItem.sourceSite ? `border: 1px solid ${getSiteColor(featuredItem.sourceSite)};` : ''"
+        :style="showDefederation && (featuredItem.metadata?.['sourceSite'] as string | undefined) ? `border: 1px solid ${getSiteColor(featuredItem.metadata?.['sourceSite'] as string)}` : ''"
       >
         <v-row
           justify="center"
@@ -81,41 +81,41 @@
               <h5 class="text-h5 text-sm-h4">
                 {{ featuredItem.name }}
               </h5>
-              <template v-if="['music'].includes(featuredItem.category)">
+              <template v-if="['music'].includes(featuredItem.categoryId)">
                 <p class="text-body-2 text-sm-body-1">
-                  {{ featuredItem.author }}
+                  {{ featuredItem.metadata?.['author'] }}
                 </p>
                 <v-chip
-                  v-if="featuredItem.metadata['totalSongs'] && featuredItem.metadata['releaseYear']"
+                  v-if="featuredItem.metadata?.['totalSongs'] && featuredItem.metadata?.['releaseYear']"
                   class="opacity-100 px-0 text-medium-emphasis mt-2"
                   density="comfortable"
                   disabled
                   variant="text"
                 >
-                  {{ featuredItem.metadata['totalSongs'] }} Songs • {{ featuredItem.metadata['releaseYear'] }}
+                  {{ featuredItem.metadata?.['totalSongs'] }} Songs • {{ featuredItem.metadata?.['releaseYear'] }}
                 </v-chip>
               </template>
 
               <v-chip-group
-                v-if="['movie'].includes(featuredItem.category)"
+                v-if="['movie'].includes(featuredItem.categoryId)"
               >
                 <v-chip
-                  v-if="featuredItem.metadata['classification']"
+                  v-if="featuredItem.metadata?.['classification']"
                   class="opacity-100"
                   density="comfortable"
                   disabled
                   label
                 >
-                  {{ featuredItem.metadata['classification'] }}
+                  {{ featuredItem.metadata?.['classification'] }}
                 </v-chip>
                 <v-chip
-                  v-if="featuredItem.metadata['duration'] && featuredItem.metadata['releaseYear']"
+                  v-if="featuredItem.metadata?.['duration'] && featuredItem.metadata?.['releaseYear']"
                   density="comfortable"
                   disabled
                   class="opacity-100 text-medium-emphasis"
                   variant="text"
                 >
-                  {{ featuredItem.metadata['duration'] }} • {{ featuredItem.metadata['releaseYear'] }}
+                  {{ featuredItem.metadata?.['duration'] }} • {{ featuredItem.metadata?.['releaseYear'] }}
                 </v-chip>
               </v-chip-group>
               <p
@@ -184,12 +184,12 @@ const {promotedFeaturedReleases} = storeToRefs(releasesStore);
 
 const previousSlideImage = computed(() => {
   const previousIndex = slide.value === 0 ? promotedFeaturedReleases.value.length - 1 : slide.value - 1;
-  return promotedFeaturedReleases.value[previousIndex].cover ?? promotedFeaturedReleases.value[previousIndex].thumbnail;
+  return promotedFeaturedReleases.value[previousIndex].metadata?.['cover'] as string | undefined ?? promotedFeaturedReleases.value[previousIndex].thumbnailCID;
 });
 
 const nextSlideImage = computed(() => {
   const nextIndex = slide.value === promotedFeaturedReleases.value.length - 1 ? 0 : slide.value + 1;
-  return promotedFeaturedReleases.value[nextIndex].cover ?? promotedFeaturedReleases.value[nextIndex].thumbnail;
+  return promotedFeaturedReleases.value[nextIndex].metadata?.['cover'] as string | undefined ?? promotedFeaturedReleases.value[nextIndex].thumbnailCID;
 });
 
 const {getSiteColor} = useSiteColors();

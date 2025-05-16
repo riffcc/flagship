@@ -71,21 +71,21 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, ref, type Ref } from 'vue';
-import type { types as orbiterTypes } from '/@/plugins/peerbit/orbiter-types';
+import { computed, onMounted, ref } from 'vue';
+import type { ContentCategoryMetadata } from '/@/lib/types';
 
 const props = defineProps<{
-  initialData?: Partial<orbiterTypes.ContentCategoryMetadataField[string] & { fieldKey: string; }>;
+  initialData?: Partial<ContentCategoryMetadata[string] & { fieldKey: string; }>;
   mode?: 'create' | 'edit';
 }>();
 
 const emit = defineEmits<{
-  (e: 'submit', data: orbiterTypes.ContentCategoryMetadataField[string] & { fieldKey: string; }): void;
+  (e: 'submit', data: ContentCategoryMetadata[string] & { fieldKey: string; }): void;
 }>();
 
 const formRef = ref();
 
-const metadataField = ref<orbiterTypes.ContentCategoryMetadataField[string] & { fieldKey: string; }>({
+const metadataField = ref<ContentCategoryMetadata[string] & { fieldKey: string; }>({
   fieldKey: '',
   description: '',
   type: 'string',

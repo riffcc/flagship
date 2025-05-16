@@ -5,7 +5,7 @@ import { hrtime } from '@peerbit/time';
 import { logger as peerbitLogger } from '@peerbit/logger';
 
 import { Release, Site } from '/@/lib/schema';
-import type { IPeerbitService } from '/@/lib/types';
+import type { IPeerbitService, ReleaseData } from '/@/lib/types';
 import { DEFAULT_SITE_ID } from '/@/lib/constants';
 
 console.log('[Peerbit Plugin File] Loaded');
@@ -27,7 +27,7 @@ export async function initializePeerbitService() {
       }
       // Ensure electronIPC is available (typescript will help via global.d.ts)
       if (!window.electronIPC || typeof window.electronIPC.onceMainReady !== 'function') {
-         throw new Error('Electron IPC API (window.electronIPC.onceMainReady) not found. Ensure preload script is correctly loaded.');
+        throw new Error('Electron IPC API (window.electronIPC.onceMainReady) not found. Ensure preload script is correctly loaded.');
       }
 
       // Wait for the main process to be ready
@@ -43,7 +43,7 @@ export async function initializePeerbitService() {
         getPublicKey: () => window.electronPeerbit.getPublicKey(),
         getPeerId: () => window.electronPeerbit.getPeerId(),
         dial: (address: string) => window.electronPeerbit.dial(address),
-        addRelease: (release: Release) => window.electronPeerbit.addRelease(release),
+        addRelease: (release: ReleaseData) => window.electronPeerbit.addRelease(release),
         getRelease: (id: string) => window.electronPeerbit.getRelease(id),
         getLatestReleases: (size?: number) => window.electronPeerbit.getLatestReleases(size),
       };
@@ -61,35 +61,22 @@ export async function initializePeerbitService() {
       });
       const siteProgram = await localPeerbitClient.open(new Site(siteId));
       console.log(`[Peerbit Service Initialize] Local Peerbit for web initialized. Peer ID: ${localPeerbitClient.peerId.toString()}`);
-      
-      serviceInstance = {
-        getPublicKey: () => localPeerbitClient.identity.publicKey.toString(),
-        getPeerId: () => localPeerbitClient.peerId.toString(),
-        dial: (address: string) => localPeerbitClient.dial(address),
-        addRelease: async (releaseDataFromForm: any) => { // Changed from 'release: Release' to 'any'
-          // Map data from form to Release constructor properties for web path
-          const releaseConstructorProps = {
-            name: releaseDataFromForm.name,
-            categoryId: releaseDataFromForm.category, // Map 'category' to 'categoryId'
-            contentCID: releaseDataFromForm.file,     // Map 'file' to 'contentCID'
-            thumbnailCID: releaseDataFromForm.thumbnail, // Map 'thumbnail' to 'thumbnailCID'
-            metadata: releaseDataFromForm.metadata ? JSON.stringify(releaseDataFromForm.metadata) : undefined,
-          };
 
-          if (!releaseConstructorProps.name || !releaseConstructorProps.categoryId || !releaseConstructorProps.contentCID) {
-            console.error('[Peerbit Web] Missing required fields for Release:', releaseConstructorProps);
-            throw new Error('Missing required fields (name, categoryId, or contentCID) for Release constructor.');
-          }
-          
-          const releaseInstance = new Release(releaseConstructorProps);
+      serviceInstance = {
+        getPublicKey: async () => localPeerbitClient.identity.publicKey.toString(),
+        getPeerId: async () => localPeerbitClient.peerId.toString(),
+        dial: (address: string) => localPeerbitClient.dial(address),
+        addRelease: async (releaseData: ReleaseData) => {
+
+          const releaseInstance = new Release(releaseData);
           if (!releaseInstance.id) {
-            console.error('[Peerbit Web] Critical: Release instance created without an ID. Data:', releaseConstructorProps);
+            console.error('[Peerbit Web] Critical: Release instance created without an ID. Data:', releaseData);
             throw new Error('Release instance created without an ID. Check Release class constructor.');
           }
           console.log(`[Peerbit Web] Adding release - ID: ${releaseInstance.id}, Name: ${releaseInstance.name}`);
           const resultHash = await siteProgram.addRelease(releaseInstance);
           // Match the return structure expected by the component and now provided by main process
-          return { success: true, id: releaseInstance.id, hash: resultHash, message: "Release added successfully (Web)" }; 
+          return { success: true, id: releaseInstance.id, hash: resultHash, message: 'Release added successfully (Web)' };
         },
         getRelease: (id: string) => siteProgram.getRelease(id),
         getLatestReleases: (size?: number) => siteProgram.getLatestReleases(size),

@@ -68,7 +68,6 @@ import { selectTranslation } from '/@/utils';
 
 import { useStaticStatus } from '../composables/staticStatus';
 import { useOrbiter } from '/@/plugins/peerbit/utils';
-import { useCopyToClipboard } from '/@/composables/copyToClipboard';
 import { AccountType } from '/@/lib/schema';
 import { useUserSession } from '../composables/userSession';
 import type { IPeerbitService } from '/@/lib/types';
@@ -108,9 +107,9 @@ watchEffect(async () => {
       publicKey.value = await peerbitServiceRef.value.getPublicKey();
       peerId.value = await peerbitServiceRef.value.getPeerId();
       console.log('[AccountPage] watchEffect: Fetched PK:', publicKey.value, 'PeerID:', peerId.value);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[AccountPage] watchEffect: Error fetching account details:', e);
-      fetchError.value = e.message || 'Failed to fetch account details.';
+      fetchError.value = e instanceof Error ? e.message :  'Failed to fetch account details.';
     }
   } else {
     console.log('[AccountPage] watchEffect: Peerbit service not yet available.');

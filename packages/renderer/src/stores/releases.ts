@@ -1,33 +1,20 @@
 import { defineStore } from 'pinia';
-import { computed, onMounted, onScopeDispose, ref, watch, type Ref } from 'vue';
+import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
 import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
 import type { FeaturedRelease, Release } from '/@/lib/schema';
 import { usePeerbitService } from '../plugins/peerbit/utils';
+import type { FeaturedReleaseData, IdData, ReleaseData, AnyObject } from '/@/lib/types';
+import { RELEASE_METADATA_PROPERTY } from '/@/lib/constants';
+
 const NO_CONTENT_DELAY_MS = 20000;
 type ContentStatus = 'loading' | 'checking' | 'idle' | 'empty';
 
-export type ReleaseItem = {
-  id?: string;
-  name: string;
-  contentCID: string;
-  category: string;
-  author: string;
-  thumbnail?: string;
-  cover?: string;
-  sourceSite?: string;
-  metadata: Record<string, unknown>
-}
+export type ReleaseItem<T = string> = IdData & ReleaseData<T>;
 
-export type PartialReleaseItem = Partial<ReleaseItem>;
+export type PartialReleaseItem<T = string> = Partial<ReleaseItem<T>>;
 
-export type FeaturedReleaseItem = {
-  id: string;
-  releaseId: string;
-  startTime: string;
-  endTime: string;
-  promoted: boolean;
-};
+export type FeaturedReleaseItem = IdData & FeaturedReleaseData;
 
 export type PartialFeaturedReleaseItem = Partial<FeaturedReleaseItem>;
 
@@ -62,7 +49,7 @@ const determineTargetStatus = (
 };
 
 export const useReleasesStore = defineStore('releases', () => {
-  const { peerbitService } = usePeerbitService();
+  const { peerbitServiceRef } = usePeerbitService();
   const { staticReleases, staticFeaturedReleases } = useStaticReleases();
   const { staticStatus } = useStaticStatus();
 
@@ -72,12 +59,12 @@ export const useReleasesStore = defineStore('releases', () => {
   const status: Ref<ContentStatus> = ref('loading');
   const timerId = ref<ReturnType<typeof setTimeout> | null>(null);
 
-  const releases = computed<ReleaseItem[]>(() => {
+  const releases = computed<ReleaseItem<AnyObject>[]>(() => {
     if (releasesRaw.value) {
       if (releasesRaw.value.length > 0) {
         console.log('[ReleasesStore] Using Peerbit releases. Count:', releasesRaw.value.length);
         return releasesRaw.value.map((pr) => {
-          let parsedMetadata: Record<string, unknown> = {};
+          let parsedMetadata: AnyObject = {};
           try {
             if (pr.metadata) {
               parsedMetadata = JSON.parse(pr.metadata);
@@ -86,14 +73,8 @@ export const useReleasesStore = defineStore('releases', () => {
             console.error('Failed to parse release metadata from Peerbit:', e);
           }
           return {
-            id: pr.id,
-            name: pr.name,
-            contentCID: pr.contentCID,
-            category: pr.categoryId,
-            author: parsedMetadata.author as string || 'N/A',
-            thumbnail: pr.thumbnailCID,
-            cover: parsedMetadata.cover as string,
-            metadata: parsedMetadata,
+            ...pr,
+            [RELEASE_METADATA_PROPERTY]: parsedMetadata,
           };
         });
       } else {
@@ -122,14 +103,14 @@ export const useReleasesStore = defineStore('releases', () => {
     }
   });
 
-  const activedFeaturedReleases = computed<ReleaseItem[]>(() => {
+  const activedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
     const activedFeaturedReleasesIds = unfilteredFeaturedReleases.value
       .filter(filterActivedFeatured)
       .map(fr => fr.releaseId);
     return releases.value.filter(r => r.id && activedFeaturedReleasesIds.includes(r.id));
   });
 
-  const promotedFeaturedReleases = computed<ReleaseItem[]>(() => {
+  const promotedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
     const promotedActivedFeaturedReleasesIds = unfilteredFeaturedReleases.value
       .filter(filterActivedFeatured)
       .filter(filterPromotedFeatured)
@@ -138,7 +119,7 @@ export const useReleasesStore = defineStore('releases', () => {
   });
 
   watch(
-    [releasesRaw,featuredReleasesRaw, staticStatus],
+    [releasesRaw, featuredReleasesRaw, staticStatus],
     ([currentReleases, _currentFeaturedReleases, currentStaticMode]) => {
       const isStatic = currentStaticMode === 'static';
       const hasPeerbitContent = currentReleases && currentReleases.length > 0;
@@ -179,8 +160,8 @@ export const useReleasesStore = defineStore('releases', () => {
   const noContent = computed(() => status.value === 'empty');
 
   async function fetchReleasesFromPeerbit() {
-    // Ensure the peerbitService Ref itself was injected AND its .value (the service instance) is available
-    if (!peerbitService || !peerbitService.value) {
+    // Ensure the peerbitServiceRef Ref itself was injected AND its .value (the service instance) is available
+    if (!peerbitServiceRef || !peerbitServiceRef.value) {
       console.warn('[ReleasesStore] fetchReleasesFromPeerbit: Peerbit service Ref not injected or service instance not available.');
       // Set to empty array or null, depending on how "no service" should be represented.
       // Empty array is consistent with error handling below.
@@ -188,7 +169,7 @@ export const useReleasesStore = defineStore('releases', () => {
       return;
     }
 
-    const serviceInstance = peerbitService.value; // Safe to use now
+    const serviceInstance = peerbitServiceRef.value; // Safe to use now
     try {
       console.log('[ReleasesStore] Fetching releases from Peerbit service instance...');
       const results = await serviceInstance.getLatestReleases();
@@ -203,7 +184,7 @@ export const useReleasesStore = defineStore('releases', () => {
 
   // Watch for the Peerbit service to become available
   watch(
-    () => peerbitService?.value, // Safely access .value from the potentially undefined ref
+    () => peerbitServiceRef?.value, // Safely access .value from the potentially undefined ref
     (newServiceInstance, oldServiceInstance) => {
       if (newServiceInstance && !oldServiceInstance) {
         console.log('[ReleasesStore] Peerbit service became available. Fetching initial releases.');
@@ -218,7 +199,7 @@ export const useReleasesStore = defineStore('releases', () => {
   );
 
   // The onMounted hook calling fetchReleasesFromPeerbit() was removed.
-  // Fetching is now triggered by the watcher when the peerbitService becomes available.
+  // Fetching is now triggered by the watcher when the peerbitServiceRef becomes available.
 
   return {
     releases,

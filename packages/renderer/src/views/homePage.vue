@@ -21,7 +21,7 @@
       >
         <!-- Special TV Show Alert -->
         <v-alert
-          v-if="section.categoryId === 'tvShow' && section.items.length > 0"
+          v-if="section.id === 'tvShow' && section.items.length > 0"
           type="info"
           class="mt-8 mb-n8"
           color="black"
@@ -33,7 +33,7 @@
 
         <content-section
           :title="section.title"
-          :pagination="section.categoryId === 'tvShow' && section.items.length > 4"
+          :pagination="section.id === 'tvShow' && section.items.length > 4"
           @navigate="() => router.push(section.navigationPath)"
         >
           <v-col
@@ -43,7 +43,7 @@
             <content-card
               :item="item"
               cursor-pointer
-              :source-site="item.sourceSite"
+              :source-site="(item.metadata?.['sourceSite'] as string | undefined)"
               @click="router.push(`/release/${item.id}`)"
             />
           </v-col>
@@ -74,8 +74,9 @@ import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import { type ReleaseItem, useReleasesStore } from '/@/stores/releases';
-import { useContentCategoriesStore, type ContentCategoryMetadataField, type ContentCategoryWithId} from '/@/stores/contentCategories';
+import { useContentCategoriesStore } from '/@/stores/contentCategories';
 import { storeToRefs } from 'pinia';
+import type { AnyObject, ContentCategoryData, ContentCategoryMetadata } from '/@/lib/types';
 
 const router = useRouter();
 
@@ -86,15 +87,15 @@ const contentCategoriesStore = useContentCategoriesStore();
 const { featuredContentCategories } = storeToRefs(contentCategoriesStore);
 
 function categorizeReleasesByFeaturedCategories(
-  releases: ReleaseItem[],
-  featuredCats: ContentCategoryWithId<ContentCategoryMetadataField>[],
+  releases: ReleaseItem<AnyObject>[],
+  featuredCats: ContentCategoryData<ContentCategoryMetadata>[],
   limitPerCategory: number = 8,
-): Record<string, ReleaseItem[]> {
-  const result: Record<string, ReleaseItem[]> = {};
+): Record<string, ReleaseItem<AnyObject>[]> {
+  const result: Record<string, ReleaseItem<AnyObject>[]> = {};
   const addedReleaseIds = new Set<string>();
 
   featuredCats.forEach(fc => {
-    result[fc.contentCategory.categoryId] = [];
+    result[fc.id] = [];
   });
 
   for (const release of releases) {
@@ -103,8 +104,8 @@ function categorizeReleasesByFeaturedCategories(
     }
 
     for (const fc of featuredCats) {
-      const currentCategoryId = fc.contentCategory.categoryId;
-      if (release.category === currentCategoryId) {
+      const currentCategoryId = fc.id;
+      if (release.categoryId === currentCategoryId) {
         if (result[currentCategoryId].length < limitPerCategory) {
           result[currentCategoryId].push(release);
           addedReleaseIds.add(release.id);
@@ -125,12 +126,11 @@ const categorizedReleases = computed(() => {
 const activeSections = computed(() => {
   return featuredContentCategories.value
     .map(fc => {
-      const categoryId = fc.contentCategory.categoryId;
+      const categoryId = fc.id;
       const items = categorizedReleases.value[categoryId] || [];
       return {
         id: fc.id,
-        categoryId,
-        title: categoryId === 'tvShow' ? fc.contentCategory.displayName : `Featured ${fc.contentCategory.displayName}`,
+        title: categoryId === 'tvShow' ? fc.displayName : `Featured ${fc.displayName}`,
         items: items,
         navigationPath: `/featured/${categoryId}`, // Generic path, adjust if specific paths needed
       };

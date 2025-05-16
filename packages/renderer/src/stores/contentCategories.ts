@@ -1,36 +1,28 @@
-// Removed: import { ContentCategoryWithId } from './contentCategories';
 import { defineStore } from 'pinia';
 import { computed } from 'vue';
+import type { ContentCategoryData, ContentCategoryMetadata } from '/@/lib/types';
+import {
+  ID_PROPERTY,
+  CONTENT_CATEGORY_DISPLAY_NAME_PROPERTY,
+  CONTENT_CATEGORY_FEATURED_PROPERTY,
+  CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY,
+} from '/@/lib/constants';
 
-export const CONTENT_CATEGORIES_CATEGORY_ID = 'categoryId';
-export const CONTENT_CATEGORIES_DISPLAY_NAME = 'displayName';
-export const CONTENT_CATEGORIES_FEATURED = 'featured';
-export const CONTENT_CATEGORIES_METADATA_SCHEMA = 'metadataSchema';
 
-export type ContentCategory<T = string> = {
-  [CONTENT_CATEGORIES_CATEGORY_ID]: string;
-  [CONTENT_CATEGORIES_DISPLAY_NAME]: string;
-  [CONTENT_CATEGORIES_FEATURED]?: boolean;
-  [CONTENT_CATEGORIES_METADATA_SCHEMA]: T;
-};
-
-export type ContentCategoryMetadataField = Record<string, {
-  type: 'string' | 'number' | 'array';
-  description: string;
-  options?: string[];
-}>;
-
-export type ContentCategoryWithId<T = string> = {
-  id: string;
-  contentCategory: ContentCategory<T>;
-};
-
-export const DEFAULT_CONTENT_CATEGORIES: ContentCategory<ContentCategoryMetadataField>[] = [
+export const DEFAULT_CONTENT_CATEGORIES: ContentCategoryData<ContentCategoryMetadata>[] = [
   {
-    categoryId: 'music',
-    displayName: 'Music',
-    featured: true,
-    metadataSchema: {
+    [ID_PROPERTY]: 'music',
+    [CONTENT_CATEGORY_DISPLAY_NAME_PROPERTY]: 'Music',
+    [CONTENT_CATEGORY_FEATURED_PROPERTY]: true,
+    [CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY]: {
+      author: {
+        type: 'string',
+        description: 'Name of the author or creator of the music content',
+      },
+      cover: {
+        type: 'string',
+        description: 'URL or path to the cover image of the music content',
+      },
       description: {
         type: 'string',
         description: 'Brief description of the music content',
@@ -101,9 +93,18 @@ export const DEFAULT_CONTENT_CATEGORIES: ContentCategory<ContentCategoryMetadata
     },
   },
   {
-    categoryId: 'video',
-    displayName: 'Videos',
-    metadataSchema: {
+    [ID_PROPERTY]: 'video',
+    [CONTENT_CATEGORY_DISPLAY_NAME_PROPERTY]: 'Videos',
+    [CONTENT_CATEGORY_FEATURED_PROPERTY]: false,
+    [CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY]: {
+      author: {
+        type: 'string',
+        description: 'Name of the author or creator of the video content',
+      },
+      cover: {
+        type: 'string',
+        description: 'URL or path to the cover image of the video content',
+      },
       title: {
         type: 'string',
         description: 'Title of the video',
@@ -143,13 +144,21 @@ export const DEFAULT_CONTENT_CATEGORIES: ContentCategory<ContentCategoryMetadata
     },
   },
   {
-    categoryId: 'movie',
-    displayName: 'Movies',
-    featured: true,
-    metadataSchema: {
+    [ID_PROPERTY]: 'movie',
+    [CONTENT_CATEGORY_DISPLAY_NAME_PROPERTY]: 'Movies',
+    [CONTENT_CATEGORY_FEATURED_PROPERTY]: true,
+    [CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY]: {
       description: {
         type: 'string',
         description: 'Brief description of the movie',
+      },
+      author: {
+        type: 'string',
+        description: 'Name of the author or creator of the video content',
+      },
+      cover: {
+        type: 'string',
+        description: 'URL or path to the cover image of the video content',
       },
       resolution: {
         type: 'string',
@@ -198,13 +207,21 @@ export const DEFAULT_CONTENT_CATEGORIES: ContentCategory<ContentCategoryMetadata
     },
   },
   {
-    categoryId: 'tvShow',
-    displayName: 'TV Shows',
-    featured: true,
-    metadataSchema: {
+    [ID_PROPERTY]: 'tvShow',
+    [CONTENT_CATEGORY_DISPLAY_NAME_PROPERTY]: 'TV Shows',
+    [CONTENT_CATEGORY_FEATURED_PROPERTY]: true,
+    [CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY]: {
       description: {
         type: 'string',
         description: 'Brief description of the TV show',
+      },
+      author: {
+        type: 'string',
+        description: 'Name of the author or creator of the tv show content',
+      },
+      cover: {
+        type: 'string',
+        description: 'URL or path to the cover image of the tv show content',
       },
       seasons: {
         type: 'number',
@@ -257,16 +274,12 @@ export const DEFAULT_CONTENT_CATEGORIES: ContentCategory<ContentCategoryMetadata
 
 export const useContentCategoriesStore = defineStore('contentCategories', () => {
 
-  const contentCategories = computed<ContentCategoryWithId<ContentCategoryMetadataField>[]>(() => { // Applied fix here
-    return DEFAULT_CONTENT_CATEGORIES.map((dcc) => ({
-      id: dcc.categoryId,
-      contentCategory: dcc,
-    }));
+  const contentCategories = computed<ContentCategoryData<ContentCategoryMetadata>[]>(() => { // Applied fix here
+    return DEFAULT_CONTENT_CATEGORIES;
   });
 
   const featuredContentCategories = computed(() => {
-    // Type of 'cc' will now be correctly inferred as ContentCategoryWithId<ContentCategoryMetadataField>
-    return contentCategories.value.filter(cc => cc.contentCategory.featured);
+    return contentCategories.value.filter(cc => cc.featured);
   });
 
   return {
