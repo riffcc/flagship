@@ -29,20 +29,18 @@
       <v-list lines="two">
         <v-list-item
           title="Public Key"
-          :subtitle="isCopied(accountId!) ? 'Copied!' : accountId"
-          :ripple="false"
-          @click="copy(accountId!, accountId!)"
+          :subtitle="publicKey || 'Fetching Public Key...'"
         >
-          <v-list-item
-            title="Peer ID"
-            :subtitle="peerId"
-          >
-          </v-list-item>
-          <v-list-item
-            title="Account status"
-            :subtitle="`${accountStatus} (${statusExplanation})`"
-          >
-          </v-list-item>
+        </v-list-item>
+        <v-list-item
+          title="Peer ID"
+          :subtitle="peerId || 'Fetching Peer ID...'"
+        >
+        </v-list-item>
+        <v-list-item
+          title="Account status"
+          :subtitle="`${accountStatus} (${statusExplanation})`"
+        >
         </v-list-item>
       </v-list>
     </v-card>
@@ -65,7 +63,7 @@
   </v-container>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref, watchEffect } from 'vue';
+import { computed, onMounted, ref, watchEffect, inject, type Ref } from 'vue';
 import { selectTranslation } from '/@/utils';
 
 import { useStaticStatus } from '../composables/staticStatus';
@@ -73,10 +71,13 @@ import { useOrbiter } from '/@/plugins/peerbit/utils';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
 import { AccountType } from '/@/lib/schema';
 import { useUserSession } from '../composables/userSession';
+import type { IPeerbitService } from '/@/lib/types';
 
 const { orbiter } = useOrbiter();
-// User name
 const { userData } = useUserSession();
+
+const peerbitServiceRef = inject<Ref<IPeerbitService | undefined>>('peerbitService');
+
 const names = computed(() => {
   return orbiter.listenForNameChange();
 });
@@ -85,7 +86,6 @@ const displayName = computed(() => {
   return selectTranslation(names.value) || 'Anonymous';
 });
 
-// Dev static mode
 const { staticStatus } = useStaticStatus();
 
 const staticModeSwitch = ref(staticStatus.value === 'static');
@@ -96,11 +96,26 @@ watchEffect(() => {
   staticModeSwitch.value = staticStatus.value === 'static';
 });
 
-const { copy, isCopied } = useCopyToClipboard();
-
-const accountId = ref<string | undefined>();
+const publicKey = ref<string | undefined>();
 const peerId = ref<string | undefined>();
+const fetchError = ref<string | null>(null);
 
+watchEffect(async () => {
+  if (peerbitServiceRef?.value) {
+    console.log('[AccountPage] watchEffect: Peerbit service is now available. Fetching account details...');
+    fetchError.value = null;
+    try {
+      publicKey.value = await peerbitServiceRef.value.getPublicKey();
+      peerId.value = await peerbitServiceRef.value.getPeerId();
+      console.log('[AccountPage] watchEffect: Fetched PK:', publicKey.value, 'PeerID:', peerId.value);
+    } catch (e: any) {
+      console.error('[AccountPage] watchEffect: Error fetching account details:', e);
+      fetchError.value = e.message || 'Failed to fetch account details.';
+    }
+  } else {
+    console.log('[AccountPage] watchEffect: Peerbit service not yet available.');
+  }
+});
 
 const accountStatus = computed<AccountType>(() => {
   return AccountType.GUEST;
@@ -120,7 +135,6 @@ const statusExplanation = computed(() => {
   }
 });
 
-// Connectivity
 const ipfsConnections = computed(() => orbiter?.constellation?.réseau?.suivreConnexionsPostesSFIP ? orbiter.constellation.réseau.suivreConnexionsPostesSFIP() : []);
 const nOrbiterDevices = computed(() => {
   return 0;
@@ -130,8 +144,8 @@ const nOrbiterAccounts = computed(() => {
 });
 
 onMounted(async () => {
-  accountId.value = await orbiter.getAccountId();
-  peerId.value = await orbiter.getPeerId();
+  // accountId.value = await orbiter.getAccountId();
+  // peerId.value = await orbiter.getPeerId();
 });
 
 </script>

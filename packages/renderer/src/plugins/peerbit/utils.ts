@@ -1,16 +1,12 @@
-import { inject } from 'vue';
+import { inject, type Ref } from 'vue';
 import type { IPeerbitService } from '/@/lib/types';
 
 /**
  * Provides access to the peerbit service instance
  */
-export function usePeerbitService() {
-  const peerbitService = inject<IPeerbitService | undefined>('peerbitService');
-  // Removed the throw new Error to allow the app to load even if Peerbit service is not immediately available.
-  // Consumers must handle the case where peerbitService might be undefined.
-  return {
-    peerbitService,
-  };
+export function usePeerbitService(): { peerbitServiceRef: Ref<IPeerbitService | undefined> | undefined } {
+  const service = inject<Ref<IPeerbitService | undefined>>('peerbitService');
+  return { peerbitServiceRef: service };
 }
 
 
@@ -39,71 +35,55 @@ export interface OrbiterAdapter {
  * an interface similar to what AccountPage.vue expects from "orbiter".
  */
 export function useOrbiter(): { orbiter: OrbiterAdapter } {
-  const { peerbitService } = usePeerbitService();
+  const { peerbitServiceRef } = usePeerbitService();
 
-  if (!peerbitService) {
-    console.warn('Peerbit service is not available. Orbiter will use stub implementations.');
+  // Check if the ref itself is undefined or its .value is undefined
+  if (!peerbitServiceRef || !peerbitServiceRef.value) {
+    console.warn('Peerbit service Ref is not available or not yet initialized. Orbiter will use stub implementations.');
     return {
       orbiter: {
         getAccountId: async () => {
-          console.warn('Orbiter: getAccountId called but Peerbit service is not available.');
+          console.warn('Orbiter stub: getAccountId called because Peerbit service is not available/initialized.');
           return undefined;
         },
         getPeerId: async () => {
-          console.warn('Orbiter: getPeerId called but Peerbit service is not available.');
+          console.warn('Orbiter stub: getPeerId called because Peerbit service is not available/initialized.');
           return undefined;
         },
-        followIsModerator: async () => {
-          console.warn('Orbiter: followIsModerator called but Peerbit service is not available.');
-          return false;
-        },
-        followCanUpload: async () => {
-          console.warn('Orbiter: followCanUpload called but Peerbit service is not available.');
-          return false;
-        },
         listenForNameChange: () => {
-          console.warn('Orbiter: listenForNameChange called but Peerbit service is not available. This function is also not fully implemented.');
-          return {};
+          console.warn('Orbiter stub: listenForNameChange called because Peerbit service is not available/initialized.');
+          return {}; 
         },
+        followIsModerator: async () => false,
+        followCanUpload: async () => false,
         constellation: {
           réseau: {
-            suivreConnexionsPostesSFIP: () => {
-              console.warn('Orbiter: suivreConnexionsPostesSFIP called but Peerbit service is not available.');
-              return [];
-            },
-            suivreConnexionsDispositifs: () => {
-              console.warn('Orbiter: suivreConnexionsDispositifs called but Peerbit service is not available.');
-              return [];
-            },
-            suivreConnexionsMembres: () => {
-              console.warn('Orbiter: suivreConnexionsMembres called but Peerbit service is not available.');
-              return [];
-            },
+            suivreConnexionsPostesSFIP: () => [],
+            suivreConnexionsDispositifs: () => [],
+            suivreConnexionsMembres: () => [],
           },
         },
       },
     };
   }
 
-  // Peerbit service is available, return the original implementation.
+  // At this point, peerbitServiceRef.value is guaranteed to be IPeerbitService
+  const serviceInstance = peerbitServiceRef.value; 
+
   return { orbiter: {
-    getAccountId: async () => peerbitService.getPublicKey(),
-    getPeerId: async () => peerbitService.getPeerId(),
-    followIsModerator: async () => {
-      return false;
-    },
-    followCanUpload: async () => {
-      return false;
-    },
+    getAccountId: async () => serviceInstance.getPublicKey(),
+    getPeerId: async () => serviceInstance.getPeerId(),
     listenForNameChange: () => {
-      console.warn('orbiter.listenForNameChange is not fully implemented');
-      return {};
+      console.warn('orbiter.listenForNameChange is not fully implemented using actual Peerbit service yet.');
+      return {}; 
     },
+    followIsModerator: async () => false,
+    followCanUpload: async () => false,
     constellation: {
       réseau: {
-        suivreConnexionsPostesSFIP: () => { /* Placeholder */ return []; },
-        suivreConnexionsDispositifs: () => { /* Placeholder */ return []; },
-        suivreConnexionsMembres: () => { /* Placeholder */ return []; },
+        suivreConnexionsPostesSFIP: () => { console.warn("Orbiter: suivreConnexionsPostesSFIP not implemented with Peerbit"); return []; },
+        suivreConnexionsDispositifs: () => { console.warn("Orbiter: suivreConnexionsDispositifs not implemented with Peerbit"); return []; },
+        suivreConnexionsMembres: () => { console.warn("Orbiter: suivreConnexionsMembres not implemented with Peerbit"); return []; },
       },
     },
   } };

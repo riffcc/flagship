@@ -1,0 +1,70 @@
+{
+	"name": "@peerbit/trusted-network",
+	"version": "4.1.95",
+	"description": "Access controller that operates on a DB",
+	"sideEffects": false,
+	"type": "module",
+	"types": "./dist/src/index.d.ts",
+	"typesVersions": {
+		"*": {
+			"*": [
+				"*",
+				"dist/*",
+				"dist/src/*",
+				"dist/src/*/index"
+			],
+			"src/*": [
+				"*",
+				"dist/*",
+				"dist/src/*",
+				"dist/src/*/index"
+			]
+		}
+	},
+	"files": [
+		"src",
+		"dist",
+		"!dist/e2e",
+		"!dist/test",
+		"!**/*.tsbuildinfo"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/src/index.d.ts",
+			"import": "./dist/src/index.js"
+		}
+	},
+	"eslintConfig": {
+		"extends": "peerbit",
+		"parserOptions": {
+			"project": true,
+			"sourceType": "module"
+		},
+		"ignorePatterns": [
+			"!.aegir.js",
+			"test/ts-use",
+			"*.d.ts"
+		]
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"clean": "aegir clean",
+		"build": "aegir build --no-bundle",
+		"test": "aegir test --target node",
+		"lint": "aegir lint"
+	},
+	"author": "dao.xyz",
+	"license": "MIT",
+	"dependencies": {
+		"@dao-xyz/borsh": "^5.2.3",
+		"@peerbit/crypto": "2.3.8",
+		"@peerbit/document": "9.6.2"
+	},
+	"devDependencies": {
+		"@peerbit/time": "2.1.0",
+		"@ethersproject/wallet": "^5.8.0",
+		"@peerbit/test-utils": "^2.1.46"
+	}
+}
