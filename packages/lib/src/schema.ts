@@ -410,7 +410,7 @@ export class Site extends Program<Args> {
     return result.entry.hash;
   }
 
-  async getRelease(id: string): Promise<Release> {
+  async getRelease(id: string): Promise<Release | undefined> {
     return this.releases.index.get(id);
   }
 
