@@ -19,12 +19,26 @@ export async function initializePeerbitService() {
     const bootstrappersRaw = import.meta.env.VITE_BOOTSTRAPPERS as string | undefined;
 
     if (import.meta.env.IS_ELECTRON) {
-      console.log('[Peerbit Service Initialize] Running in Electron. Using main process Peerbit via IPC.');
+      console.log('[Peerbit Plugin Renderer] Running in Electron. Using main process Peerbit via IPC.');
       if (!window.electronPeerbit) {
         throw new Error(
           'Electron Peerbit API (window.electronPeerbit) not found. Ensure preload script is correctly loaded and exposing the API.',
         );
       }
+      // Ensure electronIPC is available (typescript will help via global.d.ts)
+      if (!window.electronIPC || typeof window.electronIPC.onceMainReady !== 'function') {
+         throw new Error('Electron IPC API (window.electronIPC.onceMainReady) not found. Ensure preload script is correctly loaded.');
+      }
+
+      // Wait for the main process to be ready
+      await new Promise<void>(resolve => {
+        console.log('[Peerbit Plugin Renderer] Waiting for main process ready signal...');
+        window.electronIPC.onceMainReady(() => {
+          console.log('[Peerbit Plugin Renderer] Main process ready signal received.');
+          resolve();
+        });
+      });
+
       serviceInstance = {
         getPublicKey: () => window.electronPeerbit.getPublicKey(),
         getPeerId: () => window.electronPeerbit.getPeerId(),
@@ -38,22 +52,45 @@ export async function initializePeerbitService() {
       let siteId = import.meta.env.VITE_SITE_ID as string | undefined;
 
       if (!siteId) {
-        console.error('VITE_SITE_ID is missing in environment variables.');
-        console.warn('[Peerbit Service Initialize] VITE_SITE_ID is missing. Using a default or allowing Site program to handle.');
+        console.warn('[Peerbit Service Initialize] VITE_SITE_ID is missing. Using default.');
       }
-      siteId = DEFAULT_SITE_ID;
+      siteId = DEFAULT_SITE_ID; // Ensure siteId has a value
 
       const localPeerbitClient = await Peerbit.create({
         directory: `./.peerbit/${siteId}`,
       });
       const siteProgram = await localPeerbitClient.open(new Site(siteId));
-      console.log('[Peerbit Service Initialize] Peerbit.create finished.');
       console.log(`[Peerbit Service Initialize] Local Peerbit for web initialized. Peer ID: ${localPeerbitClient.peerId.toString()}`);
+      
       serviceInstance = {
         getPublicKey: () => localPeerbitClient.identity.publicKey.toString(),
-        dial: (address: string) => localPeerbitClient.dial(address),
         getPeerId: () => localPeerbitClient.peerId.toString(),
-        addRelease: (release: Release) => siteProgram.addRelease(release),
+        dial: (address: string) => localPeerbitClient.dial(address),
+        addRelease: async (releaseDataFromForm: any) => { // Changed from 'release: Release' to 'any'
+          // Map data from form to Release constructor properties for web path
+          const releaseConstructorProps = {
+            name: releaseDataFromForm.name,
+            categoryId: releaseDataFromForm.category, // Map 'category' to 'categoryId'
+            contentCID: releaseDataFromForm.file,     // Map 'file' to 'contentCID'
+            thumbnailCID: releaseDataFromForm.thumbnail, // Map 'thumbnail' to 'thumbnailCID'
+            metadata: releaseDataFromForm.metadata ? JSON.stringify(releaseDataFromForm.metadata) : undefined,
+          };
+
+          if (!releaseConstructorProps.name || !releaseConstructorProps.categoryId || !releaseConstructorProps.contentCID) {
+            console.error('[Peerbit Web] Missing required fields for Release:', releaseConstructorProps);
+            throw new Error('Missing required fields (name, categoryId, or contentCID) for Release constructor.');
+          }
+          
+          const releaseInstance = new Release(releaseConstructorProps);
+          if (!releaseInstance.id) {
+            console.error('[Peerbit Web] Critical: Release instance created without an ID. Data:', releaseConstructorProps);
+            throw new Error('Release instance created without an ID. Check Release class constructor.');
+          }
+          console.log(`[Peerbit Web] Adding release - ID: ${releaseInstance.id}, Name: ${releaseInstance.name}`);
+          const resultHash = await siteProgram.addRelease(releaseInstance);
+          // Match the return structure expected by the component and now provided by main process
+          return { success: true, id: releaseInstance.id, hash: resultHash, message: "Release added successfully (Web)" }; 
+        },
         getRelease: (id: string) => siteProgram.getRelease(id),
         getLatestReleases: (size?: number) => siteProgram.getLatestReleases(size),
       };

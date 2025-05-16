@@ -122,11 +122,12 @@
 <script setup lang="ts">
 import {consts, type types as orbiterTypes} from '/@/plugins/peerbit/orbiter-types';
 import {cid} from 'is-ipfs';
-import {computed, onMounted, ref} from 'vue';
+import {computed, onMounted, ref, inject, type Ref} from 'vue';
 import {useOrbiter} from '/@/plugins/peerbit/utils';
 import type { ReleaseItem, PartialReleaseItem } from '/@/stores/releases';
 import { useContentCategoriesStore } from '/@/stores/contentCategories';
 import { storeToRefs } from 'pinia';
+import type { IPeerbitService } from '/@/lib/types';
 
 const props = defineProps<{
   initialData?: PartialReleaseItem;
@@ -159,6 +160,8 @@ const rules = {
   isValidCid: (v: string) => !v || cid(v) || 'Please enter a valid CID.',
 };
 const isLoading = ref(false);
+
+const peerbitService = inject<Ref<IPeerbitService | undefined>>('peerbitService');
 
 const contentCategoriesItems = computed(() => (contentCategories.value ?? []).map(item => ({
   id: item.id,
@@ -210,47 +213,47 @@ const readyToSave = computed(() => {
 const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
   isLoading.value = true;
-  try {
-    const data = readyToSave.value; // Single declaration of data
 
-    // Prepare data for Peerbit (common for add and update)
-    // The 'id' field from 'data' (which comes from releaseItem.value) will be used by updateRelease.
-    // releaseItem.value.id is populated from props.initialData.id on mount for edit mode.
+  if (!peerbitService?.value) {
+    emit('update:error', 'Peerbit service is not available.');
+    isLoading.value = false;
+    return;
+  }
+
+  try {
+    const data = readyToSave.value;
     const peerbitReleaseData = {
-      id: data.id, // Pass existing ID for updates; will be undefined for new releases
+      id: data.id,
       name: data.name,
-      file: data.contentCID, // Map contentCID to 'file' as expected by peerbitNode.ts ReleaseType
+      file: data.contentCID,
       author: data.author,
       category: data.category,
       thumbnail: data.thumbnail,
       cover: data.cover,
-      metadata: data.metadata, // Send metadata as an object; peerbitNode.ts handles stringification
+      metadata: data.metadata,
     };
 
     if (props.mode === 'edit' && data.id) {
-      // Update existing release using Peerbit
-      const response = await (window as any).peerbitAPI.updateRelease(data.id, peerbitReleaseData);
+      console.log('[ReleaseForm] Updating existing release with ID:', data.id, peerbitReleaseData);
+      const response = await peerbitService.value.updateRelease(data.id, peerbitReleaseData);
+      console.log('[ReleaseForm] Update release response:', response);
       if (response.success) {
-        emit('submit', data); // data here includes the id
-        emit('update:success', response.message || 'Release updated in Peerbit successfully!');
-        // clearForm(); // Decide on UX: clear form or navigate away after edit
+        emit('submit', data);
+        emit('update:success', response.message || 'Release updated successfully!');
       } else {
-        console.error('Error updating release in Peerbit:', response.error);
-        emit('update:error', response.error || 'Error updating release in Peerbit. Please try again later.');
+        emit('update:error', response.error || 'Error updating release.');
       }
     } else {
-      // Create new release using Peerbit
-      // peerbitReleaseData.id will be undefined here, backend generates it.
-      const response = await (window as any).peerbitAPI.addRelease(peerbitReleaseData);
+      console.log('[ReleaseForm] Creating new release:', peerbitReleaseData);
+      const response = await peerbitService.value.addRelease(peerbitReleaseData);
+      console.log('[ReleaseForm] Add release response:', response);
       if (response.success) {
-        // Update the local data with the ID returned from the backend
         const submittedData = { ...data, id: response.id };
         emit('submit', submittedData);
-        emit('update:success', response.message || 'Release saved to Peerbit successfully!');
+        emit('update:success', response.message || 'Release saved successfully!');
         clearForm();
       } else {
-        console.error('Error saving release to Peerbit:', response.error);
-        emit('update:error', response.error || 'Error saving release to Peerbit. Please try again later.');
+        emit('update:error', response.error || 'Error saving release.');
       }
     }
   } catch (error) {
