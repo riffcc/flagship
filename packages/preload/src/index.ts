@@ -13,6 +13,12 @@ contextBridge.exposeInMainWorld('osInfo', {
   platform: so.platform,
 });
 
+contextBridge.exposeInMainWorld('electronIPC', {
+  onceMainReady: (callback: () => void) => {
+    ipcRenderer.once('main-process-ready', callback);
+  },
+});
+
 contextBridge.exposeInMainWorld('electronPeerbit', {
   getPublicKey: (): Promise<string> => ipcRenderer.invoke('peerbit:get-public-key'),
   getPeerId: (): Promise<string> => ipcRenderer.invoke('peerbit:get-peer-id'),

@@ -56,7 +56,7 @@ app
       const siteProgram = getSiteProgram();
       if (!node) throw new Error('Peerbit node not initialized in main process');
       if (!siteProgram) throw new Error('Site program not initialized in main process');
-      
+
       try {
         // Map data from renderer to Release constructor properties
         const releaseConstructorProps = {
@@ -83,13 +83,13 @@ app
 
         console.log(`[Main IPC] Adding release - ID: ${releaseInstance.id}, Name: ${releaseInstance.name}`);
         const resultHash = await siteProgram.addRelease(releaseInstance);
-        
+
         return { success: true, id: releaseInstance.id, hash: resultHash, message: "Release added successfully" };
       } catch (error) {
         console.error(`[Main IPC] Error adding release. Initial data from renderer (ID: ${releaseDataFromRenderer.id}):`, releaseDataFromRenderer, "Mapped props:", /*releaseConstructorProps cannot be logged here if error was before its definition*/ error);
         // Ensure a structured error is returned if the component expects it, or rethrow for a generic error.
         // For now, rethrowing the original error as the component might not be robustly handling {success: false}
-        throw error; 
+        throw error;
       }
     });
 
@@ -127,9 +127,28 @@ app
 
     console.log('[Main IPC] All Peerbit IPC handlers registered.');
 
+    // Notify renderer that main is ready
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('main-process-ready');
-      console.log('[Main IPC] Sent "main-process-ready" to renderer.');
+      const sendReadySignal = () => {
+        if (!mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('main-process-ready');
+          console.log('[Main IPC] Sent "main-process-ready" to renderer.');
+        } else {
+          console.warn('[Main IPC] Main window was destroyed before ready signal could be sent.');
+        }
+      };
+
+      if (mainWindow.webContents.isLoading()) {
+        console.log('[Main IPC] Main window is loading. Waiting for did-finish-load to send ready signal.');
+        mainWindow.webContents.once('did-finish-load', () => {
+          console.log('[Main IPC] Main window did-finish-load event fired.');
+          sendReadySignal();
+        });
+      } else {
+        // If not loading, content is presumably already loaded (e.g., hot reload, or already loaded)
+        console.log('[Main IPC] Main window is not loading. Sending ready signal immediately.');
+        sendReadySignal();
+      }
     } else {
       console.warn('[Main IPC] Main window not available or destroyed; cannot send "main-process-ready".');
     }

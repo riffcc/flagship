@@ -50,23 +50,23 @@ async function createWindow() {
   return browserWindow;
 }
 
-export async function restoreOrCreateWindow() {
+export async function restoreOrCreateWindow(): Promise<BrowserWindow> {
   let window = BrowserWindow.getAllWindows().find(
     w => !w.isDestroyed(),
   );
 
   if (window === undefined) {
-    window = await createWindow();
-    connectHttp();
-    connectFileSystem();
     try {
+      window = await createWindow();
+      connectHttp();
+      connectFileSystem();
       console.log('[MainWindow] Starting Peerbit node...');
       await startPeerbitNode();
       console.log('[MainWindow] Peerbit node started or already running.');
     } catch (e) {
-      console.error('[MainWindow] CRITICAL: Failed to start main Peerbit node:', e);
-      app.quit();
-      return;
+      console.error('[MainWindow] CRITICAL: Failed to initialize main process components:', e);
+      app.quit(); // Ensure app quits on critical failure
+      throw e; // Re-throw to reject the promise from restoreOrCreateWindow
     }
   }
 
@@ -75,4 +75,5 @@ export async function restoreOrCreateWindow() {
   }
 
   window.focus();
+  return window;
 }
