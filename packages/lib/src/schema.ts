@@ -1,13 +1,9 @@
-import { SearchRequest, Sort, SortDirection } from '@peerbit/document';
+import { Documents, SearchRequest, Sort, SortDirection } from '@peerbit/document';
 import { deserialize, field, option, variant } from '@dao-xyz/borsh';
 import { PublicSignKey } from '@peerbit/crypto';
 import { sha256Sync } from '@peerbit/crypto';
-import {
-  Documents,
-
-} from '@peerbit/document';
 import { Program } from '@peerbit/program';
-import { type ReplicationOptions } from '@peerbit/shared-log';
+import type { ReplicationOptions } from '@peerbit/shared-log';
 import { v4 as uuid } from 'uuid';
 import { concat } from 'uint8arrays';
 import {
@@ -244,10 +240,12 @@ export class Account {
   }
 }
 
-type SiteArgs = { replicate?: ReplicationOptions };
+type Args = {
+  replicate?: ReplicationOptions
+};
 
 @variant('site')
-export class Site extends Program<SiteArgs> {
+export class Site extends Program<Args> {
 
   @field({ type: Documents })
   releases: Documents<Release, IndexableRelease>;
@@ -304,10 +302,10 @@ export class Site extends Program<SiteArgs> {
     });
   }
 
-  async open(): Promise<void> {
+  async open(args: Args): Promise<void> {
     await this.releases.open({
       type: Release,
-      replicate: {
+      replicate: args?.replicate || {
         factor: 1,
       },
       canPerform: async () => {
@@ -337,12 +335,12 @@ export class Site extends Program<SiteArgs> {
     });
     await this.featuredReleases.open({
       type: FeaturedRelease,
+      replicate: args?.replicate || {
+        factor: 1,
+      },
       canPerform: async () => {
         //TODO: implement access control
         return true;
-      },
-      replicate: {
-        factor: 1,
       },
       replicas: {
         min: 2,
@@ -351,12 +349,12 @@ export class Site extends Program<SiteArgs> {
     });
     await this.contentCategories.open({
       type: ContentCategory,
+      replicate: args?.replicate || {
+        factor: 1,
+      },
       canPerform: async () => {
         //TODO: implement access control
         return true;
-      },
-      replicate: {
-        factor: 1,
       },
       replicas: {
         min: 2,
@@ -365,12 +363,12 @@ export class Site extends Program<SiteArgs> {
     });
     await this.users.open({
       type: Account,
+      replicate: args?.replicate || {
+        factor: 1,
+      },
       canPerform: async () => {
         //TODO: implement access control
         return true;
-      },
-      replicate: {
-        factor: 1,
       },
       replicas: {
         min: 2,
@@ -379,12 +377,12 @@ export class Site extends Program<SiteArgs> {
     });
     await this.subscriptions.open({
       type: Subscription,
+      replicate: args?.replicate || {
+        factor: 1,
+      },
       canPerform: async () => {
         //TODO: implement access control
         return true;
-      },
-      replicate: {
-        factor: 1,
       },
       replicas: {
         min: 2,
@@ -393,12 +391,12 @@ export class Site extends Program<SiteArgs> {
     });
     await this.blockedContent.open({
       type: BlockedContent,
+      replicate: args?.replicate || {
+        factor: 1,
+      },
       canPerform: async () => {
         //TODO: implement access control
         return true;
-      },
-      replicate: {
-        factor: 1,
       },
       replicas: {
         min: 2,
