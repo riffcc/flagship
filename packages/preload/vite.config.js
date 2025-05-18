@@ -5,7 +5,6 @@ import {injectAppVersion} from '../../version/inject-app-version-plugin.mjs';
 
 const PACKAGE_ROOT = __dirname;
 const PROJECT_ROOT = join(PACKAGE_ROOT, '../..');
-const PACKAGES_ROOT = join(PACKAGE_ROOT, '..');
 
 /**
  * @type {import('vite').UserConfig}
@@ -17,7 +16,6 @@ const config = {
   envDir: PROJECT_ROOT,
   resolve: {
     alias: {
-      '/@/lib/': join(PACKAGES_ROOT, 'lib', 'src') + '/',
       '/@/': join(PACKAGE_ROOT, 'src') + '/',
     },
   },

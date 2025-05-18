@@ -1,9 +1,8 @@
 import {app, BrowserWindow} from 'electron';
 import {dirname, join} from 'node:path';
 import {fileURLToPath, URL as NodeURL} from 'node:url';
-import {connectHttp} from './http';
 import {connectFileSystem} from './file-system';
-import {startPeerbitNode} from './peerbit-node';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

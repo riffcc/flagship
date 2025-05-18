@@ -2,24 +2,6 @@ import type {Browser, Page, ElectronApplication} from 'playwright';
 import {afterAll, beforeAll, describe, expect, test} from 'vitest';
 import {onBrowser} from './utils';
 
-// Define the type for the release data to be sent, matching preload's ReleaseDataType
-type ReleaseDataTypeForTest = {
-  name: string;
-  file: string; // CID
-  author: string;
-  category: string;
-  thumbnail?: string;
-  cover?: string;
-  metadata?: Record<string, unknown> | string;
-};
-
-// Define the expected response structure from the IPC call, matching preload's AddReleaseResponseType
-type AddReleaseResponseTypeForTest = {
-  success: boolean;
-  message?: string;
-  error?: string;
-};
-
 const environnement = process.env.ENVIRONNEMENT_TESTS;
 
 describe('Test app window', function () {
@@ -29,7 +11,7 @@ describe('Test app window', function () {
 
   beforeAll(async () => {
     const testEnvironment = (environnement || 'electron') as 'firefox' | 'chromium' | 'webkit' | 'electron';
-    
+
     if (testEnvironment === 'electron') {
       const result = await onBrowser({ typeNavigateur: 'electron' });
       page = result.page;
@@ -37,7 +19,7 @@ describe('Test app window', function () {
     } else if (['firefox', 'chromium', 'webkit'].includes(testEnvironment)) {
       const result = await onBrowser({ typeNavigateur: testEnvironment as 'firefox' | 'chromium' | 'webkit' });
       page = result.page;
-      browser = result.browser; 
+      browser = result.browser;
     } else {
       throw new Error(`Unsupported test environment: ${environnement}. Must be 'firefox', 'chromium', 'webkit', or 'electron'.`);
     }
@@ -76,47 +58,5 @@ describe('Test app window', function () {
     expect((await element!.innerHTML()).trim(), 'Window content was empty').not.equal('');
   });
 
-  test('Upload a CID to Peerbit via peerbitAPI', async () => {
-    const testCID = 'QmTWWUmvC9txvE7aHs9xHd541qLx3ax58urvx3Kb3SFK2Q';
-    const releaseData: ReleaseDataTypeForTest = {
-      name: 'Test Release E2E',
-      file: testCID,
-      author: 'E2E Test',
-      category: 'Test Category',
-      metadata: {info: 'E2E test upload'},
-    };
-
-    // Ensure the page is fully loaded and peerbitAPI is available
-    try {
-      await page.waitForFunction(() => {
-        console.log('E2E polling: typeof window.peerbitAPI =', typeof (window as any).peerbitAPI);
-        return (window as any).peerbitAPI !== undefined;
-      }, {timeout: 15000}); 
-      console.log('E2E Test: window.peerbitAPI became available.');
-    } catch (e) {
-      const apiType = await page.evaluate(() => typeof (window as any).peerbitAPI);
-      const windowKeys = await page.evaluate(() => Object.keys(window));
-      console.error(`E2E Test Error: window.peerbitAPI (last known type: ${apiType}) did not become available. Window keys: ${windowKeys.join(', ')}`);
-      throw new Error(`window.peerbitAPI did not become available within 15 seconds. Last known type: ${apiType}. Original error: ${e}`);
-    }
-
-    const result = await page.evaluate(
-      async data => {
-        // @ts-expect-error peerbitAPI is exposed by preload and should be on window
-        return window.peerbitAPI.addRelease(data);
-      },
-      releaseData as any, 
-    );
-
-    expect(result, 'API call result should be defined').toBeDefined();
-    const typedResult = result as AddReleaseResponseTypeForTest; 
-
-    expect(typedResult.success, `Upload failed: ${typedResult.error || typedResult.message}`).toBe(
-      true,
-    );
-    expect(typedResult.message).toContain('Release "Test Release E2E" added successfully.');
-  });
-
-  // The 'Ping __verySimpleAPI' test, which was here, has been removed as it is obsolete.
 });
 

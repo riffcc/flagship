@@ -4,7 +4,6 @@ import {injectAppVersion} from '../../version/inject-app-version-plugin.mjs';
 
 const PACKAGE_ROOT = __dirname;
 const PROJECT_ROOT = join(PACKAGE_ROOT, '../..');
-const PACKAGES_ROOT = join(PACKAGE_ROOT, '..');
 
 /**
  * @type {import('vite').UserConfig}
@@ -16,7 +15,6 @@ const config = {
   envDir: PROJECT_ROOT,
   resolve: {
     alias: {
-      '/@/lib/': join(PACKAGES_ROOT, 'lib', 'src') + '/',
       '/@/': join(PACKAGE_ROOT, 'src') + '/',
     },
   },
@@ -39,51 +37,7 @@ const config = {
     emptyOutDir: true,
     reportCompressedSize: false,
   },
-  ssr: {
-    external: [
-      '@helia/json',
-      'helia',
-      'peerbit',
-      '@peerbit/document',
-      '@peerbit/program',
-      '@dao-xyz/borsh',
-      '@dao-xyz/datastore-level',
-      '@peerbit/keychain',
-      '@peerbit/crypto',
-      '@peerbit/blocks',
-      '@peerbit/stream',
-      '@peerbit/rpc',
-      '@peerbit/time',
-      '@peerbit/logger',
-      '@peerbit/trusted-network',
-      'better-sqlite3',
-      'bindings'
-    ]
-  },
-  // server: { // server.deps.external was not the correct fix, removing.
-  //   deps: {
-  //     external: [
-  //       'better-sqlite3',
-  //       'bindings',
-  //     ],
-  //   },
-  // },
   plugins: [injectAppVersion()],
-  test: {
-    deps: {
-      optimizer: {
-        ssr: {
-          exclude: [
-            'better-sqlite3',
-            'bindings',
-          ],
-        },
-      },
-    },
-    coverage: {
-      provider: 'istanbul',
-    },
-  },
 };
 
 export default config;

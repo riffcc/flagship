@@ -1,6 +1,4 @@
 import { app, BrowserWindow } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 // ES modules don't have __dirname by default. We need to derive it.
 // const __filename = fileURLToPath(import.meta.url);
@@ -31,8 +29,8 @@ app.whenReady().then(() => {
     console.log('[MinimalMain E2E] Window ready-to-show, showing window.');
     win.show();
   });
-  
-  win.loadURL('about:blank'); 
+
+  win.loadURL('about:blank');
   console.log('[MinimalMain E2E] Window created, loadURL(\'about:blank\') called.');
 });
 
@@ -45,4 +43,4 @@ app.on('window-all-closed', () => {
 
 app.on('quit', () => {
   console.log('[MinimalMain E2E] App quitting.');
-}); 
+});
