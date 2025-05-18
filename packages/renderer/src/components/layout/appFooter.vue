@@ -61,9 +61,9 @@
                 ></v-list-item>
                 <template v-if="key === 'explore'">
                   <v-list-item
-                    v-for="item in contentCategories.filter((cc: ContentCategory) => cc.featured)"
+                    v-for="item in contentCategories.filter((cc) => cc.featured)"
                     :key="item.id"
-                    :subtitle="pluralize(startCase(item.id))"
+                    :subtitle="item.displayName"
                     class="mb-2 pl-1"
                     min-height="12px"
                     height="24px"
@@ -111,11 +111,13 @@
 <script setup lang="ts">
 import {useRouter} from 'vue-router';
 import {navigationMap} from '/@/constants/navigation';
-import {startCase} from 'lodash';
-import pluralize from 'pluralize-esm';
-import { type ContentCategory, useSiteSettings } from '/@/composables/siteSettings';
+import { useContentCategoriesStore } from '/@/stores/contentCategories';
+import { storeToRefs } from 'pinia';
 
 const router = useRouter();
+
+const contentCategoriesStore = useContentCategoriesStore();
+const { contentCategories } = storeToRefs(contentCategoriesStore);
 
 const scrollToTop = () => {
   window.scrollTo({
@@ -127,5 +129,5 @@ const scrollToTop = () => {
 const openEmailClient = () => {
   window.location.href = 'mailto:wings@riff.cc';
 };
-const { contentCategories } = useSiteSettings();
+
 </script>

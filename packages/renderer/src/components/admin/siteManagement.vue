@@ -4,7 +4,7 @@
       class="px-6 py-4 mx-auto"
       max-width="448px"
     >
-      <v-list-item
+      <!-- <v-list-item
         class="px-0"
         :title="`Site ID: ${orbiter.siteId.slice(0, 17)}...${orbiter.siteId.slice(-10)}`"
       >
@@ -49,7 +49,7 @@
           </v-tooltip>
         </template>
       </v-list-item>
-      <v-divider class="mt-2"></v-divider>
+      <v-divider class="mt-2"></v-divider> -->
       <h3 class="mt-4 mb-2">Edit Site Info</h3>
       <v-file-input
         v-model="file"
@@ -99,11 +99,11 @@
 
 <script setup lang="ts">
 import { type Ref, ref, watch } from 'vue';
-import { useOrbiter } from '/@/plugins/peerbit/utils';
-import { useSiteColors } from '/@/composables/siteColors';
 import { parseUrlOrCid } from '/@/utils';
-import { useShowDefederation } from '/@/composables/showDefed';
-import { useCopyToClipboard } from '/@/composables/copyToClipboard';
+
+// import { useSiteColors } from '/@/composables/siteColors';
+// import { useShowDefederation } from '/@/composables/showDefed';
+// import { useCopyToClipboard } from '/@/composables/copyToClipboard';
 
 const file: Ref<File | undefined> = ref();
 const fileBlobUrl: Ref<string | undefined> = ref();
@@ -121,9 +121,8 @@ watch(file, (v) => {
 });
 
 function handleOnSave(){};
-const {orbiter} = useOrbiter();
-const {getSiteColor, saveColor, selectedColors} = useSiteColors();
-const {showDefederation} = useShowDefederation();
+// const {getSiteColor, saveColor, selectedColors} = useSiteColors();
+// const {showDefederation} = useShowDefederation();
 
-const { copy, getIcon, getColor } = useCopyToClipboard();
+// const { copy, getIcon, getColor } = useCopyToClipboard();
 </script>

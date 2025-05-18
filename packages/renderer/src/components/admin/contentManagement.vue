@@ -14,7 +14,7 @@
           rounded
         >
           <v-img
-            :src="parseUrlOrCid(item.thumbnail)"
+            :src="parseUrlOrCid(item.thumbnailCID)"
             height="64"
             width="113"
           ></v-img>
@@ -57,12 +57,12 @@
           >
             Feature
           </v-btn>
-          <v-btn
+          <!-- <v-btn
             :prepend-icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
             @click="deleteBlockRelease(item.id!, item.contentCID, item.sourceSite!)"
           >
             {{ item.sourceSite === orbiter.siteId ? 'Delete' : 'Block' }}
-          </v-btn>
+          </v-btn> -->
         </v-menu>
         <div
           v-else
@@ -104,11 +104,11 @@
               ></v-btn>
             </template>
           </v-tooltip>
-          <v-btn
+          <!-- <v-btn
             :icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
             size="small"
             @click="deleteBlockRelease(item.id!, item.contentCID, item.sourceSite!)"
-          ></v-btn>
+          ></v-btn> -->
         </div>
       </template>
       <!-- <template #item.status="{item}">
@@ -176,22 +176,24 @@
 <script setup lang="ts">
 import {computed, ref, type Ref} from 'vue';
 import {useDisplay} from 'vuetify';
-import {useStaticReleases} from '/@/composables/staticReleases';
-import {useOrbiter} from '/@/plugins/peerbit/utils';
-// import { getStatusColor } from '/@/utils';
-import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import ReleaseForm from '/@/components/releases/releaseForm.vue';
-import { useStaticStatus } from '../../composables/staticStatus';
-import { useSnackbarMessage } from '/@/composables/snackbarMessage';
-import { type PartialReleaseItem, useReleasesStore } from '/@/stores/releases';
 import { storeToRefs } from 'pinia';
+import ReleaseForm from '/@/components/releases/releaseForm.vue';
+import confirmationDialog from '/@/components/misc/confimationDialog.vue';
+import {useStaticReleases} from '/@/composables/staticReleases';
+import { useStaticStatus } from '/@/composables/staticStatus';
+import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
-import { parseUrlOrCid } from '/@/utils';
-import {useRouter} from 'vue-router';
+import { type PartialReleaseItem, useReleasesStore } from '/@/stores/releases';
+import {
+  parseUrlOrCid,
+  // getStatusColor,
+ } from '/@/utils';
+import type { AnyObject } from '@riffcc/lens-sdk';
+
 
 const {staticStatus} = useStaticStatus();
 const {lgAndUp, smAndDown} = useDisplay();
-const {orbiter} = useOrbiter();
+
 const {staticReleases} = useStaticReleases();
 const releasesStore = useReleasesStore();
 const {releases, isLoading } = storeToRefs(releasesStore);
@@ -226,25 +228,17 @@ const tableHeaders: Header[] = [
 
 const tableItems = computed(() => {
   if (staticStatus.value === 'static') {
-    return staticReleases.value
-    .map(r => ({
-      id: r.id,
-      thumbnail: r.thumbnail,
-      name: r.name,
-      category: r.category,
-      contentCID: r.contentCID,
-      sourceSite: r.sourceSite,
-    }));
+    return staticReleases.value;
   } else {
     return releases.value;
   }
 });
 
-const editedRelease: Ref<PartialReleaseItem> = ref({
+const editedRelease: Ref<PartialReleaseItem<AnyObject>> = ref({
+  id: '',
   name: '',
+  categoryId: '',
   contentCID: '',
-  category: '',
-  author: '',
   metadata: {},
 });
 
@@ -257,30 +251,12 @@ function editRelease(id?: string) {
   if (staticStatus.value === 'static') {
     const targetRelease = staticReleases.value.find(r => r.id === id);
     if (targetRelease) {
-      editedRelease.value = {
-        id: targetRelease.id,
-        name: targetRelease.name,
-        contentCID: targetRelease.contentCID,
-        category: targetRelease.category,
-        author: targetRelease.author,
-        thumbnail: targetRelease.thumbnail,
-        cover: targetRelease.cover,
-        metadata: targetRelease.metadata ?? {},
-      };
+      editedRelease.value = targetRelease;
     }
   } else {
     const targetRelease = releases.value.find(r => r.id === id);
     if (targetRelease) {
-      editedRelease.value = {
-        id: targetRelease.id,
-        name: targetRelease.name,
-        contentCID: targetRelease.contentCID,
-        category: targetRelease.category,
-        author: targetRelease.author,
-        thumbnail: targetRelease.thumbnail,
-        cover: targetRelease.cover,
-        metadata: targetRelease.metadata,
-      };
+      editedRelease.value = targetRelease;
     }
   }
   editReleaseDialog.value = true;
@@ -297,10 +273,10 @@ function handleError(message: string) {
   console.error('Error:', message);
 }
 
-function deleteBlockRelease(id: string, contentCID: string, sourceSite: string) {
-  editedRelease.value = { id, contentCID, sourceSite };
-  confirmDeleteBlockReleaseDialog.value = true;
-}
+// function deleteBlockRelease(id: string, contentCID: string) {
+//   editedRelease.value = { id, contentCID };
+//   confirmDeleteBlockReleaseDialog.value = true;
+// }
 
 async function confirmDeleteBlockRelease() {
   if (!editedRelease.value.id) return;
@@ -310,26 +286,27 @@ async function confirmDeleteBlockRelease() {
       releases.value.splice(targetReleaseIndex, 1);
     }
   } else {
-    try {
-      if (editedRelease.value.sourceSite === orbiter.siteId) {
-        await orbiter.removeRelease(editedRelease.value.id);
-        openSnackbar('Release deleted successfully.', 'success');
-      } else {
-        if (!editedRelease.value.contentCID) throw Error('Target release content CID missing.');
-        await orbiter.blockRelease({ cid: editedRelease.value.contentCID });
-        openSnackbar('Release blocked successfully.', 'success');
-      }
-      resetEditedRelease();
-    } catch (error) {
-      if (editedRelease.value.sourceSite === orbiter.siteId) {
-        console.error('Error deleting release:', error);
-        openSnackbar('Error on deleting release.', 'error');
-      } else {
-        console.error('Error blocking release:', error);
-        openSnackbar('Error on blocking release.', 'error');
-      }
+    // try {
+    //   if (editedRelease.value.sourceSite === orbiter.siteId) {
+    //     await orbiter.removeRelease(editedRelease.value.id);
+    //     openSnackbar('Release deleted successfully.', 'success');
+    //   } else {
+    //     if (!editedRelease.value.contentCID) throw Error('Target release content CID missing.');
+    //     await orbiter.blockRelease({ cid: editedRelease.value.contentCID });
+    //     openSnackbar('Release blocked successfully.', 'success');
+    //   }
+    //   resetEditedRelease();
+    // } catch (error) {
+    //   if (editedRelease.value.sourceSite === orbiter.siteId) {
+    //     console.error('Error deleting release:', error);
+    //     openSnackbar('Error on deleting release.', 'error');
+    //   } else {
+    //     console.error('Error blocking release:', error);
+    //     openSnackbar('Error on blocking release.', 'error');
+    //   }
+    // }
+    openSnackbar('Not implemented.', 'error');
 
-    }
   }
   confirmDeleteBlockReleaseDialog.value = false;
   resetEditedRelease();
@@ -338,9 +315,8 @@ async function confirmDeleteBlockRelease() {
 function resetEditedRelease() {
   editedRelease.value = {
     name: '',
+    categoryId: '',
     contentCID: '',
-    category: '',
-    author: '',
     metadata: {},
   };
 };

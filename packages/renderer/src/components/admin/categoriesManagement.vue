@@ -40,13 +40,13 @@
         <v-list-item
           v-for="category in contentCategories"
           :key="category.id"
-          :title="category.contentCategory.displayName"
+          :title="category.displayName"
           lines="two"
         >
           <template #prepend>
             <v-sheet width="24">
               <v-icon
-                v-if="category.contentCategory.featured"
+                v-if="category.featured"
                 :icon="'mdi-star'"
                 variant="text"
                 color="yellow"
@@ -129,14 +129,15 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
+import { useContentCategoriesStore } from '/@/stores/contentCategories';
+
 import ContentCategoryForm from '/@/components/releases/contentCategoryForm.vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import { type ContentCategoryItem, useContentCategoriesStore } from '../../stores/contentCategories';
-import { storeToRefs } from 'pinia';
-import { useOrbiter } from '/@/plugins/peerbit/utils';
+import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
 
-const { orbiter } = useOrbiter();
+
 const contentCategoriesStore = useContentCategoriesStore();
 const { contentCategories } = storeToRefs(contentCategoriesStore);
 
@@ -144,13 +145,11 @@ const createCategoryDialog = ref(false);
 const editCategoryDialog = ref(false);
 const confirmDeleteCategoryDialog = ref(false);
 
-const editedContentCategory = ref<ContentCategoryItem>({
+const editedContentCategory = ref<ContentCategoryData<ContentCategoryMetadata>>({
   id: '',
-  contentCategory: {
-    categoryId: '',
-    displayName: '',
-    metadataSchema: {},
-  },
+  displayName: '',
+  featured: false,
+  metadataSchema: {},
 });
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
@@ -160,13 +159,7 @@ function editCategory (id?: string) {
   if (!id) return;
   const targetItem = contentCategories.value?.find(item => item.id === id);
   if (targetItem) {
-    editedContentCategory.value = {
-      id: targetItem.id,
-      contentCategory: {
-        ...targetItem.contentCategory,
-        metadataSchema: targetItem.contentCategory.metadataSchema,
-      },
-    };
+    editedContentCategory.value = targetItem;
   }
   editCategoryDialog.value = true;
 };
@@ -184,18 +177,16 @@ function deleteCategory(id?: string) {
   if (!id) return;
   editedContentCategory.value = {
     id,
-    contentCategory: {
-      categoryId: '',
-      displayName: '',
-      metadataSchema: {},
-    },
+    displayName: '',
+    featured: false,
+    metadataSchema: {},
   };
   confirmDeleteCategoryDialog.value = true;
 }
 
 async function confirmDeleteCategory() {
   try {
-      await orbiter.removeCategory(editedContentCategory.value.id);
+      // await orbiter.removeCategory(editedContentCategory.value.id);
     } catch (error) {
       console.error('Error deleting release:', error);
     }

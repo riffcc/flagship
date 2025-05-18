@@ -49,7 +49,7 @@
           min-height="256px"
         >
           <h6 class="text-h6 font-weight-bold mb-4">Subscriptions</h6>
-          <v-list v-if="trustedSites && trustedSites?.length > 0">
+          <!-- <v-list v-if="trustedSites && trustedSites?.length > 0">
             <v-list-item
               v-for="s in trustedSites"
               :key="s.id"
@@ -87,9 +87,8 @@
                 ></v-btn>
               </template>
             </v-list-item>
-          </v-list>
+          </v-list> -->
           <div
-            v-else
             class="d-flex h-75"
           >
             <span class="ma-auto text-body-2 text-medium-emphasis">No Subscriptions found.</span>
@@ -101,15 +100,10 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, onScopeDispose} from 'vue';
-import {useOrbiter} from '/@/plugins/peerbit/utils';
-import { useSiteColors } from '/@/composables/siteColors';
-import { useShowDefederation } from '/@/composables/showDefed';
-import {useForm} from 'vuetify/lib/composables/form.mjs';
-import type { types as orbiterTypes } from '/@/plugins/peerbit/orbiter-types';
-import { useSnackbarMessage } from '/@/composables/snackbarMessage';
+import {computed, ref} from 'vue';
+// import { useSiteColors } from '/@/composables/siteColors';
+// import { useShowDefederation } from '/@/composables/showDefed';
 
-const {orbiter} = useOrbiter();
 const formRef = ref();
 
 const trustedSiteId = ref<string>();
@@ -133,13 +127,13 @@ const readyToSave = computed(() => {
 const loading = ref(false);
 const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
-  const {trustedSiteIdValue, trustedSiteNameValue} = readyToSave.value;
+  // const {trustedSiteIdValue, trustedSiteNameValue} = readyToSave.value;
   loading.value = true;
 
-  await orbiter.trustSite({
-    siteId: trustedSiteIdValue,
-    siteName: trustedSiteNameValue,
-  });
+  // await orbiter.trustSite({
+  //   siteId: trustedSiteIdValue,
+  //   siteName: trustedSiteNameValue,
+  // });
   clearForm();
   loading.value = false;
 };
@@ -149,23 +143,23 @@ const clearForm = () => {
   trustedSiteName.value = undefined;
 };
 
-const trustedSites = ref<orbiterTypes.TrustedSiteWithId[]>([]);
+// const trustedSites = ref<orbiterTypes.TrustedSiteWithId[]>([]);
 
-if (orbiter && orbiter.followTrustedSites) {
-  const unsubscribe = orbiter.followTrustedSites({
-    f: (sites: orbiterTypes.TrustedSiteWithId[]) => {
-      trustedSites.value = sites;
-    },
-  });
-  if (typeof unsubscribe === 'function') {
-    onScopeDispose(unsubscribe);
-  }
-}
+// if (orbiter && orbiter.followTrustedSites) {
+//   const unsubscribe = orbiter.followTrustedSites({
+//     f: (sites: orbiterTypes.TrustedSiteWithId[]) => {
+//       trustedSites.value = sites;
+//     },
+//   });
+//   if (typeof unsubscribe === 'function') {
+//     onScopeDispose(unsubscribe);
+//   }
+// }
 
-const untrustSite = async ({siteId}: {siteId: string}) => {
-  await orbiter.untrustSite({siteId});
-};
+// const untrustSite = async ({siteId}: {siteId: string}) => {
+//   await orbiter.untrustSite({siteId});
+// };
 
-const {getSiteColor, saveColor, selectedColors} = useSiteColors();
-const {showDefederation} = useShowDefederation();
+// const {getSiteColor, saveColor, selectedColors} = useSiteColors();
+// const {showDefederation} = useShowDefederation();
 </script>

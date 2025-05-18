@@ -157,20 +157,13 @@
 
 <script setup lang="ts">
 import {computed, onMounted, ref, watch, type Ref} from 'vue';
-import { useStaticStatus } from '/@/composables/staticStatus';
-import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import { filterActivedFeatured, filterPromotedFeatured, useReleasesStore, type PartialFeaturedReleaseItem } from '/@/stores/releases';
 import { storeToRefs } from 'pinia';
-import { useOrbiter } from '/@/plugins/peerbit/utils';
+import { filterActivedFeatured, filterPromotedFeatured, useReleasesStore, type PartialFeaturedReleaseItem } from '/@/stores/releases';
+import { useStaticStatus } from '/@/composables/staticStatus';
 import { useStaticReleases } from '/@/composables/staticReleases';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
+import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 
-const { orbiter } = useOrbiter();
-const { staticStatus } = useStaticStatus();
-const {staticFeaturedReleases} = useStaticReleases();
-const releasesStore = useReleasesStore();
-const {releases, unfilteredFeaturedReleases} = storeToRefs(releasesStore);
-const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 const props = defineProps<{
   initialFeatureData: PartialFeaturedReleaseItem | null;
 }>();
@@ -178,6 +171,15 @@ const props = defineProps<{
 const emit = defineEmits<{
   'initial-data-consumed': []
 }>();
+
+const { staticStatus } = useStaticStatus();
+const {staticFeaturedReleases} = useStaticReleases();
+
+const releasesStore = useReleasesStore();
+const {releases, unfilteredFeaturedReleases} = storeToRefs(releasesStore);
+
+const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
+
 
 const newFeaturedRelease: Ref<PartialFeaturedReleaseItem> = ref({
   releaseId: undefined,
@@ -303,13 +305,15 @@ const handleOnSubmit = async () => {
         openSnackbar('Error creating featured release.', 'error');
       }
     } else {
-      await orbiter.featureRelease({
-        cid: readyToSave.value.releaseId,
-        startTime: readyToSave.value.startTime,
-        endTime: readyToSave.value.endTime,
-        promoted: readyToSave.value.promoted,
-      });
-      openSnackbar('Featured release created succefully.', 'success');
+      // await orbiter.featureRelease({
+      //   cid: readyToSave.value.releaseId,
+      //   startTime: readyToSave.value.startTime,
+      //   endTime: readyToSave.value.endTime,
+      //   promoted: readyToSave.value.promoted,
+      // });
+      // openSnackbar('Featured release created succefully.', 'success');
+      openSnackbar('Not implemented.', 'error');
+
     }
   } catch (error) {
     console.error('Error creating featured release:', error);
@@ -336,14 +340,15 @@ const confirmEndFeaturedRelease = async () => {
     }
   } else {
     try {
-      await orbiter.editFeaturedRelease({
-        elementId: featuredItemIdToEnd.value,
-        featuredRelease: {
-          endTime,
-          promoted: false,
-        },
-      });
-      openSnackbar('Featured release ended succefully.', 'success');
+      // await orbiter.editFeaturedRelease({
+      //   elementId: featuredItemIdToEnd.value,
+      //   featuredRelease: {
+      //     endTime,
+      //     promoted: false,
+      //   },
+      // });
+      // openSnackbar('Featured release ended succefully.', 'success');
+      openSnackbar('Not implemented.', 'error');
     } catch (error) {
       console.error(`Error on ending featured release ${featuredItemIdToEnd.value}:`, error);
       openSnackbar('Error on ending featured release.', 'error');
