@@ -61,6 +61,7 @@ const config = {
   mode: process.env.MODE,
   root: PACKAGE_ROOT,
   envDir: PROJECT_ROOT,
+  publicDir: 'public',
   resolve: {
     alias: générerAliasRésolution(),
     extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],

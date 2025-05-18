@@ -76,7 +76,7 @@ import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import { type ReleaseItem, useReleasesStore } from '/@/stores/releases';
 import { useContentCategoriesStore } from '/@/stores/contentCategories';
 import { storeToRefs } from 'pinia';
-import type { AnyObject, ContentCategoryData, ContentCategoryMetadata } from '/@/lib/types';
+import type { AnyObject, ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
 
 const router = useRouter();
 

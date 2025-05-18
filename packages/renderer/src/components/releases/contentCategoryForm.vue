@@ -139,7 +139,7 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue';
 import MetadataFieldForm from '/@/components/releases/metadataFieldForm.vue';
-import type { ContentCategoryData, ContentCategoryMetadata } from '/@/lib/types';
+import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
   initialData?: ContentCategoryData<ContentCategoryMetadata>;

@@ -54,13 +54,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import {useRouter} from 'vue-router';
-import {useOrbiter} from '/@/plugins/peerbit/utils';
 import releaseForm from '/@/components/releases/releaseForm.vue';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 
-const {orbiter} = useOrbiter();
-const canUpload = computed(() => orbiter?.followCanUpload ? orbiter.followCanUpload() : undefined);
+const canUpload = computed(() => true);
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
 function handleSuccess(message: string) {

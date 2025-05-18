@@ -1,11 +1,24 @@
 import { defineStore } from 'pinia';
-import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
+import { computed, onMounted, onScopeDispose, ref, watch, type Ref } from 'vue';
 import { useStaticReleases } from '../composables/staticReleases';
 import { useStaticStatus } from '../composables/staticStatus';
-import type { FeaturedRelease, Release } from '/@/lib/schema';
-import { usePeerbitService } from '../plugins/peerbit/utils';
-import type { FeaturedReleaseData, IdData, ReleaseData, AnyObject } from '/@/lib/types';
-import { RELEASE_METADATA_PROPERTY } from '/@/lib/constants';
+import { useLensService } from '../plugins/lensService/utils';
+import type {
+  FeaturedRelease,
+  Release,
+  FeaturedReleaseData,
+  IdData,
+  ReleaseData,
+  AnyObject,
+} from '@riffcc/lens-sdk';
+import {
+  ID_PROPERTY,
+  RELEASE_NAME_PROPERTY,
+  RELEASE_CATEGORY_ID_PROPERTY,
+  RELEASE_CONTENT_CID_PROPERTY,
+  RELEASE_THUMBNAIL_CID_PROPERTY,
+  RELEASE_METADATA_PROPERTY,
+ } from '@riffcc/lens-sdk';
 
 const NO_CONTENT_DELAY_MS = 20000;
 type ContentStatus = 'loading' | 'checking' | 'idle' | 'empty';
@@ -49,10 +62,9 @@ const determineTargetStatus = (
 };
 
 export const useReleasesStore = defineStore('releases', () => {
-  const { peerbitServiceRef } = usePeerbitService();
   const { staticReleases, staticFeaturedReleases } = useStaticReleases();
   const { staticStatus } = useStaticStatus();
-
+  const { lensService } = useLensService();
   const releasesRaw = ref<Release[] | null>(null);
   const featuredReleasesRaw = ref<FeaturedRelease[] | null>(null);
 
@@ -156,54 +168,27 @@ export const useReleasesStore = defineStore('releases', () => {
     }
   });
 
+  onMounted(() => {
+    lensService.getLatestReleases()
+      .then(result => {
+        releasesRaw.value = result.map(r => ({
+          [ID_PROPERTY]: r.id,
+          [RELEASE_NAME_PROPERTY]: r.name,
+          [RELEASE_CATEGORY_ID_PROPERTY]: r.categoryId,
+          [RELEASE_CONTENT_CID_PROPERTY]: r.contentCID,
+          [RELEASE_THUMBNAIL_CID_PROPERTY]: r.thumbnailCID,
+          [RELEASE_METADATA_PROPERTY]: r.metadata ? JSON.parse(r.metadata) : undefined,
+        }));
+      featuredReleasesRaw.value = [];
+      });
+  });
+
   const isLoading = computed(() => status.value === 'loading' || status.value === 'checking');
   const noContent = computed(() => status.value === 'empty');
 
-  async function fetchReleasesFromPeerbit() {
-    // Ensure the peerbitServiceRef Ref itself was injected AND its .value (the service instance) is available
-    if (!peerbitServiceRef || !peerbitServiceRef.value) {
-      console.warn('[ReleasesStore] fetchReleasesFromPeerbit: Peerbit service Ref not injected or service instance not available.');
-      // Set to empty array or null, depending on how "no service" should be represented.
-      // Empty array is consistent with error handling below.
-      releasesRaw.value = [];
-      return;
-    }
-
-    const serviceInstance = peerbitServiceRef.value; // Safe to use now
-    try {
-      console.log('[ReleasesStore] Fetching releases from Peerbit service instance...');
-      const results = await serviceInstance.getLatestReleases();
-      console.log('[ReleasesStore] Fetched from Peerbit, raw results:', results);
-      releasesRaw.value = results;
-      // console.log('[ReleasesStore] Parsed Peerbit releases:', releasesRaw.value); // Already logged by computed if needed
-    } catch (error) {
-      console.error('[ReleasesStore] Error fetching releases from Peerbit:', error);
-      releasesRaw.value = []; // Set to empty on error
-    }
-  }
-
-  // Watch for the Peerbit service to become available
-  watch(
-    () => peerbitServiceRef?.value, // Safely access .value from the potentially undefined ref
-    (newServiceInstance, oldServiceInstance) => {
-      if (newServiceInstance && !oldServiceInstance) {
-        console.log('[ReleasesStore] Peerbit service became available. Fetching initial releases.');
-        fetchReleasesFromPeerbit();
-      } else if (!newServiceInstance && oldServiceInstance) {
-        console.log('[ReleasesStore] Peerbit service became unavailable.');
-        releasesRaw.value = null; // Or [], to clear data if service disappears
-        status.value = 'loading'; // Reset status
-      }
-    },
-    { immediate: true }, // immediate:true ensures it runs on setup and on change
-  );
-
-  // The onMounted hook calling fetchReleasesFromPeerbit() was removed.
-  // Fetching is now triggered by the watcher when the peerbitServiceRef becomes available.
 
   return {
     releases,
-    fetchReleasesFromPeerbit,
     unfilteredFeaturedReleases,
     activedFeaturedReleases,
     promotedFeaturedReleases,

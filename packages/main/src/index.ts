@@ -1,9 +1,8 @@
 import {app, ipcMain} from 'electron';
 import '/@/security-restrictions';
-import {restoreOrCreateWindow} from '/@/main-window';
-import { getPeerbitNode, getSiteProgram } from './peerbit-node';
-import { Release } from '/@/lib/schema';
-import type { ReleaseData } from '/@/lib/types';
+import {lensService, restoreOrCreateWindow } from '/@/main-window';
+import type { ReleaseData } from '@riffcc/lens-sdk';
+
 
 const isSingleInstance = app.requestSingleInstanceLock();
 if (!isSingleInstance) {
@@ -27,86 +26,18 @@ app
   .then(async () => {
     const mainWindow = await restoreOrCreateWindow();
 
-    ipcMain.handle('peerbit:get-public-key', async () => {
-      const node = getPeerbitNode();
-      if (!node) throw new Error('Peerbit node not initialized in main process');
-      return node.identity.publicKey.toString();
-    });
-
-    ipcMain.handle('peerbit:get-peer-id', async () => {
-      const node = getPeerbitNode();
-      if (!node) throw new Error('Peerbit node not initialized in main process');
-      return node.peerId.toString();
-    });
-
-    ipcMain.handle('peerbit:dial', async (_event, address: string) => {
-      const node = getPeerbitNode();
-      if (!node) throw new Error('Peerbit node not initialized in main process');
-      try {
-        console.log(`[Main IPC] Dialing ${address}`);
-        await node.dial(address);
-        return true;
-      } catch (error) {
-        console.error(`[Main IPC] Error dialing ${address}:`, error);
-        throw error;
-      }
-    });
-
-    ipcMain.handle('peerbit:add-release', async (_event, releaseData: ReleaseData) => {
-      const node = getPeerbitNode();
-      const siteProgram = getSiteProgram();
-      if (!node) throw new Error('Peerbit node not initialized in main process');
-      if (!siteProgram) throw new Error('Site program not initialized in main process');
-
-      try {
-        const releaseInstance = new Release(releaseData);
-
-        console.log(`[Main IPC] Adding release - ID: ${releaseInstance.id}, Name: ${releaseInstance.name}`);
-        const resultHash = await siteProgram.addRelease(releaseInstance);
-
-        return { success: true, id: releaseInstance.id, hash: resultHash, message: 'Release added successfully' };
-      } catch (error) {
-        console.error('[Main IPC] Error adding release. Initial data from renderer', releaseData, 'Mapped props:', /*releaseConstructorProps cannot be logged here if error was before its definition*/ error);
-        // Ensure a structured error is returned if the component expects it, or rethrow for a generic error.
-        // For now, rethrowing the original error as the component might not be robustly handling {success: false}
-        throw error;
-      }
-    });
-
-    ipcMain.handle('peerbit:get-release', async (_event, id: string) => {
-      const node = getPeerbitNode();
-      const siteProgram = getSiteProgram();
-      if (!node) throw new Error('Peerbit node not initialized in main process');
-      if (!siteProgram) throw new Error('Site program not initialized in main process');
-      try {
-        console.log(`[Main IPC] Getting release by ID: ${id}`);
-        const release = await siteProgram.getRelease(id);
-        console.log('[Main IPC] Release retrieved (or not found)');
-        return release;
-      } catch (error) {
-        console.error(`[Main IPC] Error getting release by ID ${id}:`, error);
-        throw error;
-      }
-    });
-
-    ipcMain.handle('peerbit:get-latest-releases', async (_event, size?: number) => {
-      const node = getPeerbitNode();
-      const siteProgram = getSiteProgram();
-      if (!node) throw new Error('Peerbit node not initialized in main process');
-      if (!siteProgram) throw new Error('Site program not initialized in main process');
-      try {
-        console.log('[Main IPC] Getting latest releases');
-        const releases = await siteProgram.getLatestReleases(size);
-        console.log('[Main IPC] Releases retrieved');
-        return releases;
-      } catch (error) {
-        console.error('[Main IPC] Error getting latest releases:', error);
-        throw error;
-      }
-    });
-
-    console.log('[Main IPC] All Peerbit IPC handlers registered.');
-
+      ipcMain.handle('peerbit:get-public-key', async () => lensService?.getPublicKey());
+      ipcMain.handle('peerbit:get-peer-id', async () => lensService?.getPeerId());
+      ipcMain.handle('peerbit:dial', async (_event, address: string) => lensService?.dial(address));
+      ipcMain.handle('peerbit:add-release', async (_event, releaseData: ReleaseData) =>
+        lensService?.addRelease(releaseData),
+      );
+      ipcMain.handle('peerbit:get-release', async (_event, id: string) =>
+        lensService?.getRelease(id),
+      );
+      ipcMain.handle('peerbit:get-latest-releases', async (_event, size?: number) =>
+        lensService?.getLatestReleases(size),
+      );
     // Notify renderer that main is ready
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
       const sendReadySignal = () => {

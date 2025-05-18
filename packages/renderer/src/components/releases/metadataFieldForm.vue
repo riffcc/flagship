@@ -72,7 +72,7 @@
 
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue';
-import type { ContentCategoryMetadata } from '/@/lib/types';
+import type { ContentCategoryMetadata } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
   initialData?: Partial<ContentCategoryMetadata[string] & { fieldKey: string; }>;

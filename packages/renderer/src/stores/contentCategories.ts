@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia';
 import { computed } from 'vue';
-import type { ContentCategoryData, ContentCategoryMetadata } from '/@/lib/types';
+import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
 import {
   ID_PROPERTY,
   CONTENT_CATEGORY_DISPLAY_NAME_PROPERTY,
   CONTENT_CATEGORY_FEATURED_PROPERTY,
   CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY,
-} from '/@/lib/constants';
+} from '@riffcc/lens-sdk';
 
 
 export const DEFAULT_CONTENT_CATEGORIES: ContentCategoryData<ContentCategoryMetadata>[] = [

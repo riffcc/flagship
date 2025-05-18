@@ -11,7 +11,7 @@ import {
   FEATURED_START_TIME_PROPERTY,
   FEATURED_END_TIME_PROPERTY,
   FEATURED_PROMOTED_PROPERTY,
-} from '/@/lib/constants';
+} from '@riffcc/lens-sdk';
 
 const staticFeaturedReleases: Ref<FeaturedReleaseItem[]> = ref([
   {

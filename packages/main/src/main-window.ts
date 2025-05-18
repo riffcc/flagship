@@ -2,10 +2,12 @@ import {app, BrowserWindow} from 'electron';
 import {dirname, join} from 'node:path';
 import {fileURLToPath, URL as NodeURL} from 'node:url';
 import {connectFileSystem} from './file-system';
-
+import { BrowserLensService } from '@riffcc/lens-sdk';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+export let lensService: BrowserLensService | undefined = undefined;
 
 async function createWindow() {
   const preloadScriptPath = join(__dirname, '../../preload/dist/index.cjs');
@@ -45,6 +47,15 @@ async function createWindow() {
       fileURLToPath(new NodeURL('../../../renderer/dist/index.html', import.meta.url)),
     );
   }
+  const siteAddress = import.meta.env.VITE_SITE_ADDRESS as string | undefined;
+  if (siteAddress) {
+
+    lensService = BrowserLensService.getInstance();
+    await (lensService as BrowserLensService).init(siteAddress);
+
+  } else {
+    throw new Error('VITE_SITE_ADDRESS env var missing. Please review your .env file');
+  }
 
   return browserWindow;
 }
@@ -57,15 +68,11 @@ export async function restoreOrCreateWindow(): Promise<BrowserWindow> {
   if (window === undefined) {
     try {
       window = await createWindow();
-      connectHttp();
       connectFileSystem();
-      console.log('[MainWindow] Starting Peerbit node...');
-      await startPeerbitNode();
-      console.log('[MainWindow] Peerbit node started or already running.');
     } catch (e) {
       console.error('[MainWindow] CRITICAL: Failed to initialize main process components:', e);
-      app.quit(); // Ensure app quits on critical failure
-      throw e; // Re-throw to reject the promise from restoreOrCreateWindow
+      app.quit();
+      throw e;
     }
   }
 
@@ -75,4 +82,11 @@ export async function restoreOrCreateWindow(): Promise<BrowserWindow> {
 
   window.focus();
   return window;
+}
+
+if (app && typeof app.on === 'function') {
+  app.on('will-quit', async () => {
+
+    await lensService?.close();
+  });
 }

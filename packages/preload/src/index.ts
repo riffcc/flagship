@@ -4,8 +4,7 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 import { isLinux, isMac, isWindows, platform} from './so';
-import type { Release } from '/@/lib/schema';
-import type { ReleaseData, AddReleaseResponse } from '/@/lib/types';
+import type { ReleaseData, AddReleaseResponse, Release } from '@riffcc/lens-sdk';
 
 contextBridge.exposeInMainWorld('osInfo', {
   isMac,
@@ -20,13 +19,8 @@ contextBridge.exposeInMainWorld('electronIPC', {
   },
 });
 
-contextBridge.exposeInMainWorld('electronIPC', {
-  onceMainReady: (callback: () => void) => {
-    ipcRenderer.once('main-process-ready', callback);
-  },
-});
 
-contextBridge.exposeInMainWorld('electronPeerbit', {
+contextBridge.exposeInMainWorld('electronLensService', {
   getPublicKey: (): Promise<string> => ipcRenderer.invoke('peerbit:get-public-key'),
   getPeerId: (): Promise<string> => ipcRenderer.invoke('peerbit:get-peer-id'),
   dial: (address: string): Promise<boolean> => ipcRenderer.invoke('peerbit:dial', address),

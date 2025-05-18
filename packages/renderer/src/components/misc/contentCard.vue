@@ -112,7 +112,7 @@ import { useSiteColors } from '/@/composables/siteColors';
 import { type ReleaseItem } from '/@/stores/releases';
 import { parseUrlOrCid } from '/@/utils';
 import { useRouter } from 'vue-router';
-import type { AnyObject } from '/@/lib/types';
+import type { AnyObject } from '@riffcc/lens-sdk';
 
 
 const { showDefederation } = useShowDefederation();

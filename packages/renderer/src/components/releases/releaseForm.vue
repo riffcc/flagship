@@ -110,11 +110,12 @@
 
 <script setup lang="ts">
 import {cid} from 'is-ipfs';
-import {computed, onMounted, ref, inject, type Ref} from 'vue';
+import {computed, onMounted, ref} from 'vue';
 import type { ReleaseItem, PartialReleaseItem } from '/@/stores/releases';
 import { useContentCategoriesStore } from '/@/stores/contentCategories';
 import { storeToRefs } from 'pinia';
-import type { IPeerbitService, ContentCategoryMetadata, ReleaseData, AnyObject } from '/@/lib/types';
+import type { ContentCategoryMetadata, ReleaseData, AnyObject } from '@riffcc/lens-sdk';
+import { useLensService } from '/@/plugins/lensService/utils';
 
 const props = defineProps<{
   initialData?: PartialReleaseItem<AnyObject>;
@@ -147,7 +148,7 @@ const rules = {
 };
 const isLoading = ref(false);
 
-const peerbitService = inject<Ref<IPeerbitService | undefined>>('peerbitService');
+const {lensService} = useLensService();
 
 const contentCategoriesItems = computed(() => (contentCategories.value ?? []).map(item => ({
   id: item.id,
@@ -198,16 +199,9 @@ const readyToSave = computed(() => {
 const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
   isLoading.value = true;
-
-  if (!peerbitService?.value) {
-    emit('update:error', 'Peerbit service is not available.');
-    isLoading.value = false;
-    return;
-  }
-
   try {
     const data = readyToSave.value;
-    const peerbitReleaseData: ReleaseData = {
+    const releaseData: ReleaseData = {
       name: data.name,
       categoryId: data.categoryId,
       contentCID: data.contentCID,
@@ -215,27 +209,19 @@ const handleOnSubmit = async () => {
       metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
     };
     if (props.mode === 'edit' && data.id) {
-      // console.log('[ReleaseForm] Updating existing release with ID:', data.id, peerbitReleaseData);
-      // const response = await peerbitService.value.updateRelease(data.id, peerbitReleaseData);
-      // console.log('[ReleaseForm] Update release response:', response);
-      // if (response.success) {
-      //   emit('submit', data);
-      //   emit('update:success', response.message || 'Release updated successfully!');
-      // } else {
-      // }
+      // console.log('[ReleaseForm] Updating existing release with ID:', data.id, releaseData);
+      // const response = await lensService.updateRelease(data.id, releaseData);
+      // emit('submit', data);
+      // emit('update:success', 'Release updated successfully!');
       emit('update:error', 'Not implemented');
     } else {
-      console.log('[ReleaseForm] Creating new release:', peerbitReleaseData);
-      const response = await peerbitService.value.addRelease(peerbitReleaseData);
+      console.log('[ReleaseForm] Creating new release:', releaseData);
+
+      const response = await lensService.addRelease(releaseData);
       console.log('[ReleaseForm] Add release response:', response);
-      if (response.success) {
-        const submittedData = { ...data, id: response.id };
-        emit('submit', submittedData);
-        emit('update:success', response.message || 'Release saved successfully!');
-        clearForm();
-      } else {
-        emit('update:error', response.error || 'Error saving release.');
-      }
+      emit('submit', releaseData);
+      emit('update:success', 'Release added successfully!');
+      clearForm();
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

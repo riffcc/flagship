@@ -79,6 +79,7 @@
   },
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
+    "@riffcc/lens-sdk": "^0.1.0",
     "@vueuse/core": "^12.7.0",
     "core-js": "^3.40.0",
     "electron-updater": "^6.3.9",

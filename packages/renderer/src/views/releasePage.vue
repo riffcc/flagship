@@ -50,7 +50,7 @@ import { ref, watch } from 'vue';
 import { useReleasesStore } from '../stores/releases';
 import { storeToRefs } from 'pinia';
 import type { ReleaseItem } from '/@/stores/releases';
-import type { AnyObject } from '/@/lib/types';
+import type { AnyObject } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
   id: string;
