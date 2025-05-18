@@ -1,4 +1,4 @@
-import type { IPeerbitService } from '../packages/lib/src/types';
+import type { ILensService } from '@riffcc/lens-sdk';
 
 declare global {
   interface Window {
@@ -6,7 +6,7 @@ declare global {
       onceMainReady: (callback: () => void) => void;
     };
     // Exposed by preload/src/index.ts
-    electronPeerbit: IPeerbitService;
+    electronLensService: ILensService;
     // Exposed by preload/src/index.ts for OS info
     osInfo: {
       isMac: boolean;

@@ -7,6 +7,7 @@ import vuetify from 'vite-plugin-vuetify';
 import {chrome} from '../../.electron-vendors.cache.json';
 import {injectAppVersion} from '../../version/inject-app-version-plugin.mjs';
 import {nodePolyfills} from 'vite-plugin-node-polyfills';
+import peerbit from '@peerbit/vite';
 
 const PACKAGE_ROOT = __dirname;
 const PROJECT_ROOT = join(PACKAGE_ROOT, '../..');
@@ -21,6 +22,7 @@ if (forElectron) {
 
 const générerExtentions = () => {
   const extentions = [
+    peerbit(),
     vue(),
     vuetify({
       autoImport: true,
