@@ -79,7 +79,7 @@
   },
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
-    "@riffcc/lens-sdk": "^0.1.0",
+    "@riffcc/lens-sdk": "^0.1.1",
     "@vueuse/core": "^12.7.0",
     "core-js": "^3.40.0",
     "electron-updater": "^6.3.9",
@@ -94,8 +94,11 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@ipshipyard/node-datachannel",
       "@parcel/watcher",
       "@swc/core",
+      "better-sqlite3",
+      "classic-level",
       "core-js",
       "electron",
       "electron-winstaller",
