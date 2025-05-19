@@ -32,7 +32,6 @@ const { showDefederation } = useShowDefederation();
 const { activeTrack } = useAudioAlbum();
 const { floatingVideoSource } = useFloatingVideo();
 const { lensService } = useLensService();
-
 const MAGIC_KEY = 'magicmagic';
 
 const yetToType = ref(MAGIC_KEY);
@@ -63,12 +62,22 @@ watchEffect(() => {
 });
 
 onMounted(async () => {
+
+  const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
+  if (!siteAddress) {
+    throw new Error('VITE_SITE_ADDRESS env var missing. Please review your .env file.');
+  }
+
+  await lensService.init();
+
   const bootstrappers = import.meta.env.VITE_BOOTSTRAPPERS;
   if (bootstrappers) {
     const promises = bootstrappers
       .split(',')
       .map((b) => lensService.dial(b.trim()));
-    await Promise.all(promises);
+    const result = await Promise.allSettled(promises);
+    console.log(result);
   }
+  await lensService.open(siteAddress);
 });
 </script>

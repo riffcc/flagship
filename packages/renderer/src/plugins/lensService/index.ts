@@ -20,14 +20,7 @@ export default {
       });
 
     } else {
-      const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
-
-      if (!siteAddress) {
-        throw new Error('VITE_SITE_ADDRESS env var missing. Please review your .env file.');
-      }
-
       lensServiceInstance = BrowserLensService.getInstance();
-      (lensServiceInstance as BrowserLensService).init(siteAddress);
     }
 
     app.provide('lensService', lensServiceInstance);
