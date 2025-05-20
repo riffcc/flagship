@@ -2,12 +2,12 @@ import {app, BrowserWindow} from 'electron';
 import {dirname, join} from 'node:path';
 import {fileURLToPath, URL as NodeURL} from 'node:url';
 import {connectFileSystem} from './file-system';
-import { BrowserLensService } from '@riffcc/lens-sdk';
+import { LensService } from '@riffcc/lens-sdk';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export let lensService: BrowserLensService | undefined = undefined;
+export let lensService: LensService | undefined = undefined;
 
 async function createWindow() {
   const preloadScriptPath = join(__dirname, '../../preload/dist/index.cjs');
@@ -50,8 +50,9 @@ async function createWindow() {
   const siteAddress = import.meta.env.VITE_SITE_ADDRESS as string | undefined;
   if (siteAddress) {
 
-    lensService = BrowserLensService.getInstance();
-    await (lensService as BrowserLensService).init(siteAddress);
+    lensService = new LensService();
+    await lensService.init(join('.lens-node'));
+    await lensService.openSite(siteAddress);
 
   } else {
     throw new Error('VITE_SITE_ADDRESS env var missing. Please review your .env file');
@@ -87,6 +88,6 @@ export async function restoreOrCreateWindow(): Promise<BrowserWindow> {
 if (app && typeof app.on === 'function') {
   app.on('will-quit', async () => {
 
-    await lensService?.close();
+    await lensService?.stop();
   });
 }

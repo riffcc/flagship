@@ -26,7 +26,7 @@ import appFooter from '/@/components/layout/appFooter.vue';
 import { useAudioAlbum } from '/@/composables/audioAlbum';
 import { useFloatingVideo } from '/@/composables/floatingVideo';
 import { useShowDefederation } from '/@/composables/showDefed';
-import { useLensService } from './plugins/lensService/utils';
+import { useLensService } from '/@/plugins/lensService/utils';
 
 const { showDefederation } = useShowDefederation();
 const { activeTrack } = useAudioAlbum();
@@ -68,7 +68,7 @@ onMounted(async () => {
     throw new Error('VITE_SITE_ADDRESS env var missing. Please review your .env file.');
   }
 
-  await lensService.init();
+  await lensService.init('.lens-node');
 
   const bootstrappers = import.meta.env.VITE_BOOTSTRAPPERS;
   if (bootstrappers) {
@@ -78,6 +78,6 @@ onMounted(async () => {
     const result = await Promise.allSettled(promises);
     console.log(result);
   }
-  await lensService.open(siteAddress);
+  await lensService.openSite(siteAddress);
 });
 </script>

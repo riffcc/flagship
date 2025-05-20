@@ -1,8 +1,8 @@
 import { inject } from 'vue';
-import type { BrowserLensService } from '@riffcc/lens-sdk';
+import type { LensService } from '@riffcc/lens-sdk';
 
 export function useLensService() {
-  const lensService = inject<BrowserLensService>('lensService');
+  const lensService = inject<LensService>('lensService');
   if (!lensService) {
     throw new Error('Lens Service plugin not initialized.');
   }

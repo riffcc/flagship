@@ -1,5 +1,5 @@
 import { type App } from 'vue';
-import { BrowserLensService, ElectronLensService, type ILensService } from '@riffcc/lens-sdk';
+import { LensService, ElectronLensService, type ILensService } from '@riffcc/lens-sdk';
 
 export default {
   install: (app: App) => {
@@ -20,7 +20,7 @@ export default {
       });
 
     } else {
-      lensServiceInstance = BrowserLensService.getInstance();
+      lensServiceInstance = new LensService();
     }
 
     app.provide('lensService', lensServiceInstance);
