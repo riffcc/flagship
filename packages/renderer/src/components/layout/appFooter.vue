@@ -95,7 +95,7 @@
     <v-chip variant="text">
       <template #prepend>
         <img
-          src="/assets/cc.svg"
+          src="/cc.svg"
           alt="Creative Commons License"
           class="mr-1"
           style="filter: invert(100%) sepia(0%) saturate(7438%) hue-rotate(78deg) brightness(109%) contrast(95%)"
