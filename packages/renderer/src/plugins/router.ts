@@ -1,6 +1,5 @@
 import {createRouter, createWebHashHistory, type RouteRecordRaw} from 'vue-router';
 
-import {useStaticStatus} from '../composables/staticStatus';
 import AdminPage from '../views/adminPage.vue';
 import AboutPage from '/@/views/aboutPage.vue';
 import AccountPage from '/@/views/accountPage.vue';
@@ -63,15 +62,6 @@ const routeur = createRouter({
   scrollBehavior() {
     return {top: 0};
   },
-});
-
-routeur.afterEach(to => {
-  const {stub} = to.query;
-  const {staticStatus, alreadyChanged} = useStaticStatus();
-  if (!alreadyChanged)
-    staticStatus.value = stub !== undefined
-      ? 'static'
-      : import.meta.env.VITE_STATIC_MODE ? 'static' : 'live';
 });
 
 export default routeur;

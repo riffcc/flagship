@@ -176,27 +176,28 @@
 <script setup lang="ts">
 import {computed, ref, type Ref} from 'vue';
 import {useDisplay} from 'vuetify';
-import { storeToRefs } from 'pinia';
 import ReleaseForm from '/@/components/releases/releaseForm.vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import {useStaticReleases} from '/@/composables/staticReleases';
 import { useStaticStatus } from '/@/composables/staticStatus';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
-import { type PartialReleaseItem, useReleasesStore } from '/@/stores/releases';
+import type { ReleaseItem, PartialReleaseItem } from '/@/types';
 import {
   parseUrlOrCid,
   // getStatusColor,
  } from '/@/utils';
 import type { AnyObject } from '@riffcc/lens-sdk';
+import { useQuery } from '@tanstack/vue-query';
 
 
 const {staticStatus} = useStaticStatus();
 const {lgAndUp, smAndDown} = useDisplay();
 
 const {staticReleases} = useStaticReleases();
-const releasesStore = useReleasesStore();
-const {releases, isLoading } = storeToRefs(releasesStore);
+const { data: releases, isLoading } = useQuery<ReleaseItem<AnyObject>[]>({
+  queryKey: ['releases'],
+});
 const { copy, getIcon, getColor } = useCopyToClipboard();
 const emit = defineEmits<{
   'feature-release': [id: string]
@@ -227,7 +228,7 @@ const tableHeaders: Header[] = [
 ];
 
 const tableItems = computed(() => {
-  if (staticStatus.value === 'static') {
+  if (staticStatus.value) {
     return staticReleases.value;
   } else {
     return releases.value;
@@ -248,13 +249,13 @@ const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackb
 
 function editRelease(id?: string) {
   if (!id) return;
-  if (staticStatus.value === 'static') {
+  if (staticStatus.value) {
     const targetRelease = staticReleases.value.find(r => r.id === id);
     if (targetRelease) {
       editedRelease.value = targetRelease;
     }
   } else {
-    const targetRelease = releases.value.find(r => r.id === id);
+    const targetRelease = releases.value?.find(r => r.id === id);
     if (targetRelease) {
       editedRelease.value = targetRelease;
     }
@@ -280,10 +281,10 @@ function handleError(message: string) {
 
 async function confirmDeleteBlockRelease() {
   if (!editedRelease.value.id) return;
-  if (staticStatus.value === 'static') {
-    const targetReleaseIndex = releases.value.findIndex(r => r.id === editedRelease.value.id);
-    if (targetReleaseIndex !== -1) {
-      releases.value.splice(targetReleaseIndex, 1);
+  if (staticStatus.value) {
+    const targetReleaseIndex = releases.value?.findIndex(r => r.id === editedRelease.value.id);
+    if (targetReleaseIndex && targetReleaseIndex !== -1) {
+      releases.value?.splice(targetReleaseIndex, 1);
     }
   } else {
     // try {

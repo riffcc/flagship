@@ -1,5 +1,21 @@
 <template>
-  <v-app>
+  <v-container
+    v-if="initLoading || initError"
+    class="h-screen"
+  >
+    <v-sheet
+      color="transparent"
+      class="d-flex w-100 fill-height align-center justify-center"
+    >
+      <v-progress-circular
+        v-if="initLoading"
+        indeterminate
+        color="primary"
+      ></v-progress-circular>
+      <p v-else-if="initError">{{ initError }}</p>
+    </v-sheet>
+  </v-container>
+  <v-app v-else>
     <app-bar />
     <v-main min-height="100vh">
       <router-view />
@@ -60,24 +76,44 @@ onKeyStroke(e => {
 watchEffect(() => {
   if (!yetToTypeCurtain.value.length) showDefederation.value = false;
 });
+const initLoading = ref(true);
+const initError = ref<string | null>();
 
 onMounted(async () => {
 
-  const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
-  if (!siteAddress) {
-    throw new Error('VITE_SITE_ADDRESS env var missing. Please review your .env file.');
+
+  try {
+    const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
+    if (!siteAddress) {
+      throw new Error(
+        'VITE_SITE_ADDRESS env var missing. Please review your .env file.',
+        { cause: 'MISSING_CONFIG' },
+      );
+    }
+    await lensService.init('.lens-node');
+
+    const bootstrappers = import.meta.env.VITE_BOOTSTRAPPERS;
+    if (bootstrappers) {
+      const promises = bootstrappers
+        .split(',')
+        .map((b) => lensService.dial(b.trim()));
+      const result = await Promise.allSettled(promises);
+      console.log(result);
+    }
+    await lensService.openSite(siteAddress);
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.cause === 'MISSING_CONFIG') {
+        initError.value = error.message;
+      } else {
+        initError.value = error.message.slice(200);
+      }
+    } else {
+      initError.value = JSON.stringify(error).slice(200);
+    }
+  } finally {
+    initLoading.value = false;
   }
 
-  await lensService.init('.lens-node');
-
-  const bootstrappers = import.meta.env.VITE_BOOTSTRAPPERS;
-  if (bootstrappers) {
-    const promises = bootstrappers
-      .split(',')
-      .map((b) => lensService.dial(b.trim()));
-    const result = await Promise.allSettled(promises);
-    console.log(result);
-  }
-  await lensService.openSite(siteAddress);
 });
 </script>

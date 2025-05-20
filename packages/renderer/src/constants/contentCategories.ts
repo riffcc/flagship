@@ -1,5 +1,3 @@
-import { defineStore } from 'pinia';
-import { computed } from 'vue';
 import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
 import {
   ID_PROPERTY,
@@ -271,19 +269,3 @@ export const DEFAULT_CONTENT_CATEGORIES: ContentCategoryData<ContentCategoryMeta
     },
   },
 ];
-
-export const useContentCategoriesStore = defineStore('contentCategories', () => {
-
-  const contentCategories = computed<ContentCategoryData<ContentCategoryMetadata>[]>(() => { // Applied fix here
-    return DEFAULT_CONTENT_CATEGORIES;
-  });
-
-  const featuredContentCategories = computed(() => {
-    return contentCategories.value.filter(cc => cc.featured);
-  });
-
-  return {
-    contentCategories,
-    featuredContentCategories,
-  };
-});

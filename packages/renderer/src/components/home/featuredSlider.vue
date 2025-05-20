@@ -6,7 +6,7 @@
   >
     <template #prev="{props: prevProps}">
       <v-sheet
-        v-if="promotedFeaturedReleases.length > 1"
+        v-if="props.promotedFeaturedReleases.length > 1"
         color="transparent"
         width="64px"
         class="position-relative h-100"
@@ -31,7 +31,7 @@
     </template>
     <template #next="{props: nextProps}">
       <v-sheet
-        v-if="promotedFeaturedReleases.length > 1"
+        v-if="props.promotedFeaturedReleases.length > 1"
         color="transparent"
         width="64px"
         class="position-relative h-100"
@@ -55,7 +55,7 @@
       </v-sheet>
     </template>
     <v-carousel-item
-      v-for="featuredItem in promotedFeaturedReleases"
+      v-for="featuredItem in props.promotedFeaturedReleases"
       :key="featuredItem.id"
       :src="parseUrlOrCid(featuredItem.metadata?.['cover'] as string | undefined ?? featuredItem.thumbnailCID)"
       cover
@@ -172,24 +172,25 @@ import {useDisplay} from 'vuetify';
 import {parseUrlOrCid} from '/@/utils';
 import {useShowDefederation} from '/@/composables/showDefed';
 import { useSiteColors } from '/@/composables/siteColors';
-import { useReleasesStore } from '/@/stores/releases';
-import { storeToRefs } from 'pinia';
+import type { ReleaseItem } from '/@/types';
+import type { AnyObject } from '@riffcc/lens-sdk';
 
+const props = defineProps<{
+  promotedFeaturedReleases: ReleaseItem<AnyObject>[];
+}>();
 const router = useRouter();
 const {showDefederation} = useShowDefederation();
 const {xs} = useDisplay();
 const slide = ref(0);
-const releasesStore = useReleasesStore();
-const {promotedFeaturedReleases} = storeToRefs(releasesStore);
 
 const previousSlideImage = computed(() => {
-  const previousIndex = slide.value === 0 ? promotedFeaturedReleases.value.length - 1 : slide.value - 1;
-  return promotedFeaturedReleases.value[previousIndex].metadata?.['cover'] as string | undefined ?? promotedFeaturedReleases.value[previousIndex].thumbnailCID;
+  const previousIndex = slide.value === 0 ? props.promotedFeaturedReleases.length - 1 : slide.value - 1;
+  return props.promotedFeaturedReleases[previousIndex].metadata?.['cover'] as string | undefined ?? props.promotedFeaturedReleases[previousIndex].thumbnailCID;
 });
 
 const nextSlideImage = computed(() => {
-  const nextIndex = slide.value === promotedFeaturedReleases.value.length - 1 ? 0 : slide.value + 1;
-  return promotedFeaturedReleases.value[nextIndex].metadata?.['cover'] as string | undefined ?? promotedFeaturedReleases.value[nextIndex].thumbnailCID;
+  const nextIndex = slide.value === props.promotedFeaturedReleases.length - 1 ? 0 : slide.value + 1;
+  return props.promotedFeaturedReleases[nextIndex].metadata?.['cover'] as string | undefined ?? props.promotedFeaturedReleases[nextIndex].thumbnailCID;
 });
 
 const {getSiteColor} = useSiteColors();

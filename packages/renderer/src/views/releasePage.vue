@@ -46,45 +46,40 @@
 import { useRouter } from 'vue-router';
 import albumViewer from '/@/components/releases/albumViewer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
-import { ref, watch } from 'vue';
-import { useReleasesStore } from '../stores/releases';
-import { storeToRefs } from 'pinia';
-import type { ReleaseItem } from '/@/stores/releases';
-import type { AnyObject } from '@riffcc/lens-sdk';
+import { watch } from 'vue';
+import { ID_PROPERTY, RELEASE_CATEGORY_ID_PROPERTY, RELEASE_CONTENT_CID_PROPERTY, RELEASE_METADATA_PROPERTY, RELEASE_NAME_PROPERTY, RELEASE_THUMBNAIL_CID_PROPERTY, type AnyObject } from '@riffcc/lens-sdk';
+import type { ReleaseItem } from '../types';
+import { useLensService } from '../plugins/lensService/utils';
+import { useQuery } from '@tanstack/vue-query';
 
 const props = defineProps<{
   id: string;
 }>();
 
 const router = useRouter();
-const releasesStore = useReleasesStore();
-const { releases, isLoading } = storeToRefs(releasesStore);
 
-const targetRelease = ref<ReleaseItem<AnyObject> | null>(null);
-
-
-watch(
-  [() => props.id, releases],
-  ([currentId, currentReleases], [prevId, _]) => {
-
-    if (currentId !== prevId && targetRelease.value?.id !== currentId) {
-      targetRelease.value = null;
-    }
-
-    if (!targetRelease.value || targetRelease.value.id !== currentId) {
-      const foundRelease = currentReleases.find(r => r.id === currentId);
-
-      if (foundRelease) {
-        targetRelease.value = foundRelease;
-      } else {
-        if (currentId !== prevId) {
-          targetRelease.value = null;
-        }
-      }
+const { lensService } = useLensService();
+const {
+  data: targetRelease,
+  isLoading,
+} = useQuery<ReleaseItem<AnyObject> | undefined>({
+  queryKey: ['release', props.id],
+  queryFn: async () => {
+    const r = await lensService.getRelease(props.id);
+    if (r) {
+      return {
+        [ID_PROPERTY]: r.id,
+        [RELEASE_NAME_PROPERTY]: r.name,
+        [RELEASE_CATEGORY_ID_PROPERTY]: r.categoryId,
+        [RELEASE_CONTENT_CID_PROPERTY]: r.contentCID,
+        [RELEASE_THUMBNAIL_CID_PROPERTY]: r.thumbnailCID,
+        [RELEASE_METADATA_PROPERTY]: r.metadata ? JSON.parse(r.metadata) : undefined,
+      };
+    } else {
+      return undefined;
     }
   },
-  { immediate: true },
-);
+});
 
 watch(targetRelease, (r) => {
   if (r) {

@@ -2,6 +2,7 @@ import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
 import {cid as isCID} from 'is-ipfs';
 import { IPFS_GATEWAY } from './constants/ipfs';
+import type { FeaturedReleaseItem } from './types';
 
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
@@ -96,7 +97,7 @@ export function parseUrlOrCid(urlOrCid?: string): string | undefined {
   const gatewayBase = selectedGateway.startsWith('http://') || selectedGateway.startsWith('https://')
     ? selectedGateway
     : `https://${selectedGateway}`;
-  
+
   // For codex gateway, we'll maintain the 'codex-' prefix logic if the base gateway doesn't already include it.
   // If the override is a full URL, we might need a more sophisticated way to derive the codex variant.
   // For now, let's assume the override is a domain or IP:port.
@@ -114,3 +115,14 @@ export function parseUrlOrCid(urlOrCid?: string): string | undefined {
   }
 };
 
+export function filterActivedFeatured(featured: FeaturedReleaseItem) {
+  const now = new Date();
+  const startTime = new Date(featured.startTime);
+  const endTime = new Date(featured.endTime);
+
+  return now >= startTime && now <= endTime;
+};
+
+export function filterPromotedFeatured(featured: FeaturedReleaseItem) {
+  return featured.promoted;
+};

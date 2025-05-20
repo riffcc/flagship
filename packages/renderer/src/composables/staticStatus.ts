@@ -1,19 +1,14 @@
-import {readonly, ref, watch, type Ref} from 'vue';
+import { readonly, ref, watch } from 'vue';
 
-export type StaticStatusTypes = 'static' | 'live';
-
-const staticStatus = ref<StaticStatusTypes>(import.meta.env.VITE_STATIC_MODE ? 'static' : 'live');
+const staticStatus = ref<boolean>(Boolean(import.meta.env.VITE_STATIC_STATUS));
 
 const alreadyChanged = ref(false);
 
-watch(staticStatus, ()=>{
+watch(staticStatus, () => {
   alreadyChanged.value = true;
 });
 
-export const useStaticStatus = function (): {
-  staticStatus: Ref<StaticStatusTypes>;
-  alreadyChanged: Readonly<Ref<boolean>>;
-} {
+export const useStaticStatus = () => {
   return {
     staticStatus,
     alreadyChanged: readonly(alreadyChanged),

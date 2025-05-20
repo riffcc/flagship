@@ -129,17 +129,19 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { storeToRefs } from 'pinia';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
-import { useContentCategoriesStore } from '/@/stores/contentCategories';
 
 import ContentCategoryForm from '/@/components/releases/contentCategoryForm.vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
+import { useQuery } from '@tanstack/vue-query';
+import { DEFAULT_CONTENT_CATEGORIES } from '/@/constants/contentCategories';
 
 
-const contentCategoriesStore = useContentCategoriesStore();
-const { contentCategories } = storeToRefs(contentCategoriesStore);
+const { data: contentCategories } = useQuery<ContentCategoryData<ContentCategoryMetadata>[]>({
+  queryKey: ['contentCategories'],
+  placeholderData: DEFAULT_CONTENT_CATEGORIES,
+});
 
 const createCategoryDialog = ref(false);
 const editCategoryDialog = ref(false);

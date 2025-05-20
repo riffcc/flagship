@@ -1,15 +1,15 @@
 import { createApp, type App as VueApp } from 'vue';
+import { VueQueryPlugin } from '@tanstack/vue-query';
 import App from './App.vue';
-import routeur from './plugins/router';
-import vuetify from './plugins/vuetify';
-import {pinia} from './plugins/pinia';
-import lensService from './plugins/lensService';
+import routerPlugin from './plugins/router';
+import vuetifyPlugin from './plugins/vuetify';
+import lensServicePlugin from './plugins/lensService';
 
-  const app: VueApp = createApp(App);
+const app: VueApp = createApp(App);
 
-  app.use(routeur);
-  app.use(vuetify);
-  app.use(pinia);
-  app.use(lensService);
+app.use(routerPlugin);
+app.use(vuetifyPlugin);
+app.use(VueQueryPlugin);
+app.use(lensServicePlugin);
 
-  app.mount('#app');
+app.mount('#app');

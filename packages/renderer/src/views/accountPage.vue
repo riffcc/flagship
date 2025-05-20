@@ -12,10 +12,10 @@
         Anonymous
       </p>
       <v-switch
-        v-model="staticModeSwitch"
+        v-model="staticStatus"
         class="position-absolute right-0 top-0 mr-4 mr-md-12 mt-md-2"
         label="Static mode"
-        :color="staticModeSwitch ? 'primary' : 'secondary'"
+        :color="staticStatus ? 'primary' : 'secondary'"
       />
     </v-sheet>
 
@@ -28,18 +28,23 @@
       <v-divider></v-divider>
       <v-list lines="two">
         <v-list-item
+          v-if="publicKey"
           title="Public Key"
           :subtitle="publicKey"
+          @click="copy(publicKey, publicKey)"
         >
         </v-list-item>
         <v-list-item
+          v-if="peerId"
           title="Peer ID"
           :subtitle="peerId"
+          @click="copy(peerId, peerId)"
         >
         </v-list-item>
         <v-list-item
+          v-if="accountStatus"
           title="Account status"
-          :subtitle="`GUEST (View-only access to the site)`"
+          :subtitle="`${statusExplanation.title} ${statusExplanation.description}`"
         >
         </v-list-item>
       </v-list>
@@ -60,31 +65,52 @@
   </v-container>
 </template>
 <script setup lang="ts">
-import { onMounted, ref, watchEffect } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 import { useStaticStatus } from '/@/composables/staticStatus';
 import { useUserSession } from '/@/composables/userSession';
 import { useLensService } from '/@/plugins/lensService/utils';
+import { useCopyToClipboard } from '../composables/copyToClipboard';
 
 const { userData } = useUserSession();
+const { copy } = useCopyToClipboard();
 const { staticStatus } = useStaticStatus();
 
 const { lensService } = useLensService();
 
-const staticModeSwitch = ref(staticStatus.value === 'static');
-watchEffect(() => {
-  staticStatus.value = staticModeSwitch.value ? 'static' : 'live';
-});
-watchEffect(() => {
-  staticModeSwitch.value = staticStatus.value === 'static';
-});
-
 const publicKey = ref<string | undefined>();
 const peerId = ref<string | undefined>();
+const accountStatus = ref<number | undefined>();
+
+const statusExplanation = computed(() => {
+  switch (accountStatus.value) {
+    case 0:
+      return {
+        title: 'GUEST',
+        description: '(View-only access to site.)',
+      };
+    case 1:
+      return {
+        title: 'MEMBER',
+        description: '(Can add content.)',
+      };
+    case 2:
+      return {
+        title: 'ADMIN',
+        description: '(Can moderate content and invite other moderators or administrators.)',
+      };
+    default:
+      return {
+        title: 'Unknown role',
+        description: '',
+      };
+  }
+});
 
 onMounted(async () => {
   publicKey.value = await lensService.getPublicKey();
   peerId.value = await lensService.getPeerId();
+  accountStatus.value = await lensService.getAccountStatus();
 });
 
 </script>

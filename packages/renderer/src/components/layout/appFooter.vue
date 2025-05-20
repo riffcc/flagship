@@ -61,7 +61,7 @@
                 ></v-list-item>
                 <template v-if="key === 'explore'">
                   <v-list-item
-                    v-for="item in contentCategories.filter((cc) => cc.featured)"
+                    v-for="item in featuredContentCategories"
                     :key="item.id"
                     :subtitle="item.displayName"
                     class="mb-2 pl-1"
@@ -111,14 +111,19 @@
 <script setup lang="ts">
 import {useRouter} from 'vue-router';
 import {navigationMap} from '/@/constants/navigation';
-import { useContentCategoriesStore } from '/@/stores/contentCategories';
-import { storeToRefs } from 'pinia';
+import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
+import { useQuery } from '@tanstack/vue-query';
+import { DEFAULT_CONTENT_CATEGORIES } from '/@/constants/contentCategories';
+import { computed } from 'vue';
 
 const router = useRouter();
 
-const contentCategoriesStore = useContentCategoriesStore();
-const { contentCategories } = storeToRefs(contentCategoriesStore);
+const { data: contentCategories } = useQuery<ContentCategoryData<ContentCategoryMetadata>[]>({
+  queryKey: ['contentCategories'],
+  placeholderData: DEFAULT_CONTENT_CATEGORIES,
+});
 
+const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
 const scrollToTop = () => {
   window.scrollTo({
     top: 0,

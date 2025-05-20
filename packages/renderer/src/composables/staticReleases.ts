@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue';
-import type { ReleaseItem, FeaturedReleaseItem } from '/@/stores/releases';
+import type { ReleaseItem, FeaturedReleaseItem } from '/@/types';
 import {
   ID_PROPERTY,
   RELEASE_NAME_PROPERTY,

@@ -120,24 +120,35 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router';
 import { computed } from 'vue';
-// import { useOrbiter } from '/@/plugins/orbiter/utils'; // Removed
+import { useRoute, useRouter } from 'vue-router';
+import { useQuery } from '@tanstack/vue-query';
+import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
+import { DEFAULT_CONTENT_CATEGORIES } from '/@/constants/contentCategories';
 import { useUserSession } from '/@/composables/userSession';
-import accountMenu from '/@/components/account/accountMenu.vue';
-import { useContentCategoriesStore } from '/@/stores/contentCategories';
-import { storeToRefs } from 'pinia';
-
-// const {orbiter} = useOrbiter(); // Removed
+import { useLensService } from '/@/plugins/lensService/utils';
 const router = useRouter();
 const route = useRoute();
-// const isAdmin = computed(() => orbiter?.followIsModerator ? orbiter.followIsModerator() : false); // Removed - depends on orbiter
-const isAdmin = computed(() => false); // Placeholder for isAdmin
-const contentCategoriesStore = useContentCategoriesStore();
-const { featuredContentCategories } = storeToRefs(contentCategoriesStore);
+
+const { data: contentCategories } = useQuery<ContentCategoryData<ContentCategoryMetadata>[]>({
+  queryKey: ['contentCategories'],
+  placeholderData: DEFAULT_CONTENT_CATEGORIES,
+});
+
+const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
+const { lensService } = useLensService();
+const { data: accountStatus } = useQuery({
+  queryKey: ['accountStatus'],
+  queryFn: async () => {
+    return await lensService.getAccountStatus();
+  },
+});
+const isAdmin = computed(() => accountStatus.value === 2);
 const { userData } = useUserSession();
 
 function handleOnDisconnect(){
   userData.value = null;
 };
+
+
 </script>

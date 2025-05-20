@@ -15,7 +15,7 @@ interface ImportMetaEnv {
    * This variable is initialized in scripts/watch.ts
    */
   readonly VITE_DEV_SERVER_URL: undefined | string;
-
+  readonly VITE_STATIC_STATUS: string | boolean | undefined;
   /** Current app version */
   readonly VITE_APP_VERSION: string;
 

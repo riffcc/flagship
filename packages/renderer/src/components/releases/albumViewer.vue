@@ -133,7 +133,7 @@ import type {AudioTrack} from '/@/composables/audioAlbum';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {useFloatingVideo} from '/@/composables/floatingVideo';
 import { parseUrlOrCid } from '/@/utils';
-import type { ReleaseItem } from '/@/stores/releases';
+import type { ReleaseItem } from '/@/types';
 import type { AnyObject } from '@riffcc/lens-sdk';
 
 const props = defineProps<{

@@ -109,7 +109,7 @@ import { computed } from 'vue';
 import { useDisplay } from 'vuetify';
 import { useShowDefederation } from '/@/composables/showDefed';
 import { useSiteColors } from '/@/composables/siteColors';
-import { type ReleaseItem } from '/@/stores/releases';
+import { type ReleaseItem } from '/@/types';
 import { parseUrlOrCid } from '/@/utils';
 import { useRouter } from 'vue-router';
 import type { AnyObject } from '@riffcc/lens-sdk';

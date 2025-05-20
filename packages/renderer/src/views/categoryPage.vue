@@ -10,7 +10,7 @@
         color="primary"
       ></v-progress-circular>
     </v-sheet>
-    <template v-else-if="filteredReleases.length > 0">
+    <template v-else-if="(filteredReleases?.length ?? 0) > 0">
       <content-section
         :title="pageCategory?.displayName ?? ''"
       >
@@ -39,33 +39,37 @@
 </template>
 
 <script setup lang="ts">
-import { storeToRefs } from 'pinia';
-import { useReleasesStore } from '/@/stores/releases';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import contentSection from '/@/components/home/contentSection.vue';
 import contentCard from '/@/components/misc/contentCard.vue';
-import { useContentCategoriesStore } from '/@/stores/contentCategories';
+import { useQuery } from '@tanstack/vue-query';
+import type { AnyObject, ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
+import { DEFAULT_CONTENT_CATEGORIES } from '/@/constants/contentCategories';
+import type { ReleaseItem } from '../types';
 
 const props = defineProps<{
   category: string
 }>();
 const router = useRouter();
-const releasesStore = useReleasesStore();
-const contentCategoriesStore = useContentCategoriesStore();
+const { data: releases, isLoading } = useQuery<ReleaseItem<AnyObject>[]>({
+  queryKey: ['releases'],
+});
 
-const { releases, isLoading } = storeToRefs(releasesStore);
-const { contentCategories } = storeToRefs(contentCategoriesStore);
+const { data: contentCategories } = useQuery<ContentCategoryData<ContentCategoryMetadata>[]>({
+  queryKey: ['contentCategories'],
+  placeholderData: DEFAULT_CONTENT_CATEGORIES,
+});
 
 const filteredReleases = computed(() => {
-  return releases.value.filter((release) => {
+  return releases.value?.filter((release) => {
     return release.categoryId === props.category;
   });
 });
 
 const pageCategory = computed(() => {
   const categoryId = props.category;
-  const category = contentCategories.value.find((cat) => cat.id === categoryId);
+  const category = contentCategories.value?.find((cat) => cat.id === categoryId);
   return category;
 });
 

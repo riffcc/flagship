@@ -66,14 +66,14 @@
           min-height="256px"
         >
           <h6 class="text-h6 font-weight-bold mb-4">Featured Releases</h6>
-          <v-list v-if="unfilteredFeaturedReleases.length > 0">
+          <v-list v-if="(featuredReleases?.length ?? 0) > 0">
             <v-list-item
-              v-for="featuredRelease in unfilteredFeaturedReleases"
+              v-for="featuredRelease in featuredReleases"
               :key="featuredRelease.id"
               class="px-0"
               :title="featuredRelease.releaseId"
             >
-              <template #title="{title}">
+              <template #title="{ title }">
                 <p class="text-subtitle-2 text-center">{{ title }}</p>
               </template>
               <template #prepend>
@@ -156,13 +156,15 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, ref, watch, type Ref} from 'vue';
-import { storeToRefs } from 'pinia';
-import { filterActivedFeatured, filterPromotedFeatured, useReleasesStore, type PartialFeaturedReleaseItem } from '/@/stores/releases';
+import { computed, onMounted, ref, watch, type Ref } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
+import type{ AnyObject } from '@riffcc/lens-sdk';
 import { useStaticStatus } from '/@/composables/staticStatus';
 import { useStaticReleases } from '/@/composables/staticReleases';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
+import { filterActivedFeatured, filterPromotedFeatured } from '/@/utils';
+import type { FeaturedReleaseItem, PartialFeaturedReleaseItem, ReleaseItem } from '/@/types';
 
 const props = defineProps<{
   initialFeatureData: PartialFeaturedReleaseItem | null;
@@ -173,10 +175,15 @@ const emit = defineEmits<{
 }>();
 
 const { staticStatus } = useStaticStatus();
-const {staticFeaturedReleases} = useStaticReleases();
+const { staticFeaturedReleases } = useStaticReleases();
 
-const releasesStore = useReleasesStore();
-const {releases, unfilteredFeaturedReleases} = storeToRefs(releasesStore);
+const { data: releases } = useQuery<ReleaseItem<AnyObject>[]>({
+  queryKey: ['releases'],
+});
+
+const { data: featuredReleases } = useQuery<FeaturedReleaseItem[]>({
+  queryKey: ['featuredReleases'],
+});
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
@@ -199,8 +206,8 @@ const rules = [
 const endAtRules = [
   (value: string | null) => !newFeaturedRelease.value.startTime || Boolean(value) || 'End date is required if start date is set.',
   (value: string | null) => {
-      if (!value || !newFeaturedRelease.value.startTime) return true;
-      return new Date(value) > new Date(newFeaturedRelease.value.startTime) || 'End date must be after start date.';
+    if (!value || !newFeaturedRelease.value.startTime) return true;
+    return new Date(value) > new Date(newFeaturedRelease.value.startTime) || 'End date must be after start date.';
   },
 ];
 
@@ -286,9 +293,9 @@ const handleOnSubmit = async () => {
   console.log('Creating new featured release with data:', readyToSave.value);
 
   try {
-    if (staticStatus.value === 'static') {
+    if (staticStatus.value) {
       await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-      const targetRelease = releases.value.find(r => r.id === readyToSave.value?.releaseId);
+      const targetRelease = releases.value?.find(r => r.id === readyToSave.value?.releaseId);
       if (targetRelease && targetRelease.id && readyToSave.value) {
         staticFeaturedReleases.value.push({
           id: `featured-${Date.now()}-${Math.random().toString(16).substring(2, 8)}`,
@@ -326,17 +333,17 @@ const handleOnSubmit = async () => {
 const confirmEndFeaturedRelease = async () => {
   if (!featuredItemIdToEnd.value) return;
   const endTime = (new Date()).toISOString();
-  if (staticStatus.value === 'static') {
+  if (staticStatus.value) {
     const index = staticFeaturedReleases.value.findIndex(fr => fr.id === featuredItemIdToEnd.value);
     if (index !== -1) {
-        staticFeaturedReleases.value[index] = {
-            ...staticFeaturedReleases.value[index],
-            endTime,
-        };
-        openSnackbar('Featured release ended succefully.', 'success');
+      staticFeaturedReleases.value[index] = {
+        ...staticFeaturedReleases.value[index],
+        endTime,
+      };
+      openSnackbar('Featured release ended succefully.', 'success');
     } else {
-        console.error(`Static featured release ${featuredItemIdToEnd.value} not found to end.`);
-        openSnackbar('Error on ending featured release.', 'error');
+      console.error(`Static featured release ${featuredItemIdToEnd.value} not found to end.`);
+      openSnackbar('Error on ending featured release.', 'error');
     }
   } else {
     try {

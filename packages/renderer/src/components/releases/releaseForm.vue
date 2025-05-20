@@ -111,11 +111,11 @@
 <script setup lang="ts">
 import {cid} from 'is-ipfs';
 import {computed, onMounted, ref} from 'vue';
-import type { ReleaseItem, PartialReleaseItem } from '/@/stores/releases';
-import { useContentCategoriesStore } from '/@/stores/contentCategories';
-import { storeToRefs } from 'pinia';
-import type { ContentCategoryMetadata, ReleaseData, AnyObject } from '@riffcc/lens-sdk';
+import type { ReleaseItem, PartialReleaseItem } from '/@/types';
+import type { ContentCategoryMetadata, ReleaseData, AnyObject, ContentCategoryData } from '@riffcc/lens-sdk';
 import { useLensService } from '/@/plugins/lensService/utils';
+import { useQuery } from '@tanstack/vue-query';
+import { DEFAULT_CONTENT_CATEGORIES } from '/@/constants/contentCategories';
 
 const props = defineProps<{
   initialData?: PartialReleaseItem<AnyObject>;
@@ -128,8 +128,12 @@ const emit = defineEmits<{
   (e: 'update:error', message: string): void;
 }>();
 
-const contentCategoriesStore = useContentCategoriesStore();
-const { contentCategories } = storeToRefs(contentCategoriesStore);
+const {
+  data: contentCategories,
+} = useQuery<ContentCategoryData<ContentCategoryMetadata>[]>({
+  queryKey: ['contentCategories'],
+  placeholderData: DEFAULT_CONTENT_CATEGORIES,
+});
 
 const formRef = ref();
 const openAdvanced = ref<boolean>();
@@ -150,7 +154,7 @@ const isLoading = ref(false);
 
 const {lensService} = useLensService();
 
-const contentCategoriesItems = computed(() => (contentCategories.value ?? []).map(item => ({
+const contentCategoriesItems = computed(() => contentCategories.value?.map(item => ({
   id: item.id,
   value: item.id,
   title: item.displayName,
