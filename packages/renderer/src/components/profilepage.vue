@@ -7,7 +7,7 @@
 
           <div class="pic-section d-flex flex-column align-center pa-4">
             <v-avatar size="150" class="mb-2">
-              <img :src="orbiterprofilepic ||placeholder" class="profile-pic" alt="Profile" />
+              <img :src="orbiterprofilepic || placeholder" class="profile-pic" alt="Profile" />
             </v-avatar>
             <v-btn icon class="camera-icon-btn" @click="triggerFileInput">
               <v-icon color="white">mdi-camera</v-icon>
@@ -15,9 +15,10 @@
             <input ref="fileInput" type="file" accept="image/*" class="d-none" @change="handleFileChange" />
           </div>
 
-          <v-text-field v-model="name" label="Full Name" outlined dense />
+          <v-text-field v-model="username" label="Full Name" outlined dense />
           <v-textarea v-model="bio" label="Bio" outlined rows="3" dense />
           <v-btn color="primary" class="mt-4" @click="saveProfile">Save</v-btn>
+
         </v-col>
       </v-row>
     </v-container>
@@ -25,15 +26,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, watchEffect } from 'vue'
 import { useOrbiter } from '/@/plugins/orbiter/utils';
 import { suivre as follow } from '@constl/vue';
-import { url } from 'inspector';
 
 const { orbiter } = useOrbiter();
-const accountName = follow(orbiter.listenForNameChange.bind(orbiter));
+const username = ref('')
+const saveProfile = async () => {
+  await orbiter.changeName({
+    name: username.value,
+    language: 'english',
+  })
+}
+const fullname = follow(orbiter.listenForNameChange.bind(orbiter))
+watchEffect(() => {
+  if (fullname.value && fullname.value)
+  username.value = fullname.value.english;
+  })
 
-const name = ref('')
 const bio = ref('')
 const photo = follow(orbiter.listenForProfilePhotoChange.bind(orbiter));
 const orbiterprofilepic = computed(() => {
@@ -57,10 +67,6 @@ const handleFileChange = (event: Event) => {
     profilePicUrl.value = URL.createObjectURL(target.files[0])
   }
 }
-
-const saveProfile = () => {
-  orbiter.changeName({ name: name.value, language: 'english' })
-}
 const savePhoto = async () => {
   if (!profilePic.value) return
   const file = profilePic.value
@@ -72,9 +78,8 @@ const savePhoto = async () => {
       contenu: uint8Array,
       nomFichier: file.name,
     },
-    
+
   })
-  console.log("hello")
 }
 watch(profilePic, savePhoto)
 </script>
