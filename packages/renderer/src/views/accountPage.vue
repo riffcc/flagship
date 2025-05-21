@@ -30,19 +30,19 @@
         <v-list-item
           v-if="publicKey"
           title="Public Key"
-          :subtitle="publicKey"
+          :subtitle="isCopied(publicKey) ? 'Copied!' : publicKey"
           @click="copy(publicKey, publicKey)"
         >
         </v-list-item>
         <v-list-item
           v-if="peerId"
           title="Peer ID"
-          :subtitle="peerId"
+          :subtitle="isCopied(peerId) ? 'Copied!' : peerId"
           @click="copy(peerId, peerId)"
         >
         </v-list-item>
         <v-list-item
-          v-if="accountStatus"
+          v-if="accountStatus !== undefined"
           title="Account status"
           :subtitle="`${statusExplanation.title} ${statusExplanation.description}`"
         >
@@ -73,7 +73,7 @@ import { useAccountStatusQuery, usePeerIdQuery, usePublicKeyQuery } from '../plu
 import { useCopyToClipboard } from '../composables/copyToClipboard';
 
 const { userData } = useUserSession();
-const { copy } = useCopyToClipboard();
+const { copy, isCopied } = useCopyToClipboard();
 const { staticStatus } = useStaticStatus();
 
 const { data: publicKey } = usePublicKeyQuery();
