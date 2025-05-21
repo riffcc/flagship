@@ -7,8 +7,7 @@ import vuetify from 'vite-plugin-vuetify';
 import {chrome} from '../../.electron-vendors.cache.json';
 import {injectAppVersion} from '../../version/inject-app-version-plugin.mjs';
 import {nodePolyfills} from 'vite-plugin-node-polyfills';
-import peerbit from '@peerbit/vite';
-import { viteStaticCopy } from 'vite-plugin-static-copy';
+
 const PACKAGE_ROOT = __dirname;
 const PROJECT_ROOT = join(PACKAGE_ROOT, '../..');
 
@@ -22,15 +21,6 @@ if (forElectron) {
 
 const générerExtentions = () => {
   const extentions = [
-    peerbit(),
-    viteStaticCopy({
-      targets: [
-        {
-          src: join(PACKAGE_ROOT, 'public', 'peerbit', 'sqlite3.wasm'),
-          dest: join(PROJECT_ROOT, 'node_modules', '.vite', 'deps'),
-        },
-      ],
-    }),
     vue(),
     vuetify({
       autoImport: true,
