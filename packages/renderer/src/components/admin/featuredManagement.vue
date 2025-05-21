@@ -157,14 +157,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type Ref } from 'vue';
-import { useQuery } from '@tanstack/vue-query';
-import type{ AnyObject } from '@riffcc/lens-sdk';
 import { useStaticStatus } from '/@/composables/staticStatus';
-import { useStaticReleases } from '/@/composables/staticReleases';
+import { useStaticData } from '../../composables/staticData';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { filterActivedFeatured, filterPromotedFeatured } from '/@/utils';
-import type { FeaturedReleaseItem, PartialFeaturedReleaseItem, ReleaseItem } from '/@/types';
+import type { PartialFeaturedReleaseItem } from '/@/types';
+import { useFeaturedReleasesQuery, useReleasesQuery } from '../../plugins/lensService/hooks';
 
 const props = defineProps<{
   initialFeatureData: PartialFeaturedReleaseItem | null;
@@ -175,15 +174,10 @@ const emit = defineEmits<{
 }>();
 
 const { staticStatus } = useStaticStatus();
-const { staticFeaturedReleases } = useStaticReleases();
+const { staticFeaturedReleases } = useStaticData();
 
-const { data: releases } = useQuery<ReleaseItem<AnyObject>[]>({
-  queryKey: ['releases'],
-});
-
-const { data: featuredReleases } = useQuery<FeaturedReleaseItem[]>({
-  queryKey: ['featuredReleases'],
-});
+const { data: releases } = useReleasesQuery();
+const { data: featuredReleases } = useFeaturedReleasesQuery();
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 

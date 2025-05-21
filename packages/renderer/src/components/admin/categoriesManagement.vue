@@ -134,14 +134,10 @@ import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import ContentCategoryForm from '/@/components/releases/contentCategoryForm.vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
-import { useQuery } from '@tanstack/vue-query';
-import { DEFAULT_CONTENT_CATEGORIES } from '/@/constants/contentCategories';
+import { useContentCategoriesQuery } from '../../plugins/lensService/hooks';
 
 
-const { data: contentCategories } = useQuery<ContentCategoryData<ContentCategoryMetadata>[]>({
-  queryKey: ['contentCategories'],
-  placeholderData: DEFAULT_CONTENT_CATEGORIES,
-});
+const { data: contentCategories } = useContentCategoriesQuery();
 
 const createCategoryDialog = ref(false);
 const editCategoryDialog = ref(false);

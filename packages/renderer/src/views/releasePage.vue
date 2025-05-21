@@ -43,14 +43,11 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from 'vue';
 import { useRouter } from 'vue-router';
 import albumViewer from '/@/components/releases/albumViewer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
-import { watch } from 'vue';
-import { ID_PROPERTY, RELEASE_CATEGORY_ID_PROPERTY, RELEASE_CONTENT_CID_PROPERTY, RELEASE_METADATA_PROPERTY, RELEASE_NAME_PROPERTY, RELEASE_THUMBNAIL_CID_PROPERTY, type AnyObject } from '@riffcc/lens-sdk';
-import type { ReleaseItem } from '../types';
-import { useLensService } from '../plugins/lensService/utils';
-import { useQuery } from '@tanstack/vue-query';
+import { useReleaseQuery } from '../plugins/lensService/hooks';
 
 const props = defineProps<{
   id: string;
@@ -58,28 +55,7 @@ const props = defineProps<{
 
 const router = useRouter();
 
-const { lensService } = useLensService();
-const {
-  data: targetRelease,
-  isLoading,
-} = useQuery<ReleaseItem<AnyObject> | undefined>({
-  queryKey: ['release', props.id],
-  queryFn: async () => {
-    const r = await lensService.getRelease(props.id);
-    if (r) {
-      return {
-        [ID_PROPERTY]: r.id,
-        [RELEASE_NAME_PROPERTY]: r.name,
-        [RELEASE_CATEGORY_ID_PROPERTY]: r.categoryId,
-        [RELEASE_CONTENT_CID_PROPERTY]: r.contentCID,
-        [RELEASE_THUMBNAIL_CID_PROPERTY]: r.thumbnailCID,
-        [RELEASE_METADATA_PROPERTY]: r.metadata ? JSON.parse(r.metadata) : undefined,
-      };
-    } else {
-      return undefined;
-    }
-  },
-});
+const { data: targetRelease, isLoading } = useReleaseQuery(props.id);
 
 watch(targetRelease, (r) => {
   if (r) {

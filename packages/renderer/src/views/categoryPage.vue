@@ -11,9 +11,7 @@
       ></v-progress-circular>
     </v-sheet>
     <template v-else-if="(filteredReleases?.length ?? 0) > 0">
-      <content-section
-        :title="pageCategory?.displayName ?? ''"
-      >
+      <content-section :title="pageCategory?.displayName ?? ''">
         <v-col
           v-for="item in filteredReleases"
           :key="item.id"
@@ -43,23 +41,15 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import contentSection from '/@/components/home/contentSection.vue';
 import contentCard from '/@/components/misc/contentCard.vue';
-import { useQuery } from '@tanstack/vue-query';
-import type { AnyObject, ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
-import { DEFAULT_CONTENT_CATEGORIES } from '/@/constants/contentCategories';
-import type { ReleaseItem } from '../types';
+import { useContentCategoriesQuery, useReleasesQuery } from '../plugins/lensService/hooks';
 
 const props = defineProps<{
   category: string
 }>();
 const router = useRouter();
-const { data: releases, isLoading } = useQuery<ReleaseItem<AnyObject>[]>({
-  queryKey: ['releases'],
-});
+const { data: releases, isLoading } = useReleasesQuery();
 
-const { data: contentCategories } = useQuery<ContentCategoryData<ContentCategoryMetadata>[]>({
-  queryKey: ['contentCategories'],
-  placeholderData: DEFAULT_CONTENT_CATEGORIES,
-});
+const { data: contentCategories } = useContentCategoriesQuery();
 
 const filteredReleases = computed(() => {
   return releases.value?.filter((release) => {

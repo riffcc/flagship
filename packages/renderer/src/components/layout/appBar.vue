@@ -122,27 +122,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useQuery } from '@tanstack/vue-query';
-import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
-import { DEFAULT_CONTENT_CATEGORIES } from '/@/constants/contentCategories';
 import { useUserSession } from '/@/composables/userSession';
-import { useLensService } from '/@/plugins/lensService/utils';
+import { useAccountStatusQuery, useContentCategoriesQuery } from '../../plugins/lensService/hooks';
+import accountMenu from '/@/components/account/accountMenu.vue';
+
 const router = useRouter();
 const route = useRoute();
 
-const { data: contentCategories } = useQuery<ContentCategoryData<ContentCategoryMetadata>[]>({
-  queryKey: ['contentCategories'],
-  placeholderData: DEFAULT_CONTENT_CATEGORIES,
-});
-
+const { data: contentCategories } = useContentCategoriesQuery();
 const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
-const { lensService } = useLensService();
-const { data: accountStatus } = useQuery({
-  queryKey: ['accountStatus'],
-  queryFn: async () => {
-    return await lensService.getAccountStatus();
-  },
-});
+
+const { data: accountStatus } = useAccountStatusQuery();
 const isAdmin = computed(() => accountStatus.value === 2);
 const { userData } = useUserSession();
 

@@ -1,7 +1,7 @@
 <template>
   <v-form
     ref="formRef"
-    :disabled="isLoading"
+    :disabled="addReleaseMutation.isPending.value"
     class="d-flex flex-column ga-2"
     @submit.prevent="handleOnSubmit"
   >
@@ -102,8 +102,8 @@
       type="submit"
       block
       text="Submit"
-      :disabled="!readyToSave"
-      :is-loading="isLoading"
+      :disabled="!readyToSave || addReleaseMutation.isPending.value"
+      :loading="addReleaseMutation.isPending.value"
     />
   </v-form>
 </template>
@@ -112,10 +112,8 @@
 import {cid} from 'is-ipfs';
 import {computed, onMounted, ref} from 'vue';
 import type { ReleaseItem, PartialReleaseItem } from '/@/types';
-import type { ContentCategoryMetadata, ReleaseData, AnyObject, ContentCategoryData } from '@riffcc/lens-sdk';
-import { useLensService } from '/@/plugins/lensService/utils';
-import { useQuery } from '@tanstack/vue-query';
-import { DEFAULT_CONTENT_CATEGORIES } from '/@/constants/contentCategories';
+import type { ContentCategoryMetadata, ReleaseData, AnyObject } from '@riffcc/lens-sdk';
+import { useAddReleaseMutation, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 
 const props = defineProps<{
   initialData?: PartialReleaseItem<AnyObject>;
@@ -123,17 +121,15 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'submit', data: unknown): void;
+  (e: 'submit', data: ReleaseData): void;
   (e: 'update:success', message: string): void;
   (e: 'update:error', message: string): void;
 }>();
 
 const {
   data: contentCategories,
-} = useQuery<ContentCategoryData<ContentCategoryMetadata>[]>({
-  queryKey: ['contentCategories'],
-  placeholderData: DEFAULT_CONTENT_CATEGORIES,
-});
+} = useContentCategoriesQuery();
+
 
 const formRef = ref();
 const openAdvanced = ref<boolean>();
@@ -150,9 +146,18 @@ const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
   isValidCid: (v: string) => !v || cid(v) || 'Please enter a valid CID.',
 };
-const isLoading = ref(false);
 
-const {lensService} = useLensService();
+const addReleaseMutation = useAddReleaseMutation({
+  onSuccess: () => {
+    emit('update:success', 'Release added successfully!');
+    clearForm();
+  },
+  onError: (e) => {
+    const errorMessage = e instanceof Error ? e.message : `${String(e).slice(0, 200)}...`;
+    console.error('Error in submission process (mutation):', errorMessage);
+    emit('update:error', `Submission error: ${errorMessage}`);
+  },
+});
 
 const contentCategoriesItems = computed(() => contentCategories.value?.map(item => ({
   id: item.id,
@@ -200,39 +205,23 @@ const readyToSave = computed(() => {
   return undefined;
 });
 
-const handleOnSubmit = async () => {
+const handleOnSubmit = () => {
   if (!readyToSave.value) return;
-  isLoading.value = true;
-  try {
-    const data = readyToSave.value;
-    const releaseData: ReleaseData = {
-      name: data.name,
-      categoryId: data.categoryId,
-      contentCID: data.contentCID,
-      thumbnailCID: data.thumbnailCID,
-      metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
-    };
-    if (props.mode === 'edit' && data.id) {
-      // console.log('[ReleaseForm] Updating existing release with ID:', data.id, releaseData);
-      // const response = await lensService.updateRelease(data.id, releaseData);
-      // emit('submit', data);
-      // emit('update:success', 'Release updated successfully!');
-      emit('update:error', 'Not implemented');
-    } else {
-      console.log('[ReleaseForm] Creating new release:', releaseData);
 
-      const response = await lensService.addRelease(releaseData);
-      console.log('[ReleaseForm] Add release response:', response);
-      emit('submit', releaseData);
-      emit('update:success', 'Release added successfully!');
-      clearForm();
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Error in submission process:', errorMessage);
-    emit('update:error', `Submission error: ${errorMessage}`);
-  } finally {
-    isLoading.value = false;
+  const data = readyToSave.value;
+  const releaseDataPayload: ReleaseData = {
+    name: data.name,
+    categoryId: data.categoryId,
+    contentCID: data.contentCID,
+    thumbnailCID: data.thumbnailCID,
+    metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
+  };
+
+  if (props.mode === 'edit' && data.id) {
+    console.log('[ReleaseForm] Updating existing release with ID:', data.id, releaseDataPayload);
+    emit('update:error', 'Not implemented'); // Current behavior for edit mode
+  } else {
+    addReleaseMutation.mutate(releaseDataPayload);
   }
 };
 

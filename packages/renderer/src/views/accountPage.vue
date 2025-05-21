@@ -65,22 +65,20 @@
   </v-container>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 
 import { useStaticStatus } from '/@/composables/staticStatus';
 import { useUserSession } from '/@/composables/userSession';
-import { useLensService } from '/@/plugins/lensService/utils';
+import { useAccountStatusQuery, usePeerIdQuery, usePublicKeyQuery } from '../plugins/lensService/hooks';
 import { useCopyToClipboard } from '../composables/copyToClipboard';
 
 const { userData } = useUserSession();
 const { copy } = useCopyToClipboard();
 const { staticStatus } = useStaticStatus();
 
-const { lensService } = useLensService();
-
-const publicKey = ref<string | undefined>();
-const peerId = ref<string | undefined>();
-const accountStatus = ref<number | undefined>();
+const { data: publicKey } = usePublicKeyQuery();
+const { data: peerId } = usePeerIdQuery();
+const { data: accountStatus } = useAccountStatusQuery();
 
 const statusExplanation = computed(() => {
   switch (accountStatus.value) {
@@ -105,12 +103,6 @@ const statusExplanation = computed(() => {
         description: '',
       };
   }
-});
-
-onMounted(async () => {
-  publicKey.value = await lensService.getPublicKey();
-  peerId.value = await lensService.getPeerId();
-  accountStatus.value = await lensService.getAccountStatus();
 });
 
 </script>

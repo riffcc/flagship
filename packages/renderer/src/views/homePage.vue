@@ -26,7 +26,10 @@
         </v-btn>
       </template>
       <template v-else-if="noFeaturedContent">
-        <p class="text-white text-center mb-2">No featured content yet. It will appear once some content is marked as featured</p>
+        <p class="text-white text-center mb-2">
+          No featured content yet. It will appear once some content is marked as
+          featured
+        </p>
       </template>
     </v-sheet>
     <template v-else>
@@ -71,105 +74,49 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useQuery } from '@tanstack/vue-query';
-import type { AnyObject, ContentCategoryData, ContentCategoryMetadata} from '@riffcc/lens-sdk';
-import {
-  ID_PROPERTY,
-  RELEASE_CATEGORY_ID_PROPERTY,
-  RELEASE_CONTENT_CID_PROPERTY,
-  RELEASE_METADATA_PROPERTY,
-  RELEASE_NAME_PROPERTY,
-  RELEASE_THUMBNAIL_CID_PROPERTY,
-} from '@riffcc/lens-sdk';
+
+import type { AnyObject, ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
-import type { ReleaseItem, FeaturedReleaseItem } from '/@/types';
-import { useLensService } from '/@/plugins/lensService/utils';
-import { DEFAULT_CONTENT_CATEGORIES } from '/@/constants/contentCategories';
-import { useStaticStatus } from '/@/composables/staticStatus';
-import { useStaticReleases } from '/@/composables/staticReleases';
+import type { ReleaseItem } from '/@/types';
+import { useContentCategoriesQuery, useFeaturedReleasesQuery, useReleasesQuery } from '../plugins/lensService/hooks';
 import { filterActivedFeatured, filterPromotedFeatured } from '../utils';
 
 const router = useRouter();
-const { staticStatus } = useStaticStatus();
-const { staticReleases, staticFeaturedReleases } = useStaticReleases();
-const { lensService } = useLensService();
+
 const {
   data: releases,
   isLoading: isReleasesLoading,
   isFetched: isReleasesFetched,
-} = useQuery<ReleaseItem<AnyObject>[]>({
-  queryKey: ['releases'],
-  queryFn: async () => {
-    if (staticStatus.value) {
-      return staticReleases.value;
-    } else {
-      const result = await lensService.getLatestReleases();
-      return result.map(r => ({
-        [ID_PROPERTY]: r.id,
-        [RELEASE_NAME_PROPERTY]: r.name,
-        [RELEASE_CATEGORY_ID_PROPERTY]: r.categoryId,
-        [RELEASE_CONTENT_CID_PROPERTY]: r.contentCID,
-        [RELEASE_THUMBNAIL_CID_PROPERTY]: r.thumbnailCID,
-        [RELEASE_METADATA_PROPERTY]: r.metadata ? JSON.parse(r.metadata) : undefined,
-      }));;
-    }
-  },
-});
+} = useReleasesQuery();
 
 const {
   data: featuredReleases,
   isLoading: isFeaturedReleasesLoading,
   isFetched: isFeaturedReleasesFetched,
-} = useQuery<FeaturedReleaseItem[]>({
-  queryKey: ['featuredReleases'],
-  queryFn: async () => {
-    if (staticStatus.value) {
-      return staticFeaturedReleases.value;
-    } else {
-      // Not implemented
-      return [];
-      // const result = await lensService.getLatestFeaturedReleases();
-      // return result.map(r => ({
-      //   [ID_PROPERTY]: r.id,
-      //   [RELEASE_NAME_PROPERTY]: r.name,
-      //   [RELEASE_CATEGORY_ID_PROPERTY]: r.categoryId,
-      //   [RELEASE_CONTENT_CID_PROPERTY]: r.contentCID,
-      //   [RELEASE_THUMBNAIL_CID_PROPERTY]: r.thumbnailCID,
-      //   [RELEASE_METADATA_PROPERTY]: r.metadata ? JSON.parse(r.metadata) : undefined,
-      // }));;
-    }
-  },
+} = useFeaturedReleasesQuery();
+
+
+
+const { data: contentCategories } = useContentCategoriesQuery();
+
+const activedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
+  if (!releases.value || !featuredReleases.value) return [];
+  const activedFeaturedReleasesIds = featuredReleases.value
+    .filter(filterActivedFeatured)
+    .map(fr => fr.releaseId);
+  return releases.value.filter(r => r.id && activedFeaturedReleasesIds.includes(r.id));
 });
 
-
-const {
-  data: contentCategories,
-} = useQuery({
-  queryKey: ['contentCategories'],
-  queryFn: async () => {
-    // const result = await lensService.getContentCategories();
-    return await new Promise<ContentCategoryData<ContentCategoryMetadata>[]>(r => r(DEFAULT_CONTENT_CATEGORIES));
-  },
+const promotedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
+  if (!releases.value || !featuredReleases.value) return [];
+  const promotedActivedFeaturedReleasesIds = featuredReleases.value
+    .filter(filterActivedFeatured)
+    .filter(filterPromotedFeatured)
+    .map(fr => fr.releaseId);
+  return releases.value.filter(r => r.id && promotedActivedFeaturedReleasesIds.includes(r.id));
 });
-
-  const activedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
-    if (!releases.value || !featuredReleases.value) return [];
-    const activedFeaturedReleasesIds = featuredReleases.value
-      .filter(filterActivedFeatured)
-      .map(fr => fr.releaseId);
-    return releases.value.filter(r => r.id && activedFeaturedReleasesIds.includes(r.id));
-  });
-
-  const promotedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
-    if (!releases.value || !featuredReleases.value) return [];
-    const promotedActivedFeaturedReleasesIds = featuredReleases.value
-      .filter(filterActivedFeatured)
-      .filter(filterPromotedFeatured)
-      .map(fr => fr.releaseId);
-    return releases.value.filter(r => r.id && promotedActivedFeaturedReleasesIds.includes(r.id));
-  });
 
 
 
@@ -237,9 +184,9 @@ const activeSections = computed<{
 });
 
 
-const isLoading = computed(() => isReleasesLoading || isFeaturedReleasesLoading);
-const noFeaturedContent = computed(() => isReleasesFetched && isFeaturedReleasesFetched && promotedFeaturedReleases.value.length === 0 && activeSections.value.length === 0);
-const noContent = computed(() => isReleasesFetched && isFeaturedReleasesFetched && releases.value?.length === 0 && featuredReleases.value?.length === 0);
+const isLoading = computed(() => isReleasesLoading.value || isFeaturedReleasesLoading.value);
+const noFeaturedContent = computed(() => isReleasesFetched.value && isFeaturedReleasesFetched.value && promotedFeaturedReleases.value.length === 0 && activeSections.value.length === 0);
+const noContent = computed(() => isReleasesFetched.value && isFeaturedReleasesFetched.value && releases.value?.length === 0 && featuredReleases.value?.length === 0);
+
 
 </script>
-

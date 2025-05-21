@@ -42,7 +42,7 @@ import appFooter from '/@/components/layout/appFooter.vue';
 import { useAudioAlbum } from '/@/composables/audioAlbum';
 import { useFloatingVideo } from '/@/composables/floatingVideo';
 import { useShowDefederation } from '/@/composables/showDefed';
-import { useLensService } from '/@/plugins/lensService/utils';
+import { useLensService } from '/@/plugins/lensService/hooks';
 
 const { showDefederation } = useShowDefederation();
 const { activeTrack } = useAudioAlbum();

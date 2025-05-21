@@ -111,17 +111,12 @@
 <script setup lang="ts">
 import {useRouter} from 'vue-router';
 import {navigationMap} from '/@/constants/navigation';
-import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
-import { useQuery } from '@tanstack/vue-query';
-import { DEFAULT_CONTENT_CATEGORIES } from '/@/constants/contentCategories';
 import { computed } from 'vue';
+import { useContentCategoriesQuery } from '../../plugins/lensService/hooks';
 
 const router = useRouter();
 
-const { data: contentCategories } = useQuery<ContentCategoryData<ContentCategoryMetadata>[]>({
-  queryKey: ['contentCategories'],
-  placeholderData: DEFAULT_CONTENT_CATEGORIES,
-});
+const { data: contentCategories } = useContentCategoriesQuery();
 
 const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
 const scrollToTop = () => {

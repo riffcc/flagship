@@ -178,26 +178,25 @@ import {computed, ref, type Ref} from 'vue';
 import {useDisplay} from 'vuetify';
 import ReleaseForm from '/@/components/releases/releaseForm.vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import {useStaticReleases} from '/@/composables/staticReleases';
+import {useStaticData} from '../../composables/staticData';
 import { useStaticStatus } from '/@/composables/staticStatus';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
-import type { ReleaseItem, PartialReleaseItem } from '/@/types';
+import type { PartialReleaseItem } from '/@/types';
 import {
   parseUrlOrCid,
   // getStatusColor,
  } from '/@/utils';
 import type { AnyObject } from '@riffcc/lens-sdk';
-import { useQuery } from '@tanstack/vue-query';
+import { useReleasesQuery } from '../../plugins/lensService/hooks';
 
 
 const {staticStatus} = useStaticStatus();
 const {lgAndUp, smAndDown} = useDisplay();
 
-const {staticReleases} = useStaticReleases();
-const { data: releases, isLoading } = useQuery<ReleaseItem<AnyObject>[]>({
-  queryKey: ['releases'],
-});
+const {staticReleases} = useStaticData();
+const { data: releases, isLoading } = useReleasesQuery();
+
 const { copy, getIcon, getColor } = useCopyToClipboard();
 const emit = defineEmits<{
   'feature-release': [id: string]
