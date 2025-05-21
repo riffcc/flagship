@@ -80,7 +80,7 @@ import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import type { ReleaseItem } from '/@/types';
-import { useContentCategoriesQuery, useFeaturedReleasesQuery, useReleasesQuery } from '../plugins/lensService/hooks';
+import { useContentCategoriesQuery, useGetFeaturedReleasesQuery, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
 import { filterActivedFeatured, filterPromotedFeatured } from '../utils';
 
 const router = useRouter();
@@ -89,13 +89,13 @@ const {
   data: releases,
   isLoading: isReleasesLoading,
   isFetched: isReleasesFetched,
-} = useReleasesQuery();
+} = useGetReleasesQuery();
 
 const {
   data: featuredReleases,
   isLoading: isFeaturedReleasesLoading,
   isFetched: isFeaturedReleasesFetched,
-} = useFeaturedReleasesQuery();
+} = useGetFeaturedReleasesQuery();
 
 
 

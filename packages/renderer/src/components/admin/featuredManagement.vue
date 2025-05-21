@@ -116,7 +116,7 @@
                   density="compact"
                   :disabled="!filterActivedFeatured(featuredRelease)"
                   :color="filterActivedFeatured(featuredRelease) ? 'blue' : 'default'"
-                  @click="featuredItemIdToEnd = featuredRelease.id"
+                  @click="featuredItemIdToEnd = featuredRelease"
                 >
                 </v-btn>
               </template>
@@ -157,13 +157,12 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type Ref } from 'vue';
-import { useStaticStatus } from '/@/composables/staticStatus';
-import { useStaticData } from '../../composables/staticData';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { filterActivedFeatured, filterPromotedFeatured } from '/@/utils';
-import type { PartialFeaturedReleaseItem } from '/@/types';
-import { useFeaturedReleasesQuery, useReleasesQuery } from '../../plugins/lensService/hooks';
+import type { FeaturedReleaseItem, PartialFeaturedReleaseItem } from '/@/types';
+import { useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useGetFeaturedReleasesQuery } from '/@/plugins/lensService/hooks';
+import { FEATURED_END_TIME_PROPERTY, FEATURED_PROMOTED_PROPERTY, FEATURED_RELEASE_ID_PROPERTY, FEATURED_START_TIME_PROPERTY, ID_PROPERTY } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
   initialFeatureData: PartialFeaturedReleaseItem | null;
@@ -173,25 +172,42 @@ const emit = defineEmits<{
   'initial-data-consumed': []
 }>();
 
-const { staticStatus } = useStaticStatus();
-const { staticFeaturedReleases } = useStaticData();
-
-const { data: releases } = useReleasesQuery();
-const { data: featuredReleases } = useFeaturedReleasesQuery();
-
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
-
-const newFeaturedRelease: Ref<PartialFeaturedReleaseItem> = ref({
-  releaseId: undefined,
-  startAt: undefined,
-  endAt: undefined,
-  promoted: undefined,
+const { data: featuredReleases } = useGetFeaturedReleasesQuery();
+const addFeaturedReleaseMutation = useAddFeaturedReleaseMutation({
+  onSuccess: () => {
+    openSnackbar('Featured release created succefully.', 'success');
+    resetForm();
+  },
+  onError: (e) => {
+    console.error('Error creating featured release:', e);
+    openSnackbar(`Error creating featured release: ${e.message.slice(0, 200)}`, 'error');
+  },
+});
+const editFeaturedReleaseMutation = useEditFeaturedReleaseMutation({
+  onSuccess: () => {
+    openSnackbar('Featured release ended succefully.', 'success');
+    resetForm();
+  },
+  onError: (e) => {
+    console.error('Error ending featured release:', e);
+    openSnackbar(`Error ending featured release: ${e.message.slice(0, 200)}`, 'error');
+  },
 });
 
+const newFeaturedRelease: Ref<PartialFeaturedReleaseItem> = ref({});
+
 const formRef = ref();
-const isLoading = ref(false);
-const featuredItemIdToEnd = ref<string | null>(null);
+const isLoading = computed(() => addFeaturedReleaseMutation.isPending.value || editFeaturedReleaseMutation.isPending.value);
+
+const featuredItemIdToEnd: Ref<FeaturedReleaseItem | null> = ref({
+  [ID_PROPERTY]: '',
+  [FEATURED_RELEASE_ID_PROPERTY]: '',
+  [FEATURED_START_TIME_PROPERTY]: '',
+  [FEATURED_END_TIME_PROPERTY]: '',
+  [FEATURED_PROMOTED_PROPERTY]: false,
+});
 
 const rules = [
   (value: string) => Boolean(value) || 'Required field.',
@@ -282,79 +298,16 @@ const handleOnSubmit = async () => {
   if (!readyToSave.value) {
     return;
   }
-
-  isLoading.value = true;
-  console.log('Creating new featured release with data:', readyToSave.value);
-
-  try {
-    if (staticStatus.value) {
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-      const targetRelease = releases.value?.find(r => r.id === readyToSave.value?.releaseId);
-      if (targetRelease && targetRelease.id && readyToSave.value) {
-        staticFeaturedReleases.value.push({
-          id: `featured-${Date.now()}-${Math.random().toString(16).substring(2, 8)}`,
-          releaseId: targetRelease.id,
-          startTime: readyToSave.value.startTime,
-          endTime: readyToSave.value.endTime,
-          promoted: true,
-        });
-        console.log('Featured release added successfully to static list.');
-        openSnackbar('Featured release created succefully.', 'success');
-        resetForm(); // Reset form on success
-      } else {
-        console.error('Target release not found.');
-        openSnackbar('Error creating featured release.', 'error');
-      }
-    } else {
-      // await orbiter.featureRelease({
-      //   cid: readyToSave.value.releaseId,
-      //   startTime: readyToSave.value.startTime,
-      //   endTime: readyToSave.value.endTime,
-      //   promoted: readyToSave.value.promoted,
-      // });
-      // openSnackbar('Featured release created succefully.', 'success');
-      openSnackbar('Not implemented.', 'error');
-
-    }
-  } catch (error) {
-    console.error('Error creating featured release:', error);
-    openSnackbar('Error creating featured release.', 'error');
-  } finally {
-    isLoading.value = false;
-  }
+  addFeaturedReleaseMutation.mutate(readyToSave.value);
 };
+
 
 const confirmEndFeaturedRelease = async () => {
   if (!featuredItemIdToEnd.value) return;
-  const endTime = (new Date()).toISOString();
-  if (staticStatus.value) {
-    const index = staticFeaturedReleases.value.findIndex(fr => fr.id === featuredItemIdToEnd.value);
-    if (index !== -1) {
-      staticFeaturedReleases.value[index] = {
-        ...staticFeaturedReleases.value[index],
-        endTime,
-      };
-      openSnackbar('Featured release ended succefully.', 'success');
-    } else {
-      console.error(`Static featured release ${featuredItemIdToEnd.value} not found to end.`);
-      openSnackbar('Error on ending featured release.', 'error');
-    }
-  } else {
-    try {
-      // await orbiter.editFeaturedRelease({
-      //   elementId: featuredItemIdToEnd.value,
-      //   featuredRelease: {
-      //     endTime,
-      //     promoted: false,
-      //   },
-      // });
-      // openSnackbar('Featured release ended succefully.', 'success');
-      openSnackbar('Not implemented.', 'error');
-    } catch (error) {
-      console.error(`Error on ending featured release ${featuredItemIdToEnd.value}:`, error);
-      openSnackbar('Error on ending featured release.', 'error');
-    }
-  }
+  editFeaturedReleaseMutation.mutate({
+    ...featuredItemIdToEnd.value,
+    [FEATURED_END_TIME_PROPERTY]: (new Date()).toISOString(),
+  });
   featuredItemIdToEnd.value = null;
 };
 

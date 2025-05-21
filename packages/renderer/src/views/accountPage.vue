@@ -69,7 +69,7 @@ import { computed } from 'vue';
 
 import { useStaticStatus } from '/@/composables/staticStatus';
 import { useUserSession } from '/@/composables/userSession';
-import { useAccountStatusQuery, usePeerIdQuery, usePublicKeyQuery } from '../plugins/lensService/hooks';
+import { useAccountStatusQuery, usePeerIdQuery, usePublicKeyQuery } from '/@/plugins/lensService/hooks';
 import { useCopyToClipboard } from '../composables/copyToClipboard';
 
 const { userData } = useUserSession();

@@ -188,14 +188,24 @@ import {
   // getStatusColor,
  } from '/@/utils';
 import type { AnyObject } from '@riffcc/lens-sdk';
-import { useReleasesQuery } from '../../plugins/lensService/hooks';
+import { useDeleteReleaseMutation, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
 
 
 const {staticStatus} = useStaticStatus();
 const {lgAndUp, smAndDown} = useDisplay();
 
 const {staticReleases} = useStaticData();
-const { data: releases, isLoading } = useReleasesQuery();
+const { data: releases, isLoading } = useGetReleasesQuery();
+const deleteReleaseMutation = useDeleteReleaseMutation({
+  onSuccess: () => {
+    openSnackbar('Release deleted successfully.', 'success');
+    resetEditedRelease();
+  },
+  onError: (e) => {
+    console.error('Error blocking release:', e);
+    openSnackbar('Error on blocking release.', 'error');
+  },
+});
 
 const { copy, getIcon, getColor } = useCopyToClipboard();
 const emit = defineEmits<{
@@ -280,34 +290,7 @@ function handleError(message: string) {
 
 async function confirmDeleteBlockRelease() {
   if (!editedRelease.value.id) return;
-  if (staticStatus.value) {
-    const targetReleaseIndex = releases.value?.findIndex(r => r.id === editedRelease.value.id);
-    if (targetReleaseIndex && targetReleaseIndex !== -1) {
-      releases.value?.splice(targetReleaseIndex, 1);
-    }
-  } else {
-    // try {
-    //   if (editedRelease.value.sourceSite === orbiter.siteId) {
-    //     await orbiter.removeRelease(editedRelease.value.id);
-    //     openSnackbar('Release deleted successfully.', 'success');
-    //   } else {
-    //     if (!editedRelease.value.contentCID) throw Error('Target release content CID missing.');
-    //     await orbiter.blockRelease({ cid: editedRelease.value.contentCID });
-    //     openSnackbar('Release blocked successfully.', 'success');
-    //   }
-    //   resetEditedRelease();
-    // } catch (error) {
-    //   if (editedRelease.value.sourceSite === orbiter.siteId) {
-    //     console.error('Error deleting release:', error);
-    //     openSnackbar('Error on deleting release.', 'error');
-    //   } else {
-    //     console.error('Error blocking release:', error);
-    //     openSnackbar('Error on blocking release.', 'error');
-    //   }
-    // }
-    openSnackbar('Not implemented.', 'error');
-
-  }
+  deleteReleaseMutation.mutate({ id: editedRelease.value.id });
   confirmDeleteBlockReleaseDialog.value = false;
   resetEditedRelease();
 }

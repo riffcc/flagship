@@ -112,7 +112,7 @@
 import {useRouter} from 'vue-router';
 import {navigationMap} from '/@/constants/navigation';
 import { computed } from 'vue';
-import { useContentCategoriesQuery } from '../../plugins/lensService/hooks';
+import { useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 
 const router = useRouter();
 

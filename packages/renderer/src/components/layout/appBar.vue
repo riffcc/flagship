@@ -124,7 +124,7 @@
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserSession } from '/@/composables/userSession';
-import { useAccountStatusQuery, useContentCategoriesQuery } from '../../plugins/lensService/hooks';
+import { useAccountStatusQuery, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 import accountMenu from '/@/components/account/accountMenu.vue';
 
 const router = useRouter();

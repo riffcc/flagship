@@ -41,13 +41,13 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import contentSection from '/@/components/home/contentSection.vue';
 import contentCard from '/@/components/misc/contentCard.vue';
-import { useContentCategoriesQuery, useReleasesQuery } from '../plugins/lensService/hooks';
+import { useContentCategoriesQuery, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
 
 const props = defineProps<{
   category: string
 }>();
 const router = useRouter();
-const { data: releases, isLoading } = useReleasesQuery();
+const { data: releases, isLoading } = useGetReleasesQuery();
 
 const { data: contentCategories } = useContentCategoriesQuery();
 

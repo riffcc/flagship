@@ -113,7 +113,7 @@ import {cid} from 'is-ipfs';
 import {computed, onMounted, ref} from 'vue';
 import type { ReleaseItem, PartialReleaseItem } from '/@/types';
 import type { ContentCategoryMetadata, ReleaseData, AnyObject } from '@riffcc/lens-sdk';
-import { useAddReleaseMutation, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
+import { useAddReleaseMutation, useEditReleaseMutation, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 
 const props = defineProps<{
   initialData?: PartialReleaseItem<AnyObject>;
@@ -153,11 +153,22 @@ const addReleaseMutation = useAddReleaseMutation({
     clearForm();
   },
   onError: (e) => {
-    const errorMessage = e instanceof Error ? e.message : `${String(e).slice(0, 200)}...`;
-    console.error('Error in submission process (mutation):', errorMessage);
-    emit('update:error', `Submission error: ${errorMessage}`);
+    console.error('Error on adding release:', e);
+    emit('update:error', `Error on adding release: ${e.message.slice(0, 200)}`);
   },
 });
+
+const editReleaseMutation = useEditReleaseMutation({
+  onSuccess: () => {
+    emit('update:success', 'Release edited successfully!');
+    clearForm();
+  },
+  onError: (e) => {
+    console.error('Error in editing release:', e);
+    emit('update:error', `Error on editing release: ${e.message.slice(0, 200)}`);
+  },
+});
+
 
 const contentCategoriesItems = computed(() => contentCategories.value?.map(item => ({
   id: item.id,
@@ -218,8 +229,7 @@ const handleOnSubmit = () => {
   };
 
   if (props.mode === 'edit' && data.id) {
-    console.log('[ReleaseForm] Updating existing release with ID:', data.id, releaseDataPayload);
-    emit('update:error', 'Not implemented'); // Current behavior for edit mode
+    editReleaseMutation.mutate({ id: data.id, ...releaseDataPayload });
   } else {
     addReleaseMutation.mutate(releaseDataPayload);
   }

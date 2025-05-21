@@ -14,7 +14,7 @@ import {
   CONTENT_CATEGORY_FEATURED_PROPERTY,
   CONTENT_CATEGORY_METADATA_SCHEMA_PROPERTY,
 } from '@riffcc/lens-sdk';
-import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
+import type { AnyObject, ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
 import type { ReleaseItem, FeaturedReleaseItem } from '/@/types';
 
 
@@ -175,7 +175,7 @@ const staticFeaturedReleases: Ref<FeaturedReleaseItem[]> = ref([
   },
 ]);
 
-const staticReleases: Ref<ReleaseItem<{[key: string]: unknown}>[]> = ref([
+const staticReleases: Ref<ReleaseItem<AnyObject>[]> = ref([
   {
     [ID_PROPERTY]: '1',
     [RELEASE_NAME_PROPERTY]: 'Pure Pwnage',

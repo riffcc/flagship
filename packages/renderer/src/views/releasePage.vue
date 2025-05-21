@@ -47,7 +47,7 @@ import { watch } from 'vue';
 import { useRouter } from 'vue-router';
 import albumViewer from '/@/components/releases/albumViewer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
-import { useReleaseQuery } from '../plugins/lensService/hooks';
+import { useGetReleaseQuery } from '/@/plugins/lensService/hooks';
 
 const props = defineProps<{
   id: string;
@@ -55,7 +55,7 @@ const props = defineProps<{
 
 const router = useRouter();
 
-const { data: targetRelease, isLoading } = useReleaseQuery(props.id);
+const { data: targetRelease, isLoading } = useGetReleaseQuery(props);
 
 watch(targetRelease, (r) => {
   if (r) {
