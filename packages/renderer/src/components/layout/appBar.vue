@@ -42,10 +42,18 @@
         <template v-if="userData">
           <v-divider class="my-1"></v-divider>
           <v-list-item
+            v-if="isMember"
             title="Upload"
             active-class="text-primary-lighten-1"
             :active="route.path === '/upload'"
             @click="router.push('/upload')"
+          ></v-list-item>
+          <v-list-item
+            v-if="isAdmin"
+            title="Admin"
+            active-class="text-primary-lighten-1"
+            :active="route.path === '/admin'"
+            @click="router.push('/admin')"
           ></v-list-item>
           <v-divider class="my-1"></v-divider>
           <v-list-item
@@ -64,13 +72,6 @@
             title="Disconnect"
             active-class="text-primary-lighten-1"
             @click="handleOnDisconnect"
-          ></v-list-item>
-          <v-list-item
-            v-if="isAdmin"
-            title="Admin"
-            active-class="text-primary-lighten-1"
-            :active="route.path === '/admin'"
-            @click="router.push('/admin')"
           ></v-list-item>
         </template>
       </v-list>
@@ -93,7 +94,7 @@
         {{ item.displayName }}
       </router-link>
 
-      <template v-if="userData">
+      <template v-if="isMember || isAdmin">
         <v-divider
           vertical
           class="mx-4"
@@ -133,6 +134,7 @@ const { data: contentCategories } = useContentCategoriesQuery();
 const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
 
 const { data: accountStatus } = useAccountStatusQuery();
+const isMember = computed(() => accountStatus.value === 1);
 const isAdmin = computed(() => accountStatus.value === 2);
 const { userData } = useUserSession();
 
