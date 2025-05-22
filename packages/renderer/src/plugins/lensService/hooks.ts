@@ -2,6 +2,7 @@ import { inject } from 'vue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import type { HashResponse, IdResponse, AnyObject, LensService, ReleaseData, SearchOptions, IdData, FeaturedReleaseData } from '@riffcc/lens-sdk';
 import {
+  AccountType,
   ID_PROPERTY,
   RELEASE_METADATA_PROPERTY,
 } from '@riffcc/lens-sdk';
@@ -46,7 +47,8 @@ export function useAccountStatusQuery() {
     queryFn: async () => {
       return await lensService.getAccountStatus();
     },
-    staleTime: 1000 * 60,
+    initialData: AccountType.GUEST,
+    refetchInterval: 1000 * 30,
   });
 }
 
