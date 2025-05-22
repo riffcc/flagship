@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 import { onKeyStroke } from '@vueuse/core';
-import { ref, watchEffect, onMounted } from 'vue';
+import { ref, watchEffect, onMounted, watch } from 'vue';
 
 import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
@@ -42,7 +42,15 @@ import appFooter from '/@/components/layout/appFooter.vue';
 import { useAudioAlbum } from '/@/composables/audioAlbum';
 import { useFloatingVideo } from '/@/composables/floatingVideo';
 import { useShowDefederation } from '/@/composables/showDefed';
-import { useLensService } from '/@/plugins/lensService/hooks';
+import { useAccountStatusQuery, useLensService } from '/@/plugins/lensService/hooks';
+import {
+  ADMIN_REPLICATION_ARGS,
+  DEDICATED_REPLICATOR_ARGS,
+  GUEST_REPLICATION_ARGS,
+  MEMBER_REPLICATION_ARGS,
+  AccountType,
+  type SiteArgs,
+} from '@riffcc/lens-sdk';
 
 const { showDefederation } = useShowDefederation();
 const { activeTrack } = useAudioAlbum();
@@ -51,6 +59,7 @@ const { lensService } = useLensService();
 const MAGIC_KEY = 'magicmagic';
 
 const yetToType = ref(MAGIC_KEY);
+
 onKeyStroke(e => {
   if (!yetToType.value.length) return;
   if (e.key === yetToType.value[0]) {
@@ -59,12 +68,14 @@ onKeyStroke(e => {
     yetToType.value = MAGIC_KEY;
   }
 });
+
 watchEffect(() => {
   if (!yetToType.value.length) showDefederation.value = true;
 });
 
 const CURTAIN_KEY = 'curtain';
 const yetToTypeCurtain = ref(CURTAIN_KEY);
+
 onKeyStroke(e => {
   if (!yetToTypeCurtain.value.length) return;
   if (e.key === yetToTypeCurtain.value[0]) {
@@ -73,17 +84,16 @@ onKeyStroke(e => {
     yetToTypeCurtain.value = CURTAIN_KEY;
   }
 });
+
 watchEffect(() => {
   if (!yetToTypeCurtain.value.length) showDefederation.value = false;
 });
 const initLoading = ref(true);
 const initError = ref<string | null>();
+const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
 
 onMounted(async () => {
-
-
   try {
-    const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
     if (!siteAddress) {
       throw new Error(
         'VITE_SITE_ADDRESS env var missing. Please review your .env file.',
@@ -100,7 +110,10 @@ onMounted(async () => {
       const result = await Promise.allSettled(promises);
       console.log(result);
     }
-    await lensService.openSite(siteAddress);
+    await lensService.openSite(
+      siteAddress,
+      GUEST_REPLICATION_ARGS,
+    );
   } catch (error) {
     if (error instanceof Error) {
       if (error.cause === 'MISSING_CONFIG') {
@@ -114,6 +127,36 @@ onMounted(async () => {
   } finally {
     initLoading.value = false;
   }
-
 });
+
+const { data: accountStatus } = useAccountStatusQuery();
+
+watch(accountStatus, async (newValue, oldValue) => {
+  if (!siteAddress) return;
+  if (newValue !== oldValue) {
+    console.log('accountStatus changed');
+    let newSiteArgs: SiteArgs | undefined = undefined;
+    switch (newValue) {
+      case AccountType.GUEST:
+        newSiteArgs = GUEST_REPLICATION_ARGS;
+        break;
+      case AccountType.MEMBER:
+        newSiteArgs = MEMBER_REPLICATION_ARGS;
+        break;
+      case AccountType.ADMIN:
+        newSiteArgs = ADMIN_REPLICATION_ARGS;
+        break;
+      default:
+        newSiteArgs = DEDICATED_REPLICATOR_ARGS;
+        break;
+    }
+    try {
+      await lensService.closeSite();
+      await lensService.openSite(siteAddress, newSiteArgs);
+    } catch (e) {
+      console.log(`Error on reopened the site with new replication args: ${e}`);
+    }
+  }
+});
+
 </script>
