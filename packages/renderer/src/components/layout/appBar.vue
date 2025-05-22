@@ -108,7 +108,7 @@
         </router-link>
         <router-link
           v-if="isAdmin"
-          to="Admin"
+          to="/Admin"
           class="text-decoration-none mx-2 text-subtitle-1 text-white"
           active-class="text-primary-lighten-1"
         >
