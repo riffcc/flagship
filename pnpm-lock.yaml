@@ -27,11 +27,11 @@ importers:
         specifier: ^1.0.6
         version: 1.0.6
       '@riffcc/lens-sdk':
-        specifier: ^0.1.4
-        version: 0.1.4(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))
+        specifier: ^0.1.6
+        version: 0.1.6(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))
       '@tanstack/vue-query':
         specifier: ^5.76.0
-        version: 5.76.0(vue@3.5.14(typescript@5.8.3))
+        version: 5.76.2(vue@3.5.14(typescript@5.8.3))
       '@vueuse/core':
         specifier: ^12.7.0
         version: 12.8.2(typescript@5.8.3)
@@ -703,8 +703,8 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
-  '@ipld/dag-cbor@9.2.3':
-    resolution: {integrity: sha512-x78CdVhtctIMBpwOnzbojsvDy6qNxdeR3RC2W+/fMo2sccqlYkPXbjpmghAVdKx/g0xfHYvSMU8cgCnYvLwRag==}
+  '@ipld/dag-cbor@9.2.4':
+    resolution: {integrity: sha512-GbDWYl2fdJgkYtIJN0HY9oO0o50d1nB4EQb7uYWKUd2ztxCjxiEW3PjwGG0nqUpN1G4Cug6LX8NzbA7fKT+zfA==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
 
   '@ipshipyard/node-datachannel@0.26.6':
@@ -1163,8 +1163,8 @@ packages:
       '@types/react':
         optional: true
 
-  '@riffcc/lens-sdk@0.1.4':
-    resolution: {integrity: sha512-1v2KsFgltjkz2YjYMhOQ53w5tk8wxFuTn9HoXf/NeSzkgI5mpZYdjqR+bfeLpqfbVA8rE0/lAC0z9QXAFdfinQ==}
+  '@riffcc/lens-sdk@0.1.6':
+    resolution: {integrity: sha512-7HbI71TZRWKw3Vt0bkOce31tuKNk46tO8h8i9SX/Bq5kFLrCHkhiVNXG8uRr+5cYWf8gK7gGRqfVNe0gnNsxQg==}
 
   '@rollup/plugin-inject@5.0.5':
     resolution: {integrity: sha512-2+DEJbNBoPROPkgTDNe8/1YXWcqxbN5DTjASVIOx8HS+pITXushyNiBV56RB08zuptzz8gT3YfkqriTBVycepg==}
@@ -1421,11 +1421,11 @@ packages:
     resolution: {integrity: sha512-Wo1iKt2b9OT7d+YGhvEPD3DXvPv2etTusIMhMUoG7fbhmxcXCtIjJDEygy91Y2JFlwGyjqiBPRozme7UD8hoqg==}
     engines: {node: '>=12'}
 
-  '@tanstack/query-core@5.76.0':
-    resolution: {integrity: sha512-FN375hb8ctzfNAlex5gHI6+WDXTNpe0nbxp/d2YJtnP+IBM6OUm7zcaoCW6T63BawGOYZBbKC0iPvr41TteNVg==}
+  '@tanstack/query-core@5.76.2':
+    resolution: {integrity: sha512-PFGwWh5ss9cJQ67l6bZ7hqXbisX2gy13G2jP+VGY1bgdbCfOMWh6UBVnN62QbFXro6CCoX9hYzTnZHr6Rz00YQ==}
 
-  '@tanstack/vue-query@5.76.0':
-    resolution: {integrity: sha512-Ow1JPfAqjam/hH2WJj15Y+a7FT5LS/So2b4jMAI3lLKUcpIjVRLEOLQXdCYZ/29YbDrL66trwLPXjA9tYrHung==}
+  '@tanstack/vue-query@5.76.2':
+    resolution: {integrity: sha512-Aa/lC3LbUnciDp8kudOKHSE0luJhrBdILpfB0kzLFFt5m6RY/MJ3ydXx/7eq78BbFXUGLN8vVwyBho3AiOWayg==}
     peerDependencies:
       '@vue/composition-api': ^1.1.2
       vue: ^2.6.0 || ^3.3.0
@@ -5955,7 +5955,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@ipld/dag-cbor@9.2.3':
+  '@ipld/dag-cbor@9.2.4':
     dependencies:
       cborg: 4.2.11
       multiformats: 13.3.6
@@ -6568,7 +6568,7 @@ snapshots:
   '@peerbit/blocks@3.0.1':
     dependencies:
       '@dao-xyz/borsh': 5.2.3
-      '@ipld/dag-cbor': 9.2.3
+      '@ipld/dag-cbor': 9.2.4
       '@peerbit/any-store': 2.1.10
       '@peerbit/blocks-interface': 1.4.4
       '@peerbit/crypto': 2.3.8
@@ -6856,7 +6856,7 @@ snapshots:
       react: 19.1.0
       react-native: 0.79.2(@babel/core@7.27.1)(react@19.1.0)
 
-  '@riffcc/lens-sdk@0.1.4(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))':
+  '@riffcc/lens-sdk@0.1.6(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))':
     dependencies:
       '@dao-xyz/borsh': 5.2.3
       '@peerbit/crypto': 2.3.8
@@ -7055,12 +7055,12 @@ snapshots:
     dependencies:
       remove-accents: 0.5.0
 
-  '@tanstack/query-core@5.76.0': {}
+  '@tanstack/query-core@5.76.2': {}
 
-  '@tanstack/vue-query@5.76.0(vue@3.5.14(typescript@5.8.3))':
+  '@tanstack/vue-query@5.76.2(vue@3.5.14(typescript@5.8.3))':
     dependencies:
       '@tanstack/match-sorter-utils': 8.19.4
-      '@tanstack/query-core': 5.76.0
+      '@tanstack/query-core': 5.76.2
       '@vue/devtools-api': 6.6.4
       vue: 3.5.14(typescript@5.8.3)
       vue-demi: 0.14.10(vue@3.5.14(typescript@5.8.3))
