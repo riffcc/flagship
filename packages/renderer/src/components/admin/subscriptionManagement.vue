@@ -112,7 +112,7 @@ const trustedSiteName = ref<string>();
 const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
   isValidSiteAddress: (v: string) =>
-    /^\/orbitdb\/[a-zA-Z0-9]+\/[a-zA-Z0-9]+$/.test(v) || 'Please enter a valid site address (e.g., `/orbitdb/zd.../siteName`).',
+    /^[1-9A-HJ-NP-Za-km-z]+$/.test(v) || 'Please enter a valid site address (e.g., `zb2rhdS7GgY88eLJe1WptwXa9Zmibh1xTc5WCkSCox2sTDwuX`).',
 };
 
 const readyToSave = computed(() => {
