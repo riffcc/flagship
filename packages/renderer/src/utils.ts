@@ -3,6 +3,7 @@ import {CID} from 'multiformats/cid';
 import {cid as isCID} from 'is-ipfs';
 import { IPFS_GATEWAY } from './constants/ipfs';
 import type { FeaturedReleaseItem } from './types';
+import {Duration} from 'luxon';
 
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
@@ -44,19 +45,8 @@ export const formatTime = (ms: number): string => {
     return '00:00';
   }
 
-  let totalSeconds = Math.floor(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  totalSeconds %= 3600;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-
-  const formattedHours = hours > 0 ? (hours < 10 ? `0${hours}` : `${hours}`) : null;
-  const formattedMinutes = minutes < 10 ? `0${minutes}` : `${minutes}`;
-  const formattedSeconds = seconds < 10 ? `0${seconds}` : `${seconds}`;
-
-  return formattedHours
-    ? `${formattedHours}:${formattedMinutes}:${formattedSeconds}`
-    : `${formattedMinutes}:${formattedSeconds}`;
+  const duration = Duration.fromObject({ seconds: ms });
+  return duration.toFormat(duration.hours > 0 ? 'hh:mm:ss' : 'mm:ss');
 };
 
 // Colors

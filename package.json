@@ -45,6 +45,7 @@
     "@mdi/font": "^7.4.47",
     "@peerbit/vite": "^1.0.25",
     "@rollup/plugin-node-resolve": "^16.0.0",
+    "@types/luxon": "^3.6.2",
     "@types/node": "^22.13.8",
     "@types/webfontloader": "^1.6.38",
     "@typescript-eslint/eslint-plugin": "^8.25.0",
@@ -91,6 +92,7 @@
     "electron-updater": "^6.3.9",
     "events": "^3.3.0",
     "is-ipfs": "^8.0.4",
+    "luxon": "^3.6.1",
     "multiformats": "^13.3.4",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
@@ -115,5 +117,6 @@
     "overrides": {
       "magic-string": "0.30.15"
     }
-  }
+  },
+  "packageManager": "pnpm@10.10.0+sha1.f657bc37aa5e08da2ecff3877fe3bbb4b13703ba"
 }
