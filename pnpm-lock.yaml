@@ -27,8 +27,8 @@ importers:
         specifier: ^1.0.6
         version: 1.0.6
       '@riffcc/lens-sdk':
-        specifier: ^0.1.6
-        version: 0.1.6(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))
+        specifier: ^0.1.7
+        version: 0.1.7(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))
       '@tanstack/vue-query':
         specifier: ^5.76.0
         version: 5.76.2(vue@3.5.14(typescript@5.8.3))
@@ -1163,8 +1163,8 @@ packages:
       '@types/react':
         optional: true
 
-  '@riffcc/lens-sdk@0.1.6':
-    resolution: {integrity: sha512-7HbI71TZRWKw3Vt0bkOce31tuKNk46tO8h8i9SX/Bq5kFLrCHkhiVNXG8uRr+5cYWf8gK7gGRqfVNe0gnNsxQg==}
+  '@riffcc/lens-sdk@0.1.7':
+    resolution: {integrity: sha512-d9Q0a9ur/+oyMaRxi+lUUqK75+67HdnmiWiIqyqCCsp52eifgOKOA0IBDkMXeIiJKsAhFyZTpQpLvuISfsJ6mg==}
 
   '@rollup/plugin-inject@5.0.5':
     resolution: {integrity: sha512-2+DEJbNBoPROPkgTDNe8/1YXWcqxbN5DTjASVIOx8HS+pITXushyNiBV56RB08zuptzz8gT3YfkqriTBVycepg==}
@@ -2452,8 +2452,8 @@ packages:
     deprecated: Please use @electron/rebuild moving forward.  There is no API change, just a package name change
     hasBin: true
 
-  electron-to-chromium@1.5.155:
-    resolution: {integrity: sha512-ps5KcGGmwL8VaeJlvlDlu4fORQpv3+GIcF5I3f9tUKUlJ/wsysh6HU8P5L1XWRYeXfA0oJd4PyM8ds8zTFf6Ng==}
+  electron-to-chromium@1.5.157:
+    resolution: {integrity: sha512-/0ybgsQd1muo8QlnuTpKwtl0oX5YMlUGbm8xyqgDU00motRkKFFbUJySAQBWcY79rVqNLWIWa87BGVGClwAB2w==}
 
   electron-updater@6.6.2:
     resolution: {integrity: sha512-Cr4GDOkbAUqRHP5/oeOmH/L2Bn6+FQPxVLZtPbcmKZC63a1F3uu5EefYOssgZXG3u/zBlubbJ5PJdITdMVggbw==}
@@ -6856,7 +6856,7 @@ snapshots:
       react: 19.1.0
       react-native: 0.79.2(@babel/core@7.27.1)(react@19.1.0)
 
-  '@riffcc/lens-sdk@0.1.6(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))':
+  '@riffcc/lens-sdk@0.1.7(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))':
     dependencies:
       '@dao-xyz/borsh': 5.2.3
       '@peerbit/crypto': 2.3.8
@@ -7791,7 +7791,7 @@ snapshots:
   browserslist@4.24.5:
     dependencies:
       caniuse-lite: 1.0.30001718
-      electron-to-chromium: 1.5.155
+      electron-to-chromium: 1.5.157
       node-releases: 2.0.19
       update-browserslist-db: 1.1.3(browserslist@4.24.5)
 
@@ -8377,7 +8377,7 @@ snapshots:
       - bluebird
       - supports-color
 
-  electron-to-chromium@1.5.155: {}
+  electron-to-chromium@1.5.157: {}
 
   electron-updater@6.6.2:
     dependencies:
