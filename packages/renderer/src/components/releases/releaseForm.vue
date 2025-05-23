@@ -220,16 +220,16 @@ const handleOnSubmit = () => {
   if (!readyToSave.value) return;
 
   const data = readyToSave.value;
-  const releaseDataPayload: ReleaseData = {
+  const releaseDataPayload: ReleaseData<AnyObject> = {
     name: data.name,
     categoryId: data.categoryId,
     contentCID: data.contentCID,
     thumbnailCID: data.thumbnailCID,
-    metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
+    metadata: data.metadata,
   };
 
   if (props.mode === 'edit' && data.id) {
-    editReleaseMutation.mutate({ id: data.id, ...releaseDataPayload });
+    editReleaseMutation.mutate({ ...releaseDataPayload, id: data.id });
   } else {
     addReleaseMutation.mutate(releaseDataPayload);
   }

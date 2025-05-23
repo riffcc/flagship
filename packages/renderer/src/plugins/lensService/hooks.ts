@@ -66,8 +66,8 @@ export function useGetReleaseQuery(props: IdData) {
         const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
         return r ?
           {
-            [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
             ...r,
+            [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
           } : undefined;
       }
     },
@@ -92,8 +92,8 @@ export function useGetReleasesQuery(options?: {
         return result.map((r) => {
           const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
           return {
-            [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
             ...r,
+            [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
           };
         });
       }
@@ -169,14 +169,12 @@ export function useAddReleaseMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: ReleaseData) => {
+    mutationFn: async (data: ReleaseData<AnyObject>) => {
       if (staticStatus.value) {
         const srId = String(staticReleases.value.length + 1);
-        const rMetadata = data[RELEASE_METADATA_PROPERTY];
         const srParsed = {
           ...data,
           [ID_PROPERTY]: srId,
-          [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
         };
         staticReleases.value.push(srParsed);
         return {
@@ -185,7 +183,11 @@ export function useAddReleaseMutation(options?: {
           hash: 'test-hash',
         };
       } else {
-        return await lensService.addRelease(data);
+        const rMetadata = data[RELEASE_METADATA_PROPERTY];
+        return await lensService.addRelease({
+          ...data,
+          [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.stringify(rMetadata) : undefined,
+        });
       }
     },
     onSuccess: (response) => {
@@ -207,22 +209,21 @@ export function useEditReleaseMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: IdData & ReleaseData) => {
+    mutationFn: async (data: IdData & ReleaseData<AnyObject>) => {
       if (staticStatus.value) {
         staticReleases.value = staticReleases.value.filter(sr => sr.id !== data.id);
-        const rMetadata = data[RELEASE_METADATA_PROPERTY];
-        const srParsed = {
-          ...data,
-          [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
-        };
-        staticReleases.value.push(srParsed);
+        staticReleases.value.push(data);
         return {
           success: true,
           id: data.id,
           hash: 'test-hash',
         };
       } else {
-        return await lensService.editRelease(data);
+        const rMetadata = data[RELEASE_METADATA_PROPERTY];
+        return await lensService.editRelease({
+          ...data,
+          [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.stringify(rMetadata) : undefined,
+        });
       }
     },
     onSuccess: (response) => {
