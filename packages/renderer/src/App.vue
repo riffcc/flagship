@@ -44,12 +44,10 @@ import { useFloatingVideo } from '/@/composables/floatingVideo';
 import { useShowDefederation } from '/@/composables/showDefed';
 import { useAccountStatusQuery, useLensService } from '/@/plugins/lensService/hooks';
 import {
-  ADMIN_REPLICATION_ARGS,
-  DEDICATED_REPLICATOR_ARGS,
-  GUEST_REPLICATION_ARGS,
-  MEMBER_REPLICATION_ARGS,
   AccountType,
   type SiteArgs,
+  MEMBER_SITE_ARGS,
+  ADMIN_SITE_ARGS,
 } from '@riffcc/lens-sdk';
 
 const { showDefederation } = useShowDefederation();
@@ -110,10 +108,7 @@ onMounted(async () => {
       const result = await Promise.allSettled(promises);
       console.log(result);
     }
-    await lensService.openSite(
-      siteAddress,
-      GUEST_REPLICATION_ARGS,
-    );
+    await lensService.openSite(siteAddress);
   } catch (error) {
     if (error instanceof Error) {
       if (error.cause === 'MISSING_CONFIG') {
@@ -135,19 +130,16 @@ watch(accountStatus, async (newValue, oldValue) => {
   if (!siteAddress) return;
   if (newValue !== oldValue) {
     console.log('accountStatus changed');
-    let newSiteArgs: SiteArgs | undefined = undefined;
+    let newSiteArgs: SiteArgs | undefined;
     switch (newValue) {
-      case AccountType.GUEST:
-        newSiteArgs = GUEST_REPLICATION_ARGS;
-        break;
       case AccountType.MEMBER:
-        newSiteArgs = MEMBER_REPLICATION_ARGS;
+        newSiteArgs = MEMBER_SITE_ARGS;
         break;
       case AccountType.ADMIN:
-        newSiteArgs = ADMIN_REPLICATION_ARGS;
+        newSiteArgs = ADMIN_SITE_ARGS;
         break;
       default:
-        newSiteArgs = DEDICATED_REPLICATOR_ARGS;
+        newSiteArgs = undefined;
         break;
     }
     try {
