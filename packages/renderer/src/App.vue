@@ -46,7 +46,6 @@ import { useAccountStatusQuery, useLensService } from '/@/plugins/lensService/ho
 import {
   AccountType,
   type SiteArgs,
-  MEMBER_SITE_ARGS,
   ADMIN_SITE_ARGS,
 } from '@riffcc/lens-sdk';
 
@@ -89,6 +88,14 @@ watchEffect(() => {
 const initLoading = ref(true);
 const initError = ref<string | null>();
 const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
+const customMemberSiteArgs: SiteArgs = {
+  releasesArgs: {
+    replicate: { factor: 1, limits: { storage: 2 * 1024 * 1024 * 1024 } },
+  },
+  featuredReleasesArgs: {
+    replicate: { factor: 1, limits: { storage: 1 * 1024* 1024 * 1024 } },
+  },
+};
 
 onMounted(async () => {
   try {
@@ -108,7 +115,7 @@ onMounted(async () => {
       const result = await Promise.allSettled(promises);
       console.log(result);
     }
-    await lensService.openSite(siteAddress);
+    await lensService.openSite(siteAddress, customMemberSiteArgs);
   } catch (error) {
     if (error instanceof Error) {
       if (error.cause === 'MISSING_CONFIG') {
@@ -132,9 +139,6 @@ watch(accountStatus, async (newValue, oldValue) => {
     console.log('accountStatus changed');
     let newSiteArgs: SiteArgs | undefined;
     switch (newValue) {
-      case AccountType.MEMBER:
-        newSiteArgs = MEMBER_SITE_ARGS;
-        break;
       case AccountType.ADMIN:
         newSiteArgs = ADMIN_SITE_ARGS;
         break;
@@ -142,11 +146,13 @@ watch(accountStatus, async (newValue, oldValue) => {
         newSiteArgs = undefined;
         break;
     }
-    try {
-      await lensService.closeSite();
-      await lensService.openSite(siteAddress, newSiteArgs);
-    } catch (e) {
-      console.log(`Error on reopened the site with new replication args: ${e}`);
+    if (newSiteArgs) {
+      try {
+        await lensService.closeSite();
+        await lensService.openSite(siteAddress, newSiteArgs);
+      } catch (e) {
+        console.log(`Error on reopened the site with new replication args: ${e}`);
+      }
     }
   }
 });
