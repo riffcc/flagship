@@ -162,7 +162,7 @@ import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { filterActivedFeatured, filterPromotedFeatured } from '/@/utils';
 import type { FeaturedReleaseItem, PartialFeaturedReleaseItem } from '/@/types';
 import { useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useGetFeaturedReleasesQuery } from '/@/plugins/lensService/hooks';
-import { FEATURED_END_TIME_PROPERTY, FEATURED_PROMOTED_PROPERTY, FEATURED_RELEASE_ID_PROPERTY, FEATURED_START_TIME_PROPERTY, ID_PROPERTY } from '@riffcc/lens-sdk';
+import { FEATURED_END_TIME_PROPERTY } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
   initialFeatureData: PartialFeaturedReleaseItem | null;
@@ -201,13 +201,7 @@ const newFeaturedRelease: Ref<PartialFeaturedReleaseItem> = ref({});
 const formRef = ref();
 const isLoading = computed(() => addFeaturedReleaseMutation.isPending.value || editFeaturedReleaseMutation.isPending.value);
 
-const featuredItemIdToEnd: Ref<FeaturedReleaseItem | null> = ref({
-  [ID_PROPERTY]: '',
-  [FEATURED_RELEASE_ID_PROPERTY]: '',
-  [FEATURED_START_TIME_PROPERTY]: '',
-  [FEATURED_END_TIME_PROPERTY]: '',
-  [FEATURED_PROMOTED_PROPERTY]: false,
-});
+const featuredItemIdToEnd: Ref<FeaturedReleaseItem | null> = ref(null);
 
 const rules = [
   (value: string) => Boolean(value) || 'Required field.',
