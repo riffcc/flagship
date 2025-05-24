@@ -43,6 +43,7 @@
   "devDependencies": {
     "@eslint/js": "^9.21.0",
     "@mdi/font": "^7.4.47",
+    "@mdi/js": "^7.4.47",
     "@peerbit/vite": "^1.0.25",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@types/luxon": "^3.6.2",
