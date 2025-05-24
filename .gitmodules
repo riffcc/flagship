@@ -1,0 +1,6 @@
+[submodule "lens-sdk"]
+	path = lens-sdk
+	url = git@github.com:riffcc/lens-sdk.git
+[submodule "lens-node"]
+	path = lens-node
+	url = git@github.com:riffcc/lens-node.git

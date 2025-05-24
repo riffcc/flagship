@@ -28,7 +28,7 @@ export const onBrowser = async ({
             NODE_OPTIONS: '', 
             ELECTRON_ENABLE_LOGGING: 'false', 
             ELECTRON_ENABLE_STACK_DUMPING: 'false', 
-        }
+        },
     });
     console.log('[E2E Utils] Electron app launched with original main.js. Waiting for first window...');
 
@@ -72,6 +72,7 @@ export const onBrowser = async ({
     'packages',
     'renderer',
     'dist',
+    'web',
     'index.html',
   );
 

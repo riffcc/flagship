@@ -101,6 +101,18 @@ export function useGetReleasesQuery(options?: {
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
+    retry: (failureCount, error) => {
+      // Don't retry on Peerbit timeout errors - they indicate network issues
+      if (error?.message?.includes('TimeoutError') || error?.message?.includes('never reachable')) {
+        return false;
+      }
+      // Retry more aggressively on shard response failures
+      if (error?.message?.includes('Did not reciveve responses from all shard')) {
+        return failureCount < 5;
+      }
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 }
 
@@ -140,6 +152,18 @@ export function useGetFeaturedReleasesQuery(options?: {
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
+    retry: (failureCount, error) => {
+      // Don't retry on Peerbit timeout errors - they indicate network issues
+      if (error?.message?.includes('TimeoutError') || error?.message?.includes('never reachable')) {
+        return false;
+      }
+      // Retry more aggressively on shard response failures
+      if (error?.message?.includes('Did not reciveve responses from all shard')) {
+        return failureCount < 5;
+      }
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 }
 

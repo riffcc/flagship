@@ -27,8 +27,8 @@ importers:
         specifier: ^1.0.6
         version: 1.0.6
       '@riffcc/lens-sdk':
-        specifier: ^0.1.7
-        version: 0.1.7(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))
+        specifier: file:./lens-sdk
+        version: file:lens-sdk(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))
       '@tanstack/vue-query':
         specifier: ^5.76.0
         version: 5.76.2(vue@3.5.14(typescript@5.8.3))
@@ -1169,8 +1169,8 @@ packages:
       '@types/react':
         optional: true
 
-  '@riffcc/lens-sdk@0.1.7':
-    resolution: {integrity: sha512-d9Q0a9ur/+oyMaRxi+lUUqK75+67HdnmiWiIqyqCCsp52eifgOKOA0IBDkMXeIiJKsAhFyZTpQpLvuISfsJ6mg==}
+  '@riffcc/lens-sdk@file:lens-sdk':
+    resolution: {directory: lens-sdk, type: directory}
 
   '@rollup/plugin-inject@5.0.5':
     resolution: {integrity: sha512-2+DEJbNBoPROPkgTDNe8/1YXWcqxbN5DTjASVIOx8HS+pITXushyNiBV56RB08zuptzz8gT3YfkqriTBVycepg==}
@@ -6864,7 +6864,7 @@ snapshots:
       react: 19.1.0
       react-native: 0.79.2(@babel/core@7.27.1)(react@19.1.0)
 
-  '@riffcc/lens-sdk@0.1.7(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))':
+  '@riffcc/lens-sdk@file:lens-sdk(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))':
     dependencies:
       '@dao-xyz/borsh': 5.2.3
       '@peerbit/crypto': 2.3.8
