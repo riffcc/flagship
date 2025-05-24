@@ -72,6 +72,9 @@ importers:
       '@mdi/font':
         specifier: ^7.4.47
         version: 7.4.47
+      '@mdi/js':
+        specifier: ^7.4.47
+        version: 7.4.47
       '@peerbit/vite':
         specifier: ^1.0.25
         version: 1.0.25(@types/node@22.15.21)(sass@1.89.0)(terser@5.39.2)
@@ -833,6 +836,9 @@ packages:
 
   '@mdi/font@7.4.47':
     resolution: {integrity: sha512-43MtGpd585SNzHZPcYowu/84Vz2a2g31TvPMTm9uTiCSWzaheQySUcSyUH/46fPnuPQWof2yd0pGBtzee/IQWw==}
+
+  '@mdi/js@7.4.47':
+    resolution: {integrity: sha512-KPnNOtm5i2pMabqZxpUz7iQf+mfrYZyKCZ8QNz85czgEt7cuHcGorWfdzUMWYA0SD+a6Hn4FmJ+YhzzzjkTZrQ==}
 
   '@multiformats/dns@1.0.6':
     resolution: {integrity: sha512-nt/5UqjMPtyvkG9BQYdJ4GfLK3nMqGpFZOzf4hAmIa0sJh2LlS9YKXZ4FgwBDsaHvzZqR/rUFIywIc7pkHNNuw==}
@@ -6310,6 +6316,8 @@ snapshots:
       - supports-color
 
   '@mdi/font@7.4.47': {}
+
+  '@mdi/js@7.4.47': {}
 
   '@multiformats/dns@1.0.6':
     dependencies:

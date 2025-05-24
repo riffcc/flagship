@@ -1,14 +1,17 @@
 import {createRouter, createWebHashHistory, type RouteRecordRaw} from 'vue-router';
 
-import AdminPage from '../views/adminPage.vue';
-import AboutPage from '/@/views/aboutPage.vue';
-import AccountPage from '/@/views/accountPage.vue';
+// Keep HomePage as direct import since it's the landing page
 import HomePage from '/@/views/homePage.vue';
-import PrivacyPolicyPage from '/@/views/privacyPolicyPage.vue';
-import ReleasePage from '/@/views/releasePage.vue';
-import TermsPage from '/@/views/termsPage.vue';
-import UploadPage from '/@/views/uploadPage.vue';
-import CategoryPage from '../views/categoryPage.vue';
+
+// Lazy load all other routes
+const AdminPage = () => import('../views/adminPage.vue');
+const AboutPage = () => import('/@/views/aboutPage.vue');
+const AccountPage = () => import('/@/views/accountPage.vue');
+const PrivacyPolicyPage = () => import('/@/views/privacyPolicyPage.vue');
+const ReleasePage = () => import('/@/views/releasePage.vue');
+const TermsPage = () => import('/@/views/termsPage.vue');
+const UploadPage = () => import('/@/views/uploadPage.vue');
+const CategoryPage = () => import('../views/categoryPage.vue');
 
 const routes: Array<RouteRecordRaw> = [
   {

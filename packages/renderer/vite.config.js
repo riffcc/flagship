@@ -7,6 +7,7 @@ import vuetify from 'vite-plugin-vuetify';
 import {chrome} from '../../.electron-vendors.cache.json';
 import {injectAppVersion} from '../../version/inject-app-version-plugin.mjs';
 import {nodePolyfills} from 'vite-plugin-node-polyfills';
+import {splitVendorChunkPlugin} from 'vite';
 
 const PACKAGE_ROOT = __dirname;
 const PROJECT_ROOT = join(PACKAGE_ROOT, '../..');
@@ -29,6 +30,7 @@ const générerExtentions = () => {
       },
     }),
     nodePolyfills(),
+    splitVendorChunkPlugin(),
   ];
   // No specific renderer plugin for auto-expose needed here with manual contextBridge
   extentions.push(injectAppVersion());
@@ -75,7 +77,7 @@ const config = {
     },
   },
   build: {
-    sourcemap: true,
+    sourcemap: process.env.MODE !== 'production',
     target: forElectron ? `chrome${chrome}` : 'esnext',
     outDir: forElectron ? 'dist' : 'dist/web',
     assetsDir: '.',
@@ -85,9 +87,26 @@ const config = {
     },
     emptyOutDir: true,
     reportCompressedSize: false,
+    // Increase chunk size warning limit since we're manually chunking
+    chunkSizeWarningLimit: 1000,
+    // Minification options
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: process.env.MODE === 'production',
+        drop_debugger: true,
+        pure_funcs: process.env.MODE === 'production' ? ['console.log', 'console.debug'] : [],
+      },
+    },
   },
   optimizeDeps: {
     exclude: dépendsÀExclure,
+    include: [
+      'vue',
+      'vue-router',
+      'vuetify',
+      '@tanstack/vue-query',
+    ],
     esbuildOptions: {
       target: 'esnext',
     },

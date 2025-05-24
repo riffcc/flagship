@@ -33,10 +33,10 @@ app
         lensService?.addRelease(releaseData),
       );
       ipcMain.handle('peerbit:get-release', async (_event, id: string) =>
-        lensService?.getRelease(id),
+        lensService?.getRelease({ id }),
       );
       ipcMain.handle('peerbit:get-latest-releases', async (_event, size?: number) =>
-        lensService?.getLatestReleases(size),
+        lensService?.getReleases(size ? { fetch: size } : undefined),
       );
     // Notify renderer that main is ready
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
