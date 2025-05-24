@@ -82,12 +82,73 @@ const config = {
     rollupOptions: {
       input: join(PACKAGE_ROOT, 'index.html'),
       external: dépendsÀExclure,
+      output: {
+        manualChunks: (id) => {
+          // Vendor chunks
+          if (id.includes('node_modules/vue') && !id.includes('vuetify')) {
+            return 'vue-vendor';
+          }
+          if (id.includes('node_modules/vuetify')) {
+            return 'vuetify';
+          }
+          if (id.includes('node_modules/@tanstack')) {
+            return 'query-vendor';
+          }
+          if (id.includes('node_modules/webfontloader')) {
+            return 'ui-vendor';
+          }
+          // PeerBit and database related
+          if (id.includes('node_modules/@peerbit')) {
+            return 'peerbit-vendor';
+          }
+          if (id.includes('node_modules/@sqlite')) {
+            return 'sqlite-vendor';
+          }
+          // IPFS and P2P
+          if (id.includes('node_modules/ipfs') || id.includes('node_modules/multiformats')) {
+            return 'ipfs-vendor';
+          }
+          if (id.includes('node_modules/libp2p') || id.includes('node_modules/@libp2p')) {
+            return 'p2p-vendor';
+          }
+          // Crypto
+          if (id.includes('node_modules/libsodium') || id.includes('node_modules/uuid')) {
+            return 'crypto-vendor';
+          }
+          // SDK
+          if (id.includes('node_modules/@riffcc/lens-sdk')) {
+            return 'lens-sdk';
+          }
+        },
+        // Optimize chunk size
+        chunkFileNames: (chunkInfo) => {
+          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
+          return `${facadeModuleId}-[hash].js`;
+        },
+      },
     },
     emptyOutDir: true,
     reportCompressedSize: false,
+    // Increase chunk size warning limit since we're manually chunking
+    chunkSizeWarningLimit: 1000,
+    // Minification options
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: process.env.MODE === 'production',
+        drop_debugger: true,
+        pure_funcs: process.env.MODE === 'production' ? ['console.log', 'console.debug'] : [],
+      },
+    },
   },
   optimizeDeps: {
     exclude: dépendsÀExclure,
+    include: [
+      'vue',
+      'vue-router',
+      'vuetify',
+      '@tanstack/vue-query',
+    ],
     esbuildOptions: {
       target: 'esnext',
     },

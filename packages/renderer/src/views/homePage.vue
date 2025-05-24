@@ -76,9 +76,11 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 import type { AnyObject, ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
+import { defineAsyncComponent } from 'vue';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
-import FeaturedSlider from '/@/components/home/featuredSlider.vue';
+// Lazy load featured slider since it's above the fold but heavy
+const FeaturedSlider = defineAsyncComponent(() => import('/@/components/home/featuredSlider.vue'));
 import type { ReleaseItem } from '/@/types';
 import { useContentCategoriesQuery, useGetFeaturedReleasesQuery, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
 import { filterActivedFeatured, filterPromotedFeatured } from '../utils';
