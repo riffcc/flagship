@@ -46,7 +46,9 @@ export const formatTime = (ms: number): string => {
   }
 
   const duration = Duration.fromObject({ seconds: ms });
-  return duration.toFormat(duration.hours > 0 ? 'hh:mm:ss' : 'mm:ss');
+  const hours = duration.as('hours');
+
+  return (hours >= 1) ? duration.toFormat('hh:mm:ss') :  duration.toFormat('mm:ss');
 };
 
 // Colors
