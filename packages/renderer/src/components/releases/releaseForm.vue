@@ -58,15 +58,13 @@
             v-if="options"
             :items="options"
             :label="categoryId"
-            :model-value="(releaseItem.metadata[categoryId] as string | null | undefined)"
-            @update:model-value="(v) => {
-              if (v) handleChangeMetadataField(categoryId, v)
-            }"
+            :model-value="String((releaseItem.metadata && releaseItem.metadata[categoryId]) || '')"
+            @update:model-value="(v) => handleChangeMetadataField(categoryId, v)"
           />
           <v-text-field
             v-else
             :label="categoryId"
-            :model-value="releaseItem.metadata?.[categoryId]"
+            :model-value="String((releaseItem.metadata && releaseItem.metadata[categoryId]) || '')"
             :type="type"
             @update:model-value="(v) => handleChangeMetadataField(categoryId, v)"
           >
@@ -110,7 +108,7 @@
 
 <script setup lang="ts">
 import {cid} from 'is-ipfs';
-import {computed, onMounted, ref} from 'vue';
+import {computed, onMounted, ref, watch} from 'vue';
 import type { ReleaseItem, PartialReleaseItem } from '/@/types';
 import type { ContentCategoryMetadata, ReleaseData, AnyObject } from '@riffcc/lens-sdk';
 import { useAddReleaseMutation, useEditReleaseMutation, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
@@ -187,10 +185,13 @@ const selectedContentCategory = computed(() => {
   return categoryMetadataData;
 });
 
-const handleChangeMetadataField = (categoryId: string, value: string) => {
+const handleChangeMetadataField = (categoryId: string, value: string | null) => {
+  if (!releaseItem.value.metadata) {
+    releaseItem.value.metadata = {};
+  }
   releaseItem.value.metadata = {
     ...releaseItem.value.metadata,
-    [categoryId]: value,
+    [categoryId]: value || '',
   };
 };
 
@@ -199,8 +200,15 @@ onMounted(() => {
     releaseItem.value = {
       ...releaseItem.value,
       ...props.initialData,
-      metadata: props.initialData.metadata,
+      metadata: props.initialData.metadata || {},
     };
+  }
+});
+
+// Ensure metadata is preserved when switching categories
+watch(() => releaseItem.value.categoryId, () => {
+  if (!releaseItem.value.metadata) {
+    releaseItem.value.metadata = {};
   }
 });
 

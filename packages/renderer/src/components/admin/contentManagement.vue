@@ -261,12 +261,18 @@ function editRelease(id?: string) {
   if (staticStatus.value) {
     const targetRelease = staticReleases.value.find(r => r.id === id);
     if (targetRelease) {
-      editedRelease.value = targetRelease;
+      editedRelease.value = {
+        ...targetRelease,
+        metadata: { ...(targetRelease.metadata || {}) },
+      };
     }
   } else {
     const targetRelease = releases.value?.find(r => r.id === id);
     if (targetRelease) {
-      editedRelease.value = targetRelease;
+      editedRelease.value = {
+        ...targetRelease,
+        metadata: { ...(targetRelease.metadata || {}) },
+      };
     }
   }
   editReleaseDialog.value = true;
@@ -297,6 +303,7 @@ async function confirmDeleteBlockRelease() {
 
 function resetEditedRelease() {
   editedRelease.value = {
+    id: '',
     name: '',
     categoryId: '',
     contentCID: '',
