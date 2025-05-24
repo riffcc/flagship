@@ -194,9 +194,10 @@ const isReleasesOnlyLoading = computed(() => {
   return isReleasesLoading.value || !isReleasesFetched.value;
 });
 
-// Overall loading - only true when BOTH queries are still loading
+// Show loading until both queries complete OR we have content to show
 const isLoading = computed(() => {
-  return isFeaturedLoading.value && isReleasesOnlyLoading.value;
+  // Show loading if either query is still loading
+  return isFeaturedLoading.value || isReleasesOnlyLoading.value;
 });
 
 const noFeaturedContent = computed(() => {

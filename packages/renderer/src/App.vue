@@ -115,7 +115,14 @@ onMounted(async () => {
       const result = await Promise.allSettled(promises);
       console.log(result);
     }
-    await lensService.openSite(siteAddress, customMemberSiteArgs);
+    
+    // Set loading to false before openSite so UI shows immediately
+    initLoading.value = false;
+    
+    // Open site in background without blocking UI
+    lensService.openSite(siteAddress, customMemberSiteArgs).catch(error => {
+      console.warn('Site opening failed:', error);
+    });
   } catch (error) {
     if (error instanceof Error) {
       if (error.cause === 'MISSING_CONFIG') {
@@ -126,7 +133,6 @@ onMounted(async () => {
     } else {
       initError.value = JSON.stringify(error).slice(200);
     }
-  } finally {
     initLoading.value = false;
   }
 });
