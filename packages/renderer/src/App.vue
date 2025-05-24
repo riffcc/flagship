@@ -34,13 +34,10 @@
 import { onKeyStroke } from '@vueuse/core';
 import { ref, watchEffect, onMounted, watch } from 'vue';
 
-import { defineAsyncComponent } from 'vue';
 import appBar from '/@/components/layout/appBar.vue';
 import appFooter from '/@/components/layout/appFooter.vue';
-
-// Lazy load media players since they're not always needed
-const audioPlayer = defineAsyncComponent(() => import('/@/components/releases/audioPlayer.vue'));
-const videoPlayer = defineAsyncComponent(() => import('/@/components/releases/videoPlayer.vue'));
+import audioPlayer from '/@/components/releases/audioPlayer.vue';
+import videoPlayer from '/@/components/releases/videoPlayer.vue';
 
 import { useAudioAlbum } from '/@/composables/audioAlbum';
 import { useFloatingVideo } from '/@/composables/floatingVideo';

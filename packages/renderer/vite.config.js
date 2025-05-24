@@ -75,7 +75,7 @@ const config = {
     },
   },
   build: {
-    sourcemap: true,
+    sourcemap: process.env.MODE !== 'production',
     target: forElectron ? `chrome${chrome}` : 'esnext',
     outDir: forElectron ? 'dist' : 'dist/web',
     assetsDir: '.',
@@ -84,40 +84,38 @@ const config = {
       external: dépendsÀExclure,
       output: {
         manualChunks: (id) => {
-          // Vendor chunks
-          if (id.includes('node_modules/vue') && !id.includes('vuetify')) {
-            return 'vue-vendor';
-          }
-          if (id.includes('node_modules/vuetify')) {
-            return 'vuetify';
-          }
-          if (id.includes('node_modules/@tanstack')) {
-            return 'query-vendor';
-          }
-          if (id.includes('node_modules/webfontloader')) {
-            return 'ui-vendor';
-          }
-          // PeerBit and database related
-          if (id.includes('node_modules/@peerbit')) {
-            return 'peerbit-vendor';
-          }
-          if (id.includes('node_modules/@sqlite')) {
-            return 'sqlite-vendor';
-          }
-          // IPFS and P2P
-          if (id.includes('node_modules/ipfs') || id.includes('node_modules/multiformats')) {
-            return 'ipfs-vendor';
-          }
-          if (id.includes('node_modules/libp2p') || id.includes('node_modules/@libp2p')) {
-            return 'p2p-vendor';
-          }
-          // Crypto
-          if (id.includes('node_modules/libsodium') || id.includes('node_modules/uuid')) {
-            return 'crypto-vendor';
-          }
-          // SDK
-          if (id.includes('node_modules/@riffcc/lens-sdk')) {
-            return 'lens-sdk';
+          if (id.includes('node_modules')) {
+            // Core framework chunks
+            if (id.includes('vue') && !id.includes('vuetify') && !id.includes('@tanstack')) {
+              return 'vue-core';
+            }
+            if (id.includes('vuetify')) {
+              return 'vuetify';
+            }
+            if (id.includes('@tanstack/vue-query')) {
+              return 'vue-query';
+            }
+            // Large dependencies
+            if (id.includes('@riffcc/lens-sdk')) {
+              return 'lens-sdk';
+            }
+            if (id.includes('libp2p') || id.includes('@libp2p')) {
+              return 'p2p';
+            }
+            if (id.includes('ipfs')) {
+              return 'ipfs';
+            }
+            if (id.includes('@peerbit')) {
+              return 'peerbit';
+            }
+            if (id.includes('libsodium')) {
+              return 'crypto';
+            }
+            if (id.includes('@sqlite') || id.includes('sqlite')) {
+              return 'sqlite';
+            }
+            // All other vendor modules
+            return 'vendor';
           }
         },
         // Optimize chunk size
