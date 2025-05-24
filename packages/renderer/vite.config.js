@@ -7,6 +7,7 @@ import vuetify from 'vite-plugin-vuetify';
 import {chrome} from '../../.electron-vendors.cache.json';
 import {injectAppVersion} from '../../version/inject-app-version-plugin.mjs';
 import {nodePolyfills} from 'vite-plugin-node-polyfills';
+import {splitVendorChunkPlugin} from 'vite';
 
 const PACKAGE_ROOT = __dirname;
 const PROJECT_ROOT = join(PACKAGE_ROOT, '../..');
@@ -29,6 +30,7 @@ const générerExtentions = () => {
       },
     }),
     nodePolyfills(),
+    splitVendorChunkPlugin(),
   ];
   // No specific renderer plugin for auto-expose needed here with manual contextBridge
   extentions.push(injectAppVersion());
@@ -82,48 +84,6 @@ const config = {
     rollupOptions: {
       input: join(PACKAGE_ROOT, 'index.html'),
       external: dépendsÀExclure,
-      output: {
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            // Core framework chunks
-            if (id.includes('vue') && !id.includes('vuetify') && !id.includes('@tanstack')) {
-              return 'vue-core';
-            }
-            if (id.includes('vuetify')) {
-              return 'vuetify';
-            }
-            if (id.includes('@tanstack/vue-query')) {
-              return 'vue-query';
-            }
-            // Large dependencies
-            if (id.includes('@riffcc/lens-sdk')) {
-              return 'lens-sdk';
-            }
-            if (id.includes('libp2p') || id.includes('@libp2p')) {
-              return 'p2p';
-            }
-            if (id.includes('ipfs')) {
-              return 'ipfs';
-            }
-            if (id.includes('@peerbit')) {
-              return 'peerbit';
-            }
-            if (id.includes('libsodium')) {
-              return 'crypto';
-            }
-            if (id.includes('@sqlite') || id.includes('sqlite')) {
-              return 'sqlite';
-            }
-            // All other vendor modules
-            return 'vendor';
-          }
-        },
-        // Optimize chunk size
-        chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
-          return `${facadeModuleId}-[hash].js`;
-        },
-      },
     },
     emptyOutDir: true,
     reportCompressedSize: false,
