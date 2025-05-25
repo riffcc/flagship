@@ -44,7 +44,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
-    "@mdi/font": "^7.4.47",
     "@mdi/js": "^7.4.47",
     "@peerbit/vite": "^1.0.25",
     "@rollup/plugin-node-resolve": "^16.0.0",
@@ -84,6 +83,7 @@
   },
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
+    "@mdi/font": "^7.4.47",
     "@peerbit/any-store": "^2.1.10",
     "@peerbit/any-store-opfs": "^1.0.9",
     "@peerbit/indexer-sqlite3": "^1.2.19",
