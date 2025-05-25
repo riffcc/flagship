@@ -46,7 +46,12 @@ export function useAccountStatusQuery() {
       return await lensService.getAccountStatus();
     },
     initialData: AccountType.GUEST,
+    staleTime: 0, // Always consider data stale
     refetchInterval: 1000 * 30,
+    refetchIntervalInBackground: true,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    networkMode: 'offlineFirst', // Use cached data first
   });
 }
 
