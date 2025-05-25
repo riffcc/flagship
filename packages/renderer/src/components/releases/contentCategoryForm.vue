@@ -35,7 +35,7 @@
         >
           <template #activator="{props: createMetadataFieldDialogActivatorProps}">
             <v-btn
-              icon="mdi-plus-circle"
+              icon="$plus-circle"
               variant="text"
               density="comfortable"
               size="small"
@@ -73,14 +73,14 @@
       >
         <template #append>
           <v-btn
-            icon="mdi-pencil"
+            icon="$pencil"
             variant="text"
             density="comfortable"
             size="x-small"
             @click="() => editMetadataField(fieldKey)"
           ></v-btn>
           <v-btn
-            icon="mdi-delete"
+            icon="$delete"
             variant="text"
             density="comfortable"
             size="x-small"

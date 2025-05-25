@@ -20,7 +20,7 @@
       <template #activator="{ props }">
         <v-btn
           v-bind="props"
-          icon="mdi-menu"
+          icon="$menu"
           class="d-sm-none mr-2"
         ></v-btn>
       </template>

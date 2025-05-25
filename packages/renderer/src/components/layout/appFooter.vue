@@ -77,7 +77,7 @@
       </v-row>
     </v-container>
     <v-btn
-      icon="mdi-chevron-up"
+      icon="$chevron-up"
       density="comfortable"
       color="primary-darken-1"
       rounded="0"

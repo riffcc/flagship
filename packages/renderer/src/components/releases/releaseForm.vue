@@ -78,7 +78,7 @@
                     size="small"
                     v-bind="tooltipProps"
                     color="grey-lighten-1"
-                    icon="mdi-help-circle-outline"
+                    icon="$help-circle-outline"
                   ></v-icon>
                 </template>
               </v-tooltip>

@@ -111,7 +111,7 @@
               </template>
               <template #append>
                 <v-btn
-                  icon="mdi-check"
+                  icon="$check"
                   size="small"
                   density="compact"
                   :disabled="!filterActivedFeatured(featuredRelease)"

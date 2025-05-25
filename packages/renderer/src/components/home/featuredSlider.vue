@@ -129,7 +129,7 @@
                 <v-btn
                   color="primary"
                   rounded="0"
-                  prepend-icon="mdi-play"
+                  prepend-icon="$play"
                   class="text-none mr-4"
                   text="Play now"
                   @click="router.push(`/release/${featuredItem.id}`)"

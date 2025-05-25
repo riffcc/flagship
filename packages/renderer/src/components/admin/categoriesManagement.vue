@@ -14,7 +14,7 @@
           >
             <template #activator="{props: activatorProps}">
               <v-btn
-                icon="mdi-plus-circle"
+                icon="$plus-circle"
                 variant="text"
                 density="comfortable"
                 size="small"
@@ -47,7 +47,7 @@
             <v-sheet width="24">
               <v-icon
                 v-if="category.featured"
-                :icon="'mdi-star'"
+                :icon="'$star'"
                 variant="text"
                 color="yellow"
                 size="small"
@@ -57,14 +57,14 @@
           </template>
           <template #append>
             <v-btn
-              icon="mdi-pencil"
+              icon="$pencil"
               variant="text"
               density="comfortable"
               size="x-small"
               @click="() => editCategory(category.id)"
             ></v-btn>
             <v-btn
-              icon="mdi-delete"
+              icon="$delete"
               variant="text"
               density="comfortable"
               size="x-small"

@@ -14,7 +14,7 @@
   >
     <v-container fluid>
       <v-btn
-        icon="mdi-arrow-left"
+        icon="$arrow-left"
         class="mb-md-4"
         :size="xs ? 'small' : 'default'"
         :style="{zIndex: 1000}"
@@ -71,7 +71,7 @@
                   <v-btn
                     location="center"
                     variant="tonal"
-                    icon="mdi-play"
+                    icon="$play"
                     density="comfortable"
                     readonly
                     :size="xs ? 'small' : 'default'"
@@ -99,7 +99,7 @@
                   >
                     <v-icon
                       size="25px"
-                      icon="mdi-dots-vertical"
+                      icon="$dots-vertical"
                     />
                   </v-btn>
                 </template>
@@ -107,7 +107,7 @@
                 <v-list>
                   <v-list-item @click="setTrackToDownload(file)">
                     <template #title>
-                      <v-icon icon="mdi-download" />
+                      <v-icon icon="$download" />
                       Download track
                     </template>
 

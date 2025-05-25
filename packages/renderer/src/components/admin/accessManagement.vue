@@ -58,13 +58,13 @@
             >
               <template #prepend>
                 <v-icon
-                  :icon="admin.super ? 'mdi-account-supervisor' : 'mdi-account'"
+                  :icon="admin.super ? '$account-supervisor' : '$account'"
                   size="small"
                 ></v-icon>
               </template>
               <template #append>
                 <v-btn
-                  icon="mdi-delete"
+                  icon="$delete"
                   size="small"
                   @click="confirmDeleteAdminDialog = true"
                 >

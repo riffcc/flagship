@@ -34,7 +34,7 @@
             <v-icon
               v-if="item.categoryId === 'music'"
               size="4.5rem"
-              icon="mdi-play"
+              icon="$play"
               color="primary"
               class="position-absolute top-0 left-0 right-0 bottom-0 ma-auto"
             ></v-icon>
@@ -46,19 +46,19 @@
                 size="small"
                 color="grey-lighten-3"
                 density="comfortable"
-                icon="mdi-share-variant"
+                icon="$share-variant"
               ></v-btn>
               <v-btn
                 size="small"
                 color="grey-lighten-3"
                 density="comfortable"
-                icon="mdi-heart"
+                icon="$heart"
               ></v-btn>
               <v-btn
                 size="small"
                 color="grey-lighten-3"
                 density="comfortable"
-                icon="mdi-plus"
+                icon="$plus"
               ></v-btn>
             </div>
           </template>
@@ -69,7 +69,7 @@
             <v-btn
               color="primary"
               rounded="0"
-              prepend-icon="mdi-play"
+              prepend-icon="$play"
               size="small"
               class="position-absolute bottom-0 rigth-0 text-none ml-4 mb-10"
               text="Play now"

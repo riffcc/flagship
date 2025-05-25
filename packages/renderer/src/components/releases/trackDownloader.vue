@@ -27,7 +27,7 @@
               >
                 <v-icon
                   size="25px"
-                  icon="mdi-download"
+                  icon="$download"
                 />
               </v-btn>
             </template>

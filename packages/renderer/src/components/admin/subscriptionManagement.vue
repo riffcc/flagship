@@ -64,7 +64,7 @@
                   <template #activator="{ props }">
                     <v-btn
                       v-bind="props"
-                      icon="mdi-circle"
+                      icon="$circle"
                       variant="text"
                       density="compact"
                       size="x-small"
@@ -80,7 +80,7 @@
               </template>
               <template #append>
                 <v-btn
-                  icon="mdi-delete"
+                  icon="$delete"
                   density="comfortable"
                   size="small"
                   @click="() => untrustSite({siteId: s.id})"

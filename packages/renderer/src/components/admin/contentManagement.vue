@@ -34,31 +34,31 @@
         <v-menu v-if="smAndDown">
           <template #activator="{props}">
             <v-btn
-              icon="mdi-dots-vertical"
+              icon="$dots-vertical"
               variant="text"
               v-bind="props"
             ></v-btn>
           </template>
           <v-btn
-            prepend-icon="mdi-clipboard-multiple-outline"
+            prepend-icon="$clipboard-multiple-outline"
             @click="copy(item.id!, item.id!)"
           >
             Copy ID
           </v-btn>
           <v-btn
-            prepend-icon="mdi-pencil"
+            prepend-icon="$pencil"
             @click="editRelease(item.id)"
           >
             Edit
           </v-btn>
           <v-btn
-            prepend-icon="mdi-star-plus-outline"
+            prepend-icon="$star-plus-outline"
             @click="requestFeatureRelease(item.id)"
           >
             Feature
           </v-btn>
           <!-- <v-btn
-            :prepend-icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
+            :prepend-icon="item.sourceSite === orbiter.siteId ? '$delete' : '$block-helper'"
             @click="deleteBlockRelease(item.id!, item.contentCID, item.sourceSite!)"
           >
             {{ item.sourceSite === orbiter.siteId ? 'Delete' : 'Block' }}
@@ -85,7 +85,7 @@
             </template>
           </v-tooltip>
           <v-btn
-            icon="mdi-pencil"
+            icon="$pencil"
             class="me-2"
             size="small"
             @click="editRelease(item.id)"
@@ -97,7 +97,7 @@
             <template #activator="{ props: tooltipProps }">
               <v-btn
                 v-bind="tooltipProps"
-                icon="mdi-star-plus-outline"
+                icon="$star-plus-outline"
                 class="me-2"
                 size="small"
                 @click="requestFeatureRelease(item.id)"
@@ -105,7 +105,7 @@
             </template>
           </v-tooltip>
           <!-- <v-btn
-            :icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
+            :icon="item.sourceSite === orbiter.siteId ? '$delete' : '$block-helper'"
             size="small"
             @click="deleteBlockRelease(item.id!, item.contentCID, item.sourceSite!)"
           ></v-btn> -->

@@ -16,7 +16,7 @@
             <template #activator="{ props }">
               <v-btn
                 v-bind="props"
-                icon="mdi-circle"
+                icon="$circle"
                 variant="text"
                 density="comfortable"
                 size="x-small"

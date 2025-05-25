@@ -26,7 +26,7 @@
     >
       <template #append-inner>
         <v-btn
-          icon="mdi-plus-circle"
+          icon="$plus-circle"
           variant="text"
           density="comfortable"
           size="small"
@@ -47,7 +47,7 @@
             {{ option }}
             <template #append>
               <v-btn
-                icon="mdi-close"
+                icon="$close"
                 variant="text"
                 density="compact"
                 size="x-small"
