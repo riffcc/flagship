@@ -88,7 +88,7 @@
     "@peerbit/any-store-opfs": "^1.0.9",
     "@peerbit/indexer-sqlite3": "^1.2.19",
     "@peerbit/riblt": "^1.0.6",
-    "@riffcc/lens-sdk": "^0.1.10",
+    "@riffcc/lens-sdk": "^0.1.11",
     "@tanstack/vue-query": "^5.76.0",
     "@vueuse/core": "^12.7.0",
     "core-js": "^3.40.0",
