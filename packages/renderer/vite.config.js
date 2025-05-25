@@ -1,13 +1,14 @@
 /* eslint-env node */
 
-import vue from '@vitejs/plugin-vue';
+import Vue from '@vitejs/plugin-vue';
 import {copyFileSync} from 'fs';
 import {join} from 'node:path';
-import vuetify from 'vite-plugin-vuetify';
+import Fonts from 'unplugin-fonts/vite';
+import {splitVendorChunkPlugin} from 'vite';
+import {nodePolyfills} from 'vite-plugin-node-polyfills';
+import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
 import {chrome} from '../../.electron-vendors.cache.json';
 import {injectAppVersion} from '../../version/inject-app-version-plugin.mjs';
-import {nodePolyfills} from 'vite-plugin-node-polyfills';
-import {splitVendorChunkPlugin} from 'vite';
 
 const PACKAGE_ROOT = __dirname;
 const PROJECT_ROOT = join(PACKAGE_ROOT, '../..');
@@ -19,23 +20,6 @@ if (forElectron) {
 } else {
   copyFileSync(join(PACKAGE_ROOT, 'indexBrowser.html'), join(PACKAGE_ROOT, 'index.html'));
 }
-
-const générerExtentions = () => {
-  const extentions = [
-    vue(),
-    vuetify({
-      autoImport: true,
-      styles: {
-        configFile: 'src/styles/settings.scss',
-      },
-    }),
-    nodePolyfills(),
-    splitVendorChunkPlugin(),
-  ];
-  // No specific renderer plugin for auto-expose needed here with manual contextBridge
-  extentions.push(injectAppVersion());
-  return extentions;
-};
 
 const générerAliasRésolution = () => {
   const common = {
@@ -51,8 +35,6 @@ const générerAliasRésolution = () => {
   }
 };
 
-const dépendsÀExclure = ['chokidar', '@libp2p/tcp', '@libp2p/mdns', 'env-paths', 'datastore-fs', 'blockstore-fs'];
-
 /**
  * @type {import('vite').UserConfig}
  * @see https://vitejs.dev/config/
@@ -62,6 +44,30 @@ const config = {
   root: PACKAGE_ROOT,
   envDir: PROJECT_ROOT,
   publicDir: 'public',
+  plugins: [
+    Vue({
+      template: { transformAssetUrls },
+    }),
+    Vuetify({
+      autoImport: true,
+      styles: {
+        configFile: 'src/styles/settings.scss',
+      },
+    }),
+    Fonts({
+      google: {
+        families: [
+          {
+            name: 'Josefin Sans',
+            weights: [100, 300, 400, 500, 700],
+          },
+        ],
+      },
+    }),
+    nodePolyfills(),
+    splitVendorChunkPlugin(),
+    injectAppVersion(),
+  ],
   resolve: {
     alias: générerAliasRésolution(),
     extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
@@ -83,7 +89,6 @@ const config = {
     assetsDir: '.',
     rollupOptions: {
       input: join(PACKAGE_ROOT, 'index.html'),
-      external: dépendsÀExclure,
     },
     emptyOutDir: true,
     reportCompressedSize: false,
@@ -100,8 +105,7 @@ const config = {
     },
   },
   optimizeDeps: {
-    exclude: dépendsÀExclure,
-    include: [
+    exclude: [
       'vue',
       'vue-router',
       'vuetify',
@@ -126,7 +130,16 @@ const config = {
       provider: 'istanbul',
     },
   },
-  plugins: générerExtentions(),
+  css: {
+    preprocessorOptions: {
+      sass: {
+        api: 'modern-compiler',
+      },
+      scss: {
+        api: 'modern-compiler',
+      },
+    },
+  },
 };
 
 export default config;
