@@ -80,39 +80,36 @@ export function useGetReleasesQuery(options?: {
   searchOptions?: SearchOptions,
 }) {
   const { lensService } = useLensService();
-  const { staticStatus } = useStaticStatus();
-  const { staticReleases } = useStaticData();
   return useQuery<ReleaseItem<AnyObject>[]>({
     queryKey: ['releases'],
     queryFn: async () => {
-      if (staticStatus.value) {
-        return staticReleases.value;
-      } else {
-        const result = await lensService.getReleases(options?.searchOptions);
-        return result.map((r) => {
-          const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
-          return {
-            ...r,
-            [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
-          };
-        });
-      }
+      // PeerBit-only loading with optimized timeouts
+      const result = await lensService.getReleases(options?.searchOptions);
+      return result.map((r) => {
+        const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
+        return {
+          ...r,
+          [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
+        };
+      });
     },
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
     retry: (failureCount, error) => {
-      // Don't retry on Peerbit timeout errors - they indicate network issues
-      if (error?.message?.includes('TimeoutError') || error?.message?.includes('never reachable')) {
-        return false;
+      // Handle specific PeerBit delivery errors with appropriate retry strategy
+      if (error?.message?.includes('delivery acknowledges from all nodes (0/1)')) {
+        return failureCount < 2; // Limited retry for node connectivity issues
       }
-      // Retry more aggressively on shard response failures
-      if (error?.message?.includes('Did not reciveve responses from all shard')) {
-        return failureCount < 5;
+      if (error?.message?.includes('Failed to get message')) {
+        return failureCount < 3; // More retries for message delivery issues
       }
-      return failureCount < 3;
+      if (error?.message?.includes('try reducing fetch size')) {
+        return false; // Don't retry timeout errors
+      }
+      return failureCount < 2;
     },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retryDelay: (attemptIndex) => Math.min(500 * Math.pow(2, attemptIndex), 2000), // Exponential backoff
   });
 }
 
@@ -138,32 +135,29 @@ export function useGetFeaturedReleasesQuery(options?: {
   searchOptions?: SearchOptions,
 }) {
   const { lensService } = useLensService();
-  const { staticStatus } = useStaticStatus();
-  const { staticFeaturedReleases } = useStaticData();
   return useQuery<FeaturedReleaseItem[]>({
     queryKey: ['featuredReleases'],
     queryFn: async () => {
-      if (staticStatus.value) {
-        return staticFeaturedReleases.value;
-      } else {
-        return await lensService.getFeaturedReleases(options?.searchOptions);
-      }
+      // PeerBit-only loading with optimized timeouts
+      return await lensService.getFeaturedReleases(options?.searchOptions);
     },
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
     retry: (failureCount, error) => {
-      // Don't retry on Peerbit timeout errors - they indicate network issues
-      if (error?.message?.includes('TimeoutError') || error?.message?.includes('never reachable')) {
-        return false;
+      // Handle specific PeerBit delivery errors with appropriate retry strategy
+      if (error?.message?.includes('delivery acknowledges from all nodes (0/1)')) {
+        return failureCount < 2; // Limited retry for node connectivity issues
       }
-      // Retry more aggressively on shard response failures
-      if (error?.message?.includes('Did not reciveve responses from all shard')) {
-        return failureCount < 5;
+      if (error?.message?.includes('Failed to get message')) {
+        return failureCount < 3; // More retries for message delivery issues
       }
-      return failureCount < 3;
+      if (error?.message?.includes('try reducing fetch size')) {
+        return false; // Don't retry timeout errors
+      }
+      return failureCount < 2;
     },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retryDelay: (attemptIndex) => Math.min(500 * Math.pow(2, attemptIndex), 2000), // Exponential backoff
   });
 }
 

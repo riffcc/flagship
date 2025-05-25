@@ -86,17 +86,22 @@ import { useStaticStatus } from '/@/composables/staticStatus';
 
 const router = useRouter();
 
+// Optimize loading: Reduce stale time for faster fallback and eager loading
 const {
   data: releases,
   isLoading: isReleasesLoading,
   isFetched: isReleasesFetched,
-} = useGetReleasesQuery();
+} = useGetReleasesQuery({
+  staleTime: 1000 * 30, // 30s stale time for faster refresh
+});
 
 const {
   data: featuredReleases,
   isLoading: isFeaturedReleasesLoading,
   isFetched: isFeaturedReleasesFetched,
-} = useGetFeaturedReleasesQuery();
+} = useGetFeaturedReleasesQuery({
+  staleTime: 1000 * 30, // 30s stale time for faster refresh
+});
 
 
 
