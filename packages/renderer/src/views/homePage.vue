@@ -198,16 +198,17 @@ const isReleasesOnlyLoading = computed(() => {
   return isReleasesLoading.value || !isReleasesFetched.value;
 });
 
-// Show loading until both queries complete OR we have content to show
+// Show loading until both queries complete
 const isLoading = computed(() => {
-  // Show loading if either query is still loading
-  return isFeaturedLoading.value || isReleasesOnlyLoading.value;
+  // Show loading if BOTH queries are still loading
+  // This prevents showing "no featured content" before releases are loaded
+  return isReleasesLoading.value || isFeaturedReleasesLoading.value;
 });
 
 const noFeaturedContent = computed(() => {
-  // Only show "no featured content" if featured query is done and there's no featured content
-  if (isFeaturedLoading.value) {
-    return false; // Still loading featured content, don't show "no content" yet
+  // Only show "no featured content" if BOTH queries are done and there's no featured content
+  if (isReleasesLoading.value || isFeaturedReleasesLoading.value) {
+    return false; // Still loading, don't show "no featured content" yet
   }
   return promotedFeaturedReleases.value.length === 0 && activeSections.value.length === 0;
 });

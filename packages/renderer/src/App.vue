@@ -93,14 +93,33 @@ watchEffect(() => {
 const initLoading = ref(true);
 const initError = ref<string | null>();
 const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
+// Start with NO replication - just query the network as needed
 const customMemberSiteArgs: SiteArgs = {
+  membersArg: {
+    replicate: { factor: 0 }, // Query-only for permission checks
+  },
+  administratorsArgs: {
+    replicate: { factor: 0 }, // Query-only for permission checks  
+  },
   releasesArgs: {
-    replicate: { factor: 1, limits: { storage: 2 * 1024 * 1024 * 1024 } },
+    replicate: { factor: 0 }, // Live query for content
   },
   featuredReleasesArgs: {
-    replicate: { factor: 1, limits: { storage: 1 * 1024* 1024 * 1024 } },
+    replicate: { factor: 0 }, // Live query for featured
+  },
+  contentCategoriesArgs: {
+    replicate: { factor: 0 }, // Live query for categories
+  },
+  subscriptionsArgs: {
+    replicate: { factor: 0 }, // No replication needed
+  },
+  blockedContentArgs: {
+    replicate: { factor: 0 }, // No replication needed
   },
 };
+
+// Track initialization stages for better UX
+const initStage = ref<'init' | 'connecting' | 'opening' | 'ready'>('init');
 
 onMounted(async () => {
   try {
@@ -110,19 +129,38 @@ onMounted(async () => {
         { cause: 'MISSING_CONFIG' },
       );
     }
+    
+    // Stage 1: Initialize lens service
+    initStage.value = 'init';
     await lensService.init('.lens-node');
-
+    
+    // Stage 2: Connect to bootstrappers FIRST (critical for data availability)
+    initStage.value = 'connecting';
     const bootstrappers = import.meta.env.VITE_BOOTSTRAPPERS;
     if (bootstrappers) {
-      const promises = bootstrappers
-        .split(',')
-        .map((b) => lensService.dial(b.trim()));
-      const result = await Promise.allSettled(promises);
-      console.log(result);
+      const bootstrapperList = bootstrappers.split(',').map(b => b.trim());
+      console.log('Connecting to bootstrappers:', bootstrapperList);
+      
+      // Try to connect to at least one bootstrapper before opening site
+      const dialResults = await Promise.allSettled(
+        bootstrapperList.map(b => lensService.dial(b)),
+      );
+      
+      const connected = dialResults.filter(r => r.status === 'fulfilled').length;
+      const failed = dialResults.filter(r => r.status === 'rejected');
+      
+      console.log(`Connected to ${connected}/${bootstrapperList.length} bootstrappers`);
+      if (failed.length > 0) {
+        console.warn('Failed connections:', failed.map(f => f.reason?.message || f.reason));
+      }
+      
+      // Even if no bootstrappers connect, continue (might have local data)
     }
-
-    // Open site in background without blocking UI
+    
+    // Stage 3: Open site AFTER bootstrapper connection attempts
+    initStage.value = 'opening';
     await lensService.openSite(siteAddress, customMemberSiteArgs);
+    initStage.value = 'ready';
     initLoading.value = false;
 
   } catch (error) {
