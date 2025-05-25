@@ -122,6 +122,7 @@ const customMemberSiteArgs: SiteArgs = {
 const initStage = ref<'init' | 'connecting' | 'opening' | 'ready'>('init');
 
 onMounted(async () => {
+  console.time('[App] Total initialization');
   try {
     if (!siteAddress) {
       throw new Error(
@@ -132,7 +133,9 @@ onMounted(async () => {
     
     // Stage 1: Initialize lens service
     initStage.value = 'init';
+    console.time('[App] Lens service init');
     await lensService.init('.lens-node');
+    console.timeEnd('[App] Lens service init');
     
     // Stage 2: Connect to bootstrappers FIRST (critical for data availability)
     initStage.value = 'connecting';
@@ -141,10 +144,12 @@ onMounted(async () => {
       const bootstrapperList = bootstrappers.split(',').map(b => b.trim());
       console.log('Connecting to bootstrappers:', bootstrapperList);
       
+      console.time('[App] Bootstrap connections');
       // Try to connect to at least one bootstrapper before opening site
       const dialResults = await Promise.allSettled(
         bootstrapperList.map(b => lensService.dial(b)),
       );
+      console.timeEnd('[App] Bootstrap connections');
       
       const connected = dialResults.filter(r => r.status === 'fulfilled').length;
       const failed = dialResults.filter(r => r.status === 'rejected');
@@ -159,9 +164,12 @@ onMounted(async () => {
     
     // Stage 3: Open site AFTER bootstrapper connection attempts
     initStage.value = 'opening';
+    console.time('[App] Site open');
     await lensService.openSite(siteAddress, customMemberSiteArgs);
+    console.timeEnd('[App] Site open');
     initStage.value = 'ready';
     initLoading.value = false;
+    console.timeEnd('[App] Total initialization');
 
   } catch (error) {
     if (error instanceof Error) {
