@@ -11,12 +11,6 @@
       <p class="ml-4 my-auto">
         Anonymous
       </p>
-      <v-switch
-        v-model="staticStatus"
-        class="position-absolute right-0 top-0 mr-4 mr-md-12 mt-md-2"
-        label="Static mode"
-        :color="staticStatus ? 'primary' : 'secondary'"
-      />
     </v-sheet>
 
     <v-card class="mt-4 text-center">
@@ -67,14 +61,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-import { useStaticStatus } from '/@/composables/staticStatus';
 import { useUserSession } from '/@/composables/userSession';
 import { useAccountStatusQuery, usePeerIdQuery, usePublicKeyQuery } from '/@/plugins/lensService/hooks';
 import { useCopyToClipboard } from '../composables/copyToClipboard';
 
 const { userData } = useUserSession();
 const { copy, isCopied } = useCopyToClipboard();
-const { staticStatus } = useStaticStatus();
 
 const { data: publicKey } = usePublicKeyQuery();
 const { data: peerId } = usePeerIdQuery();

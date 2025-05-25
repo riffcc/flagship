@@ -82,7 +82,6 @@ import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import type { ReleaseItem } from '/@/types';
 import { useContentCategoriesQuery, useGetFeaturedReleasesQuery, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
 import { filterActivedFeatured, filterPromotedFeatured } from '../utils';
-import { useStaticStatus } from '/@/composables/staticStatus';
 
 const router = useRouter();
 
@@ -222,7 +221,6 @@ const noContent = computed(() => {
 });
 
 // Detailed logging to track content availability vs display
-const { staticStatus } = useStaticStatus();
 watch([releases, featuredReleases, isReleasesFetched, isFeaturedReleasesFetched], () => {
   console.log('[HomePage Debug] Data state changed:', {
     releasesCount: releases.value?.length || 0,
@@ -231,7 +229,6 @@ watch([releases, featuredReleases, isReleasesFetched, isFeaturedReleasesFetched]
     isFeaturedReleasesFetched: isFeaturedReleasesFetched.value,
     isReleasesLoading: isReleasesLoading.value,
     isFeaturedReleasesLoading: isFeaturedReleasesLoading.value,
-    staticStatus: staticStatus.value,
     timestamp: new Date().toISOString(),
   });
 }, { immediate: true });

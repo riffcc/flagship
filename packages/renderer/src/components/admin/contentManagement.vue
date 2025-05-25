@@ -3,11 +3,11 @@
   <v-container>
     <v-data-table
       :headers="smAndDown ? smTableHeaders : tableHeaders"
-      :items="tableItems"
+      :items="releases"
       :loading="isLoading"
       hide-default-header
     >
-      <template #item.thumbnail="{item}">
+      <template #item.thumbnail="{ item }">
         <v-card
           class="my-2"
           elevation="2"
@@ -20,19 +20,19 @@
           ></v-img>
         </v-card>
       </template>
-      <template #item.name="{item}">
+      <template #item.name="{ item }">
         <v-container :max-width="smAndDown ? '128px' : '256px'">
           <span>{{ item.name }}</span>
         </v-container>
       </template>
-      <template #item.contentCID="{item}">
+      <template #item.contentCID="{ item }">
         <span>{{
           lgAndUp ? item.contentCID : `${item.contentCID.slice(0, 6)}...${item.contentCID.slice(-6)}`
         }}</span>
       </template>
-      <template #item.actions="{item}">
+      <template #item.actions="{ item }">
         <v-menu v-if="smAndDown">
-          <template #activator="{props}">
+          <template #activator="{ props }">
             <v-btn
               icon="$dots-vertical"
               variant="text"
@@ -111,14 +111,6 @@
           ></v-btn>
         </div>
       </template>
-      <!-- <template #item.status="{item}">
-        <v-chip
-          :color="getStatusColor(item.status)"
-          class="text-uppercase text-caption"
-        >
-          {{ item.status }}
-        </v-chip>
-      </template> -->
     </v-data-table>
     <v-dialog
       :model-value="Boolean(targetReleaseToEdit)"
@@ -175,27 +167,23 @@
   </v-snackbar>
 </template>
 <script setup lang="ts">
-import {computed, ref, type Ref} from 'vue';
-import {useDisplay} from 'vuetify';
+import { ref } from 'vue';
+import { useDisplay } from 'vuetify';
 import ReleaseForm from '/@/components/releases/releaseForm.vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import {useStaticData} from '../../composables/staticData';
-import { useStaticStatus } from '/@/composables/staticStatus';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
 import type { ReleaseItem } from '/@/types';
 import {
   parseUrlOrCid,
   // getStatusColor,
- } from '/@/utils';
+} from '/@/utils';
 import type { AnyObject } from '@riffcc/lens-sdk';
 import { useDeleteReleaseMutation, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
 
 
-const {staticStatus} = useStaticStatus();
-const {lgAndUp, smAndDown} = useDisplay();
+const { lgAndUp, smAndDown } = useDisplay();
 
-const {staticReleases} = useStaticData();
 const { data: releases, isLoading } = useGetReleasesQuery();
 const deleteReleaseMutation = useDeleteReleaseMutation({
   onSuccess: () => {
@@ -220,30 +208,22 @@ type Header = {
   key: string;
 };
 const smTableHeaders: Header[] = [
-  {title: 'ID', align: 'start', key: 'id'},
-  {title: 'Name', align: 'start', key: 'name'},
-  {title: 'Actions', key: 'actions', sortable: false},
+  { title: 'ID', align: 'start', key: 'id' },
+  { title: 'Name', align: 'start', key: 'name' },
+  { title: 'Actions', key: 'actions', sortable: false },
 ];
 const tableHeaders: Header[] = [
-  {title: 'ID', align: 'start', key: 'id'},
+  { title: 'ID', align: 'start', key: 'id' },
   {
     title: 'Thumbnail',
     align: 'start',
     key: 'thumbnail',
   },
-  {title: 'Name', align: 'start', key: 'name'},
-  {title: 'Category', align: 'start', key: 'category'},
-  {title: 'Content CID', align: 'start', key: 'contentCID'},
-  {title: 'Actions', key: 'actions', sortable: false},
+  { title: 'Name', align: 'start', key: 'name' },
+  { title: 'Category', align: 'start', key: 'category' },
+  { title: 'Content CID', align: 'start', key: 'contentCID' },
+  { title: 'Actions', key: 'actions', sortable: false },
 ];
-
-const tableItems = computed(() => {
-  if (staticStatus.value) {
-    return staticReleases.value;
-  } else {
-    return releases.value;
-  }
-});
 
 const targetReleaseToEdit = ref<ReleaseItem<AnyObject> | null>(null);
 const targetReleaseToDelete = ref<ReleaseItem<AnyObject> | null>(null);

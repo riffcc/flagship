@@ -3,12 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import type { HashResponse, IdResponse, AnyObject, LensService, ReleaseData, SearchOptions, IdData, FeaturedReleaseData } from '@riffcc/lens-sdk';
 import {
   AccountType,
-  ID_PROPERTY,
   RELEASE_METADATA_PROPERTY,
 } from '@riffcc/lens-sdk';
 import type { FeaturedReleaseItem, ReleaseItem } from '/@/types';
 import { useStaticData } from '../../composables/staticData';
-import { useStaticStatus } from '/@/composables/staticStatus';
 
 export function useLensService() {
   const lensService = inject<LensService>('lensService');
@@ -53,23 +51,17 @@ export function useAccountStatusQuery() {
 }
 
 export function useGetReleaseQuery(props: IdData) {
-  const { staticStatus } = useStaticStatus();
-  const { staticReleases } = useStaticData();
   const { lensService } = useLensService();
   return useQuery<ReleaseItem<AnyObject> | undefined>({
     queryKey: ['release', props.id],
     queryFn: async () => {
-      if (staticStatus.value) {
-        return staticReleases.value.find(x => x.id === props.id);
-      } else {
-        const r = await lensService.getRelease(props);
-        const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
-        return r ?
-          {
-            ...r,
-            [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
-          } : undefined;
-      }
+      const r = await lensService.getRelease(props);
+      const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
+      return r ?
+        {
+          ...r,
+          [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
+        } : undefined;
     },
   });
 }
@@ -115,16 +107,10 @@ export function useGetReleasesQuery(options?: {
 
 export function useGetFeaturedReleaseQuery(props: IdData) {
   const { lensService } = useLensService();
-  const { staticStatus } = useStaticStatus();
-  const { staticFeaturedReleases } = useStaticData();
   return useQuery<FeaturedReleaseItem | undefined>({
     queryKey: ['featuredRelease', props.id],
     queryFn: async () => {
-      if (staticStatus.value) {
-        return staticFeaturedReleases.value.find(sfr => sfr.id === props.id);
-      } else {
-        return await lensService.getFeaturedRelease(props);
-      }
+      return await lensService.getFeaturedRelease(props);
     },
   });
 }
@@ -182,31 +168,15 @@ export function useAddReleaseMutation(options?: {
   onSuccess?: (response: HashResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { staticStatus } = useStaticStatus();
-  const { staticReleases } = useStaticData();
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: ReleaseData<AnyObject>) => {
-      if (staticStatus.value) {
-        const srId = String(staticReleases.value.length + 1);
-        const srParsed = {
-          ...data,
-          [ID_PROPERTY]: srId,
-        };
-        staticReleases.value.push(srParsed);
-        return {
-          success: true,
-          id: srId,
-          hash: 'test-hash',
-        };
-      } else {
-        const rMetadata = data[RELEASE_METADATA_PROPERTY];
-        return await lensService.addRelease({
-          ...data,
-          [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.stringify(rMetadata) : undefined,
-        });
-      }
+      const rMetadata = data[RELEASE_METADATA_PROPERTY];
+      return await lensService.addRelease({
+        ...data,
+        [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.stringify(rMetadata) : undefined,
+      });
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
@@ -222,27 +192,15 @@ export function useEditReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { staticStatus } = useStaticStatus();
-  const { staticReleases } = useStaticData();
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: IdData & ReleaseData<AnyObject>) => {
-      if (staticStatus.value) {
-        staticReleases.value = staticReleases.value.filter(sr => sr.id !== data.id);
-        staticReleases.value.push(data);
-        return {
-          success: true,
-          id: data.id,
-          hash: 'test-hash',
-        };
-      } else {
-        const rMetadata = data[RELEASE_METADATA_PROPERTY];
-        return await lensService.editRelease({
-          ...data,
-          [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.stringify(rMetadata) : undefined,
-        });
-      }
+      const rMetadata = data[RELEASE_METADATA_PROPERTY];
+      return await lensService.editRelease({
+        ...data,
+        [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.stringify(rMetadata) : undefined,
+      });
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
@@ -259,22 +217,11 @@ export function useDeleteReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { staticStatus } = useStaticStatus();
-  const { staticReleases } = useStaticData();
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: IdData) => {
-      if (staticStatus.value) {
-        staticReleases.value = staticReleases.value.filter(sr => sr.id !== data.id);
-        return {
-          success: true,
-          id: data.id,
-          hash: 'test-hash',
-        };
-      } else {
-        return await lensService.deleteRelease(data);
-      }
+      return await lensService.deleteRelease(data);
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
@@ -291,27 +238,11 @@ export function useAddFeaturedReleaseMutation(options?: {
   onSuccess?: (response: HashResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { staticStatus } = useStaticStatus();
-  const { staticFeaturedReleases } = useStaticData();
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: FeaturedReleaseData) => {
-      if (staticStatus.value) {
-        const srId = String(staticFeaturedReleases.value.length + 1);
-        const srParsed = {
-          ...data,
-          [ID_PROPERTY]: srId,
-        };
-        staticFeaturedReleases.value.push(srParsed);
-        return {
-          success: true,
-          id: srId,
-          hash: 'test-hash',
-        };
-      } else {
-        return await lensService.addFeaturedRelease(data);
-      }
+      return await lensService.addFeaturedRelease(data);
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
@@ -327,23 +258,11 @@ export function useEditFeaturedReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { staticStatus } = useStaticStatus();
-  const { staticFeaturedReleases } = useStaticData();
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: IdData & FeaturedReleaseData) => {
-      if (staticStatus.value) {
-        staticFeaturedReleases.value = staticFeaturedReleases.value.filter(sfr => sfr.id !== data.id);
-        staticFeaturedReleases.value.push(data);
-        return {
-          success: true,
-          id: data.id,
-          hash: 'test-hash',
-        };
-      } else {
-        return await lensService.editFeaturedRelease(data);
-      }
+      return await lensService.editFeaturedRelease(data);
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
@@ -360,22 +279,11 @@ export function useDeleteFeaturedReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { staticStatus } = useStaticStatus();
-  const { staticReleases } = useStaticData();
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: IdData) => {
-      if (staticStatus.value) {
-        staticReleases.value = staticReleases.value.filter(sr => sr.id !== data.id);
-        return {
-          success: true,
-          id: data.id,
-          hash: 'test-hash',
-        };
-      } else {
-        return await lensService.deleteFeaturedRelease(data);
-      }
+      return await lensService.deleteFeaturedRelease(data);
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
