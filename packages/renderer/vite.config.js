@@ -64,7 +64,14 @@ const config = {
         ],
       },
     }),
-    nodePolyfills(),
+    nodePolyfills({
+      include: ['crypto', 'stream', 'vm'],
+      globals: {
+        Buffer: true,
+        global: true,
+        process: true,
+      },
+    }),
     splitVendorChunkPlugin(),
     injectAppVersion(),
   ],
