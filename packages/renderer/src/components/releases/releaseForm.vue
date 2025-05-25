@@ -109,12 +109,12 @@
 <script setup lang="ts">
 import {cid} from 'is-ipfs';
 import {computed, onMounted, ref, watch} from 'vue';
-import type { ReleaseItem, PartialReleaseItem } from '/@/types';
+import type { ReleaseItem } from '/@/types';
 import type { ContentCategoryMetadata, ReleaseData, AnyObject } from '@riffcc/lens-sdk';
 import { useAddReleaseMutation, useEditReleaseMutation, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 
 const props = defineProps<{
-  initialData?: PartialReleaseItem<AnyObject>;
+  initialData?: ReleaseItem<AnyObject>;
   mode?: 'create' | 'edit';
 }>();
 
