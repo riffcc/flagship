@@ -42,7 +42,12 @@ import videoPlayer from '/@/components/releases/videoPlayer.vue';
 import { useAudioAlbum } from '/@/composables/audioAlbum';
 import { useFloatingVideo } from '/@/composables/floatingVideo';
 import { useShowDefederation } from '/@/composables/showDefed';
-import { useAccountStatusQuery, useLensService, useGetFeaturedReleasesQuery, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
+import {
+  useAccountStatusQuery,
+  useLensService,
+  // useGetFeaturedReleasesQuery,
+  // useGetReleasesQuery,
+} from '/@/plugins/lensService/hooks';
 import {
   AccountType,
   type SiteArgs,
@@ -115,19 +120,11 @@ onMounted(async () => {
       const result = await Promise.allSettled(promises);
       console.log(result);
     }
-    
-    // Set loading to false before openSite so UI shows immediately
-    initLoading.value = false;
-    
+
     // Open site in background without blocking UI
-    lensService.openSite(siteAddress, customMemberSiteArgs).catch(error => {
-      console.warn('Site opening failed:', error);
-    });
-    
-    // Prefetch featured content immediately for faster loading
-    setTimeout(() => {
-      console.log('Starting content prefetch...');
-    }, 100); // Small delay to let UI render first
+    await lensService.openSite(siteAddress, customMemberSiteArgs);
+    initLoading.value = false;
+
   } catch (error) {
     if (error instanceof Error) {
       if (error.cause === 'MISSING_CONFIG') {
@@ -142,20 +139,21 @@ onMounted(async () => {
   }
 });
 
+
+// // Prefetch critical data immediately for faster homepage loading
+// const prefetchData = () => {
+//   // Start featured releases query immediately (will use static fallback if PeerBit fails)
+//   useGetFeaturedReleasesQuery({ staleTime: 1000 * 30 });
+//   // Start releases query immediately
+//   useGetReleasesQuery({ staleTime: 1000 * 30 });
+// };
+
+// // Start prefetching as soon as the component mounts
+// onMounted(() => {
+//   setTimeout(prefetchData, 2000); // Small delay to ensure lens service is ready
+// });
+
 const { data: accountStatus } = useAccountStatusQuery();
-
-// Prefetch critical data immediately for faster homepage loading
-const prefetchData = () => {
-  // Start featured releases query immediately (will use static fallback if PeerBit fails)
-  useGetFeaturedReleasesQuery({ staleTime: 1000 * 30 });
-  // Start releases query immediately
-  useGetReleasesQuery({ staleTime: 1000 * 30 });
-};
-
-// Start prefetching as soon as the component mounts
-onMounted(() => {
-  setTimeout(prefetchData, 200); // Small delay to ensure lens service is ready
-});
 
 watch(accountStatus, async (newValue, oldValue) => {
   if (!siteAddress) return;
