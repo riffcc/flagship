@@ -93,28 +93,28 @@ watchEffect(() => {
 const initLoading = ref(true);
 const initError = ref<string | null>();
 const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
-// Start with NO replication - just query the network as needed
+// Use partial replication for guests - balance speed vs data availability
 const customMemberSiteArgs: SiteArgs = {
   membersArg: {
-    replicate: { factor: 0 }, // Query-only for permission checks
+    replicate: true,
   },
   administratorsArgs: {
-    replicate: { factor: 0 }, // Query-only for permission checks  
+    replicate: true,
   },
   releasesArgs: {
-    replicate: { factor: 0 }, // Live query for content
+    replicate: true,
   },
   featuredReleasesArgs: {
-    replicate: { factor: 0 }, // Live query for featured
+    replicate: true,
   },
   contentCategoriesArgs: {
-    replicate: { factor: 0 }, // Live query for categories
+    replicate: true,
   },
   subscriptionsArgs: {
-    replicate: { factor: 0 }, // No replication needed
+    replicate: true,
   },
   blockedContentArgs: {
-    replicate: { factor: 0 }, // No replication needed
+    replicate: true,
   },
 };
 
