@@ -82,7 +82,7 @@
   },
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
-    "@riffcc/lens-sdk": "file:./lens-sdk",
+    "@riffcc/lens-sdk": "^0.1.18",
     "@tanstack/vue-query": "^5.77.0",
     "@vueuse/core": "^12.8.2",
     "core-js": "^3.42.0",
