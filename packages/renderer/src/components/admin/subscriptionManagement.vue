@@ -106,8 +106,8 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, onMounted} from 'vue';
-import { useLensService } from '/@/plugins/lensService';
+import {computed, ref} from 'vue';
+// import { useLensService } from '/@/plugins/lensService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { SUBSCRIPTION_SITE_ID_PROPERTY, SUBSCRIPTION_NAME_PROPERTY } from '@riffcc/lens-sdk';
 import { useSiteColors } from '/@/composables/siteColors';
@@ -115,7 +115,7 @@ import { useShowDefederation } from '/@/composables/showDefed';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 
 const formRef = ref();
-const lensService = useLensService();
+// const lensService = useLensService();
 const queryClient = useQueryClient();
 const { openSnackbar } = useSnackbarMessage();
 
@@ -131,17 +131,28 @@ const rules = {
 // Query subscriptions
 const { data: subscriptions, isLoading } = useQuery({
   queryKey: ['subscriptions'],
-  queryFn: () => lensService.getSubscriptions(),
+  queryFn: async () => {
+    // TODO: Implement getSubscriptions in SDK
+    console.warn('getSubscriptions not yet implemented in SDK');
+    // Return typed empty array to avoid TypeScript issues
+    type SubscriptionItem = {
+      id: string;
+      value: {
+        [SUBSCRIPTION_SITE_ID_PROPERTY]: string;
+        [SUBSCRIPTION_NAME_PROPERTY]?: string;
+      }
+    };
+    return [] as SubscriptionItem[];
+  },
   staleTime: 30000,
 });
 
 // Add subscription mutation
 const addSubscriptionMutation = useMutation({
-  mutationFn: async ({ siteId, name }: { siteId: string; name: string }) => {
-    return lensService.addSubscription({
-      [SUBSCRIPTION_SITE_ID_PROPERTY]: siteId,
-      [SUBSCRIPTION_NAME_PROPERTY]: name,
-    });
+  mutationFn: async ({ siteId: _siteId, name: _name }: { siteId: string; name: string }) => {
+    // TODO: Implement addSubscription in SDK
+    console.warn('addSubscription not yet implemented in SDK');
+    return { success: false, error: 'addSubscription not yet implemented' };
   },
   onSuccess: (result) => {
     if (result.success) {
@@ -159,13 +170,17 @@ const addSubscriptionMutation = useMutation({
 
 // Delete subscription mutation
 const deleteSubscriptionMutation = useMutation({
-  mutationFn: (id: string) => lensService.deleteSubscription({ id }),
-  onSuccess: (result) => {
-    if (result.success) {
+  mutationFn: async (id: string) => {
+    // TODO: Implement deleteSubscription in SDK
+    console.warn('deleteSubscription not yet implemented in SDK', id);
+    return { success: false, error: 'deleteSubscription not yet implemented' };
+  },
+  onSuccess: (result: { success?: boolean; error?: string }) => {
+    if (result && result.success) {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
       openSnackbar('Subscription removed', 'success');
     } else {
-      openSnackbar(result.error || 'Failed to remove subscription', 'error');
+      openSnackbar((result && result.error) || 'Failed to remove subscription', 'error');
     }
   },
 });

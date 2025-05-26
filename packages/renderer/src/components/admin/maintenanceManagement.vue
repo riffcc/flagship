@@ -9,8 +9,8 @@
         <v-btn
           color="primary"
           prepend-icon="$download"
-          @click="exportAll"
           :loading="isExporting"
+          @click="exportAll"
         >
           Export All
         </v-btn>
@@ -48,9 +48,9 @@
         <v-btn
           color="primary"
           prepend-icon="$upload"
-          @click="importAll"
           :disabled="!importFile"
           :loading="isImporting"
+          @click="importAll"
         >
           Import
         </v-btn>
@@ -115,7 +115,7 @@
 import { ref } from 'vue';
 import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useDeleteFeaturedReleaseMutation } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
-import type { ReleaseItem, FeaturedReleaseItem } from '/@/types';
+import type { ReleaseItem } from '/@/types';
 import type { AnyObject } from '@riffcc/lens-sdk';
 
 const isExporting = ref(false);
@@ -156,13 +156,13 @@ const deleteFeaturedReleaseMutation = useDeleteFeaturedReleaseMutation({
 });
 
 // Helper to clean data for export (remove __context and handle BigInts)
-const cleanForExport = (obj: any): any => {
+const cleanForExport = (obj: unknown): unknown => {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj === 'bigint') return obj.toString();
   if (obj instanceof Date) return obj.toISOString();
   if (Array.isArray(obj)) return obj.map(cleanForExport);
-  if (typeof obj === 'object') {
-    const cleaned: any = {};
+  if (typeof obj === 'object' && obj !== null) {
+    const cleaned: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       // Skip __context as it contains BigInts and isn't needed for import
       if (key === '__context') continue;
@@ -178,11 +178,14 @@ const exportAll = async () => {
   isExporting.value = true;
   
   try {
+    const cleanedReleases = cleanForExport(releases.value || []) as unknown[];
+    const cleanedFeaturedReleases = cleanForExport(featuredReleases.value || []) as unknown[];
+    
     const exportData = {
       version: '1.0',
       exportDate: new Date().toISOString(),
-      releases: cleanForExport(releases.value || []),
-      featuredReleases: cleanForExport(featuredReleases.value || []),
+      releases: cleanedReleases,
+      featuredReleases: cleanedFeaturedReleases,
     };
     
     const jsonStr = JSON.stringify(exportData, null, 2);
@@ -197,9 +200,9 @@ const exportAll = async () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    openSnackbar(`Exported ${exportData.releases.length} releases and ${exportData.featuredReleases.length} featured releases`, 'success');
+    openSnackbar(`Exported ${cleanedReleases.length} releases and ${cleanedFeaturedReleases.length} featured releases`, 'success');
   } catch (error) {
-    openSnackbar('Export failed: ' + error.message, 'error');
+    openSnackbar('Export failed: ' + (error instanceof Error ? error.message : String(error)), 'error');
   } finally {
     isExporting.value = false;
   }
@@ -265,9 +268,9 @@ const deleteAllData = async () => {
     // Wait a bit for queries to update
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    openSnackbar(`Deleted ${releasesDeleted} releases and ${featuredDeleted} featured releases`, 'info');
+    openSnackbar(`Deleted ${releasesDeleted} releases and ${featuredDeleted} featured releases`, 'success');
   } catch (error) {
-    openSnackbar('Failed to delete existing data: ' + error.message, 'error');
+    openSnackbar('Failed to delete existing data: ' + (error instanceof Error ? error.message : String(error)), 'error');
     throw error;
   }
 };
@@ -306,10 +309,7 @@ const performImport = async () => {
           const existing = releases.value?.find(r => r.id === release.id);
           if (existing) {
             // Update existing
-            await editReleaseMutation.mutateAsync({
-              id: release.id,
-              ...releaseData
-            });
+            await editReleaseMutation.mutateAsync(releaseData);
             releasesImported++;
           } else {
             // Add new
@@ -343,7 +343,7 @@ const performImport = async () => {
             // Update existing
             await editFeaturedReleaseMutation.mutateAsync({
               id: featured.id,
-              ...featuredData
+              ...featuredData,
             });
             featuredImported++;
           } else {
@@ -364,7 +364,7 @@ const performImport = async () => {
     openSnackbar(`Import complete: ${releasesImported} releases and ${featuredImported} featured releases imported`, 'success');
     importFile.value = null;
   } catch (error) {
-    openSnackbar('Import failed: ' + error.message, 'error');
+    openSnackbar('Import failed: ' + (error instanceof Error ? error.message : String(error)), 'error');
   } finally {
     isImporting.value = false;
   }

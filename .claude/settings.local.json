@@ -11,7 +11,8 @@
       "Bash(rm:*)",
       "Bash(find:*)",
       "Bash(ls:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(pnpm run lint:*)"
     ],
     "deny": []
   }

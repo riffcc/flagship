@@ -1,4 +1,6 @@
-import type { FeaturedReleaseData, IdData, ReleaseData } from '@riffcc/lens-sdk';
+import type { FeaturedReleaseData, IdData, ReleaseData, AnyObject } from '@riffcc/lens-sdk';
+
+export type { AnyObject };
 
 export type ReleaseItem<T = string> = IdData & ReleaseData<T>;
 

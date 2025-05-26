@@ -1,6 +1,8 @@
 import { type App } from 'vue';
 import { LensService, ElectronLensService, type ILensService } from '@riffcc/lens-sdk';
 
+export * from './hooks';
+
 export default {
   install: (app: App) => {
     let lensServiceInstance: ILensService | undefined = undefined;
