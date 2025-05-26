@@ -5,6 +5,7 @@
       :headers="smAndDown ? smTableHeaders : tableHeaders"
       :items="releases"
       :loading="isLoading"
+      :items-per-page="20"
       hide-default-header
     >
       <template #item.thumbnail="{ item }">

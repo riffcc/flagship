@@ -37,7 +37,7 @@
           :title="item.displayName"
           active-class="text-primary-lighten-1"
           :active="route.path === item.id"
-          @click="router.push(`/featured/${item.id}`)"
+          @click="router.push(`/${item.id}`)"
         ></v-list-item>
         <template v-if="userData">
           <v-divider class="my-1"></v-divider>
@@ -87,7 +87,7 @@
       <router-link
         v-for="item in featuredContentCategories"
         :key="item.id"
-        :to="`/featured/${item.id}`"
+        :to="`/${item.id}`"
         class="text-decoration-none mx-2 text-subtitle-1 text-white"
         active-class="text-primary-lighten-1"
       >

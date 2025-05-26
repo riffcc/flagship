@@ -47,6 +47,12 @@
         >
           Categories
         </v-tab>
+        <v-tab
+          slider-color="primary"
+          value="maintenance"
+        >
+          Maintenance
+        </v-tab>
       </v-tabs>
       <v-window
         v-model="tab"
@@ -85,6 +91,11 @@
         >
           <categories-management></categories-management>
         </v-window-item>
+        <v-window-item
+          value="maintenance"
+        >
+          <maintenance-management></maintenance-management>
+        </v-window-item>
       </v-window>
     </div>
   </v-container>
@@ -99,6 +110,7 @@ import featuredManagement from '/@/components/admin/featuredManagement.vue';
 import subscriptionManagement from '/@/components/admin/subscriptionManagement.vue';
 import siteManagement from '/@/components/admin/siteManagement.vue';
 import categoriesManagement from '/@/components/admin/categoriesManagement.vue';
+import maintenanceManagement from '/@/components/admin/maintenanceManagement.vue';
 import type { PartialFeaturedReleaseItem } from '/@//types';
 
 const {lgAndUp} = useDisplay();

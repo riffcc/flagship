@@ -1,66 +1,104 @@
 <template>
-  <v-container class="fill-height pb-16">
-    <v-sheet
-      v-if="isLoading"
-      color="transparent"
-      class="d-flex w-100 fill-height align-center justify-center"
-    >
-      <v-progress-circular
-        indeterminate
-        color="primary"
-      ></v-progress-circular>
-    </v-sheet>
-    <template v-else-if="(filteredReleases?.length ?? 0) > 0">
-      <content-section :title="pageCategory?.displayName ?? ''">
-        <v-col
-          v-for="item in filteredReleases"
-          :key="item.id"
-        >
-          <content-card
-            :item="item"
-            cursor-pointer
-            :source-site="(item.metadata?.['sourceSite'] as string | undefined)"
-            @click="router.push(`/release/${item.id}`)"
-          />
-        </v-col>
-      </content-section>
+  <v-container fluid class="fill-height pb-16 px-3">
+    
+    <template v-if="props.showAll">
+      <!-- Show all releases with infinite scroll -->
+      <p class="text-h6 text-sm-h5 font-weight-bold mb-4">{{ pageTitle }}</p>
+      <infinite-release-list
+        :category-filter="props.category"
+        @release-click="(release) => router.push(`/release/${release.id}`)"
+      />
     </template>
-    <v-sheet
-      v-else
-      color="transparent"
-      class="d-flex flex-column mx-auto"
-      max-width="16rem"
-    >
-      <p class="text-white text-center mb-2">No content found in this category.</p>
-    </v-sheet>
+    
+    <template v-else>
+      <!-- Show only featured releases -->
+      <v-sheet
+        v-if="isLoading"
+        color="transparent"
+        class="d-flex w-100 fill-height align-center justify-center"
+      >
+        <v-progress-circular
+          indeterminate
+          color="primary"
+        ></v-progress-circular>
+      </v-sheet>
+      
+      <template v-else-if="featuredReleasesInCategory.length > 0">
+        <content-section :title="pageTitle">
+          <v-col
+            v-for="item in featuredReleasesInCategory"
+            :key="item.id"
+          >
+            <content-card
+              :item="item"
+              cursor-pointer
+              :source-site="(item.metadata?.['sourceSite'] as string | undefined)"
+              @click="router.push(`/release/${item.id}`)"
+            />
+          </v-col>
+        </content-section>
+      </template>
+      
+      <v-sheet
+        v-else
+        color="transparent"
+        class="d-flex flex-column mx-auto"
+        max-width="16rem"
+      >
+        <p class="text-white text-center mb-2">No featured content in this category yet.</p>
+      </v-sheet>
+    </template>
   </v-container>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import contentSection from '/@/components/home/contentSection.vue';
-import contentCard from '/@/components/misc/contentCard.vue';
-import { useContentCategoriesQuery, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
+import ContentSection from '/@/components/home/contentSection.vue';
+import ContentCard from '/@/components/misc/contentCard.vue';
+import InfiniteReleaseList from '/@/components/misc/infiniteReleaseList.vue';
+import { useContentCategoriesQuery, useGetReleasesQuery, useGetFeaturedReleasesQuery } from '/@/plugins/lensService/hooks';
+import { filterActivedFeatured } from '/@/utils';
+import type { ReleaseItem, AnyObject } from '/@/types';
 
 const props = defineProps<{
   category: string
+  showAll?: boolean
 }>();
 const router = useRouter();
-const { data: releases, isLoading } = useGetReleasesQuery();
 
 const { data: contentCategories } = useContentCategoriesQuery();
+const { data: releases, isLoading: isReleasesLoading } = useGetReleasesQuery();
+const { data: featuredReleases, isLoading: isFeaturedLoading } = useGetFeaturedReleasesQuery();
 
-const filteredReleases = computed(() => {
-  return releases.value?.filter((release) => {
-    return release.categoryId === props.category;
-  });
-});
+const isLoading = computed(() => isReleasesLoading.value || isFeaturedLoading.value);
 
 const pageCategory = computed(() => {
   const categoryId = props.category;
   const category = contentCategories.value?.find((cat) => cat.id === categoryId);
   return category;
+});
+
+const pageTitle = computed(() => {
+  const displayName = pageCategory.value?.displayName ?? props.category;
+  return props.showAll ? displayName : `Featured ${displayName}`;
+});
+
+// Get featured releases that are active and in this category
+const featuredReleasesInCategory = computed<ReleaseItem<AnyObject>[]>(() => {
+  if (!releases.value || !featuredReleases.value) return [];
+  
+  // Get active featured release IDs
+  const activeFeaturedReleaseIds = featuredReleases.value
+    .filter(filterActivedFeatured)
+    .map(fr => fr.releaseId);
+  
+  // Filter releases that are both featured and in this category
+  return releases.value.filter(r => 
+    r.id && 
+    activeFeaturedReleaseIds.includes(r.id) && 
+    r.categoryId === props.category
+  );
 });
 
 </script>

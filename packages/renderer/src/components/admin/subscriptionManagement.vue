@@ -49,12 +49,12 @@
           min-height="256px"
         >
           <h6 class="text-h6 font-weight-bold mb-4">Subscriptions</h6>
-          <!-- <v-list v-if="trustedSites && trustedSites?.length > 0">
+          <v-list v-if="subscriptions && subscriptions.length > 0">
             <v-list-item
-              v-for="s in trustedSites"
+              v-for="s in subscriptions"
               :key="s.id"
-              :title="`${s.données.siteId.slice(0,17)}...${s.données.siteId.slice(-10)}`"
-              :subtitle="s.données.siteName"
+              :title="`${s.value[SUBSCRIPTION_SITE_ID_PROPERTY].slice(0,17)}...${s.value[SUBSCRIPTION_SITE_ID_PROPERTY].slice(-10)}`"
+              :subtitle="s.value[SUBSCRIPTION_NAME_PROPERTY] || 'Unnamed subscription'"
             >
               <template
                 v-if="showDefederation"
@@ -69,12 +69,12 @@
                       density="compact"
                       size="x-small"
                       class="mr-2"
-                      :color="getSiteColor(s.données.siteId)"
+                      :color="getSiteColor(s.value[SUBSCRIPTION_SITE_ID_PROPERTY])"
                     />
                   </template>
                   <v-color-picker
-                    v-model="selectedColors[s.données.siteId]"
-                    @update:model-value="saveColor(s.données.siteId, $event)"
+                    v-model="selectedColors[s.value[SUBSCRIPTION_SITE_ID_PROPERTY]]"
+                    @update:model-value="saveColor(s.value[SUBSCRIPTION_SITE_ID_PROPERTY], $event)"
                   />
                 </v-menu>
               </template>
@@ -87,12 +87,18 @@
                 ></v-btn>
               </template>
             </v-list-item>
-          </v-list> -->
+          </v-list>
           <div
+            v-else-if="!isLoading"
             class="d-flex h-75"
           >
             <span class="ma-auto text-body-2 text-medium-emphasis">No Subscriptions found.</span>
           </div>
+          <v-progress-linear
+            v-else
+            indeterminate
+            color="primary"
+          />
         </v-sheet>
       </v-col>
     </v-row>
@@ -100,11 +106,18 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref} from 'vue';
-// import { useSiteColors } from '/@/composables/siteColors';
-// import { useShowDefederation } from '/@/composables/showDefed';
+import {computed, ref, onMounted} from 'vue';
+import { useLensService } from '/@/plugins/lensService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import { SUBSCRIPTION_SITE_ID_PROPERTY, SUBSCRIPTION_NAME_PROPERTY } from '@riffcc/lens-sdk';
+import { useSiteColors } from '/@/composables/siteColors';
+import { useShowDefederation } from '/@/composables/showDefed';
+import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 
 const formRef = ref();
+const lensService = useLensService();
+const queryClient = useQueryClient();
+const { openSnackbar } = useSnackbarMessage();
 
 const trustedSiteId = ref<string>();
 const trustedSiteName = ref<string>();
@@ -115,8 +128,50 @@ const rules = {
     /^[1-9A-HJ-NP-Za-km-z]+$/.test(v) || 'Please enter a valid site address (e.g., `zb2rhdS7GgY88eLJe1WptwXa9Zmibh1xTc5WCkSCox2sTDwuX`).',
 };
 
+// Query subscriptions
+const { data: subscriptions, isLoading } = useQuery({
+  queryKey: ['subscriptions'],
+  queryFn: () => lensService.getSubscriptions(),
+  staleTime: 30000,
+});
+
+// Add subscription mutation
+const addSubscriptionMutation = useMutation({
+  mutationFn: async ({ siteId, name }: { siteId: string; name: string }) => {
+    return lensService.addSubscription({
+      [SUBSCRIPTION_SITE_ID_PROPERTY]: siteId,
+      [SUBSCRIPTION_NAME_PROPERTY]: name,
+    });
+  },
+  onSuccess: (result) => {
+    if (result.success) {
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      openSnackbar('Subscription added successfully', 'success');
+      clearForm();
+    } else {
+      openSnackbar(result.error || 'Failed to add subscription', 'error');
+    }
+  },
+  onError: (error) => {
+    openSnackbar(`Error: ${error.message}`, 'error');
+  },
+});
+
+// Delete subscription mutation
+const deleteSubscriptionMutation = useMutation({
+  mutationFn: (id: string) => lensService.deleteSubscription({ id }),
+  onSuccess: (result) => {
+    if (result.success) {
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      openSnackbar('Subscription removed', 'success');
+    } else {
+      openSnackbar(result.error || 'Failed to remove subscription', 'error');
+    }
+  },
+});
+
 const readyToSave = computed(() => {
-  if (trustedSiteId.value && trustedSiteName.value && formRef.value.isValid) {
+  if (trustedSiteId.value && trustedSiteName.value && formRef.value?.isValid) {
     return {
       trustedSiteIdValue: trustedSiteId.value,
       trustedSiteNameValue: trustedSiteName.value,
@@ -124,18 +179,16 @@ const readyToSave = computed(() => {
   } else return undefined;
 });
 
-const loading = ref(false);
+const loading = computed(() => addSubscriptionMutation.isPending.value);
+
 const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
-  // const {trustedSiteIdValue, trustedSiteNameValue} = readyToSave.value;
-  loading.value = true;
-
-  // await orbiter.trustSite({
-  //   siteId: trustedSiteIdValue,
-  //   siteName: trustedSiteNameValue,
-  // });
-  clearForm();
-  loading.value = false;
+  const {trustedSiteIdValue, trustedSiteNameValue} = readyToSave.value;
+  
+  await addSubscriptionMutation.mutateAsync({
+    siteId: trustedSiteIdValue,
+    name: trustedSiteNameValue,
+  });
 };
 
 const clearForm = () => {
@@ -143,23 +196,10 @@ const clearForm = () => {
   trustedSiteName.value = undefined;
 };
 
-// const trustedSites = ref<orbiterTypes.TrustedSiteWithId[]>([]);
+const untrustSite = ({siteId}: {siteId: string}) => {
+  deleteSubscriptionMutation.mutate(siteId);
+};
 
-// if (orbiter && orbiter.followTrustedSites) {
-//   const unsubscribe = orbiter.followTrustedSites({
-//     f: (sites: orbiterTypes.TrustedSiteWithId[]) => {
-//       trustedSites.value = sites;
-//     },
-//   });
-//   if (typeof unsubscribe === 'function') {
-//     onScopeDispose(unsubscribe);
-//   }
-// }
-
-// const untrustSite = async ({siteId}: {siteId: string}) => {
-//   await orbiter.untrustSite({siteId});
-// };
-
-// const {getSiteColor, saveColor, selectedColors} = useSiteColors();
-// const {showDefederation} = useShowDefederation();
+const {getSiteColor, saveColor, selectedColors} = useSiteColors();
+const { showDefederation } = useShowDefederation();
 </script>

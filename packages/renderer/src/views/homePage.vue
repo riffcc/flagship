@@ -182,7 +182,7 @@ const activeSections = computed<{
         id: fc.id,
         title: categoryId === 'tvShow' ? fc.displayName : `Featured ${fc.displayName}`,
         items: items,
-        navigationPath: `/featured/${categoryId}`, // Generic path, adjust if specific paths needed
+        navigationPath: `/featured/${categoryId}`,
       };
     })
     .filter(section => section.items.length > 0);

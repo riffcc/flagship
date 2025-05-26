@@ -25,7 +25,7 @@
       @click="onNavigate"
     ></v-btn>
   </div>
-  <v-row>
+  <v-row dense>
     <slot></slot>
   </v-row>
 </template>

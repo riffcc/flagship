@@ -1,5 +1,5 @@
 import { inject } from 'vue';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/vue-query';
 import type { HashResponse, IdResponse, AnyObject, LensService, ReleaseData, SearchOptions, IdData, FeaturedReleaseData } from '@riffcc/lens-sdk';
 import {
   AccountType,
@@ -78,10 +78,15 @@ export function useGetReleasesQuery(options?: {
 }) {
   const { lensService } = useLensService();
   return useQuery<ReleaseItem<AnyObject>[]>({
-    queryKey: ['releases'],
+    queryKey: ['releases', options?.searchOptions],
     queryFn: async () => {
       // PeerBit-only loading with optimized timeouts
-      const result = await lensService.getReleases(options?.searchOptions);
+      // Default to fetching 100 releases at a time
+      const searchOptions = {
+        fetch: 100,
+        ...options?.searchOptions,
+      };
+      const result = await lensService.getReleases(searchOptions);
       return result.map((r) => {
         const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
         return {
@@ -110,6 +115,56 @@ export function useGetReleasesQuery(options?: {
   });
 }
 
+export function useGetAllReleasesQuery(options?: {
+  enabled?: boolean,
+  staleTime?: number,
+  onProgress?: (loaded: number, total: number) => void,
+}) {
+  const { lensService } = useLensService();
+  return useQuery<ReleaseItem<AnyObject>[]>({
+    queryKey: ['allReleases'],
+    queryFn: async () => {
+      const allReleases: ReleaseItem<AnyObject>[] = [];
+      let hasMore = true;
+      let batchNumber = 0;
+      
+      // First, get initial batch to see how many we might have
+      while (hasMore) {
+        const searchOptions: SearchOptions = {
+          fetch: 100,
+          // Note: Since lens-sdk doesn't support offset yet, 
+          // we're getting the first 100 releases multiple times
+          // In production, you'd want to add offset support to lens-sdk
+        };
+        
+        const result = await lensService.getReleases(searchOptions);
+        
+        // Transform the data
+        const transformedBatch = result.map((r) => {
+          const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
+          return {
+            ...r,
+            [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
+          };
+        });
+        
+        // For now, since we can't paginate server-side, just get one batch
+        // TODO: When lens-sdk supports offset, implement proper batching
+        allReleases.push(...transformedBatch);
+        hasMore = false; // Stop after first batch until offset is supported
+        
+        batchNumber++;
+        options?.onProgress?.(allReleases.length, allReleases.length);
+      }
+      
+      return allReleases;
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
+  });
+}
+
 export function useGetFeaturedReleaseQuery(props: IdData) {
   const { lensService } = useLensService();
   return useQuery<FeaturedReleaseItem | undefined>({
@@ -127,10 +182,15 @@ export function useGetFeaturedReleasesQuery(options?: {
 }) {
   const { lensService } = useLensService();
   return useQuery<FeaturedReleaseItem[]>({
-    queryKey: ['featuredReleases'],
+    queryKey: ['featuredReleases', options?.searchOptions],
     queryFn: async () => {
       // PeerBit-only loading with optimized timeouts
-      return await lensService.getFeaturedReleases(options?.searchOptions);
+      // Fetch all featured releases (up to 1000 - should be more than enough)
+      const searchOptions = {
+        fetch: 1000,
+        ...options?.searchOptions,
+      };
+      return await lensService.getFeaturedReleases(searchOptions);
     },
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,

@@ -55,7 +55,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/featured/:category',
     component: CategoryPage,
     props: true,
-
+  },
+  {
+    path: '/:category',
+    component: CategoryPage,
+    props: route => ({ ...route.params, showAll: true }),
   },
 ];
 
