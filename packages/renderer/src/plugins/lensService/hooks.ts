@@ -1,6 +1,6 @@
 import { inject } from 'vue';
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/vue-query';
-import type { HashResponse, IdResponse, AnyObject, LensService, ReleaseData, SearchOptions, IdData, FeaturedReleaseData } from '@riffcc/lens-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import type { HashResponse, IdResponse, AnyObject, LensService, ReleaseData, SearchOptions, IdData, FeaturedReleaseData, SubscriptionData } from '@riffcc/lens-sdk';
 import {
   AccountType,
   RELEASE_METADATA_PROPERTY,
@@ -126,7 +126,6 @@ export function useGetAllReleasesQuery(options?: {
     queryFn: async () => {
       const allReleases: ReleaseItem<AnyObject>[] = [];
       let hasMore = true;
-      let batchNumber = 0;
       
       // First, get initial batch to see how many we might have
       while (hasMore) {
@@ -153,7 +152,6 @@ export function useGetAllReleasesQuery(options?: {
         allReleases.push(...transformedBatch);
         hasMore = false; // Stop after first batch until offset is supported
         
-        batchNumber++;
         options?.onProgress?.(allReleases.length, allReleases.length);
       }
       
@@ -354,6 +352,69 @@ export function useDeleteFeaturedReleaseMutation(options?: {
       options?.onSuccess?.(response);
       queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
       queryClient.invalidateQueries({ queryKey: ['featuredReleases', response.id] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+// #### SUBSCRIPTION HOOKS ####
+
+export function useGetSubscriptionsQuery(options?: {
+  enabled?: boolean,
+  staleTime?: number,
+  searchOptions?: SearchOptions,
+}) {
+  const { lensService } = useLensService();
+  return useQuery<SubscriptionData[]>({
+    queryKey: ['subscriptions', options?.searchOptions],
+    queryFn: async () => {
+      const searchOptions = {
+        fetch: 100,
+        ...options?.searchOptions,
+      };
+      return await lensService.getSubscriptions(searchOptions);
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 15, // 15 minutes
+  });
+}
+
+export function useAddSubscriptionMutation(options?: {
+  onSuccess?: (response: HashResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: Omit<SubscriptionData, 'id'>) => {
+      return await lensService.addSubscription(data);
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useDeleteSubscriptionMutation(options?: {
+  onSuccess?: (response: IdResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: IdData) => {
+      return await lensService.deleteSubscription(data);
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
     },
     onError: (error) => {
       options?.onError?.(error);

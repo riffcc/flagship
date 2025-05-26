@@ -53,8 +53,8 @@
             <v-list-item
               v-for="s in subscriptions"
               :key="s.id"
-              :title="`${s.value[SUBSCRIPTION_SITE_ID_PROPERTY].slice(0,17)}...${s.value[SUBSCRIPTION_SITE_ID_PROPERTY].slice(-10)}`"
-              :subtitle="s.value[SUBSCRIPTION_NAME_PROPERTY] || 'Unnamed subscription'"
+              :title="`${s[SUBSCRIPTION_SITE_ID_PROPERTY].slice(0,17)}...${s[SUBSCRIPTION_SITE_ID_PROPERTY].slice(-10)}`"
+              :subtitle="s[SUBSCRIPTION_NAME_PROPERTY] || 'Unnamed subscription'"
             >
               <template
                 v-if="showDefederation"
@@ -69,12 +69,12 @@
                       density="compact"
                       size="x-small"
                       class="mr-2"
-                      :color="getSiteColor(s.value[SUBSCRIPTION_SITE_ID_PROPERTY])"
+                      :color="getSiteColor(s[SUBSCRIPTION_SITE_ID_PROPERTY])"
                     />
                   </template>
                   <v-color-picker
-                    v-model="selectedColors[s.value[SUBSCRIPTION_SITE_ID_PROPERTY]]"
-                    @update:model-value="saveColor(s.value[SUBSCRIPTION_SITE_ID_PROPERTY], $event)"
+                    v-model="selectedColors[s[SUBSCRIPTION_SITE_ID_PROPERTY]]"
+                    @update:model-value="saveColor(s[SUBSCRIPTION_SITE_ID_PROPERTY], $event)"
                   />
                 </v-menu>
               </template>
@@ -107,16 +107,13 @@
 
 <script setup lang="ts">
 import {computed, ref} from 'vue';
-// import { useLensService } from '/@/plugins/lensService';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
-import { SUBSCRIPTION_SITE_ID_PROPERTY, SUBSCRIPTION_NAME_PROPERTY } from '@riffcc/lens-sdk';
+import { useGetSubscriptionsQuery, useAddSubscriptionMutation, useDeleteSubscriptionMutation } from '/@/plugins/lensService';
+import { SUBSCRIPTION_SITE_ID_PROPERTY, SUBSCRIPTION_NAME_PROPERTY, SUBSCRIPTION_RECURSIVE_PROPERTY } from '@riffcc/lens-sdk';
 import { useSiteColors } from '/@/composables/siteColors';
 import { useShowDefederation } from '/@/composables/showDefed';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 
 const formRef = ref();
-// const lensService = useLensService();
-const queryClient = useQueryClient();
 const { openSnackbar } = useSnackbarMessage();
 
 const trustedSiteId = ref<string>();
@@ -128,35 +125,13 @@ const rules = {
     /^[1-9A-HJ-NP-Za-km-z]+$/.test(v) || 'Please enter a valid site address (e.g., `zb2rhdS7GgY88eLJe1WptwXa9Zmibh1xTc5WCkSCox2sTDwuX`).',
 };
 
-// Query subscriptions
-const { data: subscriptions, isLoading } = useQuery({
-  queryKey: ['subscriptions'],
-  queryFn: async () => {
-    // TODO: Implement getSubscriptions in SDK
-    console.warn('getSubscriptions not yet implemented in SDK');
-    // Return typed empty array to avoid TypeScript issues
-    type SubscriptionItem = {
-      id: string;
-      value: {
-        [SUBSCRIPTION_SITE_ID_PROPERTY]: string;
-        [SUBSCRIPTION_NAME_PROPERTY]?: string;
-      }
-    };
-    return [] as SubscriptionItem[];
-  },
-  staleTime: 30000,
-});
+// Query subscriptions using our new hook
+const { data: subscriptions, isLoading } = useGetSubscriptionsQuery();
 
-// Add subscription mutation
-const addSubscriptionMutation = useMutation({
-  mutationFn: async ({ siteId: _siteId, name: _name }: { siteId: string; name: string }) => {
-    // TODO: Implement addSubscription in SDK
-    console.warn('addSubscription not yet implemented in SDK');
-    return { success: false, error: 'addSubscription not yet implemented' };
-  },
+// Add subscription mutation using our new hook
+const addSubscriptionMutation = useAddSubscriptionMutation({
   onSuccess: (result) => {
     if (result.success) {
-      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
       openSnackbar('Subscription added successfully', 'success');
       clearForm();
     } else {
@@ -168,20 +143,17 @@ const addSubscriptionMutation = useMutation({
   },
 });
 
-// Delete subscription mutation
-const deleteSubscriptionMutation = useMutation({
-  mutationFn: async (id: string) => {
-    // TODO: Implement deleteSubscription in SDK
-    console.warn('deleteSubscription not yet implemented in SDK', id);
-    return { success: false, error: 'deleteSubscription not yet implemented' };
-  },
-  onSuccess: (result: { success?: boolean; error?: string }) => {
-    if (result && result.success) {
-      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+// Delete subscription mutation using our new hook
+const deleteSubscriptionMutation = useDeleteSubscriptionMutation({
+  onSuccess: (result) => {
+    if (result.success) {
       openSnackbar('Subscription removed', 'success');
     } else {
-      openSnackbar((result && result.error) || 'Failed to remove subscription', 'error');
+      openSnackbar(result.error || 'Failed to remove subscription', 'error');
     }
+  },
+  onError: (error) => {
+    openSnackbar(`Error: ${error.message}`, 'error');
   },
 });
 
@@ -201,8 +173,12 @@ const handleOnSubmit = async () => {
   const {trustedSiteIdValue, trustedSiteNameValue} = readyToSave.value;
   
   await addSubscriptionMutation.mutateAsync({
-    siteId: trustedSiteIdValue,
-    name: trustedSiteNameValue,
+    [SUBSCRIPTION_SITE_ID_PROPERTY]: trustedSiteIdValue,
+    [SUBSCRIPTION_NAME_PROPERTY]: trustedSiteNameValue,
+    [SUBSCRIPTION_RECURSIVE_PROPERTY]: false,
+    subscriptionType: 'direct',
+    currentDepth: 0,
+    followChain: [],
   });
 };
 
@@ -212,7 +188,7 @@ const clearForm = () => {
 };
 
 const untrustSite = ({siteId}: {siteId: string}) => {
-  deleteSubscriptionMutation.mutate(siteId);
+  deleteSubscriptionMutation.mutate({id: siteId});
 };
 
 const {getSiteColor, saveColor, selectedColors} = useSiteColors();

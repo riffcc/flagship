@@ -12,7 +12,10 @@
       "Bash(find:*)",
       "Bash(ls:*)",
       "Bash(pnpm build:*)",
-      "Bash(pnpm run lint:*)"
+      "Bash(pnpm run lint:*)",
+      "WebFetch(domain:opencollective.com)",
+      "Bash(pnpm i:*)",
+      "Bash(pnpm typecheck:*)"
     ],
     "deny": []
   }
