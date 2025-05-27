@@ -1,8 +1,9 @@
 [![Contributors](https://img.shields.io/opencollective/all/riffcc?style=flat-square)](https://opencollective.com/riffcc)
 [![Orbiter installable app](https://github.com/riffcc/orbiter/actions/workflows/ci.yml/badge.svg)](https://github.com/riffcc/orbiter/actions/workflows/ci.yml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/riffcc/flagship)
 
-# Riff.CC "Orbiter"
-Orbiter is the proof-of-concept version of Riff.CC, implemented using OrbitDB, Constellation, IPFS and other tools. This repository contains instructions on how to set up and install a Riff.CC instance through Orbiter, as well as the necessary code to do so. For more information about Orbiter as well as the Riff.CC project itself, [see the project's main page](https://riff.cc/riff-docs/).
+# Riff.CC Flagship
+Flagship is the proof-of-concept version of Riff.CC, implemented using Peerbit, IPFS and other tools. This repository contains instructions on how to set up and install a Riff.CC instance through Flagship, as well as the necessary code to do so. For more information about Orbiter as well as the Riff.CC project itself, [see the project's main page](https://riff.cc/riff-docs/).
 
 Funding provided via [OpenCollective](https://opencollective.com/riffcc).
 
@@ -99,10 +100,11 @@ Then deploy the bundle of HTML/CSS/JS that is produced.
 See [Configuration Reference](https://vitejs.dev/config/).
 
 ## Credits
-Authored by [@julienmalard](https://github.com/julienmalard), [@Zorlin](https://github.com/Zorlin), and the Riff.CC Project.
+Riff.CC would not be possible without our team's contributors, past and present. The Riff.CC Project thanks them for their efforts.
 
 ## Sponsors
 Thank you to our sponsors, who have generously provided funding for the development of the Riff.CC Project:
 
+* [Riff Labs](https://github.com/rifflabs)
 * [ARData Tech](https://ardata.tech)
 * [Money Every 3 Days](https://moneyevery3days.com/)
