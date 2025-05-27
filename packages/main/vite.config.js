@@ -27,22 +27,17 @@ const config = {
     minify: process.env.MODE !== 'development',
     lib: {
       entry: 'src/index.ts',
-      formats: ['cjs'],
+      formats: ['es'],
     },
     rollupOptions: {
       output: {
-        entryFileNames: '[name].cjs',
+        entryFileNames: '[name].js',
       },
     },
     emptyOutDir: true,
     reportCompressedSize: false,
   },
   plugins: [injectAppVersion()],
-  test: {
-    coverage: {
-      provider: 'istanbul',
-    },
-  },
 };
 
 export default config;

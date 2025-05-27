@@ -5,17 +5,12 @@
   >
     <template v-if="targetRelease">
       <video-player
-        v-if="['video', 'movie'].includes(targetRelease.category)"
+        v-if="['video', 'movie'].includes(targetRelease.categoryId)"
         :content-cid="targetRelease.contentCID"
       />
       <album-viewer
-        v-else-if="['audio', 'music'].includes(targetRelease.category)"
-        :content-cid="targetRelease.contentCID"
-        :title="targetRelease.name"
-        :thumbnail="targetRelease.thumbnail"
-        :author="targetRelease.author"
-        :description="(targetRelease.metadata['description'] as string | undefined)"
-        :release-year="(targetRelease.metadata['releaseYear'] as string | number | undefined)"
+        v-else-if="['audio', 'music'].includes(targetRelease.categoryId)"
+        :release="targetRelease"
       ></album-viewer>
     </template>
     <div
@@ -48,47 +43,19 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from 'vue';
 import { useRouter } from 'vue-router';
 import albumViewer from '/@/components/releases/albumViewer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
-import { ref, watch } from 'vue';
-import { useReleasesStore } from '../stores/releases';
-import { storeToRefs } from 'pinia';
-import type { ReleaseItem } from '/@/stores/releases';
+import { useGetReleaseQuery } from '/@/plugins/lensService/hooks';
 
 const props = defineProps<{
   id: string;
 }>();
 
 const router = useRouter();
-const releasesStore = useReleasesStore();
-const { releases, isLoading } = storeToRefs(releasesStore);
 
-const targetRelease = ref<ReleaseItem | null>(null);
-
-
-watch(
-  [() => props.id, releases],
-  ([currentId, currentReleases], [prevId, _]) => {
-
-    if (currentId !== prevId && targetRelease.value?.id !== currentId) {
-      targetRelease.value = null;
-    }
-
-    if (!targetRelease.value || targetRelease.value.id !== currentId) {
-      const foundRelease = currentReleases.find(r => r.id === currentId);
-
-      if (foundRelease) {
-        targetRelease.value = foundRelease;
-      } else {
-        if (currentId !== prevId) {
-          targetRelease.value = null;
-        }
-      }
-    }
-  },
-  { immediate: true },
-);
+const { data: targetRelease, isLoading } = useGetReleaseQuery(props);
 
 watch(targetRelease, (r) => {
   if (r) {
@@ -96,11 +63,11 @@ watch(targetRelease, (r) => {
       try {
         navigator.mediaSession.metadata = new MediaMetadata({
           title: r.name,
-          artist: r.author,
+          artist: r.metadata?.['author'] as string | undefined,
           album: r.metadata?.albumName as string || '',
-          artwork: r.thumbnail ? [
+          artwork: r.thumbnailCID ? [
             {
-              src: r.thumbnail,
+              src: r.thumbnailCID,
             },
           ] : undefined,
         });

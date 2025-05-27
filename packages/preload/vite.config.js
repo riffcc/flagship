@@ -1,5 +1,5 @@
 import {join} from 'node:path';
-import {preload} from 'unplugin-auto-expose';
+// import {preload} from 'unplugin-auto-expose'; // Removed unplugin-auto-expose
 import {chrome} from '../../.electron-vendors.cache.json';
 import {injectAppVersion} from '../../version/inject-app-version-plugin.mjs';
 
@@ -14,6 +14,11 @@ const config = {
   mode: process.env.MODE,
   root: PACKAGE_ROOT,
   envDir: PROJECT_ROOT,
+  resolve: {
+    alias: {
+      '/@/': join(PACKAGE_ROOT, 'src') + '/',
+    },
+  },
   build: {
     ssr: true,
     sourcemap: 'inline',
@@ -33,7 +38,7 @@ const config = {
     emptyOutDir: true,
     reportCompressedSize: false,
   },
-  plugins: [preload.vite(), injectAppVersion()],
+  plugins: [injectAppVersion()], // preload.vite() removed
   test: {
     coverage: {
       provider: 'istanbul',

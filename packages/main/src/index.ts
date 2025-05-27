@@ -1,11 +1,9 @@
-import {app} from 'electron';
-import './security-restrictions';
-import {gestionnaireFenêtres} from '/@/constellation';
-import {restoreOrCreateWindow} from '/@/mainWindow';
+import {app, ipcMain} from 'electron';
+import '/@/security-restrictions';
+import {lensService, restoreOrCreateWindow } from '/@/main-window';
+import type { ReleaseData } from '@riffcc/lens-sdk';
 
-/**
- * Prevent electron from running multiple instances.
- */
+
 const isSingleInstance = app.requestSingleInstanceLock();
 if (!isSingleInstance) {
   app.quit();
@@ -13,62 +11,57 @@ if (!isSingleInstance) {
 }
 app.on('second-instance', restoreOrCreateWindow);
 
-/**
- * Disable Hardware Acceleration to save more system resources.
- */
 app.disableHardwareAcceleration();
 
-/**
- * Shout down background process if all windows was closed
- */
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-/**
- * Fermer Constellation lorsqu'on a fini
- */
-app.on('will-quit', async () => {
-  await gestionnaireFenêtres.fermerConstellation();
-});
-
-/**
- * @see https://www.electronjs.org/docs/latest/api/app#event-activate-macos Event: 'activate'.
- */
 app.on('activate', restoreOrCreateWindow);
 
-/**
- * Create the application window when the background process is ready.
- */
 app
   .whenReady()
-  .then(restoreOrCreateWindow)
-  .catch(e => console.error('Failed create window:', e));
+  .then(async () => {
+    const mainWindow = await restoreOrCreateWindow();
 
-/**
- * Install Vue.js or any other extension in development mode only.
- * Note: You must install `electron-devtools-installer` manually
- */
-// if (import.meta.env.DEV) {
-//   app.whenReady()
-//     .then(() => import('electron-devtools-installer'))
-//     .then(({default: installExtension, VUEJS3_DEVTOOLS}) => installExtension(VUEJS3_DEVTOOLS, {
-//       loadExtensionOptions: {
-//         allowFileAccess: true,
-//       },
-//     }))
-//     .catch(e => console.error('Failed install extension:', e));
-// }
+      ipcMain.handle('peerbit:get-public-key', async () => lensService?.getPublicKey());
+      ipcMain.handle('peerbit:get-peer-id', async () => lensService?.getPeerId());
+      ipcMain.handle('peerbit:dial', async (_event, address: string) => lensService?.dial(address));
+      ipcMain.handle('peerbit:add-release', async (_event, releaseData: ReleaseData) =>
+        lensService?.addRelease(releaseData),
+      );
+      ipcMain.handle('peerbit:get-release', async (_event, id: string) =>
+        lensService?.getRelease({ id }),
+      );
+      ipcMain.handle('peerbit:get-latest-releases', async (_event, size?: number) =>
+        lensService?.getReleases(size ? { fetch: size } : undefined),
+      );
+    // Notify renderer that main is ready
+    if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+      const sendReadySignal = () => {
+        if (!mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('main-process-ready');
+          console.log('[Main IPC] Sent "main-process-ready" to renderer.');
+        } else {
+          console.warn('[Main IPC] Main window was destroyed before ready signal could be sent.');
+        }
+      };
 
-/**
- * Check for new version of the application - production mode only.
- */
-if (import.meta.env.PROD) {
-  app
-    .whenReady()
-    .then(() => import('electron-updater'))
-    .then(({default: {autoUpdater}}) => autoUpdater.checkForUpdatesAndNotify())
-    .catch(e => console.error('Erreur vérification mises à jour :', e));
-}
+      if (mainWindow.webContents.isLoading()) {
+        console.log('[Main IPC] Main window is loading. Waiting for did-finish-load to send ready signal.');
+        mainWindow.webContents.once('did-finish-load', () => {
+          console.log('[Main IPC] Main window did-finish-load event fired.');
+          sendReadySignal();
+        });
+      } else {
+        // If not loading, content is presumably already loaded (e.g., hot reload, or already loaded)
+        console.log('[Main IPC] Main window is not loading. Sending ready signal immediately.');
+        sendReadySignal();
+      }
+    } else {
+      console.warn('[Main IPC] Main window not available or destroyed; cannot send "main-process-ready".');
+    }
+  })
+  .catch(e => console.error('Error during app initialization or IPC setup:', e));

@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker build:*)",
+      "Bash(pnpm test:*)",
+      "Bash(grep:*)",
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(pnpm build:*)",
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm run lint:*)",
+      "WebFetch(domain:opencollective.com)",
+      "Bash(pnpm i:*)",
+      "Bash(pnpm typecheck:*)"
+    ],
+    "deny": []
+  }
+}

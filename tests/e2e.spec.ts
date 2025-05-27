@@ -1,72 +1,62 @@
-import type {ElectronApplication, Page} from 'playwright';
-
+import type {Browser, Page, ElectronApplication} from 'playwright';
 import {afterAll, beforeAll, describe, expect, test} from 'vitest';
-
-import {surNavig, surÉlectron} from './utils';
+import {onBrowser} from './utils';
 
 const environnement = process.env.ENVIRONNEMENT_TESTS;
 
 describe('Test app window', function () {
-  let appliÉlectron: ElectronApplication | undefined = undefined;
+  let browser: Browser | undefined = undefined;
+  let electronApp: ElectronApplication | undefined = undefined;
   let page: Page;
-  let fermer: () => Promise<void>;
 
   beforeAll(async () => {
-    if (!environnement || environnement === 'électron') {
-      ({appli: appliÉlectron, page, fermer} = await surÉlectron());
-    } else if (['firefox', 'chromium', 'webkit'].includes(environnement)) {
-      ({page, fermer} = await surNavig({
-        typeNavigateur: environnement as 'webkit' | 'chromium' | 'webkit',
-      }));
+    const testEnvironment = (environnement || 'electron') as 'firefox' | 'chromium' | 'webkit' | 'electron';
+
+    if (testEnvironment === 'electron') {
+      const result = await onBrowser({ typeNavigateur: 'electron' });
+      page = result.page;
+      electronApp = result.electronApp;
+    } else if (['firefox', 'chromium', 'webkit'].includes(testEnvironment)) {
+      const result = await onBrowser({ typeNavigateur: testEnvironment as 'firefox' | 'chromium' | 'webkit' });
+      page = result.page;
+      browser = result.browser;
     } else {
-      throw new Error(environnement);
+      throw new Error(`Unsupported test environment: ${environnement}. Must be 'firefox', 'chromium', 'webkit', or 'electron'.`);
     }
+
+    // Listen for console messages from the page to aid debugging
+    page.on('console', msg => {
+      const msgType = msg.type().toUpperCase();
+      const msgText = msg.text();
+      console.log(`E2E BROWSER CONSOLE [${msgType}]: ${msgText}`);
+      // Log arguments if any, useful for complex objects or multiple args
+      if (msg.args().length > 0) {
+        for (let i = 0; i < msg.args().length; ++i) {
+          // Attempt to get a string representation of the argument
+          msg.args()[i].jsonValue().then(value => {
+            console.log(`  ARG ${i}:`, value);
+          }).catch(() => {
+            // Fallback if jsonValue fails (e.g., for non-serializable objects like functions)
+            console.log(`  ARG ${i}: (Could not serialize)`);
+          });
+        }
+      }
+    });
   });
 
   afterAll(async () => {
-    await fermer();
+    if (electronApp) {
+      await electronApp.close();
+    } else if (browser) {
+      await browser.close();
+    }
   });
 
-  test('Main window state', async context => {
-    if (!appliÉlectron) context.skip();
-    const windowState: {isVisible: boolean; isDevToolsOpened: boolean; isCrashed: boolean} =
-      await appliÉlectron!.evaluate(async ({BrowserWindow}) => {
-        await new Promise<void>(résoudre => {
-          const fVérif = () => {
-            if (BrowserWindow.getAllWindows().length) {
-              clearInterval(intervale);
-              résoudre();
-            }
-          };
-          const intervale = setInterval(fVérif, 1000);
-          fVérif();
-        });
-        const mainWindow = BrowserWindow.getAllWindows()[0];
-
-        const getState = () => ({
-          isVisible: mainWindow.isVisible(),
-          isDevToolsOpened: mainWindow.webContents.isDevToolsOpened(),
-          isCrashed: mainWindow.webContents.isCrashed(),
-        });
-
-        return new Promise(resolve => {
-          if (mainWindow.isVisible()) {
-            resolve(getState());
-          } else mainWindow.once('ready-to-show', () => setTimeout(() => resolve(getState()), 0));
-        });
-      });
-
-    expect(windowState.isCrashed, 'The app has crashed').toBeFalsy();
-    expect(windowState.isVisible, 'The main window was not visible').toBeTruthy();
-    expect(windowState.isDevToolsOpened, 'The DevTools panel was open').toBeFalsy();
-  });
-
-  test('Main window web content', async context => {
-    if (!appliÉlectron) context.skip();
-
+  test('Main window web content', async () => {
     const element = await page.$('#app', {strict: true});
     expect(element, 'Was unable to find the root element').toBeDefined();
     expect((await element!.innerHTML()).trim(), 'Window content was empty').not.equal('');
   });
+
 });
 

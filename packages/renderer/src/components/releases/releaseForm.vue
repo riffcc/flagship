@@ -1,7 +1,7 @@
 <template>
   <v-form
     ref="formRef"
-    :disabled="isLoading"
+    :disabled="addReleaseMutation.isPending.value"
     class="d-flex flex-column ga-2"
     @submit.prevent="handleOnSubmit"
   >
@@ -16,25 +16,14 @@
       :rules="[rules.required, rules.isValidCid]"
     />
     <v-select
-      v-model="releaseItem.category"
+      v-model="releaseItem.categoryId"
       :items="contentCategoriesItems"
       :rules="[rules.required]"
       label="Category"
-      @update:model-value="() => releaseItem.metadata = {}"
     />
     <v-text-field
-      v-model="releaseItem.author"
-      label="Author"
-      :rules="[rules.required]"
-    />
-    <v-text-field
-      v-model="releaseItem.thumbnail"
+      v-model="releaseItem.thumbnailCID"
       label="Thumbnail CID (Optional)"
-      :rules="[rules.isValidCid]"
-    />
-    <v-text-field
-      v-model="releaseItem.cover"
-      label="Cover Image CID (Optional)"
       :rules="[rules.isValidCid]"
     />
     <v-dialog
@@ -53,7 +42,7 @@
         ></v-btn>
       </template>
       <v-sheet
-        v-if="selectedContentCategory"
+        v-if="selectedContentCategory && releaseItem.metadata"
         width="480px"
         max-height="620px"
         class="pa-8 ma-auto"
@@ -69,15 +58,13 @@
             v-if="options"
             :items="options"
             :label="categoryId"
-            :model-value="(releaseItem.metadata[categoryId] as string | null | undefined)"
-            @update:model-value="(v) => {
-              if (v) handleChangeMetadataField(categoryId, v)
-            }"
+            :model-value="String((releaseItem.metadata && releaseItem.metadata[categoryId]) || '')"
+            @update:model-value="(v) => handleChangeMetadataField(categoryId, v)"
           />
           <v-text-field
             v-else
             :label="categoryId"
-            :model-value="releaseItem.metadata[categoryId]"
+            :model-value="String((releaseItem.metadata && releaseItem.metadata[categoryId]) || '')"
             :type="type"
             @update:model-value="(v) => handleChangeMetadataField(categoryId, v)"
           >
@@ -91,7 +78,7 @@
                     size="small"
                     v-bind="tooltipProps"
                     color="grey-lighten-1"
-                    icon="mdi-help-circle-outline"
+                    icon="$help-circle-outline"
                   ></v-icon>
                 </template>
               </v-tooltip>
@@ -113,44 +100,43 @@
       type="submit"
       block
       text="Submit"
-      :disabled="!readyToSave"
-      :is-loading="isLoading"
+      :disabled="!readyToSave || addReleaseMutation.isPending.value"
+      :loading="addReleaseMutation.isPending.value"
     />
   </v-form>
 </template>
 
 <script setup lang="ts">
-import {consts, type types as orbiterTypes} from '@riffcc/orbiter';
 import {cid} from 'is-ipfs';
-import {computed, onMounted, ref} from 'vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
-import type { ReleaseItem, PartialReleaseItem } from '/@/stores/releases';
-import { useContentCategoriesStore } from '/@/stores/contentCategories';
-import { storeToRefs } from 'pinia';
+import {computed, onMounted, ref, watch} from 'vue';
+import type { ReleaseItem } from '/@/types';
+import type { ContentCategoryMetadata, ReleaseData, AnyObject } from '@riffcc/lens-sdk';
+import { useAddReleaseMutation, useEditReleaseMutation, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 
 const props = defineProps<{
-  initialData?: PartialReleaseItem;
+  initialData?: ReleaseItem<AnyObject>;
   mode?: 'create' | 'edit';
 }>();
 
 const emit = defineEmits<{
-  (e: 'submit', data: unknown): void;
+  (e: 'submit', data: ReleaseData): void;
   (e: 'update:success', message: string): void;
   (e: 'update:error', message: string): void;
 }>();
 
-const {orbiter} = useOrbiter();
-const contentCategoriesStore = useContentCategoriesStore();
-const { contentCategories } = storeToRefs(contentCategoriesStore);
+const {
+  data: contentCategories,
+} = useContentCategoriesQuery();
+
 
 const formRef = ref();
 const openAdvanced = ref<boolean>();
 
-const releaseItem = ref<ReleaseItem>({
+const releaseItem = ref<ReleaseItem<AnyObject>>({
+  id: '',
   name: '',
   contentCID: '',
-  category: '',
-  author: '',
+  categoryId: '',
   metadata: {},
 });
 
@@ -158,29 +144,54 @@ const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
   isValidCid: (v: string) => !v || cid(v) || 'Please enter a valid CID.',
 };
-const isLoading = ref(false);
 
-const contentCategoriesItems = computed(() => (contentCategories.value ?? []).map(item => ({
+const addReleaseMutation = useAddReleaseMutation({
+  onSuccess: () => {
+    emit('update:success', 'Release added successfully!');
+    clearForm();
+  },
+  onError: (e) => {
+    console.error('Error on adding release:', e);
+    emit('update:error', `Error on adding release: ${e.message.slice(0, 200)}`);
+  },
+});
+
+const editReleaseMutation = useEditReleaseMutation({
+  onSuccess: () => {
+    emit('update:success', 'Release edited successfully!');
+    clearForm();
+  },
+  onError: (e) => {
+    console.error('Error in editing release:', e);
+    emit('update:error', `Error on editing release: ${e.message.slice(0, 200)}`);
+  },
+});
+
+
+const contentCategoriesItems = computed(() => contentCategories.value?.map(item => ({
   id: item.id,
-  value: item.contentCategory.categoryId,
-  title: item.contentCategory.displayName,
+  value: item.id,
+  title: item.displayName,
 })));
 
 const selectedContentCategory = computed(() => {
-  let categoryMetadataData: orbiterTypes.ContentCategoryMetadataField | undefined = undefined;
+  let categoryMetadataData: ContentCategoryMetadata | undefined = undefined;
   if (contentCategories.value) {
-    const targetItem = contentCategories.value.find(item => item.contentCategory.categoryId === releaseItem.value.category);
+    const targetItem = contentCategories.value.find(item => item.id === releaseItem.value.categoryId);
     if (targetItem) {
-      categoryMetadataData = targetItem.contentCategory.metadataSchema;
+      categoryMetadataData = targetItem.metadataSchema;
     }
   }
   return categoryMetadataData;
 });
 
-const handleChangeMetadataField = (categoryId: string, value: string) => {
+const handleChangeMetadataField = (categoryId: string, value: string | null) => {
+  if (!releaseItem.value.metadata) {
+    releaseItem.value.metadata = {};
+  }
   releaseItem.value.metadata = {
     ...releaseItem.value.metadata,
-    [categoryId]: value,
+    [categoryId]: value || '',
   };
 };
 
@@ -189,8 +200,15 @@ onMounted(() => {
     releaseItem.value = {
       ...releaseItem.value,
       ...props.initialData,
-      metadata: props.initialData.metadata ? { ...props.initialData.metadata } : {},
+      metadata: props.initialData.metadata || {},
     };
+  }
+});
+
+// Ensure metadata is preserved when switching categories
+watch(() => releaseItem.value.categoryId, () => {
+  if (!releaseItem.value.metadata) {
+    releaseItem.value.metadata = {};
   }
 });
 
@@ -198,8 +216,7 @@ const readyToSave = computed(() => {
   if (
     releaseItem.value.name &&
     releaseItem.value.contentCID &&
-    releaseItem.value.category &&
-    releaseItem.value.author &&
+    releaseItem.value.categoryId &&
     formRef.value.isValid
   ) {
     return releaseItem.value;
@@ -207,45 +224,31 @@ const readyToSave = computed(() => {
   return undefined;
 });
 
-const handleOnSubmit = async () => {
+const handleOnSubmit = () => {
   if (!readyToSave.value) return;
-  isLoading.value = true;
-  try {
-    const data = readyToSave.value;
-    const release = {
-      [consts.RELEASES_AUTHOR_COLUMN]: data.author,
-      [consts.RELEASES_CATEGORY_COLUMN]: data.category,
-      [consts.RELEASES_FILE_COLUMN]: data.contentCID,
-      [consts.RELEASES_METADATA_COLUMN]: JSON.stringify(data.metadata),
-      [consts.RELEASES_NAME_COLUMN]: data.name,
-      [consts.RELEASES_THUMBNAIL_COLUMN]: data.thumbnail,
-      [consts.RELEASES_COVER_COLUMN]: data.cover,
-    };
-    if (props.mode === 'edit' && props.initialData?.id) {
-      await orbiter.editRelease({
-        releaseId: props.initialData.id,
-        release,
-      });
-    } else {
-      await orbiter.addRelease(release);
-    }
-    emit('submit', data);
-    emit('update:success', 'Release saved successfully!');
-    clearForm();
-  } catch (error) {
-    console.error('Error saving release:', error);
-    emit('update:error', 'Error saving release. Please try again later.');
-  } finally {
-    isLoading.value = false;
+
+  const data = readyToSave.value;
+  const releaseDataPayload: ReleaseData<AnyObject> = {
+    name: data.name,
+    categoryId: data.categoryId,
+    contentCID: data.contentCID,
+    thumbnailCID: data.thumbnailCID,
+    metadata: data.metadata,
+  };
+
+  if (props.mode === 'edit' && data.id) {
+    editReleaseMutation.mutate({ ...releaseDataPayload, id: data.id });
+  } else {
+    addReleaseMutation.mutate(releaseDataPayload);
   }
 };
 
 const clearForm = () => {
   releaseItem.value = {
+    id: '',
     name: '',
     contentCID: '',
-    category: '',
-    author: '',
+    categoryId: '',
     metadata: {},
   };
   formRef.value?.resetValidation();

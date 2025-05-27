@@ -24,7 +24,7 @@
           : 'border position-absolute top-0 right-0 mt-n2 mr-n2'
       "
       density="comfortable"
-      icon="mdi-close"
+      icon="$close"
       size="small"
       @click="close"
     >
@@ -40,13 +40,13 @@
           <v-btn
             :size="xs ? 'small' : 'large'"
             density="comfortable"
-            icon="mdi-skip-previous"
+            icon="$skip-previous"
             @click="handlePrevious"
           ></v-btn>
           <v-btn
             :size="xs ? 'default' : 'x-large'"
             density="comfortable"
-            :icon="isPlaying ? 'mdi-pause-circle' : 'mdi-play-circle'"
+            :icon="isPlaying ? '$pause-circle' : '$play-circle'"
             :loading="isLoading"
             @click="togglePlay"
           >
@@ -54,7 +54,7 @@
           <v-btn
             :size="xs ? 'small' : 'large'"
             density="comfortable"
-            icon="mdi-skip-next"
+            icon="$skip-next"
             @click="handleNext"
           ></v-btn>
         </div>
@@ -87,27 +87,27 @@
           <template #activator="{props: speedDialProps}">
             <v-btn
               class="mx-2"
-              icon="mdi-dots-vertical"
+              icon="$dots-vertical"
               density="comfortable"
               size="small"
               v-bind="speedDialProps"
             ></v-btn>
           </template>
           <v-btn
-            :icon="volume === 0 ? 'mdi-volume-off' : 'mdi-volume-high'"
+            :icon="volume === 0 ? '$volume-off' : '$volume-high'"
             size="small"
             density="comfortable"
             @click="toggleVolume"
           ></v-btn>
           <v-btn
-            icon="mdi-rotate-left"
+            icon="$rotate-left"
             :color="repeat ? 'grey-lighten-3' : 'default'"
             size="small"
             density="comfortable"
             @click="toggleRepeat"
           ></v-btn>
           <v-btn
-            icon="mdi-shuffle"
+            icon="$shuffle"
             :color="shuffle ? 'grey-lighten-3' : 'default'"
             size="small"
             density="comfortable"
@@ -119,20 +119,20 @@
           class="d-flex ga-1"
         >
           <v-btn
-            :icon="volume === 0 ? 'mdi-volume-off' : 'mdi-volume-high'"
+            :icon="volume === 0 ? '$volume-off' : '$volume-high'"
             size="small"
             density="comfortable"
             @click="toggleVolume"
           ></v-btn>
           <v-btn
-            icon="mdi-rotate-left"
+            icon="$rotate-left"
             :color="repeat ? 'grey-lighten-3' : 'default'"
             density="comfortable"
             size="small"
             @click="toggleRepeat"
           ></v-btn>
           <v-btn
-            icon="mdi-shuffle"
+            icon="$shuffle"
             :color="shuffle ? 'grey-lighten-3' : 'default'"
             density="comfortable"
             size="small"

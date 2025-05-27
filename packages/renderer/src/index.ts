@@ -1,8 +1,8 @@
-import {createApp} from 'vue';
+import { createApp, type App as VueApp } from 'vue';
 import App from './App.vue';
-import { registerPlugins } from './plugins/inscription/common';
+import { registerPlugins } from './plugins';
 
-const app = createApp(App);
+const app: VueApp = createApp(App);
 
 registerPlugins(app);
 

@@ -58,13 +58,13 @@
             >
               <template #prepend>
                 <v-icon
-                  :icon="admin.super ? 'mdi-account-supervisor' : 'mdi-account'"
+                  :icon="admin.super ? '$account-supervisor' : '$account'"
                   size="small"
                 ></v-icon>
               </template>
               <template #append>
                 <v-btn
-                  icon="mdi-delete"
+                  icon="$delete"
                   size="small"
                   @click="confirmDeleteAdminDialog = true"
                 >
@@ -93,7 +93,7 @@
 <script setup lang="ts">
 import { computed, type Ref, ref } from 'vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import { useOrbiter } from '/@/plugins/orbiter/utils';
+
 type Admin = {
   id: string;
   super: boolean;
@@ -115,7 +115,6 @@ const rules = [
 
 const formRef = ref();
 const isLoading = ref(false);
-const {orbiter} = useOrbiter();
 const readyToSave = computed(() => {
   if (newAdmin.value.id && formRef.value.isValid) {
     return {
@@ -130,11 +129,11 @@ const handleOnSubmit = async () => {
   console.log('adding new admin');
   isLoading.value = true;
   try {
-    await orbiter.inviteModerator({
-      userId: readyToSave.value.newAdminId,
-      admin: readyToSave.value.newAdminSuper,
-    });
-    console.log('admin added succesfully');
+    // await orbiter.inviteModerator({
+    //   userId: readyToSave.value.newAdminId,
+    //   admin: readyToSave.value.newAdminSuper,
+    // });
+    // console.log('admin added succesfully');
 
   } catch (error) {
     console.log('error on adding admin', error);

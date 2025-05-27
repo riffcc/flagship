@@ -1,0 +1,11 @@
+node_modules
+.git
+dist
+*.log
+.DS_Store
+packages/*/dist
+packages/*/node_modules
+test-results
+playwright_launch_log.txt
+buildResources
+.electron-builder.config.cjs

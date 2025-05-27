@@ -20,7 +20,7 @@
       <template #activator="{ props }">
         <v-btn
           v-bind="props"
-          icon="mdi-menu"
+          icon="$menu"
           class="d-sm-none mr-2"
         ></v-btn>
       </template>
@@ -34,18 +34,26 @@
         <v-list-item
           v-for="item in featuredContentCategories"
           :key="item.id"
-          :title="item.contentCategory.displayName"
+          :title="item.displayName"
           active-class="text-primary-lighten-1"
           :active="route.path === item.id"
-          @click="router.push(`/featured/${item.contentCategory.categoryId}`)"
+          @click="router.push(`/${item.id}`)"
         ></v-list-item>
         <template v-if="userData">
           <v-divider class="my-1"></v-divider>
           <v-list-item
+            v-if="isMember"
             title="Upload"
             active-class="text-primary-lighten-1"
             :active="route.path === '/upload'"
             @click="router.push('/upload')"
+          ></v-list-item>
+          <v-list-item
+            v-if="isAdmin"
+            title="Admin"
+            active-class="text-primary-lighten-1"
+            :active="route.path === '/admin'"
+            @click="router.push('/admin')"
           ></v-list-item>
           <v-divider class="my-1"></v-divider>
           <v-list-item
@@ -65,13 +73,6 @@
             active-class="text-primary-lighten-1"
             @click="handleOnDisconnect"
           ></v-list-item>
-          <v-list-item
-            v-if="isAdmin"
-            title="Admin"
-            active-class="text-primary-lighten-1"
-            :active="route.path === '/admin'"
-            @click="router.push('/admin')"
-          ></v-list-item>
         </template>
       </v-list>
     </v-bottom-sheet>
@@ -86,14 +87,14 @@
       <router-link
         v-for="item in featuredContentCategories"
         :key="item.id"
-        :to="`/featured/${item.contentCategory.categoryId}`"
+        :to="`/${item.id}`"
         class="text-decoration-none mx-2 text-subtitle-1 text-white"
         active-class="text-primary-lighten-1"
       >
-        {{ item.contentCategory.displayName }}
+        {{ item.displayName }}
       </router-link>
 
-      <template v-if="userData">
+      <template v-if="isMember || isAdmin">
         <v-divider
           vertical
           class="mx-4"
@@ -107,7 +108,7 @@
         </router-link>
         <router-link
           v-if="isAdmin"
-          to="Admin"
+          to="/Admin"
           class="text-decoration-none mx-2 text-subtitle-1 text-white"
           active-class="text-primary-lighten-1"
         >
@@ -120,23 +121,26 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { suivre as follow } from '@constl/vue';
-import { useOrbiter } from '/@/plugins/orbiter/utils';
 import { useUserSession } from '/@/composables/userSession';
+import { useAccountStatusQuery, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 import accountMenu from '/@/components/account/accountMenu.vue';
-import { useContentCategoriesStore } from '/@/stores/contentCategories';
-import { storeToRefs } from 'pinia';
 
-const {orbiter} = useOrbiter();
 const router = useRouter();
 const route = useRoute();
-const isAdmin = orbiter?.followIsModerator ? follow(orbiter.followIsModerator.bind(orbiter)) : false;
-const contentCategoriesStore = useContentCategoriesStore();
-const { featuredContentCategories } = storeToRefs(contentCategoriesStore);
+
+const { data: contentCategories } = useContentCategoriesQuery();
+const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
+
+const { data: accountStatus } = useAccountStatusQuery();
+const isMember = computed(() => accountStatus.value === 1);
+const isAdmin = computed(() => accountStatus.value === 2);
 const { userData } = useUserSession();
 
 function handleOnDisconnect(){
   userData.value = null;
 };
+
+
 </script>

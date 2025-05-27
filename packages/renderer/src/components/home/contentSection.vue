@@ -3,13 +3,13 @@
     <p class="text-h6 text-sm-h5 font-weight-bold">{{ title }}</p>
     <div v-if="pagination">
       <v-btn
-        icon="mdi-menu-left"
+        icon="$menu-left"
         density="compact"
         variant="text"
         @click="onPrevious"
       ></v-btn>
       <v-btn
-        icon="mdi-menu-right"
+        icon="$menu-right"
         density="compact"
         variant="text"
         @click="onNext"
@@ -25,7 +25,7 @@
       @click="onNavigate"
     ></v-btn>
   </div>
-  <v-row>
+  <v-row dense>
     <slot></slot>
   </v-row>
 </template>

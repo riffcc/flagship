@@ -61,9 +61,9 @@
                 ></v-list-item>
                 <template v-if="key === 'explore'">
                   <v-list-item
-                    v-for="item in contentCategories.filter((cc: ContentCategory) => cc.featured)"
+                    v-for="item in featuredContentCategories"
                     :key="item.id"
-                    :subtitle="pluralize(startCase(item.id))"
+                    :subtitle="item.displayName"
                     class="mb-2 pl-1"
                     min-height="12px"
                     height="24px"
@@ -77,7 +77,7 @@
       </v-row>
     </v-container>
     <v-btn
-      icon="mdi-chevron-up"
+      icon="$chevron-up"
       density="comfortable"
       color="primary-darken-1"
       rounded="0"
@@ -95,10 +95,12 @@
     <v-chip variant="text">
       <template #prepend>
         <img
-          src="https://mirrors.creativecommons.org/presskit/icons/cc.svg"
+          src="/cc.svg"
           alt="Creative Commons License"
-          width="17em"
-          class="mr-2"
+          class="mr-1"
+          style="filter: invert(100%) sepia(0%) saturate(7438%) hue-rotate(78deg) brightness(109%) contrast(95%)"
+          width="20"
+          height="20"
         />
       </template>
       e cinere surgemus.
@@ -109,12 +111,14 @@
 <script setup lang="ts">
 import {useRouter} from 'vue-router';
 import {navigationMap} from '/@/constants/navigation';
-import {startCase} from 'lodash';
-import pluralize from 'pluralize-esm';
-import { type ContentCategory, useSiteSettings } from '/@/composables/siteSettings';
+import { computed } from 'vue';
+import { useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 
 const router = useRouter();
 
+const { data: contentCategories } = useContentCategoriesQuery();
+
+const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
 const scrollToTop = () => {
   window.scrollTo({
     top: 0,
@@ -125,5 +129,5 @@ const scrollToTop = () => {
 const openEmailClient = () => {
   window.location.href = 'mailto:wings@riff.cc';
 };
-const { contentCategories } = useSiteSettings();
+
 </script>

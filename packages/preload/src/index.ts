@@ -2,15 +2,29 @@
  * @module preload
  */
 
-export {plateforme, surLinux, surMac, surWindows} from './so.js';
+import { contextBridge, ipcRenderer } from 'electron';
+import { isLinux, isMac, isWindows, platform} from './so';
+import type { ReleaseData, HashResponse, Release } from '@riffcc/lens-sdk';
 
-export {requêteHttp} from './http.js';
+contextBridge.exposeInMainWorld('osInfo', {
+  isMac,
+  isLinux,
+  isWindows,
+  platform,
+});
 
-export {choisirDossier} from './systèmeFichiers.js';
+contextBridge.exposeInMainWorld('electronIPC', {
+  onceMainReady: (callback: () => void) => {
+    ipcRenderer.once('main-process-ready', callback);
+  },
+});
 
-export {
-  envoyerMessageÀConstellation,
-  envoyerMessageÀServeurConstellation,
-  écouterMessagesDeConstellation,
-  écouterMessagesDeServeurConstellation,
-} from '@constl/mandataire-electron-principal';
+
+contextBridge.exposeInMainWorld('electronLensService', {
+  getPublicKey: (): Promise<string> => ipcRenderer.invoke('peerbit:get-public-key'),
+  getPeerId: (): Promise<string> => ipcRenderer.invoke('peerbit:get-peer-id'),
+  dial: (address: string): Promise<boolean> => ipcRenderer.invoke('peerbit:dial', address),
+  addRelease: (releaseData: ReleaseData): Promise<HashResponse> => ipcRenderer.invoke('peerbit:add-release', releaseData),
+  getRelease: (id: string): Promise<Release | undefined> => ipcRenderer.invoke('peerbit:get-release', id),
+  getLatestReleases: (size?: number): Promise<Release[]> => ipcRenderer.invoke('peerbit:get-latest-releases', size),
+});

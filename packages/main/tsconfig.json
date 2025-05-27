@@ -8,10 +8,12 @@
     "skipLibCheck": true,
     "strict": true,
     "isolatedModules": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "/@/*": ["./src/*"]
+      "/@/*": ["./src/*"],
     }
   },
   "include": ["src/**/*.ts", "../../types/**/*.d.ts"],

@@ -11,7 +11,7 @@
         <v-btn
           v-if="isHovering"
           density="comfortable"
-          :icon="floating ? 'mdi-close' : 'mdi-arrow-left'"
+          :icon="floating ? '$close' : '$arrow-left'"
           class="position-absolute top-0 left-0 mt-3 ml-3"
           :style="{zIndex: 1000}"
           @click="floating ? closeFloatingVideo() : canBack ? router.back() : router.push('/')"
@@ -57,7 +57,7 @@
           >
             <template #prepend>
               <v-btn
-                :icon="isPlaying ? 'mdi-pause' : 'mdi-play'"
+                :icon="isPlaying ? '$pause' : '$play'"
                 density="comfortable"
                 @click="togglePlay"
               ></v-btn>
@@ -75,12 +75,12 @@
                 <span>{{ duration }}</span>
               </v-sheet>
               <v-btn
-                :icon="volume === 0 ? 'mdi-volume-off' : 'mdi-volume-high'"
+                :icon="volume === 0 ? '$volume-off' : '$volume-high'"
                 density="comfortable"
                 @click="toggleVolume"
               ></v-btn>
               <v-btn
-                icon="mdi-fullscreen"
+                icon="$fullscreen"
                 density="comfortable"
                 @click="toggleFullscreen"
               ></v-btn>

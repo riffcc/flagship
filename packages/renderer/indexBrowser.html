@@ -1,16 +1,23 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <link rel="icon" href="/logo.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riff.CC</title>
+  <!-- Preconnect to speed up external resources -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!--
+    The vite-plugin-node-polyfills should handle providing 'process' and 'Buffer'
+    If you still face issues, you might need to configure the plugin or uncomment this.
   <script type="module">
     import process from "process";
     import { Buffer } from "buffer";
     window.Buffer = Buffer;
     window.process = process;
   </script>
+  -->
 </head>
 <body>
 <div id="app"></div>

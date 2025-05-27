@@ -26,7 +26,7 @@
     >
       <template #append-inner>
         <v-btn
-          icon="mdi-plus-circle"
+          icon="$plus-circle"
           variant="text"
           density="comfortable"
           size="small"
@@ -47,7 +47,7 @@
             {{ option }}
             <template #append>
               <v-btn
-                icon="mdi-close"
+                icon="$close"
                 variant="text"
                 density="compact"
                 size="x-small"
@@ -71,21 +71,21 @@
 </template>
 
 <script lang="ts" setup>
-import type { types as orbiterTypes } from '@riffcc/orbiter';
 import { computed, onMounted, ref } from 'vue';
+import type { ContentCategoryMetadata } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
-  initialData?: Partial<orbiterTypes.ContentCategoryMetadataField[string] & { fieldKey: string; }>;
+  initialData?: Partial<ContentCategoryMetadata[string] & { fieldKey: string; }>;
   mode?: 'create' | 'edit';
 }>();
 
 const emit = defineEmits<{
-  (e: 'submit', data: orbiterTypes.ContentCategoryMetadataField[string] & { fieldKey: string; }): void;
+  (e: 'submit', data: ContentCategoryMetadata[string] & { fieldKey: string; }): void;
 }>();
 
 const formRef = ref();
 
-const metadataField = ref<orbiterTypes.ContentCategoryMetadataField[string] & { fieldKey: string; }>({
+const metadataField = ref<ContentCategoryMetadata[string] & { fieldKey: string; }>({
   fieldKey: '',
   description: '',
   type: 'string',

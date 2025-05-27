@@ -3,65 +3,66 @@
   <v-container>
     <v-data-table
       :headers="smAndDown ? smTableHeaders : tableHeaders"
-      :items="tableItems"
+      :items="releases"
       :loading="isLoading"
+      :items-per-page="20"
       hide-default-header
     >
-      <template #item.thumbnail="{item}">
+      <template #item.thumbnail="{ item }">
         <v-card
           class="my-2"
           elevation="2"
           rounded
         >
           <v-img
-            :src="parseUrlOrCid(item.thumbnail)"
+            :src="parseUrlOrCid(item.thumbnailCID)"
             height="64"
             width="113"
           ></v-img>
         </v-card>
       </template>
-      <template #item.name="{item}">
+      <template #item.name="{ item }">
         <v-container :max-width="smAndDown ? '128px' : '256px'">
           <span>{{ item.name }}</span>
         </v-container>
       </template>
-      <template #item.contentCID="{item}">
+      <template #item.contentCID="{ item }">
         <span>{{
           lgAndUp ? item.contentCID : `${item.contentCID.slice(0, 6)}...${item.contentCID.slice(-6)}`
         }}</span>
       </template>
-      <template #item.actions="{item}">
+      <template #item.actions="{ item }">
         <v-menu v-if="smAndDown">
-          <template #activator="{props}">
+          <template #activator="{ props }">
             <v-btn
-              icon="mdi-dots-vertical"
+              icon="$dots-vertical"
               variant="text"
               v-bind="props"
             ></v-btn>
           </template>
           <v-btn
-            prepend-icon="mdi-clipboard-multiple-outline"
+            prepend-icon="$clipboard-multiple-outline"
             @click="copy(item.id!, item.id!)"
           >
             Copy ID
           </v-btn>
           <v-btn
-            prepend-icon="mdi-pencil"
-            @click="editRelease(item.id)"
+            prepend-icon="$pencil"
+            @click="targetReleaseToEdit = item"
           >
             Edit
           </v-btn>
           <v-btn
-            prepend-icon="mdi-star-plus-outline"
+            prepend-icon="$star-plus-outline"
             @click="requestFeatureRelease(item.id)"
           >
             Feature
           </v-btn>
           <v-btn
-            :prepend-icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
-            @click="deleteBlockRelease(item.id!, item.contentCID, item.sourceSite!)"
+            prepend-icon="$delete"
+            @click="targetReleaseToDelete = item"
           >
-            {{ item.sourceSite === orbiter.siteId ? 'Delete' : 'Block' }}
+            Delete
           </v-btn>
         </v-menu>
         <div
@@ -85,10 +86,10 @@
             </template>
           </v-tooltip>
           <v-btn
-            icon="mdi-pencil"
+            icon="$pencil"
             class="me-2"
             size="small"
-            @click="editRelease(item.id)"
+            @click="targetReleaseToEdit = item"
           ></v-btn>
           <v-tooltip
             text="Feature Release"
@@ -97,7 +98,7 @@
             <template #activator="{ props: tooltipProps }">
               <v-btn
                 v-bind="tooltipProps"
-                icon="mdi-star-plus-outline"
+                icon="$star-plus-outline"
                 class="me-2"
                 size="small"
                 @click="requestFeatureRelease(item.id)"
@@ -105,23 +106,15 @@
             </template>
           </v-tooltip>
           <v-btn
-            :icon="item.sourceSite === orbiter.siteId ? 'mdi-delete' : 'mdi-block-helper'"
+            icon="$delete"
             size="small"
-            @click="deleteBlockRelease(item.id!, item.contentCID, item.sourceSite!)"
+            @click="targetReleaseToDelete = item"
           ></v-btn>
         </div>
       </template>
-      <!-- <template #item.status="{item}">
-        <v-chip
-          :color="getStatusColor(item.status)"
-          class="text-uppercase text-caption"
-        >
-          {{ item.status }}
-        </v-chip>
-      </template> -->
     </v-data-table>
     <v-dialog
-      v-model="editReleaseDialog"
+      :model-value="Boolean(targetReleaseToEdit)"
       max-width="500px"
     >
       <v-card class="py-3">
@@ -131,7 +124,8 @@
 
         <v-card-text>
           <release-form
-            :initial-data="editedRelease"
+            v-if="targetReleaseToEdit"
+            :initial-data="targetReleaseToEdit"
             mode="edit"
             @update:success="handleSuccess"
             @update:error="handleError"
@@ -143,7 +137,7 @@
           <v-btn
             color="blue-darken-1"
             variant="text"
-            @click="editReleaseDialog = false"
+            @click="targetReleaseToEdit = null"
           >
             Cancel
           </v-btn>
@@ -151,9 +145,9 @@
       </v-card>
     </v-dialog>
     <confirmation-dialog
-      :message="`Are you sure you want to delete/block this release?`"
-      :dialog-open="confirmDeleteBlockReleaseDialog"
-      @close="() => {confirmDeleteBlockReleaseDialog = false}"
+      :message="`Are you sure you want to delete this release?`"
+      :dialog-open="Boolean(targetReleaseToDelete)"
+      @close="() => { targetReleaseToDelete = null }"
       @confirm="confirmDeleteBlockRelease"
     ></confirmation-dialog>
   </v-container>
@@ -174,26 +168,35 @@
   </v-snackbar>
 </template>
 <script setup lang="ts">
-import {computed, ref, type Ref} from 'vue';
-import {useDisplay} from 'vuetify';
-import {useStaticReleases} from '/@/composables/staticReleases';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
-// import { getStatusColor } from '/@/utils';
-import confirmationDialog from '/@/components/misc/confimationDialog.vue';
+import { ref } from 'vue';
+import { useDisplay } from 'vuetify';
 import ReleaseForm from '/@/components/releases/releaseForm.vue';
-import { useStaticStatus } from '../../composables/staticStatus';
+import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
-import { type PartialReleaseItem, useReleasesStore } from '/@/stores/releases';
-import { storeToRefs } from 'pinia';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
-import { parseUrlOrCid } from '/@/utils';
+import type { ReleaseItem } from '/@/types';
+import {
+  parseUrlOrCid,
+  // getStatusColor,
+} from '/@/utils';
+import type { AnyObject } from '@riffcc/lens-sdk';
+import { useDeleteReleaseMutation, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
 
-const {staticStatus} = useStaticStatus();
-const {lgAndUp, smAndDown} = useDisplay();
-const {orbiter} = useOrbiter();
-const {staticReleases} = useStaticReleases();
-const releasesStore = useReleasesStore();
-const {releases, isLoading } = storeToRefs(releasesStore);
+
+const { lgAndUp, smAndDown } = useDisplay();
+
+const { data: releases, isLoading } = useGetReleasesQuery();
+const deleteReleaseMutation = useDeleteReleaseMutation({
+  onSuccess: () => {
+    openSnackbar('Release deleted successfully.', 'success');
+    targetReleaseToDelete.value = null;
+  },
+  onError: (e) => {
+    console.error('Error blocking release:', e);
+    openSnackbar('Error on blocking release.', 'error');
+  },
+});
+
 const { copy, getIcon, getColor } = useCopyToClipboard();
 const emit = defineEmits<{
   'feature-release': [id: string]
@@ -206,89 +209,31 @@ type Header = {
   key: string;
 };
 const smTableHeaders: Header[] = [
-  {title: 'ID', align: 'start', key: 'id'},
-  {title: 'Name', align: 'start', key: 'name'},
-  {title: 'Actions', key: 'actions', sortable: false},
+  { title: 'ID', align: 'start', key: 'id' },
+  { title: 'Name', align: 'start', key: 'name' },
+  { title: 'Actions', key: 'actions', sortable: false },
 ];
 const tableHeaders: Header[] = [
-  {title: 'ID', align: 'start', key: 'id'},
+  { title: 'ID', align: 'start', key: 'id' },
   {
     title: 'Thumbnail',
     align: 'start',
     key: 'thumbnail',
   },
-  {title: 'Name', align: 'start', key: 'name'},
-  {title: 'Category', align: 'start', key: 'category'},
-  {title: 'Content CID', align: 'start', key: 'contentCID'},
-  {title: 'Actions', key: 'actions', sortable: false},
+  { title: 'Name', align: 'start', key: 'name' },
+  { title: 'Category', align: 'start', key: 'category' },
+  { title: 'Content CID', align: 'start', key: 'contentCID' },
+  { title: 'Actions', key: 'actions', sortable: false },
 ];
 
-const tableItems = computed(() => {
-  if (staticStatus.value === 'static') {
-    return staticReleases.value
-    .map(r => ({
-      id: r.id,
-      thumbnail: r.thumbnail,
-      name: r.name,
-      category: r.category,
-      contentCID: r.contentCID,
-      sourceSite: r.sourceSite,
-    }));
-  } else {
-    return releases.value;
-  }
-});
+const targetReleaseToEdit = ref<ReleaseItem<AnyObject> | null>(null);
+const targetReleaseToDelete = ref<ReleaseItem<AnyObject> | null>(null);
 
-const editedRelease: Ref<PartialReleaseItem> = ref({
-  name: '',
-  contentCID: '',
-  category: '',
-  author: '',
-  metadata: {},
-});
-
-const editReleaseDialog = ref(false);
-const confirmDeleteBlockReleaseDialog = ref(false);
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
-
-function editRelease(id?: string) {
-  if (!id) return;
-  if (staticStatus.value === 'static') {
-    const targetRelease = staticReleases.value.find(r => r.id === id);
-    if (targetRelease) {
-      editedRelease.value = {
-        id: targetRelease.id,
-        name: targetRelease.name,
-        contentCID: targetRelease.contentCID,
-        category: targetRelease.category,
-        author: targetRelease.author,
-        thumbnail: targetRelease.thumbnail,
-        cover: targetRelease.cover,
-        metadata: targetRelease.metadata ?? {},
-      };
-    }
-  } else {
-    const targetRelease = releases.value.find(r => r.id === id);
-    if (targetRelease) {
-      editedRelease.value = {
-        id: targetRelease.id,
-        name: targetRelease.name,
-        contentCID: targetRelease.contentCID,
-        category: targetRelease.category,
-        author: targetRelease.author,
-        thumbnail: targetRelease.thumbnail,
-        cover: targetRelease.cover,
-        metadata: targetRelease.metadata,
-      };
-    }
-  }
-  editReleaseDialog.value = true;
-}
 
 function handleSuccess(message: string) {
   openSnackbar(message, 'success');
-  editReleaseDialog.value = false;
-  resetEditedRelease();
+  targetReleaseToEdit.value = null;
 }
 
 function handleError(message: string) {
@@ -296,53 +241,10 @@ function handleError(message: string) {
   console.error('Error:', message);
 }
 
-function deleteBlockRelease(id: string, contentCID: string, sourceSite: string) {
-  editedRelease.value = { id, contentCID, sourceSite };
-  confirmDeleteBlockReleaseDialog.value = true;
-}
-
 async function confirmDeleteBlockRelease() {
-  if (!editedRelease.value.id) return;
-  if (staticStatus.value === 'static') {
-    const targetReleaseIndex = releases.value.findIndex(r => r.id === editedRelease.value.id);
-    if (targetReleaseIndex !== -1) {
-      releases.value.splice(targetReleaseIndex, 1);
-    }
-  } else {
-    try {
-      if (editedRelease.value.sourceSite === orbiter.siteId) {
-        await orbiter.removeRelease(editedRelease.value.id);
-        openSnackbar('Release deleted successfully.', 'success');
-      } else {
-        if (!editedRelease.value.contentCID) throw Error('Target release content CID missing.');
-        await orbiter.blockRelease({ cid: editedRelease.value.contentCID });
-        openSnackbar('Release blocked successfully.', 'success');
-      }
-      resetEditedRelease();
-    } catch (error) {
-      if (editedRelease.value.sourceSite === orbiter.siteId) {
-        console.error('Error deleting release:', error);
-        openSnackbar('Error on deleting release.', 'error');
-      } else {
-        console.error('Error blocking release:', error);
-        openSnackbar('Error on blocking release.', 'error');
-      }
-
-    }
-  }
-  confirmDeleteBlockReleaseDialog.value = false;
-  resetEditedRelease();
+  if (!targetReleaseToDelete.value) return;
+  deleteReleaseMutation.mutate({ id: targetReleaseToDelete.value.id });
 }
-
-function resetEditedRelease() {
-  editedRelease.value = {
-    name: '',
-    contentCID: '',
-    category: '',
-    author: '',
-    metadata: {},
-  };
-};
 
 function requestFeatureRelease(releaseId: string | undefined) {
   if (releaseId) {

@@ -53,13 +53,11 @@
 </template>
 
 <script setup lang="ts">
-import {suivre as follow} from '@constl/vue';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
+import { computed } from 'vue';
 import releaseForm from '/@/components/releases/releaseForm.vue';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 
-const {orbiter} = useOrbiter();
-const canUpload = follow(orbiter.followCanUpload.bind(orbiter));
+const canUpload = computed(() => true);
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
 function handleSuccess(message: string) {

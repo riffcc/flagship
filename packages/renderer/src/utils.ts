@@ -2,6 +2,8 @@ import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
 import {cid as isCID} from 'is-ipfs';
 import { IPFS_GATEWAY } from './constants/ipfs';
+import type { FeaturedReleaseItem } from './types';
+import {Duration} from 'luxon';
 
 export function downloadFile(filename: string, content: string | Uint8Array) {
   const element = document.createElement('a');
@@ -43,19 +45,10 @@ export const formatTime = (ms: number): string => {
     return '00:00';
   }
 
-  let totalSeconds = Math.floor(ms);
-  const hours = Math.floor(totalSeconds / 3600);
-  totalSeconds %= 3600;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
+  const duration = Duration.fromObject({ seconds: ms });
+  const hours = duration.as('hours');
 
-  const formattedHours = hours > 0 ? (hours < 10 ? `0${hours}` : `${hours}`) : null;
-  const formattedMinutes = minutes < 10 ? `0${minutes}` : `${minutes}`;
-  const formattedSeconds = seconds < 10 ? `0${seconds}` : `${seconds}`;
-
-  return formattedHours
-    ? `${formattedHours}:${formattedMinutes}:${formattedSeconds}`
-    : `${formattedMinutes}:${formattedSeconds}`;
+  return (hours >= 1) ? duration.toFormat('hh:mm:ss') :  duration.toFormat('mm:ss');
 };
 
 // Colors
@@ -87,14 +80,41 @@ export function parseUrlOrCid(urlOrCid?: string): string | undefined {
   if (!isCID(urlOrCid)) {
     return urlOrCid;
   }
-  // Use HTTPS for gateways
-  const gatewayBase = `https://${IPFS_GATEWAY}`;
-  const codexGatewayBase = `https://codex-${IPFS_GATEWAY}`;
+
+  // Load optional gateway override from environment variable
+  const gatewayOverride = import.meta.env.VITE_IPFS_GATEWAY as string | undefined;
+  const selectedGateway = gatewayOverride || IPFS_GATEWAY;
+
+  // Use HTTPS for gateways, unless the override specifies a protocol
+  const gatewayBase = selectedGateway.startsWith('http://') || selectedGateway.startsWith('https://')
+    ? selectedGateway
+    : `https://${selectedGateway}`;
+
+  // For codex gateway, we'll maintain the 'codex-' prefix logic if the base gateway doesn't already include it.
+  // If the override is a full URL, we might need a more sophisticated way to derive the codex variant.
+  // For now, let's assume the override is a domain or IP:port.
+  const codexGatewayBase = gatewayOverride
+    ? (gatewayOverride.startsWith('http://') || gatewayOverride.startsWith('https://') ? gatewayOverride.replace(/^(https?:\/\/)/, '$1codex-') : `https://codex-${gatewayOverride}`)
+    : `https://codex-${IPFS_GATEWAY}`;
+
 
   if (urlOrCid.startsWith('zD')) {
+    // If the gateway override is a full URL, we might not want to append /api/codex...
+    // This logic assumes the override is a base gateway.
     return `${codexGatewayBase}/api/codex/v1/data/${urlOrCid}/network/stream`;
   } else {
     return `${gatewayBase}/ipfs/${urlOrCid}`;
   }
 };
 
+export function filterActivedFeatured(featured: FeaturedReleaseItem) {
+  const now = new Date();
+  const startTime = new Date(featured.startTime);
+  const endTime = new Date(featured.endTime);
+
+  return now >= startTime && now <= endTime;
+};
+
+export function filterPromotedFeatured(featured: FeaturedReleaseItem) {
+  return featured.promoted;
+};

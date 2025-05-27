@@ -43,7 +43,7 @@ export function useCopyToClipboard() {
     return copiedStatus.value.get(identifier) ?? false;
   };
 
-  const getIcon = (identifier: string, defaultIcon: string = 'mdi-clipboard-multiple-outline', copiedIcon: string = 'mdi-clipboard-check-multiple-outline'): string => {
+  const getIcon = (identifier: string, defaultIcon: string = '$clipboard-multiple-outline', copiedIcon: string = '$clipboard-check-multiple-outline'): string => {
     return isCopied(identifier) ? copiedIcon : defaultIcon;
   };
 

@@ -66,14 +66,14 @@
           min-height="256px"
         >
           <h6 class="text-h6 font-weight-bold mb-4">Featured Releases</h6>
-          <v-list v-if="unfilteredFeaturedReleases.length > 0">
+          <v-list v-if="(featuredReleases?.length ?? 0) > 0">
             <v-list-item
-              v-for="featuredRelease in unfilteredFeaturedReleases"
+              v-for="featuredRelease in featuredReleases"
               :key="featuredRelease.id"
               class="px-0"
               :title="featuredRelease.releaseId"
             >
-              <template #title="{title}">
+              <template #title="{ title }">
                 <p class="text-subtitle-2 text-center">{{ title }}</p>
               </template>
               <template #prepend>
@@ -111,12 +111,12 @@
               </template>
               <template #append>
                 <v-btn
-                  icon="mdi-check"
+                  icon="$check"
                   size="small"
                   density="compact"
                   :disabled="!filterActivedFeatured(featuredRelease)"
                   :color="filterActivedFeatured(featuredRelease) ? 'blue' : 'default'"
-                  @click="featuredItemIdToEnd = featuredRelease.id"
+                  @click="featuredItemIdToEnd = featuredRelease"
                 >
                 </v-btn>
               </template>
@@ -156,21 +156,14 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, ref, watch, type Ref} from 'vue';
-import { useStaticStatus } from '/@/composables/staticStatus';
-import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import { filterActivedFeatured, filterPromotedFeatured, useReleasesStore, type PartialFeaturedReleaseItem } from '/@/stores/releases';
-import { storeToRefs } from 'pinia';
-import { useOrbiter } from '/@/plugins/orbiter/utils';
-import { useStaticReleases } from '/@/composables/staticReleases';
+import { computed, onMounted, ref, watch, type Ref } from 'vue';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
+import confirmationDialog from '/@/components/misc/confimationDialog.vue';
+import { filterActivedFeatured, filterPromotedFeatured } from '/@/utils';
+import type { FeaturedReleaseItem, PartialFeaturedReleaseItem } from '/@/types';
+import { useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useGetFeaturedReleasesQuery } from '/@/plugins/lensService/hooks';
+import { FEATURED_END_TIME_PROPERTY } from '@riffcc/lens-sdk';
 
-const { orbiter } = useOrbiter();
-const { staticStatus } = useStaticStatus();
-const {staticFeaturedReleases} = useStaticReleases();
-const releasesStore = useReleasesStore();
-const {releases, unfilteredFeaturedReleases} = storeToRefs(releasesStore);
-const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 const props = defineProps<{
   initialFeatureData: PartialFeaturedReleaseItem | null;
 }>();
@@ -179,16 +172,36 @@ const emit = defineEmits<{
   'initial-data-consumed': []
 }>();
 
-const newFeaturedRelease: Ref<PartialFeaturedReleaseItem> = ref({
-  releaseId: undefined,
-  startAt: undefined,
-  endAt: undefined,
-  promoted: undefined,
+const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
+
+const { data: featuredReleases } = useGetFeaturedReleasesQuery();
+const addFeaturedReleaseMutation = useAddFeaturedReleaseMutation({
+  onSuccess: () => {
+    openSnackbar('Featured release created succefully.', 'success');
+    resetForm();
+  },
+  onError: (e) => {
+    console.error('Error creating featured release:', e);
+    openSnackbar(`Error creating featured release: ${e.message.slice(0, 200)}`, 'error');
+  },
+});
+const editFeaturedReleaseMutation = useEditFeaturedReleaseMutation({
+  onSuccess: () => {
+    openSnackbar('Featured release ended succefully.', 'success');
+    resetForm();
+  },
+  onError: (e) => {
+    console.error('Error ending featured release:', e);
+    openSnackbar(`Error ending featured release: ${e.message.slice(0, 200)}`, 'error');
+  },
 });
 
+const newFeaturedRelease: Ref<PartialFeaturedReleaseItem> = ref({});
+
 const formRef = ref();
-const isLoading = ref(false);
-const featuredItemIdToEnd = ref<string | null>(null);
+const isLoading = computed(() => addFeaturedReleaseMutation.isPending.value || editFeaturedReleaseMutation.isPending.value);
+
+const featuredItemIdToEnd: Ref<FeaturedReleaseItem | null> = ref(null);
 
 const rules = [
   (value: string) => Boolean(value) || 'Required field.',
@@ -197,8 +210,8 @@ const rules = [
 const endAtRules = [
   (value: string | null) => !newFeaturedRelease.value.startTime || Boolean(value) || 'End date is required if start date is set.',
   (value: string | null) => {
-      if (!value || !newFeaturedRelease.value.startTime) return true;
-      return new Date(value) > new Date(newFeaturedRelease.value.startTime) || 'End date must be after start date.';
+    if (!value || !newFeaturedRelease.value.startTime) return true;
+    return new Date(value) > new Date(newFeaturedRelease.value.startTime) || 'End date must be after start date.';
   },
 ];
 
@@ -279,76 +292,16 @@ const handleOnSubmit = async () => {
   if (!readyToSave.value) {
     return;
   }
-
-  isLoading.value = true;
-  console.log('Creating new featured release with data:', readyToSave.value);
-
-  try {
-    if (staticStatus.value === 'static') {
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-      const targetRelease = releases.value.find(r => r.id === readyToSave.value?.releaseId);
-      if (targetRelease && targetRelease.id && readyToSave.value) {
-        staticFeaturedReleases.value.push({
-          id: `featured-${Date.now()}-${Math.random().toString(16).substring(2, 8)}`,
-          releaseId: targetRelease.id,
-          startTime: readyToSave.value.startTime,
-          endTime: readyToSave.value.endTime,
-          promoted: true,
-        });
-        console.log('Featured release added successfully to static list.');
-        openSnackbar('Featured release created succefully.', 'success');
-        resetForm(); // Reset form on success
-      } else {
-        console.error('Target release not found.');
-        openSnackbar('Error creating featured release.', 'error');
-      }
-    } else {
-      await orbiter.featureRelease({
-        cid: readyToSave.value.releaseId,
-        startTime: readyToSave.value.startTime,
-        endTime: readyToSave.value.endTime,
-        promoted: readyToSave.value.promoted,
-      });
-      openSnackbar('Featured release created succefully.', 'success');
-    }
-  } catch (error) {
-    console.error('Error creating featured release:', error);
-    openSnackbar('Error creating featured release.', 'error');
-  } finally {
-    isLoading.value = false;
-  }
+  addFeaturedReleaseMutation.mutate(readyToSave.value);
 };
+
 
 const confirmEndFeaturedRelease = async () => {
   if (!featuredItemIdToEnd.value) return;
-  const endTime = (new Date()).toISOString();
-  if (staticStatus.value === 'static') {
-    const index = staticFeaturedReleases.value.findIndex(fr => fr.id === featuredItemIdToEnd.value);
-    if (index !== -1) {
-        staticFeaturedReleases.value[index] = {
-            ...staticFeaturedReleases.value[index],
-            endTime,
-        };
-        openSnackbar('Featured release ended succefully.', 'success');
-    } else {
-        console.error(`Static featured release ${featuredItemIdToEnd.value} not found to end.`);
-        openSnackbar('Error on ending featured release.', 'error');
-    }
-  } else {
-    try {
-      await orbiter.editFeaturedRelease({
-        elementId: featuredItemIdToEnd.value,
-        featuredRelease: {
-          endTime,
-          promoted: false,
-        },
-      });
-      openSnackbar('Featured release ended succefully.', 'success');
-    } catch (error) {
-      console.error(`Error on ending featured release ${featuredItemIdToEnd.value}:`, error);
-      openSnackbar('Error on ending featured release.', 'error');
-    }
-  }
+  editFeaturedReleaseMutation.mutate({
+    ...featuredItemIdToEnd.value,
+    [FEATURED_END_TIME_PROPERTY]: (new Date()).toISOString(),
+  });
   featuredItemIdToEnd.value = null;
 };
 

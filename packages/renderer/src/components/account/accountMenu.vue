@@ -3,7 +3,7 @@
     <template #activator="{props: activatorProps}">
       <v-avatar
         v-bind="activatorProps"
-        :image="userAvatar"
+        :image="userData?.avatar"
         border
         class="mr-2 d-none d-sm-block"
       />
@@ -33,21 +33,10 @@
 </template>
 
 <script setup lang="ts">
-import {suivre as follow} from '@constl/vue';
-import {useUserProfilePhoto} from '/@/components/users/utils';
-import {useOrbiter} from '/@/plugins/orbiter/utils';
 import { useRouter } from 'vue-router';
 import { useUserSession } from '/@/composables/userSession';
 
-const {orbiter} = useOrbiter();
-
-// User avatar
-const accountId = follow(orbiter.listenForAccountId.bind(orbiter));
-
-const userAvatar = useUserProfilePhoto(accountId);
-
 const router = useRouter();
-
 
 const { userData } = useUserSession();
 const menuItems = [
