@@ -139,36 +139,45 @@ onMounted(async () => {
     await lensService.init('.lens-node');
     console.timeEnd('[App] Lens service init');
     
-    // Stage 2: Connect to bootstrappers FIRST (critical for data availability)
+    // Stage 2: Connect to first bootstrapper then immediately open site
     initStage.value = 'connecting';
     const bootstrappers = import.meta.env.VITE_BOOTSTRAPPERS;
+    
     if (bootstrappers) {
       const bootstrapperList = bootstrappers.split(',').map(b => b.trim());
-      console.log('Connecting to bootstrappers:', bootstrapperList);
+      console.log('[App] Bootstrappers:', bootstrapperList);
       
-      console.time('[App] Bootstrap connections');
-      // Try to connect to at least one bootstrapper before opening site
-      const dialResults = await Promise.allSettled(
-        bootstrapperList.map(b => lensService.dial(b)),
-      );
-      console.timeEnd('[App] Bootstrap connections');
-      
-      const connected = dialResults.filter(r => r.status === 'fulfilled').length;
-      const failed = dialResults.filter(r => r.status === 'rejected');
-      
-      console.log(`Connected to ${connected}/${bootstrapperList.length} bootstrappers`);
-      if (failed.length > 0) {
-        console.warn('Failed connections:', failed.map(f => f.reason?.message || f.reason));
+      // Try to connect to the FIRST bootstrapper only
+      if (bootstrapperList.length > 0) {
+        console.time('[App] First bootstrapper connection');
+        try {
+          await lensService.dial(bootstrapperList[0]);
+          console.log(`[App] Connected to first bootstrapper: ${bootstrapperList[0]}`);
+        } catch (err) {
+          console.warn(`[App] Failed to connect to first bootstrapper: ${err.message}`);
+        }
+        console.timeEnd('[App] First bootstrapper connection');
+        
+        // Connect to remaining bootstrappers in parallel (non-blocking)
+        if (bootstrapperList.length > 1) {
+          console.log('[App] Connecting to remaining bootstrappers in background...');
+          Promise.allSettled(
+            bootstrapperList.slice(1).map(b => lensService.dial(b)),
+          ).then(results => {
+            const connected = results.filter(r => r.status === 'fulfilled').length;
+            console.log(`[App] Background: Connected to ${connected}/${bootstrapperList.length - 1} additional bootstrappers`);
+          });
+        }
       }
-      
-      // Even if no bootstrappers connect, continue (might have local data)
     }
     
-    // Stage 3: Open site AFTER bootstrapper connection attempts
+    // Stage 3: Open site immediately after first bootstrapper attempt
     initStage.value = 'opening';
     console.time('[App] Site open (minimal)');
     await lensService.openSiteMinimal(siteAddress, customMemberSiteArgs);
     console.timeEnd('[App] Site open (minimal)');
+    
+    // Mark as ready so UI can render
     initStage.value = 'ready';
     initLoading.value = false;
     console.timeEnd('[App] Total initialization');
