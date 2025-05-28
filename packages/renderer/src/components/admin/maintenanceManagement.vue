@@ -80,6 +80,35 @@
       </v-card-text>
     </v-card>
     
+    <v-card class="mt-6">
+      <v-card-title>Federation Index</v-card-title>
+      <v-card-text>
+        <p class="mb-4">Reindex all releases in the federation index. This will sync the index with current releases.</p>
+        <v-btn
+          color="primary"
+          prepend-icon="$refresh"
+          :loading="isReindexing"
+          @click="reindexReleases"
+        >
+          Reindex Releases
+        </v-btn>
+        <div v-if="reindexResult" class="mt-4">
+          <v-alert
+            :type="reindexResult.success ? 'success' : 'error'"
+            class="mb-0"
+          >
+            <template v-if="reindexResult.success">
+              Successfully reindexed {{ reindexResult.reindexed }} releases
+              <span v-if="reindexResult.errors > 0"> ({{ reindexResult.errors }} errors)</span>
+            </template>
+            <template v-else>
+              Reindexing failed
+            </template>
+          </v-alert>
+        </div>
+      </v-card-text>
+    </v-card>
+    
     <v-dialog
       v-model="confirmDialog"
       max-width="500"
@@ -162,14 +191,24 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useDeleteFeaturedReleaseMutation } from '/@/plugins/lensService/hooks';
+import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useDeleteFeaturedReleaseMutation, useReindexReleasesMutation } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import type { ReleaseItem } from '/@/types';
-import type { AnyObject } from '@riffcc/lens-sdk';
+import type { AnyObject, ReleaseData } from '@riffcc/lens-sdk';
+import { 
+  ID_PROPERTY,
+  RELEASE_NAME_PROPERTY, 
+  RELEASE_CATEGORY_ID_PROPERTY,
+  RELEASE_CONTENT_CID_PROPERTY,
+  RELEASE_THUMBNAIL_CID_PROPERTY,
+  RELEASE_METADATA_PROPERTY,
+} from '@riffcc/lens-sdk';
 
 const isExporting = ref(false);
 const isImporting = ref(false);
 const isDeleting = ref(false);
+const isReindexing = ref(false);
+const reindexResult = ref<{ success: boolean; reindexed: number; errors: number } | null>(null);
 const importMode = ref<'upsert' | 'replace'>('upsert');
 const importFile = ref<File | null>(null);
 const confirmDialog = ref(false);
@@ -354,22 +393,26 @@ const performImport = async () => {
     // Import releases
     for (const release of importData.releases) {
       try {
-        // Extract the data without the __context
-        const releaseData: ReleaseItem<AnyObject> = {
-          id: release.id,
-          name: release.name,
-          categoryId: release.categoryId,
-          contentCID: release.contentCID,
-          thumbnailCID: release.thumbnailCID,
-          metadata: release.metadata,
+        // Convert to ReleaseData format expected by the mutation
+        const releaseData: ReleaseData<string> = {
+          [RELEASE_NAME_PROPERTY]: release.name,
+          [RELEASE_CATEGORY_ID_PROPERTY]: release.categoryId,
+          [RELEASE_CONTENT_CID_PROPERTY]: release.contentCID,
+          [RELEASE_THUMBNAIL_CID_PROPERTY]: release.thumbnailCID,
+          [RELEASE_METADATA_PROPERTY]: typeof release.metadata === 'string' 
+            ? release.metadata 
+            : JSON.stringify(release.metadata || {}),
         };
         
         if (importMode.value === 'upsert') {
           // Check if release exists
           const existing = releases.value?.find(r => r.id === release.id);
           if (existing) {
-            // Update existing
-            await editReleaseMutation.mutateAsync(releaseData);
+            // Update existing - edit mutation expects id + data
+            await editReleaseMutation.mutateAsync({
+              [ID_PROPERTY]: release.id,
+              ...releaseData,
+            });
             releasesImported++;
           } else {
             // Add new
@@ -423,6 +466,13 @@ const performImport = async () => {
     
     openSnackbar(`Import complete: ${releasesImported} releases and ${featuredImported} featured releases imported`, 'success');
     importFile.value = null;
+    
+    // After successful import, you can manually click Reindex to update federation index
+    // Commenting out auto-reindex to avoid import errors
+    // if (releasesImported > 0) {
+    //   openSnackbar('Updating federation index...', 'info');
+    //   await reindexReleases();
+    // }
   } catch (error) {
     openSnackbar('Import failed: ' + (error instanceof Error ? error.message : String(error)), 'error');
   } finally {
@@ -442,6 +492,34 @@ const deleteAllReleasesOnly = async () => {
     openSnackbar('Failed to delete releases: ' + (error instanceof Error ? error.message : String(error)), 'error');
   } finally {
     isDeleting.value = false;
+  }
+};
+
+// Use the proper mutation hook like all the other mutations
+const reindexMutation = useReindexReleasesMutation({
+  onSuccess: (result) => {
+    reindexResult.value = result;
+    if (result.success) {
+      openSnackbar(`Successfully reindexed ${result.reindexed} releases`, 'success');
+    } else {
+      openSnackbar('Reindexing failed', 'error');
+    }
+  },
+  onError: (error) => {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    openSnackbar('Failed to reindex: ' + errorMessage, 'error');
+    reindexResult.value = { success: false, reindexed: 0, errors: 0 };
+  },
+});
+
+const reindexReleases = async () => {
+  isReindexing.value = true;
+  reindexResult.value = null;
+  
+  try {
+    await reindexMutation.mutateAsync();
+  } finally {
+    isReindexing.value = false;
   }
 };
 </script>

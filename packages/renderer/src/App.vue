@@ -133,11 +133,13 @@ onMounted(async () => {
       );
     }
     
-    // Stage 1: Initialize lens service
+    // Stage 1: Wait for pre-initialized lens service
     initStage.value = 'init';
-    console.time('[App] Lens service init');
-    await lensService.init('.lens-node');
-    console.timeEnd('[App] Lens service init');
+    console.time('[App] Lens service ready wait');
+    // Import the ready promise from preload
+    const { lensServiceReady } = await import('./preload-lens');
+    await lensServiceReady;
+    console.timeEnd('[App] Lens service ready wait');
     
     // Stage 2: Connect to first bootstrapper then immediately open site
     initStage.value = 'connecting';
@@ -227,10 +229,20 @@ watch(accountStatus, async (newValue, oldValue) => {
     }
     if (newSiteArgs) {
       try {
-        await lensService.closeSite();
-        await lensService.openSite(siteAddress, newSiteArgs);
+        // Don't try to reopen if we're already admin - the site is already open with admin rights
+        if (accountStatus.accountType !== AccountType.Admin) {
+          await lensService.closeSite();
+          await lensService.openSite(siteAddress, newSiteArgs);
+        } else {
+          console.log('[App] Already admin, skipping site reopen');
+        }
       } catch (e) {
-        console.log(`Error on reopened the site with new replication args: ${e}`);
+        console.error(`[App] Error reopening site with new replication args:`, e);
+        // If reopening fails, ensure the site is still usable
+        if (!lensService.siteProgram) {
+          console.log('[App] Site lost after failed reopen, reopening with original args...');
+          await lensService.openSite(siteAddress, customMemberSiteArgs);
+        }
       }
     }
   }

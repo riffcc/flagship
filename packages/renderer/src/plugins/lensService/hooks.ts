@@ -8,6 +8,7 @@ import {
 import type { FeaturedReleaseItem, ReleaseItem } from '/@/types';
 import { useStaticData } from '../../composables/staticData';
 import type { IndexableFederationEntry } from '@riffcc/lens-sdk';
+import { federationCache } from '/@/utils/federationCache';
 
 export function useLensService() {
   const lensService = inject<LensService>('lensService');
@@ -332,6 +333,7 @@ export function useAddFeaturedReleaseMutation(options?: {
     onSuccess: (response) => {
       options?.onSuccess?.(response);
       queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+      queryClient.invalidateQueries({ queryKey: ['federationIndex'] });
     },
     onError: (error) => {
       options?.onError?.(error);
@@ -374,6 +376,7 @@ export function useDeleteFeaturedReleaseMutation(options?: {
       options?.onSuccess?.(response);
       queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
       queryClient.invalidateQueries({ queryKey: ['featuredReleases', response.id] });
+      queryClient.invalidateQueries({ queryKey: ['federationIndex'] });
     },
     onError: (error) => {
       options?.onError?.(error);
@@ -455,7 +458,22 @@ export function useFederationIndexFeaturedQuery(options?: {
   return useQuery<IndexableFederationEntry[]>({
     queryKey: ['federationIndex', 'featured', options?.limit],
     queryFn: async () => {
-      return await lensService.getFederationIndexFeatured(options?.limit);
+      const cacheKey = `featured-${options?.limit || 50}`;
+      
+      // Check cache first
+      const cached = federationCache.get<IndexableFederationEntry[]>(cacheKey);
+      if (cached) {
+        console.log('[Federation] Serving featured from memory cache');
+        return cached;
+      }
+      
+      // Fetch from service
+      const data = await lensService.getFederationIndexFeatured(options?.limit);
+      
+      // Cache the result
+      federationCache.set(cacheKey, data, 30000); // 30s cache
+      
+      return data;
     },
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 2, // 2 minute stale time
@@ -525,7 +543,22 @@ export function useFederationIndexRecentQuery(options?: {
   return useQuery<IndexableFederationEntry[]>({
     queryKey: ['federationIndex', 'recent', options?.limit, options?.offset],
     queryFn: async () => {
-      return await lensService.getFederationIndexRecent(options?.limit, options?.offset);
+      const cacheKey = `recent-${options?.limit || 200}-${options?.offset || 0}`;
+      
+      // Check cache first
+      const cached = federationCache.get<IndexableFederationEntry[]>(cacheKey);
+      if (cached) {
+        console.log('[Federation] Serving recent from memory cache');
+        return cached;
+      }
+      
+      // Fetch from service
+      const data = await lensService.getFederationIndexRecent(options?.limit, options?.offset);
+      
+      // Cache the result
+      federationCache.set(cacheKey, data, 30000); // 30s cache
+      
+      return data;
     },
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60, // 1 minute stale time
@@ -572,5 +605,26 @@ export function useFederationIndexStatsQuery(options?: {
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 10, // 10 minute stale time
     gcTime: 1000 * 60 * 30,
+  });
+}
+
+export function useReindexReleasesMutation(options?: {
+  onSuccess?: (result: { success: boolean; reindexed: number; errors: number }) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      return await lensService.reindexReleases();
+    },
+    onSuccess: (result) => {
+      options?.onSuccess?.(result);
+      // Invalidate federation index queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['federationIndex'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
   });
 }

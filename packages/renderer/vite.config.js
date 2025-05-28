@@ -65,7 +65,7 @@ const config = {
       },
     }),
     nodePolyfills({
-      include: ['crypto', 'stream', 'vm'],
+      include: ['crypto', 'stream', 'vm', 'path'],
       globals: {
         Buffer: true,
         global: true,
@@ -96,6 +96,14 @@ const config = {
     assetsDir: '.',
     rollupOptions: {
       input: join(PACKAGE_ROOT, 'index.html'),
+      onwarn(warning, warn) {
+        // Ignore warnings about vite-plugin-node-polyfills shims
+        if (warning.code === 'UNRESOLVED_IMPORT' && 
+            warning.message.includes('vite-plugin-node-polyfills/shims/')) {
+          return;
+        }
+        warn(warning);
+      },
     },
     emptyOutDir: true,
     reportCompressedSize: false,

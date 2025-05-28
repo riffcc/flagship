@@ -19,9 +19,10 @@ export function federationEntryToRelease(entry: IndexableFederationEntry): Relea
   return {
     id: entry.id, // This is sourceSiteId:contentCid
     name: entry.title,
-    categoryId: 'video', // Default to video for now
+    categoryId: entry.categoryId || 'video', // Use actual categoryId from entry
     contentCid: entry.contentCID, // Note: uppercase CID in entry
     thumbnailCid: entry.thumbnailCID, // Note: uppercase CID in entry
+    coverCid: entry.coverCID, // Add cover CID support
     metadata,
   } as ReleaseItem<AnyObject>;
 }

@@ -97,7 +97,7 @@ const {
   isFetched: isFederationFeaturedFetched,
 } = useFederationIndexFeaturedQuery({
   limit: 50, // Get top 50 featured items
-  staleTime: 1000 * 30, // 30s stale time
+  staleTime: 1000 * 5, // 5s stale time for testing cache
 });
 
 // Get recent content from federation index
@@ -214,8 +214,8 @@ const noFeaturedContent = computed(() => {
   if (isFederationFeaturedLoading.value || isFederationRecentLoading.value) {
     return false;
   }
-  // If we have any releases at all, we have content to show
-  return allReleases.value.length === 0;
+  // Check if we have featured content specifically
+  return featuredReleases.value.length === 0 && promotedFeaturedReleases.value.length === 0;
 });
 
 const noContent = computed(() => {

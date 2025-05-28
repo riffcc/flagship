@@ -110,9 +110,10 @@ const releases = computed<ReleaseItem<AnyObject>[]>(() => {
   return indexEntries.value.map(entry => ({
     id: entry.id,
     name: entry.title,
-    categoryId: 'video', // Default to video for now
+    categoryId: entry.categoryId || 'video', // Use categoryId from federation index
     contentCid: entry.contentCID, // Note: uppercase CID
     thumbnailCid: entry.thumbnailCID, // Note: uppercase CID
+    coverCid: entry.coverCID, // Cover image CID
     metadata: {
       sourceSiteId: entry.sourceSiteId,
       timestamp: Number(entry.timestamp),
