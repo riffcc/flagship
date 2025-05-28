@@ -176,7 +176,20 @@ const activeSections = computed<{
   items: ReleaseItem<AnyObject>[];
   navigationPath: string;
 }[]>(() => {
-  if (!contentCategories.value) return [];
+  // If we have no content categories but have releases, show them all in one section
+  if (!contentCategories.value || contentCategories.value.length === 0) {
+    if (allReleases.value && allReleases.value.length > 0) {
+      return [{
+        id: 'all',
+        title: 'All Content',
+        items: allReleases.value,
+        navigationPath: '/browse',
+      }];
+    }
+    return [];
+  }
+  
+  // Otherwise use the category-based filtering
   return contentCategories.value
     .filter(c => c.featured)
     .map(fc => {
@@ -201,7 +214,8 @@ const noFeaturedContent = computed(() => {
   if (isFederationFeaturedLoading.value || isFederationRecentLoading.value) {
     return false;
   }
-  return promotedFeaturedReleases.value.length === 0 && activeSections.value.length === 0;
+  // If we have any releases at all, we have content to show
+  return allReleases.value.length === 0;
 });
 
 const noContent = computed(() => {

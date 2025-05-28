@@ -80,26 +80,56 @@ import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import type { ReleaseItem } from '/@/types';
-import { useContentCategoriesQuery, useGetFeaturedReleasesQuery, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
+import { useContentCategoriesQuery, useFederationIndexFeaturedQuery, useFederationIndexRecentQuery } from '/@/plugins/lensService/hooks';
 import { filterActivedFeatured, filterPromotedFeatured } from '../utils';
 
 const router = useRouter();
 
-// Optimize loading: Reduce stale time for faster fallback and eager loading
+// Use Federation Index for all content queries
 const {
-  data: releases,
+  data: indexEntries,
   isLoading: isReleasesLoading,
   isFetched: isReleasesFetched,
-} = useGetReleasesQuery({
+} = useFederationIndexRecentQuery({
   staleTime: 1000 * 30, // 30s stale time for faster refresh
+  limit: 100, // Get recent 100 entries
 });
 
 const {
-  data: featuredReleases,
+  data: featuredIndexEntries,
   isLoading: isFeaturedReleasesLoading,
   isFetched: isFeaturedReleasesFetched,
-} = useGetFeaturedReleasesQuery({
+} = useFederationIndexFeaturedQuery({
   staleTime: 1000 * 30, // 30s stale time for faster refresh
+  limit: 20, // Featured items limit
+});
+
+// Convert federation index entries to release items format
+const releases = computed<ReleaseItem<AnyObject>[]>(() => {
+  if (!indexEntries.value) return [];
+  return indexEntries.value.map(entry => ({
+    id: entry.id,
+    name: entry.title,
+    categoryId: 'video', // Default to video for now
+    contentCid: entry.contentCID, // Note: uppercase CID
+    thumbnailCid: entry.thumbnailCID, // Note: uppercase CID
+    metadata: {
+      sourceSiteId: entry.sourceSiteId,
+      timestamp: Number(entry.timestamp),
+      isFeatured: entry.isFeatured,
+      isPromoted: entry.isPromoted,
+    },
+  }));
+});
+
+// Convert featured entries to release items, filtering by expiration
+const featuredReleases = computed(() => {
+  if (!featuredIndexEntries.value) return [];
+  const now = Date.now();
+  return featuredIndexEntries.value.filter(entry => {
+    // Check if still within featured period
+    return entry.isFeatured && (!entry.featuredUntil || Number(entry.featuredUntil) > now);
+  });
 });
 
 
@@ -107,20 +137,47 @@ const {
 const { data: contentCategories } = useContentCategoriesQuery();
 
 const activedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
-  if (!releases.value || !featuredReleases.value) return [];
-  const activedFeaturedReleasesIds = featuredReleases.value
-    .filter(filterActivedFeatured)
-    .map(fr => fr.releaseId);
-  return releases.value.filter(r => r.id && activedFeaturedReleasesIds.includes(r.id));
+  if (!featuredIndexEntries.value) return [];
+  const now = Date.now();
+  // Convert featured index entries to release items
+  return featuredIndexEntries.value
+    .filter(entry => entry.isFeatured && (!entry.featuredUntil || Number(entry.featuredUntil) > now))
+    .map(entry => ({
+      id: entry.id,
+      name: entry.title,
+      categoryId: 'video', // Default to video
+      contentCid: entry.contentCID, // Note: uppercase CID
+      thumbnailCid: entry.thumbnailCID, // Note: uppercase CID
+      metadata: {
+        sourceSiteId: entry.sourceSiteId,
+        timestamp: Number(entry.timestamp),
+        isFeatured: entry.isFeatured,
+        isPromoted: entry.isPromoted,
+        featuredUntil: entry.featuredUntil ? Number(entry.featuredUntil) : undefined,
+      },
+    }));
 });
 
 const promotedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
-  if (!releases.value || !featuredReleases.value) return [];
-  const promotedActivedFeaturedReleasesIds = featuredReleases.value
-    .filter(filterActivedFeatured)
-    .filter(filterPromotedFeatured)
-    .map(fr => fr.releaseId);
-  return releases.value.filter(r => r.id && promotedActivedFeaturedReleasesIds.includes(r.id));
+  if (!featuredIndexEntries.value) return [];
+  const now = Date.now();
+  // Convert promoted index entries to release items
+  return featuredIndexEntries.value
+    .filter(entry => entry.isPromoted && (!entry.promotedUntil || Number(entry.promotedUntil) > now))
+    .map(entry => ({
+      id: entry.id,
+      name: entry.title,
+      categoryId: 'video', // Default to video
+      contentCid: entry.contentCID, // Note: uppercase CID
+      thumbnailCid: entry.thumbnailCID, // Note: uppercase CID
+      metadata: {
+        sourceSiteId: entry.sourceSiteId,
+        timestamp: Number(entry.timestamp),
+        isFeatured: entry.isFeatured,
+        isPromoted: entry.isPromoted,
+        promotedUntil: entry.promotedUntil ? Number(entry.promotedUntil) : undefined,
+      },
+    }));
 });
 
 

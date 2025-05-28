@@ -166,9 +166,9 @@ onMounted(async () => {
     
     // Stage 3: Open site AFTER bootstrapper connection attempts
     initStage.value = 'opening';
-    console.time('[App] Site open');
-    await lensService.openSite(siteAddress, customMemberSiteArgs);
-    console.timeEnd('[App] Site open');
+    console.time('[App] Site open (minimal)');
+    await lensService.openSiteMinimal(siteAddress, customMemberSiteArgs);
+    console.timeEnd('[App] Site open (minimal)');
     initStage.value = 'ready';
     initLoading.value = false;
     console.timeEnd('[App] Total initialization');

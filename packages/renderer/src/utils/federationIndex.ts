@@ -7,28 +7,22 @@ import type { ReleaseItem, AnyObject } from '/@/types';
 export function federationEntryToRelease(entry: IndexableFederationEntry): ReleaseItem<AnyObject> {
   // Extract metadata from the entry
   const metadata: AnyObject = {
-    description: entry.description,
-    tags: entry.tags,
-    contentType: entry.contentType,
-    sourceSite: entry.sourceSiteName,
     sourceSiteId: entry.sourceSiteId,
+    timestamp: Number(entry.timestamp),
+    isFeatured: entry.isFeatured,
+    isPromoted: entry.isPromoted,
+    featuredUntil: entry.featuredUntil ? Number(entry.featuredUntil) : undefined,
+    promotedUntil: entry.promotedUntil ? Number(entry.promotedUntil) : undefined,
   };
 
   // Create a release-like object from the federation index entry
   return {
     id: entry.id, // This is sourceSiteId:contentCid
     name: entry.title,
-    categoryId: entry.categoryId,
-    contentCID: entry.contentCid,
-    thumbnailCID: entry.thumbnailCid,
-    metadata: JSON.stringify(metadata),
-    // Federation info
-    federatedFrom: entry.sourceSiteId,
-    federatedAt: new Date(entry.timestamp).toISOString(),
-    federatedRealtime: true,
-    // Context fields that might be used by UI
-    created: BigInt(entry.timestamp),
-    modified: BigInt(entry.timestamp),
+    categoryId: 'video', // Default to video for now
+    contentCid: entry.contentCID, // Note: uppercase CID in entry
+    thumbnailCid: entry.thumbnailCID, // Note: uppercase CID in entry
+    metadata,
   } as ReleaseItem<AnyObject>;
 }
 
@@ -49,12 +43,12 @@ export function shouldUseFederationIndex(): boolean {
 }
 
 /**
- * Extract featured entries from federation index based on tags or recent high-quality content
+ * Extract featured entries from federation index based on isFeatured flag
  */
 export function extractFeaturedFromIndex(entries: IndexableFederationEntry[]): IndexableFederationEntry[] {
-  // For now, return the most recent entries as "featured"
-  // In production, you might want to look for specific tags or quality indicators
+  const now = Date.now();
   return entries
-    .sort((a, b) => b.timestamp - a.timestamp)
-    .slice(0, 10); // Top 10 most recent
+    .filter(entry => entry.isFeatured && (!entry.featuredUntil || Number(entry.featuredUntil) > now))
+    .sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
+    .slice(0, 10); // Top 10 featured
 }

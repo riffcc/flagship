@@ -1,6 +1,8 @@
 <template>
-  <v-container fluid class="fill-height pb-16 px-3">
-    
+  <v-container
+    fluid
+    class="fill-height pb-16 px-3"
+  >
     <template v-if="props.showAll">
       <!-- Show all releases with infinite scroll -->
       <p class="text-h6 text-sm-h5 font-weight-bold mb-4">{{ pageTitle }}</p>
@@ -57,7 +59,7 @@ import { useRouter } from 'vue-router';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import InfiniteReleaseList from '/@/components/misc/infiniteReleaseList.vue';
-import { useContentCategoriesQuery, useGetReleasesQuery, useGetFeaturedReleasesQuery } from '/@/plugins/lensService/hooks';
+import { useContentCategoriesQuery, useFederationIndexByCategoryQuery, useFederationIndexFeaturedQuery } from '/@/plugins/lensService/hooks';
 import { filterActivedFeatured } from '/@/utils';
 import type { ReleaseItem, AnyObject } from '/@/types';
 
@@ -68,10 +70,47 @@ const props = defineProps<{
 const router = useRouter();
 
 const { data: contentCategories } = useContentCategoriesQuery();
-const { data: releases, isLoading: isReleasesLoading } = useGetReleasesQuery();
-const { data: featuredReleases, isLoading: isFeaturedLoading } = useGetFeaturedReleasesQuery();
+const { data: categoryIndexEntries, isLoading: isReleasesLoading } = useFederationIndexByCategoryQuery(props.category, {
+  limit: 100,
+});
+const { data: featuredIndexEntries, isLoading: isFeaturedLoading } = useFederationIndexFeaturedQuery({
+  limit: 20,
+});
 
 const isLoading = computed(() => isReleasesLoading.value || isFeaturedLoading.value);
+
+// Convert federation index entries to release items format
+const releases = computed<ReleaseItem<AnyObject>[]>(() => {
+  if (!categoryIndexEntries.value) return [];
+  return categoryIndexEntries.value.map(entry => ({
+    id: entry.id,
+    name: entry.title,
+    categoryId: entry.categoryId,
+    contentCid: entry.contentCid,
+    thumbnailCid: entry.thumbnailCid,
+    metadata: {
+      sourceSite: entry.sourceSiteName,
+      sourceSiteId: entry.sourceSiteId,
+      description: entry.description,
+      contentType: entry.contentType,
+      tags: entry.tags,
+    },
+  }));
+});
+
+// Convert featured entries to featured release format
+const featuredReleases = computed(() => {
+  if (!featuredIndexEntries.value) return [];
+  // Filter featured entries for this category
+  const categoryFeatured = featuredIndexEntries.value.filter(entry => entry.categoryId === props.category);
+  return categoryFeatured.map(entry => ({
+    id: `featured-${entry.id}`,
+    releaseId: entry.id,
+    startTime: new Date().toISOString(),
+    endTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+    promoted: true,
+  }));
+});
 
 const pageCategory = computed(() => {
   const categoryId = props.category;
@@ -97,7 +136,7 @@ const featuredReleasesInCategory = computed<ReleaseItem<AnyObject>[]>(() => {
   return releases.value.filter(r => 
     r.id && 
     activeFeaturedReleaseIds.includes(r.id) && 
-    r.categoryId === props.category
+    r.categoryId === props.category,
   );
 });
 

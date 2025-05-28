@@ -1,5 +1,8 @@
 <template>
-  <div ref="scrollContainer" class="infinite-release-list">
+  <div
+    ref="scrollContainer"
+    class="infinite-release-list"
+  >
     <v-sheet
       v-if="isLoading"
       class="d-flex justify-center py-8"
@@ -14,7 +17,10 @@
     
     <template v-else>
       <div class="releases-wrapper">
-        <v-row dense justify="center">
+        <v-row
+          dense
+          justify="center"
+        >
           <v-col
             v-for="item in visibleReleases"
             :key="item.id"
@@ -56,7 +62,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import type { ReleaseItem, AnyObject } from '/@/types';
 import ContentCard from './contentCard.vue';
-import { useGetReleasesQuery } from '/@/plugins/lensService/hooks';
+import { useFederationIndexRecentQuery, useFederationIndexByCategoryQuery } from '/@/plugins/lensService/hooks';
 import type { SearchOptions } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
@@ -74,9 +80,28 @@ const PAGE_SIZE = props.pageSize || 60; // Show many items to fill ultrawide scr
 const currentPage = ref(1);
 const windowWidth = ref(window.innerWidth);
 
-// Fetch releases with the configured batch size (100)
-const { data: releases, isLoading } = useGetReleasesQuery({
-  searchOptions: props.searchOptions,
+// Fetch releases from Federation Index
+const { data: indexEntries, isLoading } = props.categoryFilter
+  ? useFederationIndexByCategoryQuery(props.categoryFilter, { limit: 200 })
+  : useFederationIndexRecentQuery({ limit: 200 });
+
+// Convert federation index entries to release items format
+const releases = computed<ReleaseItem<AnyObject>[]>(() => {
+  if (!indexEntries.value) return [];
+  return indexEntries.value.map(entry => ({
+    id: entry.id,
+    name: entry.title,
+    categoryId: entry.categoryId,
+    contentCid: entry.contentCid,
+    thumbnailCid: entry.thumbnailCid,
+    metadata: {
+      sourceSite: entry.sourceSiteName,
+      sourceSiteId: entry.sourceSiteId,
+      description: entry.description,
+      contentType: entry.contentType,
+      tags: entry.tags,
+    },
+  }));
 });
 
 // Track window resize
