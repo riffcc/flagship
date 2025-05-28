@@ -45,6 +45,7 @@
   "devDependencies": {
     "@eslint/js": "^9.27.0",
     "@mdi/js": "^7.4.47",
+    "@playwright/test": "^1.52.0",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@types/luxon": "^3.6.2",
     "@types/node": "^22.15.21",
@@ -83,7 +84,7 @@
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@riffcc/flagship": "link:",
-    "@riffcc/lens-sdk": "^0.1.21",
+    "@riffcc/lens-sdk": "file:../lens-sdk",
     "@tanstack/vue-query": "^5.77.0",
     "@vueuse/core": "^12.8.2",
     "core-js": "^3.42.0",

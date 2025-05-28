@@ -7,6 +7,7 @@ import {
 } from '@riffcc/lens-sdk';
 import type { FeaturedReleaseItem, ReleaseItem } from '/@/types';
 import { useStaticData } from '../../composables/staticData';
+import type { IndexableFederationEntry } from '@riffcc/lens-sdk';
 
 export function useLensService() {
   const lensService = inject<LensService>('lensService');
@@ -297,6 +298,27 @@ export function useDeleteReleaseMutation(options?: {
   });
 }
 
+export function useClearAllReleasesMutation(options?: {
+  onSuccess?: (response: IdResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      return await lensService.clearAllReleases();
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
 export function useAddFeaturedReleaseMutation(options?: {
   onSuccess?: (response: HashResponse) => void;
   onError?: (e: Error) => void;
@@ -419,5 +441,136 @@ export function useDeleteSubscriptionMutation(options?: {
     onError: (error) => {
       options?.onError?.(error);
     },
+  });
+}
+
+// #### FEDERATION INDEX QUERIES ####
+
+export function useFederationIndexFeaturedQuery(options?: {
+  enabled?: boolean;
+  staleTime?: number;
+  limit?: number;
+}) {
+  const { lensService } = useLensService();
+  return useQuery<IndexableFederationEntry[]>({
+    queryKey: ['federationIndex', 'featured', options?.limit],
+    queryFn: async () => {
+      return await lensService.getFederationIndexFeatured(options?.limit);
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 2, // 2 minute stale time
+    gcTime: 1000 * 60 * 10, // 10 minute cache
+    retry: 2,
+  });
+}
+
+export function useFederationIndexByCategoryQuery(categoryId: string, options?: {
+  enabled?: boolean;
+  staleTime?: number;
+  limit?: number;
+}) {
+  const { lensService } = useLensService();
+  return useQuery<IndexableFederationEntry[]>({
+    queryKey: ['federationIndex', 'category', categoryId, options?.limit],
+    queryFn: async () => {
+      return await lensService.getFederationIndexByCategory(categoryId, options?.limit);
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minute stale time
+    gcTime: 1000 * 60 * 15,
+  });
+}
+
+export function useFederationIndexByTypeQuery(contentType: string, options?: {
+  enabled?: boolean;
+  staleTime?: number;
+  limit?: number;
+}) {
+  const { lensService } = useLensService();
+  return useQuery<IndexableFederationEntry[]>({
+    queryKey: ['federationIndex', 'type', contentType, options?.limit],
+    queryFn: async () => {
+      return await lensService.getFederationIndexByType(contentType, options?.limit);
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
+  });
+}
+
+export function useFederationIndexSearchQuery(query: string, options?: {
+  enabled?: boolean;
+  staleTime?: number;
+  searchOptions?: SearchOptions;
+}) {
+  const { lensService } = useLensService();
+  return useQuery<IndexableFederationEntry[]>({
+    queryKey: ['federationIndex', 'search', query, options?.searchOptions],
+    queryFn: async () => {
+      return await lensService.searchFederationIndex(query, options?.searchOptions);
+    },
+    enabled: (options?.enabled ?? true) && query.length > 0,
+    staleTime: options?.staleTime ?? 1000 * 30, // 30 second stale time for search
+    gcTime: 1000 * 60 * 5,
+  });
+}
+
+export function useFederationIndexRecentQuery(options?: {
+  enabled?: boolean;
+  staleTime?: number;
+  limit?: number;
+  offset?: number;
+}) {
+  const { lensService } = useLensService();
+  return useQuery<IndexableFederationEntry[]>({
+    queryKey: ['federationIndex', 'recent', options?.limit, options?.offset],
+    queryFn: async () => {
+      return await lensService.getFederationIndexRecent(options?.limit, options?.offset);
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60, // 1 minute stale time
+    gcTime: 1000 * 60 * 10,
+  });
+}
+
+export function useComplexFederationIndexQuery(params: {
+  query?: string;
+  contentType?: string;
+  sourceSiteId?: string;
+  categoryId?: string;
+  tags?: string[];
+  afterTimestamp?: number;
+  beforeTimestamp?: number;
+  limit?: number;
+  offset?: number;
+}, options?: {
+  enabled?: boolean;
+  staleTime?: number;
+}) {
+  const { lensService } = useLensService();
+  return useQuery<IndexableFederationEntry[]>({
+    queryKey: ['federationIndex', 'complex', params],
+    queryFn: async () => {
+      return await lensService.complexFederationIndexQuery(params);
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
+  });
+}
+
+export function useFederationIndexStatsQuery(options?: {
+  enabled?: boolean;
+  staleTime?: number;
+}) {
+  const { lensService } = useLensService();
+  return useQuery({
+    queryKey: ['federationIndex', 'stats'],
+    queryFn: async () => {
+      return await lensService.getFederationIndexStats();
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 10, // 10 minute stale time
+    gcTime: 1000 * 60 * 30,
   });
 }

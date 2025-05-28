@@ -65,6 +65,21 @@
       </v-card-text>
     </v-card>
     
+    <v-card class="mt-6">
+      <v-card-title class="text-error">Danger Zone</v-card-title>
+      <v-card-text>
+        <p class="mb-4">Permanently delete all releases from the site. This action cannot be undone.</p>
+        <v-btn
+          color="error"
+          prepend-icon="$delete"
+          :loading="isDeleting"
+          @click="confirmDeleteDialog = true"
+        >
+          Delete All Releases
+        </v-btn>
+      </v-card-text>
+    </v-card>
+    
     <v-dialog
       v-model="confirmDialog"
       max-width="500"
@@ -88,6 +103,40 @@
             @click="confirmReplaceAll"
           >
             Delete All & Import
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    
+    <v-dialog
+      v-model="confirmDeleteDialog"
+      max-width="500"
+    >
+      <v-card>
+        <v-card-title class="text-error">Confirm Delete All Releases</v-card-title>
+        <v-card-text>
+          <p class="mb-4">Are you sure you want to delete ALL releases from this site?</p>
+          <p class="font-weight-bold">This will permanently delete:</p>
+          <ul class="mb-4">
+            <li>{{ releases?.length || 0 }} releases</li>
+            <li>{{ featuredReleases?.length || 0 }} featured releases</li>
+          </ul>
+          <p class="text-error font-weight-bold">This action cannot be undone!</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            text
+            @click="confirmDeleteDialog = false"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
+            @click="deleteAllReleasesOnly"
+          >
+            Delete All Releases
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -120,9 +169,11 @@ import type { AnyObject } from '@riffcc/lens-sdk';
 
 const isExporting = ref(false);
 const isImporting = ref(false);
+const isDeleting = ref(false);
 const importMode = ref<'upsert' | 'replace'>('upsert');
 const importFile = ref<File | null>(null);
 const confirmDialog = ref(false);
+const confirmDeleteDialog = ref(false);
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
@@ -253,14 +304,23 @@ const deleteAllData = async () => {
       console.log(`Deleting ${releases.value.length} releases...`);
       for (const release of releases.value) {
         try {
+          console.log('[DELETE DEBUG] Deleting release:', {
+            id: release.id,
+            name: release.name,
+            contentCID: release.contentCID,
+            federatedFrom: (release as any).federatedFrom,
+            author: (release as any).author?.toString(),
+          });
+          
           const result = await deleteReleaseMutation.mutateAsync({ id: release.id });
           if (result.success) {
             releasesDeleted++;
+            console.log(`[DELETE DEBUG] Successfully deleted: ${release.id}`);
           } else {
-            console.error(`Failed to delete release ${release.id}:`, result.error);
+            console.error(`[DELETE DEBUG] Failed to delete release ${release.id}:`, result.error);
           }
         } catch (err) {
-          console.error(`Error deleting release ${release.id}:`, err);
+          console.error(`[DELETE DEBUG] Error deleting release ${release.id}:`, err);
         }
       }
     }
@@ -367,6 +427,21 @@ const performImport = async () => {
     openSnackbar('Import failed: ' + (error instanceof Error ? error.message : String(error)), 'error');
   } finally {
     isImporting.value = false;
+  }
+};
+
+// Delete all releases only (called from the new button)
+const deleteAllReleasesOnly = async () => {
+  confirmDeleteDialog.value = false;
+  isDeleting.value = true;
+  
+  try {
+    await deleteAllData();
+    openSnackbar('All releases have been deleted', 'success');
+  } catch (error) {
+    openSnackbar('Failed to delete releases: ' + (error instanceof Error ? error.message : String(error)), 'error');
+  } finally {
+    isDeleting.value = false;
   }
 };
 </script>

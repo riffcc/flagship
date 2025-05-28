@@ -16,6 +16,7 @@
     </v-sheet>
   </v-container>
   <v-app v-else>
+    <database-corruption-alert />
     <app-bar />
     <v-main min-height="100vh">
       <router-view />
@@ -38,6 +39,7 @@ import appBar from '/@/components/layout/appBar.vue';
 import appFooter from '/@/components/layout/appFooter.vue';
 import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
+import databaseCorruptionAlert from '/@/components/misc/databaseCorruptionAlert.vue';
 
 import { useAudioAlbum } from '/@/composables/audioAlbum';
 import { useFloatingVideo } from '/@/composables/floatingVideo';
