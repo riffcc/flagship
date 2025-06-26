@@ -18,13 +18,13 @@
             @submit.prevent="handleOnSubmit"
           >
             <v-text-field
-              v-model="trustedSiteName"
+              v-model="newSubcription[SUBSCRIPTION_NAME_PROPERTY]"
               label="Site Name"
               :rules="[rules.required]"
             />
             <v-text-field
-              v-model="trustedSiteId"
-              label="Site Id"
+              v-model="newSubcription[SITE_ADDRESS_PROPERTY]"
+              label="Site Address"
               :rules="[rules.isValidSiteAddress]"
             />
             <v-btn
@@ -53,7 +53,7 @@
             <v-list-item
               v-for="s in subscriptions"
               :key="s.id"
-              :title="`${s[SUBSCRIPTION_SITE_ID_PROPERTY].slice(0,17)}...${s[SUBSCRIPTION_SITE_ID_PROPERTY].slice(-10)}`"
+              :title="`${s[SITE_ADDRESS_PROPERTY].slice(0,17)}...${s[SITE_ADDRESS_PROPERTY].slice(-10)}`"
               :subtitle="s[SUBSCRIPTION_NAME_PROPERTY] || 'Unnamed subscription'"
             >
               <template
@@ -69,12 +69,12 @@
                       density="compact"
                       size="x-small"
                       class="mr-2"
-                      :color="getSiteColor(s[SUBSCRIPTION_SITE_ID_PROPERTY])"
+                      :color="getSiteColor(s[SITE_ADDRESS_PROPERTY])"
                     />
                   </template>
                   <v-color-picker
-                    v-model="selectedColors[s[SUBSCRIPTION_SITE_ID_PROPERTY]]"
-                    @update:model-value="saveColor(s[SUBSCRIPTION_SITE_ID_PROPERTY], $event)"
+                    v-model="selectedColors[s[SITE_ADDRESS_PROPERTY]]"
+                    @update:model-value="saveColor(s[SITE_ADDRESS_PROPERTY], $event)"
                   />
                 </v-menu>
               </template>
@@ -83,7 +83,7 @@
                   icon="$delete"
                   density="comfortable"
                   size="small"
-                  @click="() => untrustSite({siteId: s.id})"
+                  @click="() => unsubscribe({id: s.id})"
                 ></v-btn>
               </template>
             </v-list-item>
@@ -108,7 +108,7 @@
 <script setup lang="ts">
 import {computed, ref} from 'vue';
 import { useGetSubscriptionsQuery, useAddSubscriptionMutation, useDeleteSubscriptionMutation } from '/@/plugins/lensService';
-import { SUBSCRIPTION_SITE_ID_PROPERTY, SUBSCRIPTION_NAME_PROPERTY, SUBSCRIPTION_RECURSIVE_PROPERTY } from '@riffcc/lens-sdk';
+import { SITE_ADDRESS_PROPERTY, SUBSCRIPTION_NAME_PROPERTY, type SubscriptionData } from '@riffcc/lens-sdk';
 import { useSiteColors } from '/@/composables/siteColors';
 import { useShowDefederation } from '/@/composables/showDefed';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
@@ -116,8 +116,9 @@ import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 const formRef = ref();
 const { openSnackbar } = useSnackbarMessage();
 
-const trustedSiteId = ref<string>();
-const trustedSiteName = ref<string>();
+const newSubcription = ref<SubscriptionData>({
+  [SITE_ADDRESS_PROPERTY]: '',
+});
 
 const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
@@ -133,7 +134,9 @@ const addSubscriptionMutation = useAddSubscriptionMutation({
   onSuccess: (result) => {
     if (result.success) {
       openSnackbar('Subscription added successfully', 'success');
-      clearForm();
+      newSubcription.value = {
+        [SITE_ADDRESS_PROPERTY]: '',
+      };
     } else {
       openSnackbar(result.error || 'Failed to add subscription', 'error');
     }
@@ -158,10 +161,10 @@ const deleteSubscriptionMutation = useDeleteSubscriptionMutation({
 });
 
 const readyToSave = computed(() => {
-  if (trustedSiteId.value && trustedSiteName.value && formRef.value?.isValid) {
+  if (newSubcription.value && newSubcription.value[SITE_ADDRESS_PROPERTY] !== '' && formRef.value?.isValid) {
     return {
-      trustedSiteIdValue: trustedSiteId.value,
-      trustedSiteNameValue: trustedSiteName.value,
+      [SITE_ADDRESS_PROPERTY]: newSubcription.value[SITE_ADDRESS_PROPERTY],
+      [SUBSCRIPTION_NAME_PROPERTY]: newSubcription.value[SUBSCRIPTION_NAME_PROPERTY],
     };
   } else return undefined;
 });
@@ -170,25 +173,12 @@ const loading = computed(() => addSubscriptionMutation.isPending.value);
 
 const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
-  const {trustedSiteIdValue, trustedSiteNameValue} = readyToSave.value;
-  
-  await addSubscriptionMutation.mutateAsync({
-    [SUBSCRIPTION_SITE_ID_PROPERTY]: trustedSiteIdValue,
-    [SUBSCRIPTION_NAME_PROPERTY]: trustedSiteNameValue,
-    [SUBSCRIPTION_RECURSIVE_PROPERTY]: false,
-    subscriptionType: 'direct',
-    currentDepth: 0,
-    followChain: [],
-  });
+
+  await addSubscriptionMutation.mutateAsync(readyToSave.value);
 };
 
-const clearForm = () => {
-  trustedSiteId.value = undefined;
-  trustedSiteName.value = undefined;
-};
-
-const untrustSite = ({siteId}: {siteId: string}) => {
-  deleteSubscriptionMutation.mutate({id: siteId});
+const unsubscribe = ({ id }: { id: string }) => {
+  deleteSubscriptionMutation.mutate({id: id});
 };
 
 const {getSiteColor, saveColor, selectedColors} = useSiteColors();

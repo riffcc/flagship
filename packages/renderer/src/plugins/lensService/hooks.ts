@@ -1,12 +1,23 @@
 import { inject } from 'vue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
-import type { HashResponse, IdResponse, AnyObject, LensService, ReleaseData, SearchOptions, IdData, FeaturedReleaseData, SubscriptionData } from '@riffcc/lens-sdk';
+import type {
+  HashResponse,
+  IdResponse,
+  AnyObject,
+  LensService,
+  ReleaseData,
+  SearchOptions,
+  IdData,
+  FeaturedReleaseData,
+  SubscriptionData,
+  Subscription,
+} from '@riffcc/lens-sdk';
 import {
   AccountType,
   RELEASE_METADATA_PROPERTY,
 } from '@riffcc/lens-sdk';
 import type { FeaturedReleaseItem, ReleaseItem } from '/@/types';
-import { useStaticData } from '../../composables/staticData';
+import { useStaticData } from '/@/composables/staticData';
 
 export function useLensService() {
   const lensService = inject<LensService>('lensService');
@@ -126,18 +137,18 @@ export function useGetAllReleasesQuery(options?: {
     queryFn: async () => {
       const allReleases: ReleaseItem<AnyObject>[] = [];
       let hasMore = true;
-      
+
       // First, get initial batch to see how many we might have
       while (hasMore) {
         const searchOptions: SearchOptions = {
           fetch: 100,
-          // Note: Since lens-sdk doesn't support offset yet, 
+          // Note: Since lens-sdk doesn't support offset yet,
           // we're getting the first 100 releases multiple times
           // In production, you'd want to add offset support to lens-sdk
         };
-        
+
         const result = await lensService.getReleases(searchOptions);
-        
+
         // Transform the data
         const transformedBatch = result.map((r) => {
           const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
@@ -146,15 +157,15 @@ export function useGetAllReleasesQuery(options?: {
             [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
           };
         });
-        
+
         // For now, since we can't paginate server-side, just get one batch
         // TODO: When lens-sdk supports offset, implement proper batching
         allReleases.push(...transformedBatch);
         hasMore = false; // Stop after first batch until offset is supported
-        
+
         options?.onProgress?.(allReleases.length, allReleases.length);
       }
-      
+
       return allReleases;
     },
     enabled: options?.enabled ?? true,
@@ -221,6 +232,27 @@ export function useContentCategoriesQuery() {
       return staticContentCategories;
     },
     initialData: staticContentCategories,
+  });
+}
+
+export function useGetSubscriptionsQuery(options?: {
+  enabled?: boolean,
+  staleTime?: number,
+  searchOptions?: SearchOptions,
+}) {
+  const { lensService } = useLensService();
+  return useQuery<Subscription[]>({
+    queryKey: ['subscriptions', options?.searchOptions],
+    queryFn: async () => {
+      const searchOptions = {
+        fetch: 100,
+        ...options?.searchOptions,
+      };
+      return await lensService.getSubscriptions(searchOptions);
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 15, // 15 minutes
   });
 }
 
@@ -359,29 +391,6 @@ export function useDeleteFeaturedReleaseMutation(options?: {
   });
 }
 
-// #### SUBSCRIPTION HOOKS ####
-
-export function useGetSubscriptionsQuery(options?: {
-  enabled?: boolean,
-  staleTime?: number,
-  searchOptions?: SearchOptions,
-}) {
-  const { lensService } = useLensService();
-  return useQuery<SubscriptionData[]>({
-    queryKey: ['subscriptions', options?.searchOptions],
-    queryFn: async () => {
-      const searchOptions = {
-        fetch: 100,
-        ...options?.searchOptions,
-      };
-      return await lensService.getSubscriptions(searchOptions);
-    },
-    enabled: options?.enabled ?? true,
-    staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 15, // 15 minutes
-  });
-}
-
 export function useAddSubscriptionMutation(options?: {
   onSuccess?: (response: HashResponse) => void;
   onError?: (e: Error) => void;
@@ -389,7 +398,7 @@ export function useAddSubscriptionMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Omit<SubscriptionData, 'id'>) => {
+    mutationFn: async (data: SubscriptionData) => {
       return await lensService.addSubscription(data);
     },
     onSuccess: (response) => {
