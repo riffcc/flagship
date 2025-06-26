@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 import { onKeyStroke } from '@vueuse/core';
-import { ref, watchEffect, onMounted, watch } from 'vue';
+import { ref, watchEffect, onMounted } from 'vue';
 
 import appBar from '/@/components/layout/appBar.vue';
 import appFooter from '/@/components/layout/appFooter.vue';
@@ -43,15 +43,15 @@ import { useAudioAlbum } from '/@/composables/audioAlbum';
 import { useFloatingVideo } from '/@/composables/floatingVideo';
 import { useShowDefederation } from '/@/composables/showDefed';
 import {
-  useAccountStatusQuery,
+  // useAccountStatusQuery,
   useLensService,
   // useGetFeaturedReleasesQuery,
   // useGetReleasesQuery,
 } from '/@/plugins/lensService/hooks';
 import {
-  AccountType,
+  // AccountType,
   type SiteArgs,
-  ADMIN_SITE_ARGS,
+  // ADMIN_SITE_ARGS,
 } from '@riffcc/lens-sdk';
 
 const { showDefederation } = useShowDefederation();
@@ -130,42 +130,45 @@ onMounted(async () => {
         { cause: 'MISSING_CONFIG' },
       );
     }
-    
+
     // Stage 1: Initialize lens service
     initStage.value = 'init';
     console.time('[App] Lens service init');
     await lensService.init('.lens-node');
     console.timeEnd('[App] Lens service init');
-    
+
     // Stage 2: Connect to bootstrappers FIRST (critical for data availability)
     initStage.value = 'connecting';
     const bootstrappers = import.meta.env.VITE_BOOTSTRAPPERS;
     if (bootstrappers) {
       const bootstrapperList = bootstrappers.split(',').map(b => b.trim());
       console.log('Connecting to bootstrappers:', bootstrapperList);
-      
+
       console.time('[App] Bootstrap connections');
       // Try to connect to at least one bootstrapper before opening site
       const dialResults = await Promise.allSettled(
         bootstrapperList.map(b => lensService.dial(b)),
       );
       console.timeEnd('[App] Bootstrap connections');
-      
+
       const connected = dialResults.filter(r => r.status === 'fulfilled').length;
       const failed = dialResults.filter(r => r.status === 'rejected');
-      
+
       console.log(`Connected to ${connected}/${bootstrapperList.length} bootstrappers`);
       if (failed.length > 0) {
         console.warn('Failed connections:', failed.map(f => f.reason?.message || f.reason));
       }
-      
+
       // Even if no bootstrappers connect, continue (might have local data)
     }
-    
+
     // Stage 3: Open site AFTER bootstrapper connection attempts
     initStage.value = 'opening';
     console.time('[App] Site open');
-    await lensService.openSite(siteAddress, customMemberSiteArgs);
+    await lensService.openSite(siteAddress, {
+      siteArgs: customMemberSiteArgs,
+      federate: true,
+    });
     console.timeEnd('[App] Site open');
     initStage.value = 'ready';
     initLoading.value = false;
@@ -199,30 +202,30 @@ onMounted(async () => {
 //   setTimeout(prefetchData, 2000); // Small delay to ensure lens service is ready
 // });
 
-const { data: accountStatus } = useAccountStatusQuery();
+// const { data: accountStatus } = useAccountStatusQuery();
 
-watch(accountStatus, async (newValue, oldValue) => {
-  if (!siteAddress) return;
-  if (newValue !== oldValue) {
-    console.log('accountStatus changed');
-    let newSiteArgs: SiteArgs | undefined;
-    switch (newValue) {
-      case AccountType.ADMIN:
-        newSiteArgs = ADMIN_SITE_ARGS;
-        break;
-      default:
-        newSiteArgs = undefined;
-        break;
-    }
-    if (newSiteArgs) {
-      try {
-        await lensService.closeSite();
-        await lensService.openSite(siteAddress, newSiteArgs);
-      } catch (e) {
-        console.log(`Error on reopened the site with new replication args: ${e}`);
-      }
-    }
-  }
-});
+// watch(accountStatus, async (newValue, oldValue) => {
+//   if (!siteAddress) return;
+//   if (newValue !== oldValue) {
+//     console.log('accountStatus changed');
+//     let newSiteArgs: SiteArgs | undefined;
+//     switch (newValue) {
+//       case AccountType.ADMIN:
+//         newSiteArgs = ADMIN_SITE_ARGS;
+//         break;
+//       default:
+//         newSiteArgs = undefined;
+//         break;
+//     }
+//     if (newSiteArgs) {
+//       try {
+//         await lensService.closeSite();
+//         await lensService.openSite(siteAddress, newSiteArgs);
+//       } catch (e) {
+//         console.log(`Error on reopened the site with new replication args: ${e}`);
+//       }
+//     }
+//   }
+// });
 
 </script>
