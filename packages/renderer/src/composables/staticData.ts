@@ -6,7 +6,7 @@ import {
 } from '@riffcc/lens-sdk';
 import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
 
-const staticContentCategories: ContentCategoryData<ContentCategoryMetadata>[] = [
+const staticContentCategories: Omit<ContentCategoryData<ContentCategoryMetadata>, 'siteAddress'>[] = [
   {
     [ID_PROPERTY]: 'music',
     [CONTENT_CATEGORY_DISPLAY_NAME_PROPERTY]: 'Music',

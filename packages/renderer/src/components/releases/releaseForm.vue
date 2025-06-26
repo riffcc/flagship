@@ -138,6 +138,7 @@ const releaseItem = ref<ReleaseItem<AnyObject>>({
   contentCID: '',
   categoryId: '',
   metadata: {},
+  siteAddress: '',
 });
 
 const rules = {
@@ -228,18 +229,25 @@ const handleOnSubmit = () => {
   if (!readyToSave.value) return;
 
   const data = readyToSave.value;
-  const releaseDataPayload: ReleaseData<AnyObject> = {
+
+  if (props.mode === 'edit' && data.id) {
+    editReleaseMutation.mutate({
+    id: data.id,
     name: data.name,
     categoryId: data.categoryId,
     contentCID: data.contentCID,
     thumbnailCID: data.thumbnailCID,
     metadata: data.metadata,
-  };
-
-  if (props.mode === 'edit' && data.id) {
-    editReleaseMutation.mutate({ ...releaseDataPayload, id: data.id });
+    siteAddress: data.siteAddress,
+  });
   } else {
-    addReleaseMutation.mutate(releaseDataPayload);
+    addReleaseMutation.mutate({
+    name: data.name,
+    categoryId: data.categoryId,
+    contentCID: data.contentCID,
+    thumbnailCID: data.thumbnailCID,
+    metadata: data.metadata,
+  });
   }
 };
 
@@ -250,6 +258,7 @@ const clearForm = () => {
     contentCID: '',
     categoryId: '',
     metadata: {},
+    siteAddress: '',
   };
   formRef.value?.resetValidation();
   formRef.value?.reset();

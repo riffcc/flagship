@@ -142,7 +142,7 @@ import MetadataFieldForm from '/@/components/releases/metadataFieldForm.vue';
 import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
-  initialData?: ContentCategoryData<ContentCategoryMetadata>;
+  initialData?: Omit<ContentCategoryData<ContentCategoryMetadata>, 'siteAddress'>;
   mode?: 'create' | 'edit';
 }>();
 
@@ -154,7 +154,7 @@ const emit = defineEmits<{
 
 const formRef = ref();
 
-const contentCategory = ref<ContentCategoryData<ContentCategoryMetadata>>({
+const contentCategory = ref<Omit<ContentCategoryData<ContentCategoryMetadata>, 'siteAddress'>>({
   id: '',
   displayName: '',
   featured: false,

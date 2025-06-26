@@ -143,7 +143,7 @@ const createCategoryDialog = ref(false);
 const editCategoryDialog = ref(false);
 const confirmDeleteCategoryDialog = ref(false);
 
-const editedContentCategory = ref<ContentCategoryData<ContentCategoryMetadata>>({
+const editedContentCategory = ref<Omit<ContentCategoryData<ContentCategoryMetadata>, 'siteAddress'>>({
   id: '',
   displayName: '',
   featured: false,

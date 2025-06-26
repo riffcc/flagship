@@ -127,7 +127,7 @@ const promotedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
 
 function categorizeReleasesByFeaturedCategories(
   rels?: ReleaseItem<AnyObject>[],
-  featuredCats?: ContentCategoryData<ContentCategoryMetadata>[],
+  featuredCats?: Omit<ContentCategoryData<ContentCategoryMetadata>, 'siteAddress'>[],
   limitPerCategory: number = 8,
 ): Record<string, ReleaseItem<AnyObject>[]> {
   const result: Record<string, ReleaseItem<AnyObject>[]> = {};

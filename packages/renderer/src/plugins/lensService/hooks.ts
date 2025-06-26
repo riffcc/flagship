@@ -266,7 +266,7 @@ export function useAddReleaseMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: ReleaseData<AnyObject>) => {
+    mutationFn: async (data: Omit<ReleaseData<AnyObject>, 'siteAddress'>) => {
       const rMetadata = data[RELEASE_METADATA_PROPERTY];
       return await lensService.addRelease({
         ...data,
@@ -336,7 +336,7 @@ export function useAddFeaturedReleaseMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: FeaturedReleaseData) => {
+    mutationFn: async (data: Omit<FeaturedReleaseData, 'siteAddress'>) => {
       return await lensService.addFeaturedRelease(data);
     },
     onSuccess: (response) => {
