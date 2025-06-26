@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <h2 class="text-h5 mb-6">Maintenance</h2>
-    
+
     <v-card class="mb-6">
       <v-card-title>Export Data</v-card-title>
       <v-card-text>
@@ -16,12 +16,12 @@
         </v-btn>
       </v-card-text>
     </v-card>
-    
+
     <v-card>
       <v-card-title>Import Data</v-card-title>
       <v-card-text>
         <p class="mb-4">Import releases and featured releases from a JSON file.</p>
-        
+
         <v-radio-group
           v-model="importMode"
           class="mb-4"
@@ -36,7 +36,7 @@
             color="error"
           ></v-radio>
         </v-radio-group>
-        
+
         <v-file-input
           v-model="importFile"
           label="Select JSON file"
@@ -44,7 +44,7 @@
           prepend-icon="$file-upload"
           class="mb-4"
         ></v-file-input>
-        
+
         <v-btn
           color="primary"
           prepend-icon="$upload"
@@ -54,7 +54,7 @@
         >
           Import
         </v-btn>
-        
+
         <v-alert
           v-if="importMode === 'replace'"
           type="warning"
@@ -64,7 +64,7 @@
         </v-alert>
       </v-card-text>
     </v-card>
-    
+
     <v-dialog
       v-model="confirmDialog"
       max-width="500"
@@ -93,7 +93,7 @@
       </v-card>
     </v-dialog>
   </v-container>
-  
+
   <v-snackbar
     v-model="showSnackbar"
     :color="snackbarMessage?.type ?? 'default'"
@@ -176,22 +176,22 @@ const cleanForExport = (obj: unknown): unknown => {
 // Export functionality
 const exportAll = async () => {
   isExporting.value = true;
-  
+
   try {
     const cleanedReleases = cleanForExport(releases.value || []) as unknown[];
     const cleanedFeaturedReleases = cleanForExport(featuredReleases.value || []) as unknown[];
-    
+
     const exportData = {
       version: '1.0',
       exportDate: new Date().toISOString(),
       releases: cleanedReleases,
       featuredReleases: cleanedFeaturedReleases,
     };
-    
+
     const jsonStr = JSON.stringify(exportData, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = `flagship-export-${new Date().toISOString().split('T')[0]}.json`;
@@ -199,7 +199,7 @@ const exportAll = async () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     openSnackbar(`Exported ${cleanedReleases.length} releases and ${cleanedFeaturedReleases.length} featured releases`, 'success');
   } catch (error) {
     openSnackbar('Export failed: ' + (error instanceof Error ? error.message : String(error)), 'error');
@@ -211,12 +211,12 @@ const exportAll = async () => {
 // Import functionality
 const importAll = async () => {
   if (!importFile.value) return;
-  
+
   if (importMode.value === 'replace') {
     confirmDialog.value = true;
     return;
   }
-  
+
   performImport();
 };
 
@@ -230,7 +230,7 @@ const deleteAllData = async () => {
   try {
     let featuredDeleted = 0;
     let releasesDeleted = 0;
-    
+
     // Delete all featured releases first
     if (featuredReleases.value && featuredReleases.value.length > 0) {
       console.log(`Deleting ${featuredReleases.value.length} featured releases...`);
@@ -247,7 +247,7 @@ const deleteAllData = async () => {
         }
       }
     }
-    
+
     // Then delete all releases
     if (releases.value && releases.value.length > 0) {
       console.log(`Deleting ${releases.value.length} releases...`);
@@ -264,10 +264,10 @@ const deleteAllData = async () => {
         }
       }
     }
-    
+
     // Wait a bit for queries to update
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     openSnackbar(`Deleted ${releasesDeleted} releases and ${featuredDeleted} featured releases`, 'success');
   } catch (error) {
     openSnackbar('Failed to delete existing data: ' + (error instanceof Error ? error.message : String(error)), 'error');
@@ -277,20 +277,20 @@ const deleteAllData = async () => {
 
 const performImport = async () => {
   if (!importFile.value) return;
-  
+
   isImporting.value = true;
-  
+
   try {
     const text = await importFile.value.text();
     const importData = JSON.parse(text);
-    
+
     if (!importData.version || !importData.releases || !importData.featuredReleases) {
       throw new Error('Invalid import file format');
     }
-    
+
     let releasesImported = 0;
     let featuredImported = 0;
-    
+
     // Import releases
     for (const release of importData.releases) {
       try {
@@ -302,8 +302,9 @@ const performImport = async () => {
           contentCID: release.contentCID,
           thumbnailCID: release.thumbnailCID,
           metadata: release.metadata,
+          siteAddress: release.siteAddress ?? import.meta.env.VITE_SITE_ADDRESS,
         };
-        
+
         if (importMode.value === 'upsert') {
           // Check if release exists
           const existing = releases.value?.find(r => r.id === release.id);
@@ -325,7 +326,7 @@ const performImport = async () => {
         console.error('Failed to import release:', release.id, error);
       }
     }
-    
+
     // Import featured releases
     for (const featured of importData.featuredReleases) {
       try {
@@ -334,8 +335,9 @@ const performImport = async () => {
           startTime: featured.startTime,
           endTime: featured.endTime,
           promoted: featured.promoted,
+          siteAddress: featured.siteAddress ?? import.meta.env.VITE_SITE_ADDRESS,
         };
-        
+
         if (importMode.value === 'upsert') {
           // Check if featured release exists
           const existing = featuredReleases.value?.find(f => f.id === featured.id);
@@ -360,7 +362,7 @@ const performImport = async () => {
         console.error('Failed to import featured release:', featured.id, error);
       }
     }
-    
+
     openSnackbar(`Import complete: ${releasesImported} releases and ${featuredImported} featured releases imported`, 'success');
     importFile.value = null;
   } catch (error) {
