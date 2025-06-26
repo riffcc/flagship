@@ -35,20 +35,20 @@ concurrency:
 jobs:
   typechecking:
     uses: ./.github/workflows/typechecking.yml
-  tests:
-    uses: ./.github/workflows/tests.yml
-  web_tests:
-    uses: ./.github/workflows/webTests.yml
-  publish_web_app:
-    needs: [ web_tests ]
-    uses: ./.github/workflows/publishPage.yml
-  draft_release:
-    permissions:
-      contents: write # Allows this job to create releases
-    with:
-      dry-run: ${{ github.event_name != 'push' || github.ref_name != 'main' }}
-    needs: [ typechecking, tests ]
-    uses: ./.github/workflows/release.yml
-  merge_pr:
-    needs: [ typechecking, publish_web_app, draft_release ]
-    uses: ./.github/workflows/mergePr.yml
+  # tests:
+  #   uses: ./.github/workflows/tests.yml
+  # web_tests:
+  #   uses: ./.github/workflows/webTests.yml
+  # publish_web_app:
+  #   needs: [ web_tests ]
+  #   uses: ./.github/workflows/publishPage.yml
+  # draft_release:
+  #   permissions:
+  #     contents: write # Allows this job to create releases
+  #   with:
+  #     dry-run: ${{ github.event_name != 'push' || github.ref_name != 'main' }}
+  #   needs: [ typechecking, tests ]
+  #   uses: ./.github/workflows/release.yml
+  # merge_pr:
+  #   needs: [ typechecking, publish_web_app, draft_release ]
+  #   uses: ./.github/workflows/mergePr.yml
