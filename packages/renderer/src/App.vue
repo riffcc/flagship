@@ -94,7 +94,7 @@ const initLoading = ref(true);
 const initError = ref<string | null>();
 const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
 // Use partial replication for guests - balance speed vs data availability
-const customMemberSiteArgs: SiteArgs = {
+const siteArgs: SiteArgs = {
   membersArg: {
     replicate: true,
   },
@@ -102,19 +102,19 @@ const customMemberSiteArgs: SiteArgs = {
     replicate: true,
   },
   releasesArgs: {
-    replicate: true,
+    replicate: { factor: 1 },
   },
   featuredReleasesArgs: {
-    replicate: true,
+    replicate: { factor: 1 },
   },
   contentCategoriesArgs: {
-    replicate: true,
+    replicate: { factor: 1 },
   },
   subscriptionsArgs: {
-    replicate: true,
+    replicate: { factor: 1 },
   },
   blockedContentArgs: {
-    replicate: true,
+    replicate: { factor: 1 },
   },
 };
 
@@ -166,7 +166,7 @@ onMounted(async () => {
     initStage.value = 'opening';
     console.time('[App] Site open');
     await lensService.openSite(siteAddress, {
-      siteArgs: customMemberSiteArgs,
+      siteArgs,
       federate: true,
     });
     console.timeEnd('[App] Site open');
