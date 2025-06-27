@@ -295,14 +295,13 @@ const performImport = async () => {
     for (const release of importData.releases) {
       try {
         // Extract the data without the __context
-        const releaseData: ReleaseItem<AnyObject> = {
+        const releaseData: Omit<ReleaseItem<AnyObject>, 'siteAddress'> = {
           id: release.id,
           name: release.name,
           categoryId: release.categoryId,
           contentCID: release.contentCID,
           thumbnailCID: release.thumbnailCID,
           metadata: release.metadata,
-          siteAddress: release.siteAddress ?? import.meta.env.VITE_SITE_ADDRESS,
         };
 
         if (importMode.value === 'upsert') {
@@ -310,7 +309,10 @@ const performImport = async () => {
           const existing = releases.value?.find(r => r.id === release.id);
           if (existing) {
             // Update existing
-            await editReleaseMutation.mutateAsync(releaseData);
+            await editReleaseMutation.mutateAsync({
+              ...releaseData,
+              siteAddress: existing.siteAddress,
+            });
             releasesImported++;
           } else {
             // Add new
@@ -335,7 +337,6 @@ const performImport = async () => {
           startTime: featured.startTime,
           endTime: featured.endTime,
           promoted: featured.promoted,
-          siteAddress: featured.siteAddress ?? import.meta.env.VITE_SITE_ADDRESS,
         };
 
         if (importMode.value === 'upsert') {
@@ -344,8 +345,9 @@ const performImport = async () => {
           if (existing) {
             // Update existing
             await editFeaturedReleaseMutation.mutateAsync({
-              id: featured.id,
               ...featuredData,
+              id: featured.id,
+              siteAddress: existing.siteAddress,
             });
             featuredImported++;
           } else {
