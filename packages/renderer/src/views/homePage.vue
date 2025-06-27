@@ -61,7 +61,6 @@
             <content-card
               :item="item"
               cursor-pointer
-              :source-site="(item.metadata?.['sourceSite'] as string | undefined)"
               @click="router.push(`/release/${item.id}`)"
             />
           </v-col>

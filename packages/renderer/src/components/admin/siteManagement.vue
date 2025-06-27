@@ -4,9 +4,10 @@
       class="px-6 py-4 mx-auto"
       max-width="448px"
     >
-      <!-- <v-list-item
+      <v-list-item
+        v-if="siteAddress && siteAddress.length > 0"
         class="px-0"
-        :title="`Site ID: ${orbiter.siteId.slice(0, 17)}...${orbiter.siteId.slice(-10)}`"
+        :title="`Site Address: ${siteAddress.slice(0, 17)}...${siteAddress.slice(-10)}`"
       >
         <template
           v-if="showDefederation"
@@ -21,12 +22,12 @@
                 density="comfortable"
                 size="x-small"
                 class="mr-2"
-                :color="getSiteColor(orbiter.siteId)"
+                :color="getSiteColor(siteAddress)"
               />
             </template>
             <v-color-picker
-              v-model="selectedColors[orbiter.siteId]"
-              @update:model-value="saveColor(orbiter.siteId, $event)"
+              v-model="selectedColors[siteAddress]"
+              @update:model-value="saveColor(siteAddress, $event)"
             />
           </v-menu>
         </template>
@@ -38,18 +39,18 @@
             <template #activator="{ props: tooltipProps }">
               <v-btn
                 v-bind="tooltipProps"
-                :icon="getIcon(orbiter.siteId)"
-                :color="getColor(orbiter.siteId)"
+                :icon="getIcon(siteAddress)"
+                :color="getColor(siteAddress)"
                 variant="text"
                 density="comfortable"
                 size="x-small"
-                @click="copy(orbiter.siteId, orbiter.siteId)"
+                @click="copy(siteAddress, siteAddress)"
               ></v-btn>
             </template>
           </v-tooltip>
         </template>
       </v-list-item>
-      <v-divider class="mt-2"></v-divider> -->
+      <v-divider class="mt-2"></v-divider>
       <h3 class="mt-4 mb-2">Edit Site Info</h3>
       <v-file-input
         v-model="file"
@@ -98,12 +99,13 @@
 </template>
 
 <script setup lang="ts">
-import { type Ref, ref, watch } from 'vue';
+import { computed, type Ref, ref, watch } from 'vue';
 import { parseUrlOrCid } from '/@/utils';
 
-// import { useSiteColors } from '/@/composables/siteColors';
-// import { useShowDefederation } from '/@/composables/showDefed';
-// import { useCopyToClipboard } from '/@/composables/copyToClipboard';
+import { useSiteColors } from '/@/composables/siteColors';
+import { useShowDefederation } from '/@/composables/showDefed';
+import { useCopyToClipboard } from '/@/composables/copyToClipboard';
+import { useLensService } from '/@/plugins/lensService/hooks';
 
 const file: Ref<File | undefined> = ref();
 const fileBlobUrl: Ref<string | undefined> = ref();
@@ -121,8 +123,11 @@ watch(file, (v) => {
 });
 
 function handleOnSave(){};
-// const {getSiteColor, saveColor, selectedColors} = useSiteColors();
-// const {showDefederation} = useShowDefederation();
-
-// const { copy, getIcon, getColor } = useCopyToClipboard();
+const {getSiteColor, saveColor, selectedColors} = useSiteColors();
+const {showDefederation} = useShowDefederation();
+const { lensService } = useLensService();
+const siteAddress = computed(() => {
+  return lensService?.siteProgram?.address;
+});
+const { copy, getIcon, getColor } = useCopyToClipboard();
 </script>

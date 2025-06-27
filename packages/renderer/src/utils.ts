@@ -52,10 +52,9 @@ export const formatTime = (ms: number): string => {
 };
 
 // Colors
-export const lensColorHash = (sourceSite: string): string => {
-  const idSite = sourceSite.replace('/orbitdb/', '');
-  console.log('#' + CID.parse(idSite).toString(base16.encoder));
-  return '#' + CID.parse(idSite).toString(base16.encoder).slice(-6);
+export const lensColorHash = (siteAddress: string): string => {
+  console.log('#' + CID.parse(siteAddress).toString(base16.encoder));
+  return '#' + CID.parse(siteAddress).toString(base16.encoder).slice(-6);
 };
 
 // export function getStatusColor(status: ItemStatus) {

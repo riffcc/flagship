@@ -10,7 +10,7 @@
       color="transparent"
       :height="cardHeight"
       :width="cardWidth"
-      :style="showDefederation && sourceSite ? `border: 1px solid ${getSiteColor(sourceSite)};` : ''"
+      :style="showDefederation ? `border: 1px solid ${getSiteColor(item.siteAddress)};` : ''"
       @click="onClick"
     >
       <template v-if="isOverlapping">
@@ -123,7 +123,6 @@ const router = useRouter();
 const props = defineProps<{
   item: ReleaseItem<AnyObject>;
   cursorPointer?: boolean;
-  sourceSite?: string;
   onClick?: () => void;
 }>();
 

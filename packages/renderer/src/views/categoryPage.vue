@@ -1,6 +1,8 @@
 <template>
-  <v-container fluid class="fill-height pb-16 px-3">
-    
+  <v-container
+    fluid
+    class="fill-height pb-16 px-3"
+  >
     <template v-if="props.showAll">
       <!-- Show all releases with infinite scroll -->
       <p class="text-h6 text-sm-h5 font-weight-bold mb-4">{{ pageTitle }}</p>
@@ -9,7 +11,7 @@
         @release-click="(release) => router.push(`/release/${release.id}`)"
       />
     </template>
-    
+
     <template v-else>
       <!-- Show only featured releases -->
       <v-sheet
@@ -22,7 +24,7 @@
           color="primary"
         ></v-progress-circular>
       </v-sheet>
-      
+
       <template v-else-if="featuredReleasesInCategory.length > 0">
         <content-section :title="pageTitle">
           <v-col
@@ -32,13 +34,12 @@
             <content-card
               :item="item"
               cursor-pointer
-              :source-site="(item.metadata?.['sourceSite'] as string | undefined)"
               @click="router.push(`/release/${item.id}`)"
             />
           </v-col>
         </content-section>
       </template>
-      
+
       <v-sheet
         v-else
         color="transparent"
@@ -87,17 +88,17 @@ const pageTitle = computed(() => {
 // Get featured releases that are active and in this category
 const featuredReleasesInCategory = computed<ReleaseItem<AnyObject>[]>(() => {
   if (!releases.value || !featuredReleases.value) return [];
-  
+
   // Get active featured release IDs
   const activeFeaturedReleaseIds = featuredReleases.value
     .filter(filterActivedFeatured)
     .map(fr => fr.releaseId);
-  
+
   // Filter releases that are both featured and in this category
-  return releases.value.filter(r => 
-    r.id && 
-    activeFeaturedReleaseIds.includes(r.id) && 
-    r.categoryId === props.category
+  return releases.value.filter(r =>
+    r.id &&
+    activeFeaturedReleaseIds.includes(r.id) &&
+    r.categoryId === props.category,
   );
 });
 

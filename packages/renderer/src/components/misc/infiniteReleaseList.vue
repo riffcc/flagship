@@ -1,5 +1,8 @@
 <template>
-  <div ref="scrollContainer" class="infinite-release-list">
+  <div
+    ref="scrollContainer"
+    class="infinite-release-list"
+  >
     <v-sheet
       v-if="isLoading"
       class="d-flex justify-center py-8"
@@ -11,10 +14,13 @@
         size="64"
       ></v-progress-circular>
     </v-sheet>
-    
+
     <template v-else>
       <div class="releases-wrapper">
-        <v-row dense justify="center">
+        <v-row
+          dense
+          justify="center"
+        >
           <v-col
             v-for="item in visibleReleases"
             :key="item.id"
@@ -23,11 +29,10 @@
             <content-card
               :item="item"
               cursor-pointer
-              :source-site="(item.metadata?.['sourceSite'] as string | undefined)"
               @click="$emit('release-click', item)"
             />
           </v-col>
-          
+
           <!-- Lightweight placeholder tiles -->
           <v-col
             v-for="n in placeholderCount"
@@ -38,7 +43,7 @@
           </v-col>
         </v-row>
       </div>
-      
+
       <v-sheet
         v-if="hasMore"
         v-intersect="onIntersect"
@@ -65,7 +70,7 @@ const props = defineProps<{
   pageSize?: number;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   'release-click': [release: ReleaseItem<AnyObject>];
 }>();
 
@@ -95,11 +100,11 @@ onUnmounted(() => {
 // Filter releases by category if needed
 const filteredReleases = computed(() => {
   if (!releases.value) return [];
-  
+
   if (props.categoryFilter) {
     return releases.value.filter(release => release.categoryId === props.categoryFilter);
   }
-  
+
   return releases.value;
 });
 
@@ -116,19 +121,19 @@ const hasMore = computed(() => visibleCount.value < totalCount.value);
 // Calculate placeholders for even rows
 const placeholderCount = computed(() => {
   if (visibleCount.value === 0) return 0;
-  
+
   // Use reactive window width
   const containerPadding = 32; // 1rem * 2
   const containerWidth = windowWidth.value - containerPadding;
   const cardWidth = 240; // 15rem for music cards
   const gap = 12; // Vuetify dense gap
-  
+
   // Calculate how many cards fit in a row
   const itemsPerRow = Math.floor((containerWidth + gap) / (cardWidth + gap));
-  
+
   // Calculate how many items are in the last row
   const itemsInLastRow = visibleCount.value % itemsPerRow;
-  
+
   // If last row is incomplete, add placeholders
   return itemsInLastRow === 0 ? 0 : itemsPerRow - itemsInLastRow;
 });

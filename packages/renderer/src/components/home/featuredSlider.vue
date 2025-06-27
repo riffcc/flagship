@@ -63,7 +63,7 @@
     >
       <v-container
         class="fill-height"
-        :style="showDefederation && (featuredItem.metadata?.['sourceSite'] as string | undefined) ? `border: 1px solid ${getSiteColor(featuredItem.metadata?.['sourceSite'] as string)}` : ''"
+        :style="showDefederation ? `border: 1px solid ${getSiteColor(featuredItem.siteAddress)}` : ''"
       >
         <v-row
           justify="center"
