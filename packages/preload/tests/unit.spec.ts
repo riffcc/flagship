@@ -16,7 +16,7 @@ import EventEmitter from 'events';
 import type TypedEmitter from 'typed-emitter';
 import {v4 as uuidv4} from 'uuid';
 
-import type {MessageDIpa, MessagePourIpa} from '@constl/mandataire';
+import type {MessageActionPourIpa, MessageDIpa} from '@constl/mandataire';
 import {
   envoyerMessageÀConstellation,
   envoyerMessageÀServeurConstellation,
@@ -26,8 +26,7 @@ import {
   surWindows,
   écouterMessagesDeConstellation,
   écouterMessagesDeServeurConstellation,
-} from '../src';
-
+} from '../src/';
 
 vi.mock('electron', () => {
   type ÉvénementsCoquille = {
@@ -72,7 +71,25 @@ vi.mock('electron', () => {
     },
   };
 
-  return {ipcRenderer};
+  const app: Pick<Electron.App, 'getAppPath' | 'getPath'> = {
+    getAppPath(): string {
+      return '';
+    },
+    getPath(): string {
+      return '';
+    },
+  };
+
+  const ipcMain: Pick<Electron.IpcMain, 'on' | 'handle'> = {
+    on(..._args) {
+      return this;
+    },
+    handle(..._args) {
+      return this;
+    },
+  };
+
+  return {ipcRenderer, default: {app, ipcMain, ipcRenderer}};
 });
 
 test('plateforme', async () => {
@@ -96,9 +113,9 @@ test('messages ipa constellation', async () => {
 
   écouterMessagesDeConstellation(message => résultat.mettreÀJour(message));
 
-  const message: MessagePourIpa = {
+  const message: MessageActionPourIpa = {
     type: 'action',
-    id: uuidv4(),
+    idRequête: uuidv4(),
     fonction: ['on', 'test', 'une', 'fonction'],
     args: {qui: 'nexiste', pas: 'vraiment'},
   };

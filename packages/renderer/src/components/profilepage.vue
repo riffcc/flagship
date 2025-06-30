@@ -37,14 +37,28 @@ const saveProfile = async () => {
     name: username.value,
     language: 'english',
   })
+  savebio()
 }
-const fullname = follow(orbiter.listenForNameChange.bind(orbiter))
+const apiUsername = follow(orbiter.listenForNameChange.bind(orbiter))
 watchEffect(() => {
-  if (fullname.value && fullname.value)
-  username.value = fullname.value.english;
-  })
-
+  if (apiUsername.value && apiUsername.value)
+    username.value = apiUsername.value.english;
+})
 const bio = ref('')
+const savebio = async () => {
+  await orbiter.changeBio({
+    name: bio.value,
+    language: 'english',
+  })
+}
+
+const apiBio = follow(orbiter.listenFornBioChange.bind(orbiter))
+watchEffect(() => {
+  if (apiBio.value && apiBio.value) {
+    bio.value = apiBio.value.english;
+  }
+})
+
 const photo = follow(orbiter.listenForProfilePhotoChange.bind(orbiter));
 const orbiterprofilepic = computed(() => {
   if (photo.value)
