@@ -1,9 +1,8 @@
 [![Contributors](https://img.shields.io/opencollective/all/riffcc?style=flat-square)](https://opencollective.com/riffcc)
-[![Orbiter installable app](https://github.com/riffcc/orbiter/actions/workflows/ci.yml/badge.svg)](https://github.com/riffcc/orbiter/actions/workflows/ci.yml)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/riffcc/flagship)
 
 # Riff.CC Flagship
-Flagship is the proof-of-concept version of Riff.CC, implemented using Peerbit, IPFS and other tools. This repository contains instructions on how to set up and install a Riff.CC instance through Flagship, as well as the necessary code to do so. For more information about Orbiter as well as the Riff.CC project itself, [see the project's main page](https://riff.cc/riff-docs/).
+Flagship is the proof-of-concept version of Riff.CC, implemented using Peerbit, IPFS and other tools. This repository contains instructions on how to set up and install a Riff.CC instance through Flagship, as well as the necessary code to do so. For more information about Flagship as well as the Riff.CC project itself, [see the project's main page](https://riff.cc/).
 
 Funding provided via [OpenCollective](https://opencollective.com/riffcc).
 
@@ -15,15 +14,15 @@ It's like if sites like Netflix, Spotify and YouTube were rolled into one platfo
 The software we're making is open source and you can not only make your own things with it but federate with other sites using the Defederation Model.
 
 ## Getting started
-Orbiter will work on any standard Linux distribution where standard utilities like a webserver and Node.JS are available, but **our instructions specifically cover the latest LTS releases of Ubuntu and Debian only**. Ask us (or submit a PR) if you want any others to be added.
+Flagship will work on any standard Linux distribution where standard utilities like a webserver and Node.JS are available, but **our instructions specifically cover the latest LTS releases of Ubuntu and Debian only**. Ask us (or submit a PR) if you want any others to be added.
 
 ### Dependencies
-Before installing Orbiter, you must install the following dependencies:
+Before installing Flagship, you must install the following dependencies:
 ```
 sudo apt install libnss3-dev libgtk-3-0 libgbm1 libasound2-dev libatk1.0-0 node-pre-gyp git curl
 ```
 
-Additionally, Orbiter utilizes **Node.JS** and **pnpm** to set up and install the platform, and as such it's required to install them as well.
+Additionally, Flagship utilizes **Node.JS** and **pnpm** to set up and install the platform, and as such it's required to install them as well.
 
 #### **Base: Node.JS**
 Required whether you use pnpm or yarn. We suggest using the [NodeSource installation guide](https://github.com/nodesource/distributions#installation-instructions), with $NODE_MAJOR set to 22:
@@ -65,14 +64,14 @@ source ~/.bashrc
 
 ### Installation
 
-1. Clone Orbiter's GitHub repository:
+1. Clone Flagship's GitHub repository:
 ```sh
-git clone https://github.com/riffcc/orbiter.git
+git clone https://github.com/riffcc/flagship.git
 ```
 
-2. Move into Orbiter's directory and set up its installation dependencies:
+2. Move into Flagship's directory and set up its installation dependencies:
     ```sh
-    cd orbiter
+    cd flagship
     pnpm install
     ```
 
