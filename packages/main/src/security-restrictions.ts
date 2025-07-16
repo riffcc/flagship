@@ -62,7 +62,7 @@ app.on('web-contents-created', (_, contents) => {
       let newCspString: string;
 
       if (import.meta.env.PROD) {
-        newCspString = "default-src 'self'; script-src 'self' blob:; object-src 'self'; base-uri 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self';";
+        newCspString = "default-src 'self'; script-src 'self' blob: 'unsafe-eval'; object-src 'self'; base-uri 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self';";
       } else {
         newCspString = "default-src 'self'; script-src 'self' blob: 'unsafe-inline' 'unsafe-eval'; object-src 'self'; style-src 'self' 'unsafe-inline'; connect-src *;";
       }
