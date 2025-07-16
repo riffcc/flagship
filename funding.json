@@ -1,0 +1,48 @@
+{ "version": "v1.0.0", "entity": { "type":
+    "organisation", "role": "owner", "name":
+    "Riff.CC", "email": "team@riff.cc",
+    "description": "Riff.CC is building software
+    for publishing content libraries that are
+    decentralised, sustainable and censorship
+    resistant.", "webpageUrl": {
+      "url": "https://riff.cc"
+    }
+  },
+  "projects": [ { "guid": "flagship", "name":
+      "Flagship", "description": "Flagship is the
+      frontend for Riff.CC Lenses - a vibrant media
+      streaming platform for the world.",
+      "webpageUrl": {
+        "url": "https://riff.cc/docs/flagship"
+      },
+      "repositoryUrl": { "url":
+        "https://github.com/riffcc/flagship"
+      },
+      "licenses": [ "spdx:AGPL-3.0" ], "tags": [
+        "media", "streaming", "ipfs"
+      ]
+    }
+  ], "funding": { "channels": [ { "guid":
+        "opencollective", "type":
+        "payment-provider", "address":
+        "https://opencollective.com/riffcc"
+      },
+      { "guid": "bitcoin", "type": "other"
+      }
+    ], "plans": [ { "guid": "opencollective",
+        "status": "active", "name": "Development
+        costs and overall project costs",
+        "description": "Our current spend on
+        OpenCollective is approximately $125,000 a
+        year as of July 2025.", "amount": 150000,
+        "currency": "AUD", "frequency": "yearly",
+        "channels": [
+          "opencollective", "bitcoin" ]
+      }
+    ], "history": [ { "year": 2024, "income":
+        79684.84, "expenses": 78708.94, "currency":
+        "AUD"
+      }
+    ]
+  }
+}
