@@ -22,14 +22,7 @@ export default {
       });
 
     } else {
-      console.log('[LensService] Initializing browser LensService...');
-      try {
-        lensServiceInstance = new LensService();
-        console.log('[LensService] Browser LensService initialized successfully');
-      } catch (error) {
-        console.error('[LensService] Failed to initialize:', error);
-        throw error;
-      }
+      lensServiceInstance = new LensService();
     }
 
     app.provide('lensService', lensServiceInstance);
