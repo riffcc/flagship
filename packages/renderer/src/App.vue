@@ -122,8 +122,6 @@ const siteArgs: SiteArgs = {
 const initStage = ref<'init' | 'connecting' | 'opening' | 'ready'>('init');
 
 onMounted(async () => {
-  console.log('[WebOS Debug] User Agent:', navigator.userAgent);
-  console.log('[WebOS Debug] App mounted, starting initialization...');
   console.time('[App] Total initialization');
   try {
     if (!siteAddress) {
