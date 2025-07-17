@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 import type { AnyObject, ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
@@ -189,15 +189,6 @@ const activeSections = computed<{
 
 
 // Progressive loading - show content as each query completes
-const isFeaturedLoading = computed(() => {
-  return isFeaturedReleasesLoading.value || !isFeaturedReleasesFetched.value;
-});
-
-const isReleasesOnlyLoading = computed(() => {
-  return isReleasesLoading.value || !isReleasesFetched.value;
-});
-
-// Show loading until both queries complete
 const isLoading = computed(() => {
   // Show loading if BOTH queries are still loading
   // This prevents showing "no featured content" before releases are loaded
@@ -206,7 +197,7 @@ const isLoading = computed(() => {
 
 const noFeaturedContent = computed(() => {
   // Only show "no featured content" if BOTH queries are done and there's no featured content
-  if (isReleasesLoading.value || isFeaturedReleasesLoading.value) {
+  if (!isReleasesFetched.value || !isFeaturedReleasesFetched.value) {
     return false; // Still loading, don't show "no featured content" yet
   }
   return promotedFeaturedReleases.value.length === 0 && activeSections.value.length === 0;
@@ -214,43 +205,9 @@ const noFeaturedContent = computed(() => {
 
 const noContent = computed(() => {
   // Only show "no content" if BOTH queries are done and there's truly no content anywhere
-  if (isFeaturedLoading.value || isReleasesOnlyLoading.value) {
+  if (!isReleasesFetched.value || !isFeaturedReleasesFetched.value) {
     return false; // Still loading something, don't show "no content" yet
   }
   return releases.value?.length === 0 && featuredReleases.value?.length === 0;
 });
-
-// Detailed logging to track content availability vs display
-watch([releases, featuredReleases, isReleasesFetched, isFeaturedReleasesFetched], () => {
-  console.log('[HomePage Debug] Data state changed:', {
-    releasesCount: releases.value?.length || 0,
-    featuredReleasesCount: featuredReleases.value?.length || 0,
-    isReleasesFetched: isReleasesFetched.value,
-    isFeaturedReleasesFetched: isFeaturedReleasesFetched.value,
-    isReleasesLoading: isReleasesLoading.value,
-    isFeaturedReleasesLoading: isFeaturedReleasesLoading.value,
-    timestamp: new Date().toISOString(),
-  });
-}, { immediate: true });
-
-watch([promotedFeaturedReleases, activeSections], () => {
-  console.log('[HomePage Debug] Computed content changed:', {
-    promotedFeaturedReleasesCount: promotedFeaturedReleases.value.length,
-    activeSectionsCount: activeSections.value.length,
-    activeSections: activeSections.value.map(s => ({ id: s.id, title: s.title, itemCount: s.items.length })),
-    timestamp: new Date().toISOString(),
-  });
-}, { immediate: true });
-
-watch([isLoading, noContent, noFeaturedContent], () => {
-  console.log('[HomePage Debug] UI state changed:', {
-    isLoading: isLoading.value,
-    noContent: noContent.value,
-    noFeaturedContent: noFeaturedContent.value,
-    shouldShowContent: !isLoading.value && !noContent.value && !noFeaturedContent.value,
-    timestamp: new Date().toISOString(),
-  });
-}, { immediate: true });
-
-
 </script>
