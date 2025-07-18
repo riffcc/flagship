@@ -109,6 +109,11 @@ export function useGetReleasesQuery(options?: {
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
+    refetchInterval: (data) => {
+      if (data.state.data && !(data.state.data.length > 0) && data.state.dataUpdateCount > 0) {
+        return 500;
+      }
+    },
     retry: (failureCount, error) => {
       // Handle specific PeerBit delivery errors with appropriate retry strategy
       if (error?.message?.includes('delivery acknowledges from all nodes (0/1)')) {
@@ -204,6 +209,11 @@ export function useGetFeaturedReleasesQuery(options?: {
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
+    refetchInterval: (data) => {
+      if (data.state.data && !(data.state.data.length > 0) && data.state.dataUpdateCount > 0) {
+        return 500;
+      }
+    },
     retry: (failureCount, error) => {
       // Handle specific PeerBit delivery errors with appropriate retry strategy
       if (error?.message?.includes('delivery acknowledges from all nodes (0/1)')) {
