@@ -133,8 +133,8 @@ import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 
 import ContentCategoryForm from '/@/components/releases/contentCategoryForm.vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
-import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
 import { useContentCategoriesQuery } from '../../plugins/lensService/hooks';
+import type { ContentCategoryItem } from '/@/types';
 
 
 const { data: contentCategories } = useContentCategoriesQuery();
@@ -143,12 +143,7 @@ const createCategoryDialog = ref(false);
 const editCategoryDialog = ref(false);
 const confirmDeleteCategoryDialog = ref(false);
 
-const editedContentCategory = ref<Omit<ContentCategoryData<ContentCategoryMetadata>, 'siteAddress'>>({
-  id: '',
-  displayName: '',
-  featured: false,
-  metadataSchema: {},
-});
+const editedContentCategory = ref<Partial<ContentCategoryItem>>({});
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
 

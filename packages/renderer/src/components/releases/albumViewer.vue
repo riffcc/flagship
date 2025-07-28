@@ -134,10 +134,9 @@ import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {useFloatingVideo} from '/@/composables/floatingVideo';
 import { parseUrlOrCid } from '/@/utils';
 import type { ReleaseItem } from '/@/types';
-import type { AnyObject } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
-  release: ReleaseItem<AnyObject>
+  release: ReleaseItem
 }>();
 
 const router = useRouter();

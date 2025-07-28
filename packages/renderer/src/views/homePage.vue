@@ -74,7 +74,6 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
-import type { AnyObject, ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
 import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
@@ -105,7 +104,7 @@ const {
 
 const { data: contentCategories } = useContentCategoriesQuery();
 
-const activedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
+const activedFeaturedReleases = computed<ReleaseItem[]>(() => {
   if (!releases.value || !featuredReleases.value) return [];
   const activedFeaturedReleasesIds = featuredReleases.value
     .filter(filterActivedFeatured)
@@ -113,7 +112,7 @@ const activedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
   return releases.value.filter(r => r.id && activedFeaturedReleasesIds.includes(r.id));
 });
 
-const promotedFeaturedReleases = computed<ReleaseItem<AnyObject>[]>(() => {
+const promotedFeaturedReleases = computed<ReleaseItem[]>(() => {
   if (!releases.value || !featuredReleases.value) return [];
   const promotedActivedFeaturedReleasesIds = featuredReleases.value
     .filter(filterActivedFeatured)

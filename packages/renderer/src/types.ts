@@ -1,11 +1,16 @@
-import type { FeaturedReleaseData, IdData, ReleaseData, AnyObject } from '@riffcc/lens-sdk';
+import type {
+  ImmutableProps,
+  FeaturedReleaseData,
+  ReleaseData,
+  AnyObject,
+  ContentCategoryData,
+  ContentCategoryMetadataField,
+} from '@riffcc/lens-sdk';
 
 export type { AnyObject };
 
-export type ReleaseItem<T = string> = IdData & ReleaseData<T>;
+export type ReleaseItem= ImmutableProps & ReleaseData<AnyObject>;
 
-export type PartialReleaseItem<T = string> = Partial<ReleaseItem<T>>;
+export type FeaturedReleaseItem = ImmutableProps & FeaturedReleaseData;
 
-export type FeaturedReleaseItem = IdData & FeaturedReleaseData;
-
-export type PartialFeaturedReleaseItem = Partial<FeaturedReleaseItem>;
+export type ContentCategoryItem = ImmutableProps & ContentCategoryData<ContentCategoryMetadataField>;

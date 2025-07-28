@@ -160,12 +160,11 @@ import { computed, onMounted, ref, watch, type Ref } from 'vue';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { filterActivedFeatured, filterPromotedFeatured } from '/@/utils';
-import type { FeaturedReleaseItem, PartialFeaturedReleaseItem } from '/@/types';
+import type { FeaturedReleaseItem } from '/@/types';
 import { useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useGetFeaturedReleasesQuery } from '/@/plugins/lensService/hooks';
-import { FEATURED_END_TIME_PROPERTY } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
-  initialFeatureData: PartialFeaturedReleaseItem | null;
+  initialFeatureData: Partial<FeaturedReleaseItem> | null;
 }>();
 
 const emit = defineEmits<{
@@ -196,7 +195,7 @@ const editFeaturedReleaseMutation = useEditFeaturedReleaseMutation({
   },
 });
 
-const newFeaturedRelease: Ref<PartialFeaturedReleaseItem> = ref({});
+const newFeaturedRelease: Ref<Partial<FeaturedReleaseItem>> = ref({});
 
 const formRef = ref();
 const isLoading = computed(() => addFeaturedReleaseMutation.isPending.value || editFeaturedReleaseMutation.isPending.value);
@@ -300,7 +299,7 @@ const confirmEndFeaturedRelease = async () => {
   if (!featuredItemIdToEnd.value) return;
   editFeaturedReleaseMutation.mutate({
     ...featuredItemIdToEnd.value,
-    [FEATURED_END_TIME_PROPERTY]: (new Date()).toISOString(),
+    endTime: (new Date()).toISOString(),
   });
   featuredItemIdToEnd.value = null;
 };

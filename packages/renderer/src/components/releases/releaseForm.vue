@@ -110,11 +110,11 @@
 import {cid} from 'is-ipfs';
 import {computed, onMounted, ref, watch} from 'vue';
 import type { ReleaseItem } from '/@/types';
-import type { ContentCategoryMetadata, ReleaseData, AnyObject } from '@riffcc/lens-sdk';
+import type { ContentCategoryMetadataField, ReleaseData } from '@riffcc/lens-sdk';
 import { useAddReleaseMutation, useEditReleaseMutation, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 
 const props = defineProps<{
-  initialData?: ReleaseItem<AnyObject>;
+  initialData?: ReleaseItem;
   mode?: 'create' | 'edit';
 }>();
 
@@ -132,14 +132,7 @@ const {
 const formRef = ref();
 const openAdvanced = ref<boolean>();
 
-const releaseItem = ref<ReleaseItem<AnyObject>>({
-  id: '',
-  name: '',
-  contentCID: '',
-  categoryId: '',
-  metadata: {},
-  siteAddress: '',
-});
+const releaseItem = ref<Partial<ReleaseItem>>({});
 
 const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
@@ -176,7 +169,7 @@ const contentCategoriesItems = computed(() => contentCategories.value?.map(item 
 })));
 
 const selectedContentCategory = computed(() => {
-  let categoryMetadataData: ContentCategoryMetadata | undefined = undefined;
+  let categoryMetadataData: ContentCategoryMetadataField | undefined = undefined;
   if (contentCategories.value) {
     const targetItem = contentCategories.value.find(item => item.id === releaseItem.value.categoryId);
     if (targetItem) {
@@ -233,18 +226,19 @@ const handleOnSubmit = () => {
   if (props.mode === 'edit' && data.id) {
     editReleaseMutation.mutate({
     id: data.id,
-    name: data.name,
-    categoryId: data.categoryId,
-    contentCID: data.contentCID,
+    name: data.name!,
+    categoryId: data.categoryId!,
+    contentCID: data.contentCID!,
     thumbnailCID: data.thumbnailCID,
     metadata: data.metadata,
-    siteAddress: data.siteAddress,
+    siteAddress: data.siteAddress!,
+    postedBy: data.postedBy!,
   });
   } else {
     addReleaseMutation.mutate({
-    name: data.name,
-    categoryId: data.categoryId,
-    contentCID: data.contentCID,
+    name: data.name!,
+    categoryId: data.categoryId!,
+    contentCID: data.contentCID!,
     thumbnailCID: data.thumbnailCID,
     metadata: data.metadata,
   });

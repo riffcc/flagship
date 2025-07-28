@@ -179,7 +179,6 @@ import {
   parseUrlOrCid,
   // getStatusColor,
 } from '/@/utils';
-import type { AnyObject } from '@riffcc/lens-sdk';
 import { useDeleteReleaseMutation, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
 
 
@@ -226,8 +225,8 @@ const tableHeaders: Header[] = [
   { title: 'Actions', key: 'actions', sortable: false },
 ];
 
-const targetReleaseToEdit = ref<ReleaseItem<AnyObject> | null>(null);
-const targetReleaseToDelete = ref<ReleaseItem<AnyObject> | null>(null);
+const targetReleaseToEdit = ref<ReleaseItem | null>(null);
+const targetReleaseToDelete = ref<ReleaseItem | null>(null);
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
@@ -243,7 +242,7 @@ function handleError(message: string) {
 
 async function confirmDeleteBlockRelease() {
   if (!targetReleaseToDelete.value) return;
-  deleteReleaseMutation.mutate({ id: targetReleaseToDelete.value.id });
+  deleteReleaseMutation.mutate(targetReleaseToDelete.value.id);
 }
 
 function requestFeatureRelease(releaseId: string | undefined) {

@@ -1,4 +1,4 @@
-import { inject } from 'vue';
+import { inject, type Ref } from 'vue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import type {
   HashResponse,
@@ -7,17 +7,13 @@ import type {
   LensService,
   ReleaseData,
   SearchOptions,
-  IdData,
   FeaturedReleaseData,
   SubscriptionData,
-  Subscription,
+  AddInput,
+  EditInput,
 } from '@riffcc/lens-sdk';
-import {
-  AccountType,
-  RELEASE_METADATA_PROPERTY,
-} from '@riffcc/lens-sdk';
-import type { FeaturedReleaseItem, ReleaseItem } from '/@/types';
-import { useStaticData } from '/@/composables/staticData';
+import type { ContentCategoryItem, FeaturedReleaseItem, ReleaseItem } from '/@/types';
+import { useLensInitialization } from '/@/composables/lensInitialization';
 
 export function useLensService() {
   const lensService = inject<LensService>('lensService');
@@ -28,68 +24,64 @@ export function useLensService() {
 }
 
 // #### QUERIES ####
-
-export function usePublicKeyQuery() {
+export function usePublicKeyQuery(options?: { enabled?: boolean | Ref<boolean> }) {
   const { lensService } = useLensService();
   return useQuery({
     queryKey: ['publicKey'],
-    queryFn: async () => {
-      return await lensService.getPublicKey();
+    queryFn: () => {
+      return lensService.peerbit?.identity.publicKey.toString();
     },
+    enabled: options?.enabled ?? true,
   });
 }
 
-export function usePeerIdQuery() {
+export function usePeerIdQuery(options?: { enabled?: boolean | Ref<boolean> }) {
   const { lensService } = useLensService();
   return useQuery({
     queryKey: ['peerId'],
-    queryFn: async () => {
-      return await lensService.getPeerId();
+    queryFn: () => {
+      return lensService.peerbit?.peerId.toString();
     },
+    enabled: options?.enabled ?? true,
   });
 }
 
-export function useAccountStatusQuery() {
+export function useAccountStatusQuery(options?: { enabled?: boolean | Ref<boolean> }) {
   const { lensService } = useLensService();
   return useQuery({
     queryKey: ['accountStatus'],
     queryFn: async () => {
       return await lensService.getAccountStatus();
     },
-    initialData: AccountType.GUEST,
-    staleTime: 0, // Always consider data stale
-    refetchInterval: 1000 * 30,
-    refetchIntervalInBackground: true,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    networkMode: 'offlineFirst', // Use cached data first
+    refetchInterval: 15000,
+    enabled: options?.enabled ?? true,
   });
 }
 
-export function useGetReleaseQuery(props: IdData) {
+export function useGetReleaseQuery(id: string, options?: { enabled?: boolean | Ref<boolean> }) {
   const { lensService } = useLensService();
-  return useQuery<ReleaseItem<AnyObject> | undefined>({
-    queryKey: ['release', props.id],
+  return useQuery<ReleaseItem | undefined>({
+    queryKey: ['release', id],
     queryFn: async () => {
-      const r = await lensService.getRelease(props);
-      const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
+      const r = await lensService.getRelease(id);
       return r ?
         {
           ...r,
-          [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
+          metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
         } : undefined;
     },
+    enabled: options?.enabled ?? true,
   });
 }
 
 export function useGetReleasesQuery(options?: {
-  enabled?: boolean,
+  enabled?: boolean | Ref<boolean>,
   staleTime?: number,
   searchOptions?: SearchOptions,
 }) {
   const { lensService } = useLensService();
-  return useQuery<ReleaseItem<AnyObject>[]>({
-    queryKey: ['releases', options?.searchOptions],
+  return useQuery<ReleaseItem[]>({
+    queryKey: ['releases'],
     queryFn: async () => {
       // PeerBit-only loading with optimized timeouts
       // Default to fetching 100 releases at a time
@@ -99,104 +91,36 @@ export function useGetReleasesQuery(options?: {
       };
       const result = await lensService.getReleases(searchOptions);
       return result.map((r) => {
-        const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
         return {
           ...r,
-          [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
+          metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
         };
       });
     },
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
-    refetchInterval: (data) => {
-      if (data.state.data && !(data.state.data.length > 0) && data.state.dataUpdateCount > 0) {
-        return 500;
-      }
-    },
-    retry: (failureCount, error) => {
-      // Handle specific PeerBit delivery errors with appropriate retry strategy
-      if (error?.message?.includes('delivery acknowledges from all nodes (0/1)')) {
-        return failureCount < 2; // Limited retry for node connectivity issues
-      }
-      if (error?.message?.includes('Failed to get message')) {
-        return failureCount < 3; // More retries for message delivery issues
-      }
-      if (error?.message?.includes('try reducing fetch size')) {
-        return false; // Don't retry timeout errors
-      }
-      return failureCount < 2;
-    },
-    retryDelay: (attemptIndex) => Math.min(500 * Math.pow(2, attemptIndex), 2000), // Exponential backoff
   });
 }
 
-export function useGetAllReleasesQuery(options?: {
-  enabled?: boolean,
-  staleTime?: number,
-  onProgress?: (loaded: number, total: number) => void,
-}) {
-  const { lensService } = useLensService();
-  return useQuery<ReleaseItem<AnyObject>[]>({
-    queryKey: ['allReleases'],
-    queryFn: async () => {
-      const allReleases: ReleaseItem<AnyObject>[] = [];
-      let hasMore = true;
-
-      // First, get initial batch to see how many we might have
-      while (hasMore) {
-        const searchOptions: SearchOptions = {
-          fetch: 100,
-          // Note: Since lens-sdk doesn't support offset yet,
-          // we're getting the first 100 releases multiple times
-          // In production, you'd want to add offset support to lens-sdk
-        };
-
-        const result = await lensService.getReleases(searchOptions);
-
-        // Transform the data
-        const transformedBatch = result.map((r) => {
-          const rMetadata = r?.[RELEASE_METADATA_PROPERTY];
-          return {
-            ...r,
-            [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.parse(rMetadata) : undefined,
-          };
-        });
-
-        // For now, since we can't paginate server-side, just get one batch
-        // TODO: When lens-sdk supports offset, implement proper batching
-        allReleases.push(...transformedBatch);
-        hasMore = false; // Stop after first batch until offset is supported
-
-        options?.onProgress?.(allReleases.length, allReleases.length);
-      }
-
-      return allReleases;
-    },
-    enabled: options?.enabled ?? true,
-    staleTime: options?.staleTime ?? 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 15,
-  });
-}
-
-export function useGetFeaturedReleaseQuery(props: IdData) {
+export function useGetFeaturedReleaseQuery(id: string) {
   const { lensService } = useLensService();
   return useQuery<FeaturedReleaseItem | undefined>({
-    queryKey: ['featuredRelease', props.id],
+    queryKey: ['featuredRelease', id],
     queryFn: async () => {
-      return await lensService.getFeaturedRelease(props);
+      return await lensService.getFeaturedRelease(id);
     },
   });
 }
 
 export function useGetFeaturedReleasesQuery(options?: {
-  enabled?: boolean,
+  enabled?: boolean | Ref<boolean>,
   staleTime?: number,
   searchOptions?: SearchOptions,
 }) {
   const { lensService } = useLensService();
   return useQuery<FeaturedReleaseItem[]>({
-    queryKey: ['featuredReleases', options?.searchOptions],
+    queryKey: ['featuredReleases'],
     queryFn: async () => {
       // PeerBit-only loading with optimized timeouts
       // Fetch all featured releases (up to 1000 - should be more than enough)
@@ -209,50 +133,36 @@ export function useGetFeaturedReleasesQuery(options?: {
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
-    refetchInterval: (data) => {
-      if (data.state.data && !(data.state.data.length > 0) && data.state.dataUpdateCount > 0) {
-        return 500;
-      }
-    },
-    retry: (failureCount, error) => {
-      // Handle specific PeerBit delivery errors with appropriate retry strategy
-      if (error?.message?.includes('delivery acknowledges from all nodes (0/1)')) {
-        return failureCount < 2; // Limited retry for node connectivity issues
-      }
-      if (error?.message?.includes('Failed to get message')) {
-        return failureCount < 3; // More retries for message delivery issues
-      }
-      if (error?.message?.includes('try reducing fetch size')) {
-        return false; // Don't retry timeout errors
-      }
-      return failureCount < 2;
-    },
-    retryDelay: (attemptIndex) => Math.min(500 * Math.pow(2, attemptIndex), 2000), // Exponential backoff
   });
 }
 
-export function useContentCategoriesQuery() {
-  // const { lensService } = useLensService();
-  // const { staticStatus } = useStaticStatus();
-  const { staticContentCategories } = useStaticData();
-  return useQuery({
+export function useContentCategoriesQuery(options?: {
+  enabled?: boolean | Ref<boolean>;
+}) {
+  const { lensService } = useLensService();
+  return useQuery<ContentCategoryItem[]>({
     queryKey: ['contentCategories'],
     queryFn: async () => {
-      // const result = await lensService.getContentCategories();
-      return staticContentCategories;
+      const result = await lensService.getContentCategories();
+      return result.map((c) => {
+        return {
+          ...c,
+          metadataSchema: c.metadataSchema ? JSON.parse(c.metadataSchema) : undefined,
+        };
+      });
     },
-    initialData: staticContentCategories,
+    enabled: options?.enabled ?? true,
   });
 }
 
 export function useGetSubscriptionsQuery(options?: {
-  enabled?: boolean,
+  enabled?: boolean | Ref<boolean>,
   staleTime?: number,
   searchOptions?: SearchOptions,
 }) {
   const { lensService } = useLensService();
-  return useQuery<Subscription[]>({
-    queryKey: ['subscriptions', options?.searchOptions],
+  return useQuery({
+    queryKey: ['subscriptions'],
     queryFn: async () => {
       const searchOptions = {
         fetch: 100,
@@ -268,7 +178,6 @@ export function useGetSubscriptionsQuery(options?: {
 
 
 // #### MUTATIONS ####
-
 export function useAddReleaseMutation(options?: {
   onSuccess?: (response: HashResponse) => void;
   onError?: (e: Error) => void;
@@ -276,11 +185,10 @@ export function useAddReleaseMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Omit<ReleaseData<AnyObject>, 'siteAddress'>) => {
-      const rMetadata = data[RELEASE_METADATA_PROPERTY];
+    mutationFn: async (data: AddInput<ReleaseData<AnyObject>>) => {
       return await lensService.addRelease({
         ...data,
-        [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.stringify(rMetadata) : undefined,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
       });
     },
     onSuccess: (response) => {
@@ -300,11 +208,10 @@ export function useEditReleaseMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: IdData & ReleaseData<AnyObject>) => {
-      const rMetadata = data[RELEASE_METADATA_PROPERTY];
+    mutationFn: async (data: EditInput<ReleaseData<AnyObject>>) => {
       return await lensService.editRelease({
         ...data,
-        [RELEASE_METADATA_PROPERTY]: rMetadata ? JSON.stringify(rMetadata) : undefined,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
       });
     },
     onSuccess: (response) => {
@@ -325,12 +232,13 @@ export function useDeleteReleaseMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: IdData) => {
-      return await lensService.deleteRelease(data);
+    mutationFn: async (id: string) => {
+      return await lensService.deleteRelease(id);
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
       queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
       queryClient.invalidateQueries({ queryKey: ['releases', response.id] });
     },
     onError: (error) => {
@@ -346,7 +254,7 @@ export function useAddFeaturedReleaseMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Omit<FeaturedReleaseData, 'siteAddress'>) => {
+    mutationFn: async (data: AddInput<FeaturedReleaseData>) => {
       return await lensService.addFeaturedRelease(data);
     },
     onSuccess: (response) => {
@@ -366,7 +274,7 @@ export function useEditFeaturedReleaseMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: IdData & FeaturedReleaseData) => {
+    mutationFn: async (data: EditInput<FeaturedReleaseData>) => {
       return await lensService.editFeaturedRelease(data);
     },
     onSuccess: (response) => {
@@ -387,8 +295,8 @@ export function useDeleteFeaturedReleaseMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: IdData) => {
-      return await lensService.deleteFeaturedRelease(data);
+    mutationFn: async (id: string) => {
+      return await lensService.deleteFeaturedRelease(id);
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
@@ -408,7 +316,7 @@ export function useAddSubscriptionMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: SubscriptionData) => {
+    mutationFn: async (data: AddInput<SubscriptionData>) => {
       return await lensService.addSubscription(data);
     },
     onSuccess: (response) => {
@@ -428,7 +336,7 @@ export function useDeleteSubscriptionMutation(options?: {
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: IdData) => {
+    mutationFn: async (data: { id?: string; to?: string }) => {
       return await lensService.deleteSubscription(data);
     },
     onSuccess: (response) => {
