@@ -20,7 +20,7 @@ interface ImportMetaEnv {
   readonly VITE_APP_VERSION: string;
 
   readonly VITE_SITE_ADDRESS: string | undefined;
-  readonly VITE_BOOTSTRAPPERS: string | undefined;
+  readonly VITE_LENS_NODE: string | undefined;
 
 }
 

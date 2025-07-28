@@ -1,7 +1,7 @@
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
 import {cid as isCID} from 'is-ipfs';
-import { IPFS_GATEWAY } from './constants/ipfs';
+import { RIFFCC_IPFS_GATEWAY } from './constants/config';
 import type { FeaturedReleaseItem } from './types';
 import {Duration} from 'luxon';
 
@@ -82,7 +82,7 @@ export function parseUrlOrCid(urlOrCid?: string): string | undefined {
 
   // Load optional gateway override from environment variable
   const gatewayOverride = import.meta.env.VITE_IPFS_GATEWAY as string | undefined;
-  const selectedGateway = gatewayOverride || IPFS_GATEWAY;
+  const selectedGateway = gatewayOverride || RIFFCC_IPFS_GATEWAY;
 
   // Use HTTPS for gateways, unless the override specifies a protocol
   const gatewayBase = selectedGateway.startsWith('http://') || selectedGateway.startsWith('https://')
@@ -94,7 +94,7 @@ export function parseUrlOrCid(urlOrCid?: string): string | undefined {
   // For now, let's assume the override is a domain or IP:port.
   const codexGatewayBase = gatewayOverride
     ? (gatewayOverride.startsWith('http://') || gatewayOverride.startsWith('https://') ? gatewayOverride.replace(/^(https?:\/\/)/, '$1codex-') : `https://codex-${gatewayOverride}`)
-    : `https://codex-${IPFS_GATEWAY}`;
+    : `https://codex-${RIFFCC_IPFS_GATEWAY}`;
 
 
   if (urlOrCid.startsWith('zD')) {

@@ -83,24 +83,17 @@ import { filterActivedFeatured, filterPromotedFeatured } from '../utils';
 
 const router = useRouter();
 
-// Optimize loading: Reduce stale time for faster fallback and eager loading
 const {
   data: releases,
   isLoading: isReleasesLoading,
   isFetched: isReleasesFetched,
-} = useGetReleasesQuery({
-  staleTime: 1000 * 30, // 30s stale time for faster refresh
-});
+} = useGetReleasesQuery();
 
 const {
   data: featuredReleases,
   isLoading: isFeaturedReleasesLoading,
   isFetched: isFeaturedReleasesFetched,
-} = useGetFeaturedReleasesQuery({
-  staleTime: 1000 * 30, // 30s stale time for faster refresh
-});
-
-
+} = useGetFeaturedReleasesQuery();
 
 const { data: contentCategories } = useContentCategoriesQuery();
 
@@ -122,90 +115,47 @@ const promotedFeaturedReleases = computed<ReleaseItem[]>(() => {
 });
 
 
+const activeSections = computed(() => {
+  const limitPerCategory = 8;
+  if (!contentCategories.value || !activedFeaturedReleases.value) return [];
 
-function categorizeReleasesByFeaturedCategories(
-  rels?: ReleaseItem<AnyObject>[],
-  featuredCats?: Omit<ContentCategoryData<ContentCategoryMetadata>, 'siteAddress'>[],
-  limitPerCategory: number = 8,
-): Record<string, ReleaseItem<AnyObject>[]> {
-  const result: Record<string, ReleaseItem<AnyObject>[]> = {};
-  if (!rels || !featuredCats) {
-    return result;
-  }
-  const addedReleaseIds = new Set<string>();
-
-  featuredCats.forEach(fc => {
-    result[fc.id] = [];
-  });
-
-  for (const rel of rels) {
-    if (!rel.id || addedReleaseIds.has(rel.id)) {
-      continue;
+  const releasesByCategory = new Map<string, ReleaseItem[]>();
+  for (const release of activedFeaturedReleases.value) {
+    if (!release.categoryId) continue;
+    if (!releasesByCategory.has(release.categoryId)) {
+      releasesByCategory.set(release.categoryId, []);
     }
-
-    for (const fc of featuredCats) {
-      const currentCategoryId = fc.id;
-      if (rel.categoryId === currentCategoryId) {
-        if (result[currentCategoryId].length < limitPerCategory) {
-          result[currentCategoryId].push(rel);
-          addedReleaseIds.add(rel.id);
-        }
-        // A release is categorized, move to the next release.
-        // It won't be added to multiple sections by this logic as release.category is singular.
-        break;
-      }
-    }
+    releasesByCategory.get(release.categoryId)!.push(release);
   }
-  return result;
-}
 
-const categorizedReleases = computed(() => {
-  return categorizeReleasesByFeaturedCategories(activedFeaturedReleases.value, contentCategories.value);
-});
-
-
-const activeSections = computed<{
-  id: string;
-  title: string;
-  items: ReleaseItem<AnyObject>[];
-  navigationPath: string;
-}[]>(() => {
-  if (!contentCategories.value) return [];
   return contentCategories.value
-    .filter(c => c.featured)
-    .map(fc => {
-      const categoryId = fc.id;
-      const items = categorizedReleases.value[categoryId] || [];
+    .filter(category => category.featured)
+    .map(featuredCategory => {
+      const items = releasesByCategory.get(featuredCategory.categoryId) || [];
       return {
-        id: fc.id,
-        title: categoryId === 'tvShow' ? fc.displayName : `Featured ${fc.displayName}`,
-        items: items,
-        navigationPath: `/featured/${categoryId}`,
+        id: featuredCategory.categoryId,
+        title: featuredCategory.categoryId === 'tv-shows' ? featuredCategory.displayName : `Featured ${featuredCategory.displayName}`,
+        items: items.slice(0, limitPerCategory),
+        navigationPath: `/featured/${featuredCategory.categoryId}`,
       };
     })
     .filter(section => section.items.length > 0);
 });
 
-
-// Progressive loading - show content as each query completes
 const isLoading = computed(() => {
-  // Show loading if BOTH queries are still loading
-  // This prevents showing "no featured content" before releases are loaded
   return isReleasesLoading.value || isFeaturedReleasesLoading.value;
 });
 
 const noFeaturedContent = computed(() => {
-  // Only show "no featured content" if BOTH queries are done and there's no featured content
   if (!isReleasesFetched.value || !isFeaturedReleasesFetched.value) {
-    return false; // Still loading, don't show "no featured content" yet
+    return false;
   }
   return promotedFeaturedReleases.value.length === 0 && activeSections.value.length === 0;
 });
 
 const noContent = computed(() => {
-  // Only show "no content" if BOTH queries are done and there's truly no content anywhere
   if (!isReleasesFetched.value || !isFeaturedReleasesFetched.value) {
-    return false; // Still loading something, don't show "no content" yet
+    return false;
   }
   return releases.value?.length === 0 && featuredReleases.value?.length === 0;
 });
