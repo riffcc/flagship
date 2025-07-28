@@ -72,20 +72,20 @@
 
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue';
-import type { ContentCategoryMetadata } from '@riffcc/lens-sdk';
+import type { ContentCategoryMetadataField } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
-  initialData?: Partial<ContentCategoryMetadata[string] & { fieldKey: string; }>;
+  initialData?: Partial<ContentCategoryMetadataField[string] & { fieldKey: string; }>;
   mode?: 'create' | 'edit';
 }>();
 
 const emit = defineEmits<{
-  (e: 'submit', data: ContentCategoryMetadata[string] & { fieldKey: string; }): void;
+  (e: 'submit', data: ContentCategoryMetadataField[string] & { fieldKey: string; }): void;
 }>();
 
 const formRef = ref();
 
-const metadataField = ref<ContentCategoryMetadata[string] & { fieldKey: string; }>({
+const metadataField = ref<ContentCategoryMetadataField[string] & { fieldKey: string; }>({
   fieldKey: '',
   description: '',
   type: 'string',

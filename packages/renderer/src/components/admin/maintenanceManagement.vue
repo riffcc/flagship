@@ -116,7 +116,6 @@ import { ref } from 'vue';
 import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useDeleteFeaturedReleaseMutation } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import type { ReleaseItem } from '/@/types';
-import type { AnyObject } from '@riffcc/lens-sdk';
 
 const isExporting = ref(false);
 const isImporting = ref(false);
@@ -236,7 +235,7 @@ const deleteAllData = async () => {
       console.log(`Deleting ${featuredReleases.value.length} featured releases...`);
       for (const featured of featuredReleases.value) {
         try {
-          const result = await deleteFeaturedReleaseMutation.mutateAsync({ id: featured.id });
+          const result = await deleteFeaturedReleaseMutation.mutateAsync(featured.id);
           if (result.success) {
             featuredDeleted++;
           } else {
@@ -253,7 +252,7 @@ const deleteAllData = async () => {
       console.log(`Deleting ${releases.value.length} releases...`);
       for (const release of releases.value) {
         try {
-          const result = await deleteReleaseMutation.mutateAsync({ id: release.id });
+          const result = await deleteReleaseMutation.mutateAsync(release.id);
           if (result.success) {
             releasesDeleted++;
           } else {
@@ -295,13 +294,15 @@ const performImport = async () => {
     for (const release of importData.releases) {
       try {
         // Extract the data without the __context
-        const releaseData: Omit<ReleaseItem<AnyObject>, 'siteAddress'> = {
+        const releaseData: ReleaseItem = {
           id: release.id,
           name: release.name,
           categoryId: release.categoryId,
           contentCID: release.contentCID,
           thumbnailCID: release.thumbnailCID,
           metadata: release.metadata,
+          siteAddress: release.siteAddress,
+          postedBy: release.postedBy,
         };
 
         if (importMode.value === 'upsert') {
@@ -333,6 +334,9 @@ const performImport = async () => {
     for (const featured of importData.featuredReleases) {
       try {
         const featuredData = {
+          id: featured.id,
+          siteAddress: featured.siteAddress,
+          postedBy: featured.postedBy,
           releaseId: featured.releaseId,
           startTime: featured.startTime,
           endTime: featured.endTime,
@@ -346,8 +350,6 @@ const performImport = async () => {
             // Update existing
             await editFeaturedReleaseMutation.mutateAsync({
               ...featuredData,
-              id: featured.id,
-              siteAddress: existing.siteAddress,
             });
             featuredImported++;
           } else {

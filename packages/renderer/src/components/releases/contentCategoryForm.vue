@@ -139,10 +139,11 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue';
 import MetadataFieldForm from '/@/components/releases/metadataFieldForm.vue';
-import type { ContentCategoryData, ContentCategoryMetadata } from '@riffcc/lens-sdk';
+import type { ContentCategoryItem } from '/@/types';
+import type { ContentCategoryMetadataField } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
-  initialData?: Omit<ContentCategoryData<ContentCategoryMetadata>, 'siteAddress'>;
+  initialData?: Partial<ContentCategoryItem>;
   mode?: 'create' | 'edit';
 }>();
 
@@ -154,12 +155,7 @@ const emit = defineEmits<{
 
 const formRef = ref();
 
-const contentCategory = ref<Omit<ContentCategoryData<ContentCategoryMetadata>, 'siteAddress'>>({
-  id: '',
-  displayName: '',
-  featured: false,
-  metadataSchema: {},
-});
+const contentCategory = ref<Partial<ContentCategoryItem>>({});
 
 const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
@@ -168,7 +164,7 @@ const isLoading = ref(false);
 const createMetadataFieldDialog = ref(false);
 const editMetadataFieldDialog = ref(false);
 
-const editedMetadataField = ref<ContentCategoryMetadata[string] & { fieldKey: string; }>({
+const editedMetadataField = ref<ContentCategoryMetadataField[string] & { fieldKey: string; }>({
   fieldKey: '',
   description: '',
   type: 'string',
@@ -191,9 +187,9 @@ function editMetadataField(fieldKey: string) {
   }
 }
 
-function handleSubmitMetadataField(data: ContentCategoryMetadata[string] & { fieldKey: string; }) {
+function handleSubmitMetadataField(data: ContentCategoryMetadataField[string] & { fieldKey: string; }) {
   if (!contentCategory.value.metadataSchema) return;
-  const metadataField: ContentCategoryMetadata[string] = {
+  const metadataField: ContentCategoryMetadataField[string] = {
     description: data.description,
     type: data.type,
     options: data.options && data.options.length > 0 ? data.options : undefined,

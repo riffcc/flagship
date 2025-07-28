@@ -60,7 +60,7 @@ import ContentCard from '/@/components/misc/contentCard.vue';
 import InfiniteReleaseList from '/@/components/misc/infiniteReleaseList.vue';
 import { useContentCategoriesQuery, useGetReleasesQuery, useGetFeaturedReleasesQuery } from '/@/plugins/lensService/hooks';
 import { filterActivedFeatured } from '/@/utils';
-import type { ReleaseItem, AnyObject } from '/@/types';
+import type { ReleaseItem } from '/@/types';
 
 const props = defineProps<{
   category: string
@@ -86,7 +86,7 @@ const pageTitle = computed(() => {
 });
 
 // Get featured releases that are active and in this category
-const featuredReleasesInCategory = computed<ReleaseItem<AnyObject>[]>(() => {
+const featuredReleasesInCategory = computed<ReleaseItem[]>(() => {
   if (!releases.value || !featuredReleases.value) return [];
 
   // Get active featured release IDs

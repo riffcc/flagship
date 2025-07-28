@@ -5,7 +5,7 @@
   >
     <template v-if="targetRelease">
       <video-player
-        v-if="['video', 'movie'].includes(targetRelease.categoryId)"
+        v-if="['videos', 'movies'].includes(targetRelease.categoryId)"
         :content-cid="targetRelease.contentCID"
       />
       <album-viewer
@@ -55,7 +55,7 @@ const props = defineProps<{
 
 const router = useRouter();
 
-const { data: targetRelease, isLoading } = useGetReleaseQuery(props);
+const { data: targetRelease, isLoading } = useGetReleaseQuery(props.id);
 
 watch(targetRelease, (r) => {
   if (r) {

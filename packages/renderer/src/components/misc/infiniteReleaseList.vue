@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
-import type { ReleaseItem, AnyObject } from '/@/types';
+import type { ReleaseItem } from '/@/types';
 import ContentCard from './contentCard.vue';
 import { useGetReleasesQuery } from '/@/plugins/lensService/hooks';
 import type { SearchOptions } from '@riffcc/lens-sdk';
@@ -71,7 +71,7 @@ const props = defineProps<{
 }>();
 
 defineEmits<{
-  'release-click': [release: ReleaseItem<AnyObject>];
+  'release-click': [release: ReleaseItem];
 }>();
 
 // Number of items to show per "page"

@@ -112,7 +112,6 @@ import { useSiteColors } from '/@/composables/siteColors';
 import { type ReleaseItem } from '/@/types';
 import { parseUrlOrCid } from '/@/utils';
 import { useRouter } from 'vue-router';
-import type { AnyObject } from '@riffcc/lens-sdk';
 
 
 const { showDefederation } = useShowDefederation();
@@ -121,7 +120,7 @@ const { xs } = useDisplay();
 const router = useRouter();
 
 const props = defineProps<{
-  item: ReleaseItem<AnyObject>;
+  item: ReleaseItem;
   cursorPointer?: boolean;
   onClick?: () => void;
 }>();
