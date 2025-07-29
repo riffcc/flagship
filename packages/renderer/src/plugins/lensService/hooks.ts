@@ -13,7 +13,6 @@ import type {
   EditInput,
 } from '@riffcc/lens-sdk';
 import type { ContentCategoryItem, FeaturedReleaseItem, ReleaseItem } from '/@/types';
-import { useLensInitialization } from '/@/composables/lensInitialization';
 
 export function useLensService() {
   const lensService = inject<LensService>('lensService');

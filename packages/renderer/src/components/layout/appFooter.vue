@@ -62,12 +62,12 @@
                 <template v-if="key === 'explore'">
                   <v-list-item
                     v-for="item in featuredContentCategories"
-                    :key="item.id"
+                    :key="item.categoryId"
                     :subtitle="item.displayName"
                     class="mb-2 pl-1"
                     min-height="12px"
                     height="24px"
-                    @click="router.push(`/featured/${item.id}`)"
+                    @click="router.push(`/featured/${item.categoryId}`)"
                   ></v-list-item>
                 </template>
               </v-list>

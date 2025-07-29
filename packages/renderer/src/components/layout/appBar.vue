@@ -36,20 +36,20 @@
           :key="item.id"
           :title="item.displayName"
           active-class="text-primary-lighten-1"
-          :active="route.path === item.id"
-          @click="router.push(`/${item.id}`)"
+          :active="route.path === item.categoryId"
+          @click="router.push(`/featured/${item.categoryId}`)"
         ></v-list-item>
         <template v-if="userData">
           <v-divider class="my-1"></v-divider>
           <v-list-item
-            v-if="isMember"
+            v-if="canUpload"
             title="Upload"
             active-class="text-primary-lighten-1"
             :active="route.path === '/upload'"
             @click="router.push('/upload')"
           ></v-list-item>
           <v-list-item
-            v-if="isAdmin"
+            v-if="canAccessAdminPanel"
             title="Admin"
             active-class="text-primary-lighten-1"
             :active="route.path === '/admin'"
@@ -86,15 +86,15 @@
       </router-link>
       <router-link
         v-for="item in featuredContentCategories"
-        :key="item.id"
-        :to="`/${item.id}`"
+        :key="item.categoryId"
+        :to="`/featured/${item.categoryId}`"
         class="text-decoration-none mx-2 text-subtitle-1 text-white"
         active-class="text-primary-lighten-1"
       >
         {{ item.displayName }}
       </router-link>
 
-      <template v-if="isMember || isAdmin">
+      <template v-if="canUpload || canAccessAdminPanel">
         <v-divider
           vertical
           class="mx-4"
@@ -107,8 +107,8 @@
           Upload
         </router-link>
         <router-link
-          v-if="isAdmin"
-          to="/Admin"
+          v-if="canAccessAdminPanel"
+          to="/admin"
           class="text-decoration-none mx-2 text-subtitle-1 text-white"
           active-class="text-primary-lighten-1"
         >
@@ -134,11 +134,34 @@ const { data: contentCategories } = useContentCategoriesQuery();
 const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
 
 const { data: accountStatus } = useAccountStatusQuery();
-const isMember = computed(() => accountStatus.value === 1);
-const isAdmin = computed(() => accountStatus.value === 2);
+
+const canUpload = computed(() =>
+  accountStatus.value?.permissions.includes('release:create') ?? false,
+);
+
+const canAccessAdminPanel = computed(() => {
+  // Always guard against the initial undefined state.
+  if (!accountStatus.value) {
+    return false;
+  }
+
+  // Check for the direct isAdmin flag first.
+  if (accountStatus.value.isAdmin) {
+    return true;
+  }
+
+  // FIX: Use .includes() or .some() to check for the presence of a role.
+  // .includes() is cleaner if you only need to check for one role.
+  if (accountStatus.value.roles.includes('moderator')) {
+    return true;
+  }
+
+  // If none of the above, deny access.
+  return false;
+});
 const { userData } = useUserSession();
 
-function handleOnDisconnect(){
+function handleOnDisconnect() {
   userData.value = null;
 };
 

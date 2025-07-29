@@ -5,7 +5,7 @@
   >
     <template v-if="props.showAll">
       <!-- Show all releases with infinite scroll -->
-      <p class="text-h6 text-sm-h5 font-weight-bold mb-4">{{ pageTitle }}</p>
+      <p class="text-h6 text-sm-h5 font-weight-bold mb-4">{{ pageCategory?.displayName }}</p>
       <infinite-release-list
         :category-filter="props.category"
         @release-click="(release) => router.push(`/release/${release.id}`)"
@@ -25,8 +25,8 @@
         ></v-progress-circular>
       </v-sheet>
 
-      <template v-else-if="featuredReleasesInCategory.length > 0">
-        <content-section :title="pageTitle">
+      <template v-else-if="featuredReleasesInCategory.length > 0 && pageCategory">
+        <content-section :title="pageCategory.displayName">
           <v-col
             v-for="item in featuredReleasesInCategory"
             :key="item.id"
@@ -76,13 +76,8 @@ const isLoading = computed(() => isReleasesLoading.value || isFeaturedLoading.va
 
 const pageCategory = computed(() => {
   const categoryId = props.category;
-  const category = contentCategories.value?.find((cat) => cat.id === categoryId);
+  const category = contentCategories.value?.find((cat) => cat.categoryId === categoryId);
   return category;
-});
-
-const pageTitle = computed(() => {
-  const displayName = pageCategory.value?.displayName ?? props.category;
-  return props.showAll ? displayName : `Featured ${displayName}`;
 });
 
 // Get featured releases that are active and in this category
