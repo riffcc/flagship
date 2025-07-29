@@ -13,14 +13,21 @@
       </p>
     </v-sheet>
 
-    <v-card class="mt-4 text-center">
+    <v-card class="mt-4 text-center py-1">
       <v-card-title>
-        <h3>
-          Account info
-        </h3>
+        Account info
       </v-card-title>
       <v-divider></v-divider>
-      <v-list lines="two">
+      <v-skeleton-loader
+        v-if="isLoading"
+        max-width="90%"
+        class="mx-auto"
+        type="list-item-two-line@4"
+      ></v-skeleton-loader>
+      <v-list
+        v-else
+        lines="two"
+      >
         <v-list-item
           v-if="publicKey"
           title="Public Key"
@@ -36,65 +43,116 @@
         >
         </v-list-item>
         <v-list-item
-          v-if="accountStatus !== undefined"
-          title="Account status"
-          :subtitle="`${statusExplanation.title} ${statusExplanation.description}`"
+          v-if="accountStatus"
+          title="Role"
         >
+          <v-list-item-subtitle class="mt-1">
+            <v-chip
+              v-if="accountStatus.isAdmin"
+              color="primary"
+              class="font-weight-bold"
+              size="small"
+            >
+              ADMINISTRATOR
+            </v-chip>
+            <v-chip
+              v-for="role in accountStatus.roles"
+              v-else
+              :key="role"
+              color="secondary"
+              class="text-uppercase"
+              size="small"
+            >
+              {{ role }}
+            </v-chip>
+          </v-list-item-subtitle>
         </v-list-item>
-      </v-list>
-    </v-card>
-    <v-card class="mt-4 text-center">
-      <v-card-title>
-        <h3>
-          Connectivity
-        </h3>
-      </v-card-title>
-      <v-divider></v-divider>
-      <v-list lines="two">
-        <v-list-item>
-          <p>Not implemented ⚠️</p>
+        <v-list-item
+          v-if="accountStatus && accountStatus.permissions.length > 0"
+          title="Key Permissions"
+        >
+          <v-list-item-subtitle class="text-wrap">
+            {{ formattedPermissions }}
+          </v-list-item-subtitle>
         </v-list-item>
       </v-list>
     </v-card>
   </v-container>
 </template>
-<script setup lang="ts">
-import { computed } from 'vue';
 
+<script lang="ts" setup>
+import { computed } from 'vue';
 import { useUserSession } from '/@/composables/userSession';
 import { useAccountStatusQuery, usePeerIdQuery, usePublicKeyQuery } from '/@/plugins/lensService/hooks';
 import { useCopyToClipboard } from '../composables/copyToClipboard';
+import { useLensInitialization } from '../composables/lensInitialization';
 
 const { userData } = useUserSession();
 const { copy, isCopied } = useCopyToClipboard();
+const { isLensReady } = useLensInitialization();
 
-const { data: publicKey } = usePublicKeyQuery();
-const { data: peerId } = usePeerIdQuery();
-const { data: accountStatus } = useAccountStatusQuery();
-
-const statusExplanation = computed(() => {
-  switch (accountStatus.value) {
-    case 0:
-      return {
-        title: 'GUEST',
-        description: '(View-only access to site.)',
-      };
-    case 1:
-      return {
-        title: 'MEMBER',
-        description: '(Can add content.)',
-      };
-    case 2:
-      return {
-        title: 'ADMIN',
-        description: '(Can moderate content and invite other moderators or administrators.)',
-      };
-    default:
-      return {
-        title: 'Unknown role',
-        description: '',
-      };
-  }
+const { data: publicKey, isLoading: publicKeyIsLoading } = usePublicKeyQuery({
+  enabled: isLensReady,
+});
+const { data: peerId, isLoading: peerIdIsLoading } = usePeerIdQuery({
+  enabled: isLensReady,
+});
+const { data: accountStatus, isLoading: accountStatusIsLoading } = useAccountStatusQuery({
+  enabled: isLensReady,
 });
 
+const isLoading = computed(() => {
+  return !publicKey.value || publicKeyIsLoading.value || !peerId.value || peerIdIsLoading.value || !accountStatus.value || accountStatusIsLoading.value;
+});
+
+const PERMISSION_LABELS: Record<string, string> = {
+  // Release Permissions
+  'release:create': 'Create Releases',
+  'release:edit:own': 'Edit Own Releases',
+  'release:edit:any': 'Edit Any Release',
+  'release:delete': 'Delete Releases',
+
+  // Content Management Permissions
+  'featured:manage': 'Manage Featured Content',
+  'category:manage': 'Manage Categories',
+  'blocklist:manage': 'Manage Blocked Content',
+
+  // Site Management Permissions
+  'subscription:manage': 'Manage Site Subscriptions',
+
+  // RBAC System Permissions (often implicit for admins, but good to have)
+  'system:manage:admins': 'Manage Administrators',
+  'system:manage:roles': 'Manage Roles',
+  'system:manage:assignments': 'Manage User Roles',
+};
+
+function capitalize(str: string): string {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+const formattedPermissions = computed(() => {
+  if (!accountStatus.value) {
+    return 'Loading permissions...';
+  }
+
+  if (accountStatus.value.isAdmin) {
+    return 'Full control over all site content and user management.';
+  }
+
+  if (accountStatus.value.permissions.length === 0) {
+    return 'View-only access to site content.';
+  }
+
+  const permissionTexts = accountStatus.value.permissions.map(p => {
+    if (PERMISSION_LABELS[p]) {
+      return PERMISSION_LABELS[p];
+    }
+
+    const parts = p.split(':');
+    return parts.map(capitalize).join(' ');
+  });
+
+  return permissionTexts.join(', ');
+});
 </script>
