@@ -39,8 +39,11 @@ Thumbs.db
 
 # Testing
 test-results/
+playwright-report/
 
 # Build tools
 .eslintcache
 .prettierrc
 .electron-vendors.cache.json
+
+*.txt

@@ -1,5 +1,5 @@
-import type {Browser, Page, ElectronApplication} from 'playwright';
-import {_electron as electron, chromium, firefox, webkit} from 'playwright';
+import type {Browser, Page, ElectronApplication} from '@playwright/test';
+import {_electron as electron, chromium, firefox, webkit} from '@playwright/test';
 
 import path, {dirname} from 'path';
 import {fileURLToPath} from 'url';
@@ -18,16 +18,16 @@ export const onBrowser = async ({
     const __dirname = dirname(fileURLToPath(import.meta.url));
     const projectRoot = path.join(__dirname, '..'); // Assumes utils.ts is in tests/ subdir of project root
     console.log(`[E2E Utils] Electron project root for CWD: ${projectRoot}`);
-    
-    const electronApp = await electron.launch({ 
+
+    const electronApp = await electron.launch({
         args: ['packages/main/dist/index.js'],
         cwd: projectRoot,
-        env: { 
-            ...process.env, 
+        env: {
+            ...process.env,
             NODE_ENV: 'production',
-            NODE_OPTIONS: '', 
-            ELECTRON_ENABLE_LOGGING: 'false', 
-            ELECTRON_ENABLE_STACK_DUMPING: 'false', 
+            NODE_OPTIONS: '',
+            ELECTRON_ENABLE_LOGGING: 'false',
+            ELECTRON_ENABLE_STACK_DUMPING: 'false',
         },
     });
     console.log('[E2E Utils] Electron app launched with original main.js. Waiting for first window...');

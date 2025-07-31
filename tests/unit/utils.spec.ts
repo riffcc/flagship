@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatTime } from './utils';
+import { formatTime } from '../../packages/renderer/src/utils';
 
 describe('formatTime', () => {
   it('should format milliseconds to HH:MM:SS or MM:SS', () => {
@@ -21,4 +21,4 @@ describe('formatTime', () => {
     expect(formatTime(5 * 60 * 1000)).toBe('05:00'); // 5 minutes
     expect(formatTime(5 * 60 * 60 * 1000)).toBe('05:00:00'); // 5 hours
   });
-}); 
+});

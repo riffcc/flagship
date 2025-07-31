@@ -1,54 +1,129 @@
-# This workflow is the entry point for all CI processes.
-# It is from here that all other workflows are launched.
-name: Orbiter tests
+name: Continuous Integration
 
+# This workflow runs on pushes to the main branch and on any pull request.
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
-      - 'renovate/**'
-    tags:
-      - v*
-    paths-ignore:
-      - '.github/**'
-      - '!.github/workflows/*.yml'
-      - '**.md'
-      - .editorconfig
-      - .gitignore
-      - '.idea/**'
-      - '.vscode/**'
   pull_request:
-    paths-ignore:
-      - '.github/**'
-      - '!.github/workflows/*.yml'
-      - '**.md'
-      - .editorconfig
-      - .gitignore
-      - '.idea/**'
-      - '.vscode/**'
 
+# Ensures that only the latest commit for a branch/PR gets run.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  typechecking:
-    uses: ./.github/workflows/typechecking.yml
-  # tests:
-  #   uses: ./.github/workflows/tests.yml
-  # web_tests:
-  #   uses: ./.github/workflows/webTests.yml
-  # publish_web_app:
-  #   needs: [ web_tests ]
-  #   uses: ./.github/workflows/publishPage.yml
-  # draft_release:
-  #   permissions:
-  #     contents: write # Allows this job to create releases
-  #   with:
-  #     dry-run: ${{ github.event_name != 'push' || github.ref_name != 'main' }}
-  #   needs: [ typechecking, tests ]
-  #   uses: ./.github/workflows/release.yml
-  # merge_pr:
-  #   needs: [ typechecking, publish_web_app, draft_release ]
-  #   uses: ./.github/workflows/mergePr.yml
+  # ----------------------------------------------------
+  # Job 1: Quick checks (Linting & Type-checking)
+  # This job runs first. It's fast and provides quick feedback.
+  # ----------------------------------------------------
+  quality_checks:
+    name: Lint & Type-Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Specify a Node.js version
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+        # We skip downloading browsers here because this job doesn't need them.
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+
+      - name: Run Linting
+        run: pnpm run lint
+
+      - name: Run Type-Checking
+        run: pnpm run typecheck
+
+  # ----------------------------------------------------
+  # Job 2: Unit Tests
+  # This runs in parallel with quality_checks. It's also fast.
+  # ----------------------------------------------------
+  unit_tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+
+      - name: Run Unit Tests
+        run: pnpm run test:unit
+
+  # ----------------------------------------------------
+  # Job 3: End-to-End Tests
+  # This is the most comprehensive job. It builds the app and then runs Playwright tests.
+  # It depends on the faster jobs to ensure we don't waste time if basic checks fail.
+  # ----------------------------------------------------
+  e2e_tests:
+    name: Build & E2E Tests
+    # This job will only start if the quality_checks and unit_tests jobs succeed.
+    needs: [quality_checks, unit_tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        # This command specifically downloads the browser binaries needed for Playwright.
+        run: pnpm exec playwright install --with-deps
+
+      - name: Build Web Application
+        run: pnpm run build
+
+      - name: Run E2E Tests
+        # We start the preview server in the background (&) and then run Playwright.
+        # This simulates the local testing environment.
+        run: |
+          pnpm run preview &
+          pnpm run test:e2e
+
+      - name: Upload Test Report
+        # This step runs only if the E2E tests fail, to help with debugging.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
