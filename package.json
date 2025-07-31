@@ -34,6 +34,7 @@
   "devDependencies": {
     "@eslint/js": "^9.29.0",
     "@mdi/js": "^7.4.47",
+    "@playwright/test": "^1.54.1",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@types/luxon": "^3.6.2",
     "@types/node": "^22.15.33",
@@ -49,7 +50,6 @@
     "eslint-plugin-vue": "^9.33.0",
     "happy-dom": "^14.12.3",
     "nano-staged": "^0.8.0",
-    "playwright": "^1.53.1",
     "prettier-plugin-organize-imports": "^4.1.0",
     "rollup-plugin-node-builtins": "^2.1.2",
     "rollup-plugin-node-globals": "^1.4.0",
@@ -71,7 +71,7 @@
   },
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
-    "@riffcc/lens-sdk": "^0.1.25",
+    "@riffcc/lens-sdk": "^0.1.32",
     "@tanstack/vue-query": "^5.81.2",
     "@vueuse/core": "^12.8.2",
     "core-js": "^3.43.0",
