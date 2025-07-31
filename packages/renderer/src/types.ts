@@ -7,8 +7,6 @@ import type {
   ContentCategoryMetadataField,
 } from '@riffcc/lens-sdk';
 
-export type { AnyObject };
-
 export type ReleaseItem= ImmutableProps & ReleaseData<AnyObject>;
 
 export type FeaturedReleaseItem = ImmutableProps & FeaturedReleaseData;
