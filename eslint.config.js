@@ -1,106 +1,85 @@
 import eslint from '@eslint/js';
 import pluginVue from 'eslint-plugin-vue';
 import tseslint from 'typescript-eslint';
-
 import globals from 'globals';
 
 export default [
+  // --- Global Ignores ---
   {
-    ignores: ['**/dist/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/coverage/**',
+      'packages/renderer/public/**',
+      'playwright-report/**',
+      'test-results/**',
+    ],
   },
+
+  // Base configurations
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],
+
+  // --- Configuration for Browser/Vue Application Code ---
   {
-    files: ['**/*.{js,mjs,cjs,ts,mts,cts,vue}'],
+    files: ['packages/renderer/src/**/*.{js,ts,vue}'],
     languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
       parserOptions: {
         sourceType: 'module',
-        parser: '@typescript-eslint/parser',
+        parser: tseslint.parser,
       },
     },
-    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**'],
     rules: {
-      '@typescript-eslint/no-var-requires': 'off',
-      '@typescript-eslint/consistent-type-imports': 'error',
+      // --- THIS IS THE FIX ---
+      // Disable the base rule to prevent conflicts with the @typescript-eslint rule
+      'no-unused-vars': 'off',
+
+      // Your correctly configured @typescript-eslint rule
       '@typescript-eslint/no-unused-vars': [
         'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
-        },
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
-      /**
-       * Having a semicolon helps the optimizer interpret your code correctly.
-       * This avoids rare errors in optimized code.
-       * @see https://twitter.com/alex_kozack/status/1364210394328408066
-       */
-      semi: ['error', 'always'],
-      /**
-       * This will make the history of changes in the hit a little cleaner
-       */
+
+      // Other rules...
+      '@typescript-eslint/consistent-type-imports': 'error',
+      'semi': ['error', 'always'],
       'comma-dangle': ['warn', 'always-multiline'],
-      /**
-       * Just for beauty
-       */
-      quotes: [
-        'warn',
-        'single',
-        {
-          avoidEscape: true,
-        },
-      ],
-      /** These rules are disabled because they are incompatible with prettier */
+      'quotes': ['warn', 'single', { avoidEscape: true }],
       'vue/html-self-closing': 'off',
       'vue/singleline-html-element-content-newline': 'off',
-      /** Désactivée pour incompatibilité internationale*/
       'vue/multi-word-component-names': 'off',
     },
   },
+
+  // --- Configuration for Node.js files (Configs, Scripts, etc.) ---
   {
-    files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],
+    files: [
+      '*.{js,cjs,mjs,ts}',
+      'scripts/**/*.{js,mjs,ts}',
+      'version/**/*.{js,mjs,ts}',
+      'packages/main/src/**/*.{js,ts}',
+      'packages/preload/src/**/*.{js,ts}',
+      'packages/**/vite.config.{js,ts}',
+      'tests/**/*.{js,ts}',
+      'playwright.config.ts',
+    ],
     languageOptions: {
-      parserOptions: {
-        sourceType: 'module',
-        parser: '@typescript-eslint/parser',
-      },
       globals: {
         ...globals.node,
       },
     },
-    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**'],
     rules: {
-      '@typescript-eslint/no-var-requires': 'off',
-      '@typescript-eslint/consistent-type-imports': 'error',
+      // Also disable the base rule here for consistency
+      'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
-        },
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
-      /**
-       * Having a semicolon helps the optimizer interpret your code correctly.
-       * This avoids rare errors in optimized code.
-       * @see https://twitter.com/alex_kozack/status/1364210394328408066
-       */
-      semi: ['error', 'always'],
-      /**
-       * This will make the history of changes in the hit a little cleaner
-       */
-      'comma-dangle': ['warn', 'always-multiline'],
-      /**
-       * Just for beauty
-       */
-      quotes: [
-        'warn',
-        'single',
-        {
-          avoidEscape: true,
-        },
-      ],
+      '@typescript-eslint/no-var-requires': 'off',
     },
   },
 ];
