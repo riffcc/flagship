@@ -41,18 +41,14 @@ export async function copyText(text: string | undefined) {
 }
 
 export const formatTime = (ms: number): string => {
-  if (ms === 0 || !Number.isFinite(ms)) {
+  if (ms === 0 || isNaN(ms)) {
     return '00:00';
   }
 
-  const duration = Duration.fromMillis(ms);
+  const duration = Duration.fromObject({ seconds: ms });
   const hours = duration.as('hours');
 
-  if (hours >= 1) {
-    return duration.toFormat('hh:mm:ss');
-  } else {
-    return duration.toFormat('mm:ss');
-  }
+  return (hours >= 1) ? duration.toFormat('hh:mm:ss') :  duration.toFormat('mm:ss');
 };
 
 // Colors
@@ -60,7 +56,6 @@ export const lensColorHash = (siteAddress: string): string => {
   console.log('#' + CID.parse(siteAddress).toString(base16.encoder));
   return '#' + CID.parse(siteAddress).toString(base16.encoder).slice(-6);
 };
-
 // export function getStatusColor(status: ItemStatus) {
 //   if (status === 'pending') {
 //     return 'blue';
