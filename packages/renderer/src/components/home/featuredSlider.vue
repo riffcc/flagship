@@ -173,10 +173,9 @@ import {parseUrlOrCid} from '/@/utils';
 import {useShowDefederation} from '/@/composables/showDefed';
 import { useSiteColors } from '/@/composables/siteColors';
 import type { ReleaseItem } from '/@/types';
-import type { AnyObject } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
-  promotedFeaturedReleases: ReleaseItem<AnyObject>[];
+  promotedFeaturedReleases: ReleaseItem[];
 }>();
 const router = useRouter();
 const {showDefederation} = useShowDefederation();

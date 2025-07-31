@@ -41,14 +41,18 @@ export async function copyText(text: string | undefined) {
 }
 
 export const formatTime = (ms: number): string => {
-  if (ms === 0 || isNaN(ms)) {
+  if (ms === 0 || !Number.isFinite(ms)) {
     return '00:00';
   }
 
-  const duration = Duration.fromObject({ seconds: ms });
+  const duration = Duration.fromMillis(ms);
   const hours = duration.as('hours');
 
-  return (hours >= 1) ? duration.toFormat('hh:mm:ss') :  duration.toFormat('mm:ss');
+  if (hours >= 1) {
+    return duration.toFormat('hh:mm:ss');
+  } else {
+    return duration.toFormat('mm:ss');
+  }
 };
 
 // Colors
