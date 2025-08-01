@@ -14,13 +14,16 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile --ignore-scripts --unsafe-perm
 
 # Copy source code
 COPY . .
 
+# Generate Electron vendors file
+RUN node scripts/update-electron-vendors.mjs
+
 # Build the web version
-RUN pnpm compile:web
+RUN pnpm build
 
 # Production stage
 FROM nginx:alpine
