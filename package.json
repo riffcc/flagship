@@ -71,6 +71,7 @@
   },
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
+    "@multiformats/multiaddr": "^12.5.1",
     "@riffcc/lens-sdk": "^0.1.32",
     "@tanstack/vue-query": "^5.81.2",
     "@vueuse/core": "^12.8.2",
