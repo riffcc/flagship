@@ -16,32 +16,16 @@
     </v-sheet>
 
     <template v-else>
-      <div class="releases-wrapper">
-        <v-row
-          dense
-          justify="center"
-        >
-          <v-col
+      <div class="grid-container">
+        <div class="releases-grid">
+          <content-card
             v-for="item in visibleReleases"
             :key="item.id"
-            cols="auto"
-          >
-            <content-card
-              :item="item"
-              cursor-pointer
-              @click="$emit('release-click', item)"
-            />
-          </v-col>
-
-          <!-- Lightweight placeholder tiles -->
-          <v-col
-            v-for="n in placeholderCount"
-            :key="`placeholder-${n}`"
-            cols="auto"
-          >
-            <div style="width: 15rem; height: 1px;"></div>
-          </v-col>
-        </v-row>
+            :item="item"
+            cursor-pointer
+            @click="$emit('release-click', item)"
+          />
+        </div>
       </div>
 
       <v-sheet
@@ -58,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref } from 'vue';
 import type { ReleaseItem } from '/@/types';
 import ContentCard from './contentCard.vue';
 import { useGetReleasesQuery } from '/@/plugins/lensService/hooks';
@@ -77,24 +61,10 @@ defineEmits<{
 // Number of items to show per "page"
 const PAGE_SIZE = props.pageSize || 60; // Show many items to fill ultrawide screens
 const currentPage = ref(1);
-const windowWidth = ref(window.innerWidth);
 
 // Fetch releases with the configured batch size (100)
 const { data: releases, isLoading } = useGetReleasesQuery({
   searchOptions: props.searchOptions,
-});
-
-// Track window resize
-const updateWidth = () => {
-  windowWidth.value = window.innerWidth;
-};
-
-onMounted(() => {
-  window.addEventListener('resize', updateWidth);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('resize', updateWidth);
 });
 
 // Filter releases by category if needed
@@ -118,25 +88,6 @@ const totalCount = computed(() => filteredReleases.value.length);
 const visibleCount = computed(() => visibleReleases.value.length);
 const hasMore = computed(() => visibleCount.value < totalCount.value);
 
-// Calculate placeholders for even rows
-const placeholderCount = computed(() => {
-  if (visibleCount.value === 0) return 0;
-
-  // Use reactive window width
-  const containerPadding = 32; // 1rem * 2
-  const containerWidth = windowWidth.value - containerPadding;
-  const cardWidth = 240; // 15rem for music cards
-  const gap = 12; // Vuetify dense gap
-
-  // Calculate how many cards fit in a row
-  const itemsPerRow = Math.floor((containerWidth + gap) / (cardWidth + gap));
-
-  // Calculate how many items are in the last row
-  const itemsInLastRow = visibleCount.value % itemsPerRow;
-
-  // If last row is incomplete, add placeholders
-  return itemsInLastRow === 0 ? 0 : itemsPerRow - itemsInLastRow;
-});
 
 
 const loadMore = () => {
@@ -157,18 +108,22 @@ const onIntersect = (isIntersecting: boolean) => {
   width: 100%;
 }
 
-.releases-wrapper {
-  margin: 0 auto;
-  padding: 0 1rem;
+.grid-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.releases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  gap: 0.5rem;
+  justify-content: start;
+  max-width: 100%;
 }
 
 /* Disable all transitions for instant appearance */
 .infinite-release-list * {
   transition: none !important;
-}
-
-/* Ensure v-col doesn't have any fade-in effects */
-.infinite-release-list .v-col {
-  animation: none !important;
 }
 </style>
