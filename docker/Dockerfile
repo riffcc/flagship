@@ -31,16 +31,8 @@ FROM nginx:alpine
 # Copy built files from builder stage
 COPY --from=builder /app/packages/renderer/dist/web /usr/share/nginx/html
 
-# Copy nginx config if needed for SPA routing
-RUN echo 'server { \
-    listen 80; \
-    server_name localhost; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Copy custom nginx config for SPA routing and proper MIME types
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port 80
 EXPOSE 80
