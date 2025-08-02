@@ -5,11 +5,11 @@
   >
     <template v-if="targetRelease">
       <video-player
-        v-if="['videos', 'movies'].includes(targetRelease.categoryId)"
+        v-if="['videos', 'movies'].includes(categorySlug)"
         :content-cid="targetRelease.contentCID"
       />
       <album-viewer
-        v-else-if="['audio', 'music'].includes(targetRelease.categoryId)"
+        v-else-if="['audio', 'music'].includes(categorySlug)"
         :release="targetRelease"
       ></album-viewer>
     </template>
@@ -43,11 +43,11 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue';
+import { watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import albumViewer from '/@/components/releases/albumViewer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
-import { useGetReleaseQuery } from '/@/plugins/lensService/hooks';
+import { useGetReleaseQuery, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 
 const props = defineProps<{
   id: string;
@@ -56,6 +56,14 @@ const props = defineProps<{
 const router = useRouter();
 
 const { data: targetRelease, isLoading } = useGetReleaseQuery(props.id);
+const { data: contentCategories } = useContentCategoriesQuery();
+
+// Get the category slug for the release
+const categorySlug = computed(() => {
+  if (!targetRelease.value || !contentCategories.value) return null;
+  const category = contentCategories.value.find(cat => cat.id === targetRelease.value.categoryId);
+  return category?.categoryId || null;
+});
 
 watch(targetRelease, (r) => {
   if (r) {

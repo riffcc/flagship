@@ -7,7 +7,7 @@
       <!-- Show all releases with infinite scroll -->
       <p class="text-h6 text-sm-h5 font-weight-bold mb-4">{{ pageCategory?.displayName }}</p>
       <infinite-release-list
-        :category-filter="props.category"
+        :category-filter="pageCategory?.id"
         @release-click="(release) => router.push(`/release/${release.id}`)"
       />
     </template>
@@ -93,7 +93,7 @@ const featuredReleasesInCategory = computed<ReleaseItem[]>(() => {
   return releases.value.filter(r =>
     r.id &&
     activeFeaturedReleaseIds.includes(r.id) &&
-    r.categoryId === props.category,
+    r.categoryId === pageCategory.value?.id,
   );
 });
 

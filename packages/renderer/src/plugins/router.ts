@@ -270,7 +270,21 @@ router.beforeEach(async (to, from, next) => {
       const config = PREFETCH_CONFIG[key];
 
       if (result.status === 'fulfilled' && result.value.ok) {
-        const data = await result.value.json();
+        let data = await result.value.json();
+        
+        // Transform the data to match what the query hooks return
+        if (key === 'initialReleases' && Array.isArray(data)) {
+          data = data.map((r: any) => ({
+            ...r,
+            metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
+          }));
+        } else if (key === 'initialContentCategories' && Array.isArray(data)) {
+          data = data.map((c: any) => ({
+            ...c,
+            metadataSchema: c.metadataSchema ? JSON.parse(c.metadataSchema) : undefined,
+          }));
+        }
+        
         queryClient.setQueryData(config.queryKey, data);
         console.log(`✅ [SUCCESS & CACHE SEEDED] ${key}:`, data);
       } else if (result.status === 'fulfilled' && !result.value.ok) {

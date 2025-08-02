@@ -81,8 +81,11 @@
               <h5 class="text-h5 text-sm-h4">
                 {{ featuredItem.name }}
               </h5>
-              <template v-if="['music'].includes(featuredItem.categoryId)">
-                <p class="text-body-2 text-sm-body-1">
+              <template v-if="['music'].includes(getCategorySlug(featuredItem.categoryId))">
+                <p 
+                  v-if="featuredItem.metadata?.['author']"
+                  class="text-body-2 text-sm-body-1"
+                >
                   {{ featuredItem.metadata?.['author'] }}
                 </p>
                 <v-chip
@@ -97,7 +100,7 @@
               </template>
 
               <v-chip-group
-                v-if="['movie'].includes(featuredItem.categoryId)"
+                v-if="['movies'].includes(getCategorySlug(featuredItem.categoryId))"
               >
                 <v-chip
                   v-if="featuredItem.metadata?.['classification']"
@@ -173,6 +176,7 @@ import {parseUrlOrCid} from '/@/utils';
 import {useShowDefederation} from '/@/composables/showDefed';
 import { useSiteColors } from '/@/composables/siteColors';
 import type { ReleaseItem } from '/@/types';
+import { useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 
 const props = defineProps<{
   promotedFeaturedReleases: ReleaseItem[];
@@ -181,6 +185,13 @@ const router = useRouter();
 const {showDefederation} = useShowDefederation();
 const {xs} = useDisplay();
 const slide = ref(0);
+
+const { data: contentCategories } = useContentCategoriesQuery();
+
+const getCategorySlug = (categoryId: string) => {
+  const category = contentCategories.value?.find(c => c.id === categoryId);
+  return category?.categoryId || '';
+};
 
 const previousSlideImage = computed(() => {
   const previousIndex = slide.value === 0 ? props.promotedFeaturedReleases.length - 1 : slide.value - 1;

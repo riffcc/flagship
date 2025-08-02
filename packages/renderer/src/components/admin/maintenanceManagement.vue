@@ -113,7 +113,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useDeleteFeaturedReleaseMutation } from '/@/plugins/lensService/hooks';
+import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useDeleteFeaturedReleaseMutation, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import type { ReleaseItem } from '/@/types';
 
@@ -128,6 +128,7 @@ const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackb
 // Queries
 const { data: releases } = useGetReleasesQuery();
 const { data: featuredReleases } = useGetFeaturedReleasesQuery();
+const { data: contentCategories } = useContentCategoriesQuery();
 
 // Mutations
 const addReleaseMutation = useAddReleaseMutation({
@@ -274,6 +275,46 @@ const deleteAllData = async () => {
   }
 };
 
+// Helper function to map category slug to ID
+const getCategoryIdFromSlug = (categorySlug: string): string => {
+  if (!contentCategories.value) return categorySlug;
+  
+  // First check if it's already a valid category ID
+  const existingById = contentCategories.value.find(c => c.id === categorySlug);
+  if (existingById) return categorySlug;
+  
+  // Normalize the input slug
+  const normalizedInput = categorySlug.toLowerCase().trim();
+  
+  // Try exact match with category slugs
+  const exactMatch = contentCategories.value.find(c => 
+    c.categoryId?.toLowerCase() === normalizedInput
+  );
+  if (exactMatch) return exactMatch.id;
+  
+  // Try matching by adding/removing 's' for plural/singular
+  const withS = normalizedInput.endsWith('s') ? normalizedInput : normalizedInput + 's';
+  const withoutS = normalizedInput.endsWith('s') ? normalizedInput.slice(0, -1) : normalizedInput;
+  
+  const pluralMatch = contentCategories.value.find(c => 
+    c.categoryId?.toLowerCase() === withS || c.categoryId?.toLowerCase() === withoutS
+  );
+  if (pluralMatch) return pluralMatch.id;
+  
+  // Try matching with spaces converted to hyphens and vice versa
+  const withHyphens = normalizedInput.replace(/\s+/g, '-');
+  const withSpaces = normalizedInput.replace(/-/g, ' ');
+  
+  const formattedMatch = contentCategories.value.find(c => 
+    c.categoryId?.toLowerCase() === withHyphens || 
+    c.categoryId?.toLowerCase() === withSpaces
+  );
+  if (formattedMatch) return formattedMatch.id;
+  
+  // If nothing matches, return the original (will likely fail, but preserves the error)
+  return categorySlug;
+};
+
 const performImport = async () => {
   if (!importFile.value) return;
 
@@ -293,11 +334,14 @@ const performImport = async () => {
     // Import releases
     for (const release of importData.releases) {
       try {
+        // Map category slug to actual ID
+        const mappedCategoryId = getCategoryIdFromSlug(release.categoryId);
+        
         // Extract the data without the __context
         const releaseData: ReleaseItem = {
           id: release.id,
           name: release.name,
-          categoryId: release.categoryId,
+          categoryId: mappedCategoryId,
           contentCID: release.contentCID,
           thumbnailCID: release.thumbnailCID,
           metadata: release.metadata,

@@ -51,27 +51,27 @@
           Please fill out any extra information about the content that might be useful.
         </p>
         <div
-          v-for="[categoryId, {type, description, options}] in Object.entries(selectedContentCategory)"
-          :key="categoryId"
+          v-for="[fieldName, fieldConfig] in Object.entries(selectedContentCategory)"
+          :key="fieldName"
         >
           <v-select
-            v-if="options"
-            :items="options"
-            :label="categoryId"
-            :model-value="String((releaseItem.metadata && releaseItem.metadata[categoryId]) || '')"
-            @update:model-value="(v) => handleChangeMetadataField(categoryId, v)"
+            v-if="fieldConfig.options"
+            :items="fieldConfig.options"
+            :label="formatFieldLabel(fieldName)"
+            :model-value="String((releaseItem.metadata && releaseItem.metadata[fieldName]) || '')"
+            @update:model-value="(v) => handleChangeMetadataField(fieldName, v)"
           />
           <v-text-field
             v-else
-            :label="categoryId"
-            :model-value="String((releaseItem.metadata && releaseItem.metadata[categoryId]) || '')"
-            :type="type"
-            @update:model-value="(v) => handleChangeMetadataField(categoryId, v)"
+            :label="formatFieldLabel(fieldName)"
+            :model-value="String((releaseItem.metadata && releaseItem.metadata[fieldName]) || '')"
+            :type="fieldConfig.type || 'text'"
+            @update:model-value="(v) => handleChangeMetadataField(fieldName, v)"
           >
             <template #append-inner>
               <v-tooltip
                 location="top"
-                :text="description"
+                :text="fieldConfig.description || ''"
               >
                 <template #activator="{props: tooltipProps}">
                   <v-icon
@@ -169,24 +169,50 @@ const contentCategoriesItems = computed(() => contentCategories.value?.map(item 
 })));
 
 const selectedContentCategory = computed(() => {
-  let categoryMetadataData: ContentCategoryMetadataField | undefined = undefined;
-  if (contentCategories.value) {
-    const targetItem = contentCategories.value.find(item => item.id === releaseItem.value.categoryId);
-    if (targetItem) {
-      categoryMetadataData = targetItem.metadataSchema;
+  if (!contentCategories.value || !releaseItem.value.categoryId) {
+    console.log('Advanced button disabled: no categories or categoryId', {
+      hasCategories: !!contentCategories.value,
+      categoryId: releaseItem.value.categoryId
+    });
+    return null;
+  }
+  
+  const targetItem = contentCategories.value.find(item => item.id === releaseItem.value.categoryId);
+  if (!targetItem || !targetItem.metadataSchema) {
+    console.log('Advanced button disabled: no matching category or metadataSchema', {
+      targetItem,
+      categoryId: releaseItem.value.categoryId
+    });
+    return null;
+  }
+  
+  // metadataSchema should already be parsed by the query hook
+  // If it's still a string, parse it
+  if (typeof targetItem.metadataSchema === 'string') {
+    try {
+      const parsedSchema = JSON.parse(targetItem.metadataSchema);
+      return parsedSchema;
+    } catch (e) {
+      console.error('Failed to parse metadata schema:', e, targetItem.metadataSchema);
+      return null;
     }
   }
-  return categoryMetadataData;
+  
+  return targetItem.metadataSchema;
 });
 
-const handleChangeMetadataField = (categoryId: string, value: string | null) => {
+const handleChangeMetadataField = (fieldName: string, value: string | null) => {
   if (!releaseItem.value.metadata) {
     releaseItem.value.metadata = {};
   }
-  releaseItem.value.metadata = {
-    ...releaseItem.value.metadata,
-    [categoryId]: value || '',
-  };
+  
+  // Only update fields that are defined in the schema
+  if (selectedContentCategory.value && fieldName in selectedContentCategory.value) {
+    releaseItem.value.metadata = {
+      ...releaseItem.value.metadata,
+      [fieldName]: value || '',
+    };
+  }
 };
 
 onMounted(() => {
@@ -243,6 +269,52 @@ const handleOnSubmit = () => {
     metadata: data.metadata,
   });
   }
+};
+
+const fieldLabelMap: Record<string, string> = {
+  // Music fields
+  description: 'Description',
+  totalSongs: 'Total Songs',
+  totalDuration: 'Total Duration',
+  genres: 'Genres',
+  tags: 'Tags',
+  musicBrainzID: 'MusicBrainz ID',
+  albumTitle: 'Album Title',
+  releaseYear: 'Release Year',
+  releaseType: 'Release Type',
+  fileFormat: 'File Format',
+  bitrate: 'Bitrate',
+  mediaFormat: 'Media Format',
+  
+  // Video fields
+  title: 'Title',
+  duration: 'Duration',
+  resolution: 'Resolution',
+  format: 'Format',
+  uploader: 'Uploader',
+  uploadDate: 'Upload Date',
+  sourceUrl: 'Source URL',
+  
+  // Movie fields
+  TMDBID: 'TMDB ID',
+  IMDBID: 'IMDB ID',
+  classification: 'Classification',
+  
+  // TV Show fields
+  seasons: 'Seasons',
+  totalEpisodes: 'Total Episodes',
+  firstAiredYear: 'First Aired Year',
+  status: 'Status',
+  network: 'Network',
+  averageEpisodeDuration: 'Average Episode Duration',
+  
+  // Common field
+  cover: 'Cover Image CID',
+  author: 'Author',
+};
+
+const formatFieldLabel = (fieldName: string): string => {
+  return fieldLabelMap[fieldName] || fieldName;
 };
 
 const clearForm = () => {

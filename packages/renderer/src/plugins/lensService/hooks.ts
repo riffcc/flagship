@@ -217,6 +217,8 @@ export function useEditReleaseMutation(options?: {
       options?.onSuccess?.(response);
       queryClient.invalidateQueries({ queryKey: ['releases'] });
       queryClient.invalidateQueries({ queryKey: ['releases', response.id] });
+      // Also invalidate featured releases in case this release is featured
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
     },
     onError: (error) => {
       options?.onError?.(error);

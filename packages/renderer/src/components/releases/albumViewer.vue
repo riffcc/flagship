@@ -161,13 +161,34 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
   }
   try {
     const ipfsFiles: AudioTrack[] = [];
-    const response = await fetch(url);
+    const response = await fetch(url, { method: 'HEAD' });
     if (!response.ok) {
       throw new Error(`Request failed on fetchIPFSFiles: ${response.status} ${response.statusText}. URL: ${url}`);
     }
 
+    // Check if it's a single audio file by content-type
+    const contentType = response.headers.get('content-type');
+    if (contentType && (contentType.includes('audio/') || contentType.includes('application/octet-stream'))) {
+      // It's a single audio file
+      const contentLength = response.headers.get('content-length');
+      const fileName = props.release.name || 'Unknown Track';
+      
+      ipfsFiles.push({
+        index: 0,
+        album: props.release.name,
+        cid: cid,
+        title: fileName,
+        size: contentLength ? `${(parseInt(contentLength) / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
+      });
+      return ipfsFiles;
+    }
+
+    // Otherwise, try to parse as directory
+    const fullResponse = await fetch(url);
+    const responseText = await fullResponse.text();
+
     if (cid.startsWith('zD')) {
-      const data = await response.json() as {
+      const data = JSON.parse(responseText) as {
         files: {
           title: string;
           cid: string;
@@ -196,9 +217,8 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
 
     }
     else {
-      const htmlText = await response.text();
       const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlText, 'text/html');
+      const doc = parser.parseFromString(responseText, 'text/html');
 
       const ipfsLinks = doc.querySelectorAll<HTMLAnchorElement>('a.ipfs-hash');
       const ipfsSizesData = doc.querySelectorAll<HTMLAnchorElement>(
