@@ -32,6 +32,9 @@ app
       ipcMain.handle('peerbit:add-release', async (_event, releaseData: ReleaseData) =>
         lensService?.addRelease(releaseData),
       );
+      ipcMain.handle('peerbit:edit-release', async (_event, releaseData: ReleaseData) =>
+        lensService?.editRelease(releaseData),
+      );
       ipcMain.handle('peerbit:get-release', async (_event, id: string) =>
         lensService?.getRelease({ id }),
       );
