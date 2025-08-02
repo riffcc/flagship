@@ -122,6 +122,28 @@ const onIntersect = (isIntersecting: boolean) => {
   max-width: 100%;
 }
 
+/* Firefox fallback using feature detection */
+@supports (-moz-appearance: none) {
+  .grid-container {
+    /* Simplify container for Firefox */
+    display: block;
+    width: 100%;
+  }
+  
+  .releases-grid {
+    /* Keep same sizing but fix Firefox grid issues */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+    margin: 0 auto;
+    justify-content: center;
+    /* Firefox-specific grid fixes */
+    grid-auto-flow: row;
+    align-items: start;
+  }
+}
+
 /* Disable all transitions for instant appearance */
 .infinite-release-list * {
   transition: none !important;
