@@ -47,3 +47,6 @@ playwright-report/
 .electron-vendors.cache.json
 
 *.txt
+
+# lens-sdk
+lens-sdk
