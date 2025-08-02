@@ -131,7 +131,8 @@ const activeSections = computed(() => {
   return contentCategories.value
     .filter(category => category.featured)
     .map(featuredCategory => {
-      const items = releasesByCategory.get(featuredCategory.categoryId) || [];
+      // Use the category's ID (UUID) to match releases, not the slug
+      const items = releasesByCategory.get(featuredCategory.id) || [];
       return {
         id: featuredCategory.categoryId,
         title: featuredCategory.categoryId === 'tv-shows' ? featuredCategory.displayName : `Featured ${featuredCategory.displayName}`,
