@@ -1,0 +1,153 @@
+// Gamepad-specific styles for OLED optimization
+
+// Override Vuetify backgrounds for pure black
+.v-application,
+.v-main,
+.v-card {
+  background-color: #000000 !important;
+}
+
+// Don't override v-sheet - let components decide their own backgrounds
+// This preserves gradients on featured slider and other overlays
+
+// Content sections with subtle borders
+.content-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 2rem;
+  margin-top: 2rem;
+}
+
+// Featured slider adjustments - preserve background images
+.v-carousel {
+  background: #000000 !important;
+  
+  // Allow carousel items to show their background images
+}
+
+// Content cards for OLED - no borders
+.content-card {
+  background: transparent !important;
+  border: none !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  
+  // Create a subtle background frame around the image
+  &::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    z-index: -1;
+    transition: all 0.3s ease;
+  }
+  
+  // Keep images clean
+  .v-img {
+    background: #000000 !important;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  
+  &:hover {
+    transform: scale(1.02);
+    
+    &::before {
+      background: rgba(255, 255, 255, 0.04);
+    }
+  }
+  
+  &.gamepad-focused {
+    transform: scale(1.05);
+    z-index: 10;
+    
+    &::before {
+      background: rgba(138, 43, 226, 0.1);
+      top: -6px;
+      left: -6px;
+      right: -6px;
+      bottom: -6px;
+    }
+  }
+}
+
+// Button styles for OLED
+.v-btn {
+  &:not(.v-btn--variant-elevated) {
+    background: rgba(255, 255, 255, 0.05) !important;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+    }
+  }
+}
+
+// Text contrast for OLED
+.text-medium-emphasis {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.text-high-emphasis {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+// Smooth scrolling for gamepad
+html {
+  scroll-behavior: smooth;
+}
+
+// Hide scrollbars for cleaner TV experience
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+// Focus styles that work well on TV
+:focus {
+  outline: none !important;
+}
+
+.gamepad-focused,
+*:focus-visible:not(.nav-tab) {
+  box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.8), 
+              0 0 20px rgba(138, 43, 226, 0.5) !important;
+  outline: none !important;
+  border-radius: 4px;
+}
+
+// Ensure images don't have gray backgrounds (except carousel items)
+.v-img:not(.v-carousel-item .v-img) {
+  background: #000000 !important;
+}
+
+// Allow carousel items to show their background images
+.v-carousel-item {
+  background: transparent !important;
+}
+
+// Footer adjustments
+footer {
+  background: #000000 !important;
+  border-top: 1px solid rgba(138, 43, 226, 0.2);
+}
+
+// Loading states
+.v-progress-circular {
+  color: #8a2be2 !important;
+}
+
+// Dialog backgrounds
+.v-dialog {
+  .v-card {
+    background: #0a0a0a !important;
+    border: 1px solid rgba(138, 43, 226, 0.3);
+  }
+}

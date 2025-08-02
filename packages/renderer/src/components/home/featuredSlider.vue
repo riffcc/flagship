@@ -77,6 +77,7 @@
           >
             <v-sheet
               color="transparent"
+              class="text-overlay"
             >
               <h5 class="text-h5 text-sm-h4">
                 {{ featuredItem.name }}
@@ -206,3 +207,12 @@ const nextSlideImage = computed(() => {
 const {getSiteColor} = useSiteColors();
 
 </script>
+
+<style scoped>
+.text-overlay {
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(4px);
+  border-radius: 12px;
+  padding: 24px;
+}
+</style>

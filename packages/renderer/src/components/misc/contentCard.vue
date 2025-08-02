@@ -6,11 +6,13 @@
   >
     <v-sheet
       v-bind="hoveringProps"
-      :class="cursorPointer ? 'cursor-pointer mx-auto' : 'mx-auto'"
+      :class="cursorPointer ? 'cursor-pointer mx-auto content-card' : 'mx-auto content-card'"
       color="transparent"
       :height="cardHeight"
       :width="cardWidth"
       :style="showDefederation ? `border: 1px solid ${getSiteColor(item.siteAddress)};` : ''"
+      data-navigable="true"
+      tabindex="0"
       @click="onClick"
     >
       <template v-if="isOverlapping">

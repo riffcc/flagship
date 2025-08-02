@@ -48,6 +48,8 @@ import {
   mdiStar,
   mdiStarPlusOutline,
   mdiBlockHelper,
+  mdiGamepad,
+  mdiCursorDefaultOutline,
 } from '@mdi/js';
 
 const iconsAliasesMapping = {
@@ -88,6 +90,8 @@ const iconsAliasesMapping = {
   'star': mdiStar,
   'star-plus-outline': mdiStarPlusOutline,
   'block-helper': mdiBlockHelper,
+  'gamepad': mdiGamepad,
+  'cursor-default-outline': mdiCursorDefaultOutline,
 };
 
 const vuetify = createVuetify({
@@ -124,6 +128,9 @@ const vuetify = createVuetify({
           'primary-lighten-1': colors.purple.lighten1,
           'primary-darken-1': colors.purple.darken1,
           'primary-accent': colors.purple.accent2,
+          background: '#000000',
+          surface: '#000000',
+          'surface-variant': '#0a0a0a',
         },
       },
     },

@@ -14,8 +14,9 @@
     </v-sheet>
   </v-container>
   <v-app v-else>
-    <app-bar />
-    <v-main min-height="100vh">
+    <div class="app-header-border"></div>
+    <gamepad-nav-bar />
+    <v-main min-height="100vh" class="mt-12">
       <router-view />
     </v-main>
     <audio-player v-if="activeTrack"></audio-player>
@@ -23,8 +24,16 @@
       v-if="floatingVideoSource"
       floating
       :content-cid="floatingVideoSource"
+      :release-id="floatingVideoRelease?.id"
+      :release-name="floatingVideoRelease?.name"
     ></video-player>
     <app-footer />
+    <gamepad-hints :gamepad-state="gamepadState" />
+    <div 
+      v-show="showCursor"
+      id="gamepad-cursor"
+      class="gamepad-cursor"
+    ></div>
   </v-app>
 </template>
 
@@ -32,22 +41,28 @@
 import { onKeyStroke } from '@vueuse/core';
 import { ref, watchEffect, onMounted } from 'vue';
 
-import appBar from '/@/components/layout/appBar.vue';
 import appFooter from '/@/components/layout/appFooter.vue';
+import GamepadNavBar from '/@/components/layout/gamepadNavBar.vue';
 import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
+import GamepadHints from '/@/components/gamepad/gamepadHints.vue';
 
 import { useAudioAlbum } from '/@/composables/audioAlbum';
 import { useFloatingVideo } from '/@/composables/floatingVideo';
 import { useShowDefederation } from '/@/composables/showDefed';
 import { useLensInitialization } from '/@/composables/lensInitialization';
+import { useGamepad } from '/@/composables/useGamepad';
+import { useGamepadNavigation } from '/@/composables/useGamepadNavigation';
 import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useContentCategoriesQuery } from './plugins/lensService';
 
 const { showDefederation } = useShowDefederation();
 const { activeTrack } = useAudioAlbum();
-const { floatingVideoSource } = useFloatingVideo();
+const { floatingVideoSource, floatingVideoRelease } = useFloatingVideo();
 
 const { isLensReady, initLensService } = useLensInitialization();
+const { gamepadState } = useGamepad();
+const { showCursor } = useGamepadNavigation();
+
 const MAGIC_KEY = 'magicmagic';
 
 const yetToType = ref(MAGIC_KEY);
@@ -98,3 +113,121 @@ const { data: contentCategories } = useContentCategoriesQuery({
   enabled: isLensReady,
 });
 </script>
+
+<style>
+.app-header-border {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%,
+    rgba(138, 43, 226, 0) 10%,
+    rgba(138, 43, 226, 0.4) 25%,
+    rgba(138, 43, 226, 0.8) 40%,
+    rgba(138, 43, 226, 0.4) 55%,
+    rgba(138, 43, 226, 0) 70%,
+    transparent 80%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  z-index: 1000;
+  animation: gentleFlow 30s ease-in-out infinite;
+  filter: blur(0.5px);
+}
+
+@keyframes gentleFlow {
+  0% {
+    background-position: 0% 50%;
+    opacity: 0.6;
+  }
+  25% {
+    background-position: 50% 50%;
+    opacity: 0.8;
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 0.7;
+  }
+  75% {
+    background-position: 50% 50%;
+    opacity: 0.9;
+  }
+  100% {
+    background-position: 0% 50%;
+    opacity: 0.6;
+  }
+}
+
+/* Add a subtle glow that follows the animation */
+.app-header-border::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(180deg, 
+    rgba(138, 43, 226, 0.2) 0%,
+    rgba(138, 43, 226, 0.1) 30%,
+    transparent 100%
+  );
+  animation: gentleGlow 30s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes gentleGlow {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.gamepad-cursor {
+  position: fixed;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #8a2be2;
+  border-radius: 50%;
+  background: rgba(138, 43, 226, 0.3);
+  pointer-events: none;
+  z-index: 10000;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.2s;
+  box-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+}
+
+/* Global gamepad focus styles */
+.gamepad-focused {
+  position: relative !important;
+  z-index: 10 !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Ensure pure black backgrounds */
+.v-application {
+  background: #000000 !important;
+}
+
+.v-main {
+  background: #000000 !important;
+}
+
+/* Remove any gray backgrounds */
+.v-sheet {
+  background: transparent !important;
+}
+
+/* Content cards should have subtle borders for OLED */
+.content-card {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.content-card:hover {
+  border-color: rgba(138, 43, 226, 0.3);
+}
+</style>

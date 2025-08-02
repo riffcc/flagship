@@ -7,6 +7,8 @@
       <video-player
         v-if="['videos', 'movies'].includes(categorySlug)"
         :content-cid="targetRelease.contentCID"
+        :release-id="targetRelease.id"
+        :release-name="targetRelease.name"
       />
       <album-viewer
         v-else-if="['audio', 'music'].includes(categorySlug)"

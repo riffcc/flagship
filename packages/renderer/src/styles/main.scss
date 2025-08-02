@@ -8,3 +8,6 @@
 @use 'vuetify' with (
   $body-font-family: "Josefin Sans"
 );
+
+// Import gamepad-specific styles after @use
+@import './gamepad.scss';

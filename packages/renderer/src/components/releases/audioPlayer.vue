@@ -6,6 +6,8 @@
     :elevation="24"
     height="100px"
     max-width="960px"
+    :data-navigable="true"
+    @dblclick="navigateToAlbum"
   >
     <audio
       ref="audioPlayerRef"
@@ -62,7 +64,31 @@
           color="transparent"
           class="flex-1-0 d-flex flex-column px-2 px-md-4"
         >
-          <p class="text-subtitle-2">{{ activeTrack?.title }}</p>
+          <p class="text-subtitle-2 d-flex align-center ga-1">
+            <span v-if="activeTrack?.artist">{{ activeTrack.artist }}</span>
+            <span 
+              v-if="activeTrack?.artist && activeTrack?.title"
+              :style="{
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '1.2em',
+                lineHeight: '1'
+              }"
+            >
+              ›
+            </span>
+            <span
+              v-if="activeTrack?.title"
+              class="track-name"
+              :style="{
+                color: 'rgba(168, 85, 247, 1)',
+                textShadow: '0 0 10px rgba(168, 85, 247, 0.7)',
+                fontWeight: '500'
+              }"
+            >
+              {{ activeTrack.title }}
+            </span>
+          </p>
           <v-slider
             v-model="progress"
             :max="audioPlayerRef?.duration"
@@ -73,6 +99,7 @@
             color="background"
             class="mx-0"
             hide-details
+            :data-navigable="true"
             @update:model-value="seekingTrack"
           ></v-slider>
           <div>
@@ -147,12 +174,14 @@
 <script setup lang="ts">
 import {onMounted, watch} from 'vue';
 import {useDisplay} from 'vuetify';
+import {useRouter} from 'vue-router';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {usePlaybackController} from '/@/composables/playbackController';
 import {usePlayerVolume} from '/@/composables/playerVolume';
 import { parseUrlOrCid } from '/@/utils';
 
 const {xs, smAndDown} = useDisplay();
+const router = useRouter();
 
 const {
   playerRef: audioPlayerRef,
@@ -193,6 +222,10 @@ const close = () => {
   pause();
   progress.value = 0;
   handleOnClose();
+};
+
+const navigateToAlbum = () => {
+  router.back();
 };
 
 const defaultSkipTime = 10;
