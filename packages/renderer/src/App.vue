@@ -34,6 +34,7 @@
       id="gamepad-cursor"
       class="gamepad-cursor"
     ></div>
+    <start-menu v-model="showStartMenu" />
   </v-app>
 </template>
 
@@ -46,6 +47,7 @@ import GamepadNavBar from '/@/components/layout/gamepadNavBar.vue';
 import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
 import GamepadHints from '/@/components/gamepad/gamepadHints.vue';
+import StartMenu from '/@/components/misc/startMenu.vue';
 
 import { useAudioAlbum } from '/@/composables/audioAlbum';
 import { useFloatingVideo } from '/@/composables/floatingVideo';
@@ -54,14 +56,19 @@ import { useLensInitialization } from '/@/composables/lensInitialization';
 import { useGamepad } from '/@/composables/useGamepad';
 import { useGamepadNavigation } from '/@/composables/useGamepadNavigation';
 import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useContentCategoriesQuery } from './plugins/lensService';
+import { useGlobalPlayback } from '/@/composables/globalPlayback';
+import { useInputMethod } from '/@/composables/useInputMethod';
 
 const { showDefederation } = useShowDefederation();
 const { activeTrack } = useAudioAlbum();
 const { floatingVideoSource, floatingVideoRelease } = useFloatingVideo();
 
 const { isLensReady, initLensService } = useLensInitialization();
-const { gamepadState } = useGamepad();
+const { gamepadState, onButtonPress } = useGamepad();
 const { showCursor } = useGamepadNavigation();
+const { currentInputMethod } = useInputMethod();
+
+const showStartMenu = ref(false);
 
 const MAGIC_KEY = 'magicmagic';
 
@@ -98,6 +105,20 @@ watchEffect(() => {
 
 onMounted(async () => {
   initLensService();
+  
+  // Setup gamepad controls
+  onButtonPress('start', () => {
+    showStartMenu.value = true;
+  });
+  
+  // Setup L3/R3 for play/pause
+  const { globalTogglePlay } = useGlobalPlayback();
+  onButtonPress('leftStickButton', () => {
+    globalTogglePlay();
+  });
+  onButtonPress('rightStickButton', () => {
+    globalTogglePlay();
+  });
 });
 
 
@@ -120,20 +141,21 @@ const { data: contentCategories } = useContentCategoriesQuery({
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 1px;
   background: linear-gradient(90deg, 
-    transparent 0%,
-    rgba(138, 43, 226, 0) 10%,
-    rgba(138, 43, 226, 0.4) 25%,
-    rgba(138, 43, 226, 0.8) 40%,
-    rgba(138, 43, 226, 0.4) 55%,
-    rgba(138, 43, 226, 0) 70%,
-    transparent 80%,
+    rgba(98, 28, 166, 0.3) 0%,
+    rgba(98, 28, 166, 0.6) 15%,
+    rgba(98, 28, 166, 0.9) 30%,
+    rgba(98, 28, 166, 1) 40%,
+    rgba(98, 28, 166, 0.9) 50%,
+    rgba(98, 28, 166, 0.6) 65%,
+    rgba(98, 28, 166, 0.3) 80%,
+    rgba(98, 28, 166, 0.1) 95%,
     transparent 100%
   );
-  background-size: 200% 100%;
+  background-size: 150% 100%;
   z-index: 1000;
-  animation: gentleFlow 30s ease-in-out infinite;
+  animation: gentleFlow 20s ease-in-out infinite;
   filter: blur(0.5px);
 }
 
@@ -207,6 +229,27 @@ const { data: contentCategories } = useContentCategoriesQuery({
   transition: all 0.2s ease !important;
 }
 
+/* Hide hover effects when using gamepad */
+body.input-gamepad *:hover {
+  background-color: inherit !important;
+}
+
+/* Only show hover effects when using mouse */
+body.input-mouse *:hover {
+  transition: all 0.2s ease;
+}
+
+/* Only show gamepad focus when using gamepad */
+body.input-gamepad .gamepad-focused {
+  box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.8), 0 0 20px rgba(138, 43, 226, 0.5) !important;
+}
+
+/* Hide gamepad focus when using mouse */
+body.input-mouse .gamepad-focused {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 /* Ensure pure black backgrounds */
 .v-application {
   background: #000000 !important;
@@ -229,5 +272,19 @@ const { data: contentCategories } = useContentCategoriesQuery({
 
 .content-card:hover {
   border-color: rgba(138, 43, 226, 0.3);
+}
+
+/* Prevent focus on non-interactive elements */
+div:not([data-navigable]):not(.content-card):focus,
+v-sheet:focus,
+v-container:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* Prevent text selection with gamepad */
+body.input-gamepad * {
+  user-select: none;
 }
 </style>

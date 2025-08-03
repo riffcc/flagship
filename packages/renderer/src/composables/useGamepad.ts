@@ -1,4 +1,5 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { useInputMethod } from './useInputMethod';
 
 export interface GamepadState {
   connected: boolean;
@@ -31,6 +32,8 @@ const SCROLL_SPEED_MIN = 1;
 const SCROLL_SPEED_MAX = 20;
 
 export function useGamepad() {
+  const { setInputMethod } = useInputMethod();
+  
   const gamepadState = ref<GamepadState>({
     connected: false,
     type: 'generic',
@@ -59,6 +62,7 @@ export function useGamepad() {
   const gamepadIndex = ref<number | null>(null);
   const previousButtonStates = new Map<string, boolean>();
   const buttonCallbacks = new Map<string, () => void>();
+  let hasRecentInput = false;
 
   // Detect gamepad type from ID
   function detectGamepadType(id: string): 'xbox' | 'playstation' | 'switch' | 'generic' {
@@ -108,15 +112,17 @@ export function useGamepad() {
     // }
 
     // Update stick positions with dead zone
-    gamepadState.value.leftStick = {
-      x: applyDeadZone(gamepad.axes[0]),
-      y: applyDeadZone(gamepad.axes[1]),
-    };
+    const leftX = applyDeadZone(gamepad.axes[0]);
+    const leftY = applyDeadZone(gamepad.axes[1]);
+    const rightX = applyDeadZone(gamepad.axes[2]);
+    const rightY = applyDeadZone(gamepad.axes[3]);
     
-    gamepadState.value.rightStick = {
-      x: applyDeadZone(gamepad.axes[2]),
-      y: applyDeadZone(gamepad.axes[3]),
-    };
+    gamepadState.value.leftStick = { x: leftX, y: leftY };
+    gamepadState.value.rightStick = { x: rightX, y: rightY };
+    
+    // Check if there's any gamepad input
+    const hasStickInput = Math.abs(leftX) > 0 || Math.abs(leftY) > 0 || 
+                         Math.abs(rightX) > 0 || Math.abs(rightY) > 0;
 
     // Map buttons (standard gamepad mapping)
     const buttonMappings = {
@@ -138,6 +144,9 @@ export function useGamepad() {
       right: gamepad.buttons[15],
     };
 
+    // Check if any button is pressed
+    let hasButtonInput = false;
+
     // Update button states and trigger callbacks
     Object.entries(buttonMappings).forEach(([key, button]) => {
       if (!button) return; // Skip if button doesn't exist
@@ -149,9 +158,11 @@ export function useGamepad() {
         // Apply dead zone to triggers
         const triggerValue = value > TRIGGER_DEAD_ZONE ? value : 0;
         (gamepadState.value.buttons as any)[key] = triggerValue;
+        if (triggerValue > 0) hasButtonInput = true;
       } else {
         const wasPressed = previousButtonStates.get(key) || false;
         (gamepadState.value.buttons as any)[key] = pressed;
+        if (pressed) hasButtonInput = true;
         
         // Trigger callback on button press (not release)
         if (pressed && !wasPressed && buttonCallbacks.has(key)) {
@@ -161,6 +172,16 @@ export function useGamepad() {
         previousButtonStates.set(key, pressed);
       }
     });
+    
+    // Set input method to gamepad if there's any input
+    if (hasStickInput || hasButtonInput) {
+      if (!hasRecentInput) {
+        setInputMethod('gamepad');
+        hasRecentInput = true;
+      }
+    } else {
+      hasRecentInput = false;
+    }
   }
 
   // Computed values for easier access

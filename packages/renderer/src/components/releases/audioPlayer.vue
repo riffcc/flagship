@@ -3,6 +3,7 @@
     position="sticky"
     location="bottom right"
     class="w-100 border rounded-t-xl mx-auto"
+    color="black"
     :elevation="24"
     height="100px"
     max-width="960px"
@@ -172,12 +173,13 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, watch} from 'vue';
+import {onMounted, watch, onUnmounted} from 'vue';
 import {useDisplay} from 'vuetify';
 import {useRouter} from 'vue-router';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {usePlaybackController} from '/@/composables/playbackController';
 import {usePlayerVolume} from '/@/composables/playerVolume';
+import {useGlobalPlayback} from '/@/composables/globalPlayback';
 import { parseUrlOrCid } from '/@/utils';
 
 const {xs, smAndDown} = useDisplay();
@@ -230,6 +232,10 @@ const navigateToAlbum = () => {
 
 const defaultSkipTime = 10;
 onMounted(() => {
+  // Register global playback handlers
+  const { registerPlaybackHandlers } = useGlobalPlayback();
+  registerPlaybackHandlers({ play, pause, togglePlay });
+
   if ('mediaSession' in navigator) {
   navigator.mediaSession.setActionHandler('play', play);
   navigator.mediaSession.setActionHandler('pause', pause);
@@ -254,5 +260,11 @@ onMounted(() => {
   navigator.mediaSession.setActionHandler('previoustrack', handlePrevious);
   navigator.mediaSession.setActionHandler('nexttrack', handleNext);
 }
+});
+
+onUnmounted(() => {
+  // Clear global playback handlers when audio player is unmounted
+  const { clearPlaybackHandlers } = useGlobalPlayback();
+  clearPlaybackHandlers();
 });
 </script>

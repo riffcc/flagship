@@ -93,3 +93,10 @@ Flagship is Riff.CC's decentralized media platform for watching, sharing, and cu
 - TypeScript is used throughout for type safety
 - Vite configs in each package control build behavior
 - Content is distributed via P2P network with configurable replication factors
+
+## Important Instructions
+- NEVER use git checkout to revert changes - this will throw away hours of work
+- Always manually revert specific changes using the Edit tool
+- Do what has been asked; nothing more, nothing less
+- NEVER create files unless they're absolutely necessary
+- ALWAYS prefer editing existing files to creating new ones

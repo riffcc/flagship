@@ -1,5 +1,5 @@
 <template>
-  <v-container class="fill-height pb-16">
+  <v-container fluid class="fill-height pb-16">
     <v-sheet
       v-if="isLoading"
       color="transparent"

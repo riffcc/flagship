@@ -12,14 +12,17 @@ interface NavigableElement {
   height: number;
 }
 
+// Navigation lock for modal dialogs
+const navigationLocked = ref(false);
+
 export function useGamepadNavigation() {
   const router = useRouter();
   const { gamepadState, onButtonPress } = useGamepad();
   
   const focusedElement = ref<HTMLElement | null>(null);
   const navigableElements = ref<NavigableElement[]>([]);
-  const lastNavigationTime = ref(0);
-  const NAVIGATION_DELAY = 200; // ms between navigation actions
+  const lastStickDirection = ref({ x: 0, y: 0 });
+  const lastDpadState = ref({ up: false, down: false, left: false, right: false });
   
   // Custom cursor for right stick
   const cursorPosition = ref({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
@@ -37,17 +40,43 @@ export function useGamepadNavigation() {
   
   // Update navigable elements
   function updateNavigableElements() {
-    const elements = document.querySelectorAll('[data-navigable="true"], a, button, [role="button"], .content-card');
-    navigableElements.value = Array.from(elements).map(el => {
-      const rect = (el as HTMLElement).getBoundingClientRect();
-      return {
-        element: el as HTMLElement,
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-        width: rect.width,
-        height: rect.height,
-      };
-    });
+    // If navigation is locked, only look for elements in the modal
+    if (navigationLocked.value) {
+      const elements = document.querySelectorAll('.start-menu-card [data-navigable="true"], .start-menu-card .v-list-item');
+      navigableElements.value = Array.from(elements).map(el => {
+        const rect = (el as HTMLElement).getBoundingClientRect();
+        return {
+          element: el as HTMLElement,
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+          width: rect.width,
+          height: rect.height,
+        };
+      });
+    } else {
+      const elements = document.querySelectorAll('[data-navigable="true"], a[href], button:not(:disabled), [role="button"], .content-card[cursor-pointer], .v-btn:not(:disabled), .v-list-item');
+      navigableElements.value = Array.from(elements)
+        .filter(el => {
+          const element = el as HTMLElement;
+          // Filter out non-interactive elements
+          if (element.tagName === 'DIV' && !element.classList.contains('content-card') && !element.hasAttribute('data-navigable')) {
+            return false;
+          }
+          // Make sure element is visible
+          const rect = element.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        })
+        .map(el => {
+          const rect = (el as HTMLElement).getBoundingClientRect();
+          return {
+            element: el as HTMLElement,
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+            width: rect.width,
+            height: rect.height,
+          };
+        });
+    }
   }
   
   // Find nearest element in a direction
@@ -105,11 +134,11 @@ export function useGamepadNavigation() {
   
   // Handle left stick navigation
   watch([() => gamepadState.value.leftStick, () => gamepadState.value.buttons], ([stick, buttons]) => {
-    const now = Date.now();
-    if (now - lastNavigationTime.value < NAVIGATION_DELAY) return;
+    // Skip navigation if locked (modal is open)
+    if (navigationLocked.value) return;
     
     // Update control method and hide cursor when using left stick
-    if (Math.abs(stick.x) > 0.1 || Math.abs(stick.y) > 0.1 || 
+    if (Math.abs(stick.x) > 0.3 || Math.abs(stick.y) > 0.3 || 
         buttons.up || buttons.down || buttons.left || buttons.right) {
       lastControlMethod.value = 'leftStick';
       showCursor.value = false;
@@ -119,7 +148,7 @@ export function useGamepadNavigation() {
       }
     }
     
-    // D-pad navigation
+    // D-pad navigation (instant snap)
     if (buttons.up) {
       const element = findNearestElement('up');
       if (element) {
@@ -146,10 +175,11 @@ export function useGamepadNavigation() {
       }
     }
     
-    // Analog stick navigation
-    if (Math.abs(stick.x) > 0.5 || Math.abs(stick.y) > 0.5) {
+    // Left stick navigation (snap to elements, no free movement)
+    if (Math.abs(stick.x) > 0.6 || Math.abs(stick.y) > 0.6) {
       let direction: 'up' | 'down' | 'left' | 'right';
       
+      // Determine primary direction with stronger threshold
       if (Math.abs(stick.x) > Math.abs(stick.y)) {
         direction = stick.x > 0 ? 'right' : 'left';
       } else {
@@ -161,12 +191,6 @@ export function useGamepadNavigation() {
         focusElement(element);
         lastNavigationTime.value = now;
       }
-    }
-    
-    // Scroll with variable speed
-    if (Math.abs(stick.y) > 0.1) {
-      const scrollSpeed = 10 + Math.abs(stick.y) * 40; // 10-50px per frame
-      window.scrollBy(0, stick.y * scrollSpeed);
     }
   });
   
@@ -264,10 +288,11 @@ export function useGamepadNavigation() {
   
   // Removed - R3 is now used for play/pause
   
-  onButtonPress('start', () => {
-    // Open menu
-    router.push('/menu');
-  });
+  // Start button is handled in App.vue for the start menu overlay
+  // onButtonPress('start', () => {
+  //   // Open menu
+  //   router.push('/menu');
+  // });
   
   // L3/R3 for play/pause
   const playPauseHandler = () => {
@@ -347,10 +372,23 @@ export function useGamepadNavigation() {
     cursor?.remove();
   });
   
+  // Lock/unlock navigation for modal dialogs
+  function lockNavigation() {
+    navigationLocked.value = true;
+    updateNavigableElements();
+  }
+  
+  function unlockNavigation() {
+    navigationLocked.value = false;
+    updateNavigableElements();
+  }
+
   return {
     focusedElement,
     showCursor,
     cursorPosition,
     updateNavigableElements,
+    lockNavigation,
+    unlockNavigation,
   };
 }

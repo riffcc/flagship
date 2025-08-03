@@ -15,9 +15,12 @@
       >
         <span class="tab-text">{{ tab.name }}</span>
       </router-link>
-      <router-link to="/account" class="profile-link" :data-navigable="true">
-        <v-icon size="32" color="white">account</v-icon>
-      </router-link>
+      <div class="profile-link">
+        <account-menu v-if="userData" />
+        <router-link v-else to="/account" :data-navigable="true">
+          <v-icon size="32" color="white">account</v-icon>
+        </router-link>
+      </div>
     </div>
   </nav>
 </template>
@@ -25,8 +28,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
+import { useUserSession } from '/@/composables/userSession';
+import accountMenu from '/@/components/account/accountMenu.vue';
 
 const route = useRoute();
+const { userData } = useUserSession();
 
 const tabs = [
   { name: 'Home', path: '/' },

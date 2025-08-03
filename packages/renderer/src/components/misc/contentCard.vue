@@ -107,10 +107,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useDisplay } from 'vuetify';
 import { useShowDefederation } from '/@/composables/showDefed';
 import { useSiteColors } from '/@/composables/siteColors';
+import { useImageColorExtraction } from '/@/composables/imageColorExtraction';
 import { type ReleaseItem } from '/@/types';
 import { parseUrlOrCid } from '/@/utils';
 import { useRouter } from 'vue-router';
@@ -118,6 +119,7 @@ import { useRouter } from 'vue-router';
 
 const { showDefederation } = useShowDefederation();
 const { getSiteColor } = useSiteColors();
+const { getColorTintedGradient } = useImageColorExtraction();
 const { xs } = useDisplay();
 const router = useRouter();
 
@@ -126,6 +128,24 @@ const props = defineProps<{
   cursorPointer?: boolean;
   onClick?: () => void;
 }>();
+
+// Dynamic gradient based on image color
+const dynamicGradient = ref<string>('to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)');
+
+// Extract color when component mounts or image changes
+onMounted(async () => {
+  if (props.item.categoryId === 'tvShow') {
+    const imageUrl = parseUrlOrCid(props.item.thumbnailCID);
+    dynamicGradient.value = await getColorTintedGradient(imageUrl);
+  }
+});
+
+watch(() => props.item.thumbnailCID, async (newCID) => {
+  if (props.item.categoryId === 'tvShow') {
+    const imageUrl = parseUrlOrCid(newCID);
+    dynamicGradient.value = await getColorTintedGradient(imageUrl);
+  }
+});
 
 const cardWidth = computed(() => {
   const categoryId = props.item.categoryId;
@@ -179,7 +199,7 @@ const isOverlapping = computed(() => {
 });
 
 const cardBackgroundGradient = computed(() => {
-  return props.item.categoryId === 'tvShow' ? 'to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)' : undefined;
+  return props.item.categoryId === 'tvShow' ? dynamicGradient.value : undefined;
 });
 
 

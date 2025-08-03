@@ -24,7 +24,8 @@
           :style="{zIndex: 1000}"
           position="absolute"
           location="center"
-          variant="plain"
+          variant="text"
+          :ripple="false"
         >
         </v-btn>
       </v-sheet>
@@ -49,7 +50,8 @@
           :style="{zIndex: 1000}"
           position="absolute"
           location="center"
-          variant="plain"
+          variant="text"
+          :ripple="false"
         >
         </v-btn>
       </v-sheet>
