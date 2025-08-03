@@ -36,6 +36,7 @@
           
           <!-- Now Playing bar -->
           <v-sheet
+            v-if="isHovering"
             color="rgba(0, 0, 0, 0.8)"
             class="position-absolute top-0 w-100 d-flex align-center px-2"
             height="32"
@@ -53,6 +54,26 @@
               @click="navigateToRelease"
             ></v-btn>
           </v-sheet>
+          
+          <!-- Resize handles -->
+          <template v-if="floating">
+            <div
+              class="resize-handle resize-handle-nw"
+              @mousedown="startResize('nw', $event)"
+            ></div>
+            <div
+              class="resize-handle resize-handle-ne"
+              @mousedown="startResize('ne', $event)"
+            ></div>
+            <div
+              class="resize-handle resize-handle-sw"
+              @mousedown="startResize('sw', $event)"
+            ></div>
+            <div
+              class="resize-handle resize-handle-se"
+              @mousedown="startResize('se', $event)"
+            ></div>
+          </template>
           
           <!-- Center play arrow -->
           <v-btn
@@ -74,12 +95,12 @@
           ref="videoPlayerRef"
           autoplay
           :style="{
-            maxHeight: floating ? 'calc(100% - 32px)' : `${displayHeight - 64}px`,
+            maxHeight: floating ? '100%' : `${displayHeight - 64}px`,
             width: '100%',
-            height: floating ? 'calc(100% - 32px)' : '100%',
+            height: '100%',
             objectFit: floating ? 'cover' : 'contain',
-            position: floating ? 'absolute' : 'relative',
-            top: floating ? '32px' : '0',
+            position: 'relative',
+            top: 0,
             left: 0,
             backgroundColor: '#0a0a0a',
           }"
@@ -87,14 +108,46 @@
           :controls="false"
           crossorigin="anonymous"
           @click="togglePlay"
-          @loadeddata="play"
+          @loadeddata="onVideoLoaded"
           @canplay="canPlay"
           @progress="updateProgress"
+          @error="onVideoError"
+          @loadedmetadata="onLoadedMetadata"
         ></video>
+
+        <!-- Codec error overlay -->
+        <v-sheet
+          v-if="codecError"
+          color="rgba(0, 0, 0, 0.9)"
+          class="position-absolute d-flex align-center justify-center"
+          :style="{
+            top: floating ? '32px' : 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 998
+          }"
+        >
+          <div class="text-center pa-6">
+            <v-icon
+              size="64"
+              color="warning"
+              class="mb-4"
+            >mdi-alert-circle-outline</v-icon>
+            <h3 class="text-h6 mb-2">Unable to play this video</h3>
+            <p class="text-body-2 text-medium-emphasis">
+              We don't appear to support playing this video in your browser.<br>
+              Stay tuned, we'll hopefully fix it soon.
+            </p>
+            <p class="text-caption text-medium-emphasis mt-4">
+              {{ codecErrorDetails }}
+            </p>
+          </div>
+        </v-sheet>
 
         <!-- Loading overlay -->
         <v-sheet
-          v-if="isLoading"
+          v-if="isLoading && !codecError"
           :color="floating ? '#0a0a0a' : 'transparent'"
           class="position-absolute d-flex align-center justify-center"
           :style="{
@@ -209,9 +262,16 @@ const {floatingVideoSource, floatingVideoInitialTime, floatingVideoRelease, clos
 // Dragging state
 const isDragging = ref(false);
 const isResizing = ref(false);
+const resizeDirection = ref('');
 const dragStart = ref({ x: 0, y: 0 });
 const containerPosition = ref({ x: 0, y: 0 });
 const containerSize = ref({ width: 384, height: 216 });
+const initialSize = ref({ width: 0, height: 0 });
+const initialPosition = ref({ x: 0, y: 0 });
+
+// Codec error handling
+const codecError = ref(false);
+const codecErrorDetails = ref('');
 
 watch(volume, v => {
   if (videoPlayerRef.value) {
@@ -243,82 +303,184 @@ const navigateToRelease = () => {
 
 // Drag handlers
 const startDrag = (e: MouseEvent) => {
-  if (!props.floating || !containerRef.value) return;
+  if (!props.floating || !containerRef.value || isResizing.value) return;
   
-  // Check if clicking on resize handle (top-left corner)
   const rect = containerRef.value.getBoundingClientRect();
-  const isNearEdge = (
-    e.clientX < rect.left + 20 &&
-    e.clientY < rect.top + 52 && // 32px for Now Playing bar + 20px handle
-    e.clientY > rect.top + 32  // Below the Now Playing bar
-  );
-  
-  if (isNearEdge) {
-    isResizing.value = true;
-    dragStart.value = { x: e.clientX, y: e.clientY };
-    containerSize.value = { width: rect.width, height: rect.height };
-    containerPosition.value = { x: rect.left, y: rect.top };
-  } else {
-    isDragging.value = true;
-    dragStart.value = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    containerPosition.value = { x: rect.left, y: rect.top };
-  }
+  isDragging.value = true;
+  dragStart.value = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  containerPosition.value = { x: rect.left, y: rect.top };
   
   document.addEventListener('mousemove', handleDrag);
   document.addEventListener('mouseup', stopDrag);
 };
 
-const handleDrag = (e: MouseEvent) => {
-  if (!containerRef.value) return;
+const startResize = (direction: string, e: MouseEvent) => {
+  if (!props.floating || !containerRef.value) return;
   
-  if (isDragging.value) {
-    const newX = Math.max(0, Math.min(window.innerWidth - containerRef.value.offsetWidth, e.clientX - dragStart.value.x));
-    const newY = Math.max(0, Math.min(window.innerHeight - containerRef.value.offsetHeight, e.clientY - dragStart.value.y));
-    
-    containerRef.value.style.left = `${newX}px`;
-    containerRef.value.style.top = `${newY}px`;
-    containerRef.value.style.right = 'auto';
-    containerRef.value.style.bottom = 'auto';
-  } else if (isResizing.value) {
-    // For top-left resize, we need to move the position AND change the size
-    const deltaX = e.clientX - dragStart.value.x;
-    const deltaY = e.clientY - dragStart.value.y;
-    
-    // Calculate new size (inverse the deltas since we're resizing from top-left)
-    const newWidth = Math.max(320, Math.min(window.innerWidth * 0.8, containerSize.value.width - deltaX));
-    const newHeight = Math.max(180, Math.min(window.innerHeight * 0.8, containerSize.value.height - deltaY));
-    
-    // Calculate new position
-    const newLeft = Math.max(0, containerPosition.value.x + deltaX);
-    const newTop = Math.max(0, containerPosition.value.y + deltaY);
-    
-    // Only update if within bounds
-    if (newLeft + newWidth <= window.innerWidth && newTop + newHeight <= window.innerHeight) {
-      containerRef.value.style.width = `${newWidth}px`;
-      containerRef.value.style.height = `${newHeight}px`;
-      containerRef.value.style.left = `${newLeft}px`;
-      containerRef.value.style.top = `${newTop}px`;
-      containerRef.value.style.right = 'auto';
-      containerRef.value.style.bottom = 'auto';
-    }
+  e.stopPropagation();
+  e.preventDefault();
+  
+  const rect = containerRef.value.getBoundingClientRect();
+  isResizing.value = true;
+  resizeDirection.value = direction;
+  dragStart.value = { x: e.clientX, y: e.clientY };
+  initialSize.value = { width: rect.width, height: rect.height };
+  initialPosition.value = { x: rect.left, y: rect.top };
+  
+  document.addEventListener('mousemove', handleResize);
+  document.addEventListener('mouseup', stopDrag);
+};
+
+const handleDrag = (e: MouseEvent) => {
+  if (!containerRef.value || !isDragging.value || isResizing.value) return;
+  
+  const newX = Math.max(0, Math.min(window.innerWidth - containerRef.value.offsetWidth, e.clientX - dragStart.value.x));
+  const newY = Math.max(0, Math.min(window.innerHeight - containerRef.value.offsetHeight, e.clientY - dragStart.value.y));
+  
+  containerRef.value.style.left = `${newX}px`;
+  containerRef.value.style.top = `${newY}px`;
+  containerRef.value.style.right = 'auto';
+  containerRef.value.style.bottom = 'auto';
+};
+
+const handleResize = (e: MouseEvent) => {
+  if (!isResizing.value || !containerRef.value) return;
+  
+  const deltaX = e.clientX - dragStart.value.x;
+  const deltaY = e.clientY - dragStart.value.y;
+  
+  let newWidth = initialSize.value.width;
+  let newHeight = initialSize.value.height;
+  let newX = initialPosition.value.x;
+  let newY = initialPosition.value.y;
+  
+  // Minimum sizes
+  const minWidth = 320;
+  const minHeight = 180;
+  
+  // Handle resizing based on direction
+  switch (resizeDirection.value) {
+    case 'se': // Southeast (bottom-right)
+      newWidth = Math.max(minWidth, initialSize.value.width + deltaX);
+      newHeight = Math.max(minHeight, initialSize.value.height + deltaY);
+      break;
+    case 'sw': // Southwest (bottom-left)
+      const swWidth = Math.max(minWidth, initialSize.value.width - deltaX);
+      if (swWidth !== initialSize.value.width - deltaX) {
+        newX = initialPosition.value.x + (initialSize.value.width - minWidth);
+      } else {
+        newX = initialPosition.value.x + deltaX;
+      }
+      newWidth = swWidth;
+      newHeight = Math.max(minHeight, initialSize.value.height + deltaY);
+      break;
+    case 'ne': // Northeast (top-right)
+      newWidth = Math.max(minWidth, initialSize.value.width + deltaX);
+      const neHeight = Math.max(minHeight, initialSize.value.height - deltaY);
+      if (neHeight !== initialSize.value.height - deltaY) {
+        newY = initialPosition.value.y + (initialSize.value.height - minHeight);
+      } else {
+        newY = initialPosition.value.y + deltaY;
+      }
+      newHeight = neHeight;
+      break;
+    case 'nw': // Northwest (top-left)
+      const nwWidth = Math.max(minWidth, initialSize.value.width - deltaX);
+      const nwHeight = Math.max(minHeight, initialSize.value.height - deltaY);
+      if (nwWidth !== initialSize.value.width - deltaX) {
+        newX = initialPosition.value.x + (initialSize.value.width - minWidth);
+      } else {
+        newX = initialPosition.value.x + deltaX;
+      }
+      if (nwHeight !== initialSize.value.height - deltaY) {
+        newY = initialPosition.value.y + (initialSize.value.height - minHeight);
+      } else {
+        newY = initialPosition.value.y + deltaY;
+      }
+      newWidth = nwWidth;
+      newHeight = nwHeight;
+      break;
   }
+  
+  // Constrain to window bounds
+  newX = Math.max(0, Math.min(window.innerWidth - newWidth, newX));
+  newY = Math.max(0, Math.min(window.innerHeight - newHeight, newY));
+  
+  // Update styles
+  containerRef.value.style.width = `${newWidth}px`;
+  containerRef.value.style.height = `${newHeight}px`;
+  containerRef.value.style.left = `${newX}px`;
+  containerRef.value.style.top = `${newY}px`;
+  containerRef.value.style.right = 'auto';
+  containerRef.value.style.bottom = 'auto';
 };
 
 const stopDrag = () => {
   isDragging.value = false;
   isResizing.value = false;
+  resizeDirection.value = '';
   document.removeEventListener('mousemove', handleDrag);
+  document.removeEventListener('mousemove', handleResize);
   document.removeEventListener('mouseup', stopDrag);
 };
 
 const defaultSkipTime = 10;
+
+// Video event handlers
+const onVideoLoaded = () => {
+  // Reset codec error when video loads successfully
+  codecError.value = false;
+  codecErrorDetails.value = '';
+  play();
+};
+
+const onLoadedMetadata = () => {
+  if (videoPlayerRef.value) {
+    // Check if video has valid dimensions
+    if (videoPlayerRef.value.videoWidth === 0 || videoPlayerRef.value.videoHeight === 0) {
+      codecError.value = true;
+      codecErrorDetails.value = 'Video stream appears to be missing or uses an unsupported codec';
+    }
+  }
+};
+
+const onVideoError = (event: Event) => {
+  const video = event.target as HTMLVideoElement;
+  if (video.error) {
+    codecError.value = true;
+    
+    // Provide user-friendly error messages
+    switch (video.error.code) {
+      case video.error.MEDIA_ERR_ABORTED:
+        codecErrorDetails.value = 'Video loading was aborted';
+        break;
+      case video.error.MEDIA_ERR_NETWORK:
+        codecErrorDetails.value = 'Network error while loading video';
+        break;
+      case video.error.MEDIA_ERR_DECODE:
+        codecErrorDetails.value = 'Video format or codec not supported';
+        break;
+      case video.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+        codecErrorDetails.value = 'Video format not supported by your browser';
+        break;
+      default:
+        codecErrorDetails.value = 'An unknown error occurred';
+    }
+  }
+};
+
 onMounted((): void => {
   albumFiles.value = [];
   activeTrack.value = undefined;
 
   if (props.floating) {
-    if (floatingVideoInitialTime.value) {
-      seekingTrack(floatingVideoInitialTime.value);
+    if (floatingVideoInitialTime.value && videoPlayerRef.value) {
+      // Wait for video to be ready before seeking
+      const seekToTime = floatingVideoInitialTime.value;
+      videoPlayerRef.value.addEventListener('loadedmetadata', () => {
+        videoPlayerRef.value!.currentTime = seekToTime;
+        floatingVideoInitialTime.value = 0; // Reset so we don't seek again
+      }, { once: true });
     }
     // If we don't have release info from props but have it stored, keep using the stored info
     if (!props.releaseId && !props.releaseName && floatingVideoRelease.value) {
@@ -402,5 +564,47 @@ onBeforeUnmount(() => {
 
 .floating-container video {
   pointer-events: auto;
+}
+
+/* Resize handles */
+.resize-handle {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  z-index: 1002;
+}
+
+.resize-handle-nw {
+  top: 0;
+  left: 0;
+  cursor: nw-resize;
+}
+
+.resize-handle-ne {
+  top: 0;
+  right: 0;
+  cursor: ne-resize;
+}
+
+.resize-handle-sw {
+  bottom: 0;
+  left: 0;
+  cursor: sw-resize;
+}
+
+.resize-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+/* Optional: Visual hint on hover */
+.resize-handle:hover::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
 }
 </style>

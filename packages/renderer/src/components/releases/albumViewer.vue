@@ -156,7 +156,7 @@
   </v-sheet>
 </template>
 <script setup lang="ts">
-import {computed, onMounted, ref} from 'vue';
+import {computed, onMounted, onUnmounted, ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
 import trackDownloaderDialog from './trackDownloader.vue';
@@ -177,6 +177,10 @@ const props = defineProps<{
 const trackWarnings = ref<Map<number, string>>(new Map());
 const id3TrackData = ref<Map<number, { title: string; artist?: string }>>(new Map());
 const isFixingTracks = ref(false);
+
+// Abort controller for cancelling in-flight requests
+const abortController = ref<AbortController | null>(null);
+const audioElements = ref<HTMLAudioElement[]>([]);
 
 // Parse metadata if it's a string
 const metadata = computed(() => {
@@ -206,9 +210,22 @@ const totalDuration = computed(() => {
   const seconds = totalSeconds % 60;
   
   if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    // Format as "1h 37m" for albums
+    if (minutes > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${hours}h`;
+    }
+  } else if (totalSeconds >= 3600) {
+    // Exactly 1 hour
+    return '1h';
   } else {
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    // Format as "48m 5s" for albums under an hour
+    if (seconds > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${minutes}m`;
+    }
   }
 });
 
@@ -449,41 +466,98 @@ async function fixAllTrackTitles() {
 
 function formatTime(seconds: number): string {
   if (!seconds || isNaN(seconds)) return '';
-  const minutes = Math.floor(seconds / 60);
+  
+  const totalMinutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  
+  // If track is 60 minutes or longer, use hour format
+  if (totalMinutes >= 60) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (minutes > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${hours}h`;
+    }
+  }
+  
+  // Otherwise use traditional minute:second format
+  return `${totalMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
 async function loadTrackMetadataAndVerify() {
+  // Cancel any previous requests
+  if (abortController.value) {
+    abortController.value.abort();
+  }
+  
+  // Clear previous audio elements
+  audioElements.value.forEach(audio => {
+    audio.src = '';
+    audio.remove();
+  });
+  audioElements.value = [];
+  
+  // Create new abort controller
+  abortController.value = new AbortController();
+  const signal = abortController.value.signal;
+  
   // Load durations for all tracks, and ID3 tags only for admins
   const updatedTracks = await Promise.all(
     albumFiles.value.map(async (track, index) => {
+      if (signal.aborted) return track;
+      
       try {
         const url = parseUrlOrCid(track.cid);
         
         // Load audio metadata for duration if not already stored
         if (!track.duration) {
           const audio = new Audio();
+          audioElements.value.push(audio); // Track for cleanup
           audio.crossOrigin = 'anonymous';
           audio.src = url;
           
           const trackWithDuration = await new Promise<AudioTrack>((resolve) => {
-            audio.addEventListener('loadedmetadata', () => {
-              resolve({
-                ...track,
-                duration: formatTime(audio.duration)
-              });
-            });
+            const cleanup = () => {
+              audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+              audio.removeEventListener('error', onError);
+            };
             
-            audio.addEventListener('error', () => {
-              console.warn(`Failed to load duration for track: ${track.title}`);
+            const onLoadedMetadata = () => {
+              cleanup();
+              if (!signal.aborted) {
+                resolve({
+                  ...track,
+                  duration: formatTime(audio.duration)
+                });
+              } else {
+                resolve(track);
+              }
+            };
+            
+            const onError = () => {
+              cleanup();
+              // Silently fail - durations should be stored in metadata anyway
               resolve(track); // Return track without duration on error
+            };
+            
+            audio.addEventListener('loadedmetadata', onLoadedMetadata);
+            audio.addEventListener('error', onError);
+            
+            // Check if aborted
+            signal.addEventListener('abort', () => {
+              cleanup();
+              audio.src = '';
+              resolve(track);
             });
             
             // Timeout after 10 seconds
             setTimeout(() => {
-              audio.src = ''; // Cancel loading
-              resolve(track);
+              if (!signal.aborted) {
+                cleanup();
+                audio.src = ''; // Cancel loading
+                resolve(track);
+              }
             }, 10000);
           });
           
@@ -547,5 +621,19 @@ onMounted(async () => {
   } else {
     isLoading.value = false;
   }
+});
+
+onUnmounted(() => {
+  // Cancel any in-flight requests
+  if (abortController.value) {
+    abortController.value.abort();
+  }
+  
+  // Clean up audio elements
+  audioElements.value.forEach(audio => {
+    audio.src = '';
+    audio.remove();
+  });
+  audioElements.value = [];
 });
 </script>
