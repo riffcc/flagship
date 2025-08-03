@@ -48,9 +48,9 @@ playwright-report/
 
 *.txt
 
-<<<<<<< HEAD
 # lens-sdk
 lens-sdk
-=======
 .claude
->>>>>>> a0c28db (Improved releases view - CSS grid)
+
+# env
+.env.production

@@ -10,13 +10,15 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files and lens-sdk for local dependency
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY lens-sdk/ ./lens-sdk/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile --ignore-scripts --unsafe-perm
+# Using --no-frozen-lockfile temporarily due to lens-sdk path mismatch
+RUN pnpm install --no-frozen-lockfile --ignore-scripts --unsafe-perm
 
-# Copy source code
+# Copy remaining source code
 COPY . .
 
 # Generate Electron vendors file

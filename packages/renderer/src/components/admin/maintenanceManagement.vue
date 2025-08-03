@@ -178,7 +178,21 @@ const exportAll = async () => {
   isExporting.value = true;
 
   try {
-    const cleanedReleases = cleanForExport(releases.value || []) as unknown[];
+    // Create mapping of category ID to slug
+    const categoryIdToSlugMap = new Map<string, string>();
+    if (contentCategories.value) {
+      contentCategories.value.forEach(cat => {
+        categoryIdToSlugMap.set(cat.id, cat.categoryId);
+      });
+    }
+
+    // Add categorySlug to each release
+    const releasesWithSlug = (releases.value || []).map(release => ({
+      ...release,
+      categorySlug: categoryIdToSlugMap.get(release.categoryId)
+    }));
+
+    const cleanedReleases = cleanForExport(releasesWithSlug) as unknown[];
     const cleanedFeaturedReleases = cleanForExport(featuredReleases.value || []) as unknown[];
 
     const exportData = {
@@ -334,8 +348,9 @@ const performImport = async () => {
     // Import releases
     for (const release of importData.releases) {
       try {
-        // Map category slug to actual ID
-        const mappedCategoryId = getCategoryIdFromSlug(release.categoryId);
+        // Use categorySlug if available, otherwise try to map the categoryId
+        const categoryToMap = release.categorySlug || release.categoryId;
+        const mappedCategoryId = getCategoryIdFromSlug(categoryToMap);
         
         // Extract the data without the __context
         const releaseData: ReleaseItem = {
