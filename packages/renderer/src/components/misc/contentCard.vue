@@ -32,6 +32,12 @@
           >
             {{ cardSubtitle }}
           </p>
+          <p
+            v-if="item.metadata?.isSeries && item.metadata?.episodeCount"
+            class="ml-4 text-caption"
+          >
+            {{ item.metadata.episodeCount }} episode{{ item.metadata.episodeCount !== 1 ? 's' : '' }}
+          </p>
           <template v-if="isHovering">
             <v-icon
               v-if="item.categoryId === 'music'"
@@ -100,6 +106,12 @@
           class="text-caption text-sm-subtitle-1 text-center text-medium-emphasis"
         >
           {{ cardSubtitle }}
+        </p>
+        <p
+          v-if="item.metadata?.isSeries && item.metadata?.episodeCount"
+          class="text-caption text-center text-medium-emphasis"
+        >
+          {{ item.metadata.episodeCount }} episode{{ item.metadata.episodeCount !== 1 ? 's' : '' }}
         </p>
       </template>
     </v-sheet>

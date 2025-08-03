@@ -64,6 +64,20 @@ Flagship is Riff.CC's decentralized media platform for watching, sharing, and cu
    - Environment variables control build targets
    - Service layer abstracts platform differences
 
+4. **Hybrid Data Loading Architecture (PR #70)**
+   - **API-First Pre-fetching**: Attempts to load data from REST API immediately for instant UI
+   - **Graceful P2P Fallback**: Falls back to Peerbit when API is unavailable
+   - **Non-Blocking P2P Init**: Peerbit initializes in background without blocking UI
+   - **Smart Loading Screen**: Shows appropriate loading state based on data source
+   
+   Implementation details:
+   - Router guard in `plugins/router.ts` performs API health check
+   - If healthy, pre-fetches and seeds TanStack Query cache
+   - `composables/lensInitialization.ts` handles background P2P setup
+   - `getApiUrl()` dynamically constructs API URL from multiaddr
+   - Provides "near-instantaneous UI render" when API is available
+   - Degrades gracefully to P2P-only mode when necessary
+
 4. **Component Organization**
    ```
    packages/renderer/src/components/

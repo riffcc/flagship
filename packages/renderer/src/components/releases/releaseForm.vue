@@ -7,7 +7,7 @@
   >
     <v-text-field
       v-model="releaseItem.name"
-      label="Name"
+      :label="isTVCategory ? 'Episode Name' : 'Name'"
       :rules="[rules.required]"
     />
     <v-text-field
@@ -21,6 +21,53 @@
       :rules="[rules.required]"
       label="Category"
     />
+    
+    <!-- TV Show Fields -->
+    <template v-if="isTVCategory">
+      <v-autocomplete
+        v-model="selectedSeriesId"
+        :items="seriesItems"
+        :loading="structuresQuery.isLoading.value"
+        label="TV Series"
+        placeholder="Type to search or create new series..."
+        :rules="[rules.required]"
+        clearable
+        @update:search="seriesSearchText = $event"
+      >
+        <template v-if="shouldShowCreateSeriesOption" #append-item>
+          <v-list-item
+            @click="createNewSeries"
+            class="text-primary"
+          >
+            <v-list-item-title>
+              <v-icon start>mdi-plus</v-icon>
+              Create "{{ seriesSearchText }}"
+            </v-list-item-title>
+          </v-list-item>
+        </template>
+      </v-autocomplete>
+      
+      <v-row v-if="selectedSeriesId">
+        <v-col cols="6">
+          <v-text-field
+            v-model.number="seasonNumber"
+            label="Season Number"
+            type="number"
+            :rules="[rules.required, rules.positiveNumber]"
+            @update:model-value="handleSeasonChange"
+          />
+        </v-col>
+        <v-col cols="6">
+          <v-text-field
+            v-model.number="episodeNumber"
+            label="Episode Number"
+            type="number"
+            :rules="[rules.required, rules.positiveNumber]"
+          />
+        </v-col>
+      </v-row>
+    </template>
+    
     <v-text-field
       v-model="releaseItem.thumbnailCID"
       label="Thumbnail CID (Optional)"
@@ -55,8 +102,8 @@
           :key="fieldName"
         >
           <v-select
-            v-if="fieldConfig.options"
-            :items="fieldConfig.options"
+            v-if="(fieldConfig as any).options"
+            :items="(fieldConfig as any).options"
             :label="formatFieldLabel(fieldName)"
             :model-value="String((releaseItem.metadata && releaseItem.metadata[fieldName]) || '')"
             @update:model-value="(v) => handleChangeMetadataField(fieldName, v)"
@@ -65,13 +112,13 @@
             v-else
             :label="formatFieldLabel(fieldName)"
             :model-value="String((releaseItem.metadata && releaseItem.metadata[fieldName]) || '')"
-            :type="fieldConfig.type || 'text'"
+            :type="(fieldConfig as any).type || 'text'"
             @update:model-value="(v) => handleChangeMetadataField(fieldName, v)"
           >
             <template #append-inner>
               <v-tooltip
                 location="top"
-                :text="fieldConfig.description || ''"
+                :text="(fieldConfig as any).description || ''"
               >
                 <template #activator="{props: tooltipProps}">
                   <v-icon
@@ -111,7 +158,15 @@ import {cid} from 'is-ipfs';
 import {computed, onMounted, ref, watch} from 'vue';
 import type { ReleaseItem } from '/@/types';
 import type { ContentCategoryMetadataField, ReleaseData } from '@riffcc/lens-sdk';
-import { useAddReleaseMutation, useEditReleaseMutation, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
+import { 
+  useAddReleaseMutation, 
+  useEditReleaseMutation, 
+  useContentCategoriesQuery,
+  useGetStructuresQuery,
+  useAddStructureMutation,
+  useEditStructureMutation
+} from '/@/plugins/lensService/hooks';
+// import { StringMatch, StringMatchMethod } from '@peerbit/document';
 
 const props = defineProps<{
   initialData?: ReleaseItem;
@@ -134,10 +189,26 @@ const openAdvanced = ref<boolean>();
 
 const releaseItem = ref<Partial<ReleaseItem>>({});
 
+// TV-specific state
+const selectedSeriesId = ref<string>('');
+const seriesSearchText = ref<string>('');
+const seasonNumber = ref<number>(1);
+const episodeNumber = ref<number>(1);
+const selectedSeasonId = ref<string>('');
+
 const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
   isValidCid: (v: string) => !v || cid(v) || 'Please enter a valid CID.',
+  positiveNumber: (v: number) => v > 0 || 'Must be a positive number.',
 };
+
+// Check if TV category is selected (moved before structuresQuery to avoid circular dependency)
+const isTVCategory = computed(() => {
+  const category = contentCategories.value?.find(c => c.id === releaseItem.value.categoryId);
+  // Check both categoryId and displayName for TV shows (handle corrupted data)
+  const isTV = category?.categoryId === 'tv-shows' || category?.displayName === 'TV Shows';
+  return isTV;
+});
 
 const addReleaseMutation = useAddReleaseMutation({
   onSuccess: () => {
@@ -162,11 +233,85 @@ const editReleaseMutation = useEditReleaseMutation({
 });
 
 
+// Fetch structures for TV shows (both series and seasons)
+const structuresQuery = useGetStructuresQuery({
+  searchOptions: {
+    // Fetch all structures, we'll filter them in computed properties
+    fetch: 1000,
+  },
+  enabled: computed(() => {
+    const enabled = isTVCategory.value;
+    console.log('Structures query enabled:', enabled, 'isTVCategory:', isTVCategory.value);
+    return enabled;
+  }),
+});
+
+// Watch for structure query errors
+watch(() => structuresQuery.error.value, (error) => {
+  if (error) {
+    console.error('Failed to fetch structures:', error);
+  }
+});
+
+const addStructureMutation = useAddStructureMutation({
+  onSuccess: (response) => {
+    console.log('Structure created successfully:', response);
+  },
+  onError: (e) => {
+    console.error('Error creating structure:', e);
+  },
+});
+
+const editStructureMutation = useEditStructureMutation({
+  onSuccess: (response) => {
+    console.log('Structure updated successfully:', response);
+  },
+  onError: (e) => {
+    console.error('Error updating structure:', e);
+  },
+});
+
 const contentCategoriesItems = computed(() => contentCategories.value?.map(item => ({
   id: item.id,
   value: item.id,
   title: item.displayName,
 })));
+
+// Get list of series for autocomplete
+const seriesItems = computed(() => {
+  console.log('Computing series items, structures query state:', {
+    isLoading: structuresQuery.isLoading.value,
+    isError: structuresQuery.isError.value,
+    error: structuresQuery.error.value,
+    dataLength: structuresQuery.data.value?.length
+  });
+  
+  if (!structuresQuery.data.value) {
+    console.log('No structures data available');
+    return [];
+  }
+  
+  console.log('All structures:', structuresQuery.data.value);
+  
+  const series = structuresQuery.data.value
+    .filter((s: any) => s.type === 'series')
+    .map((s: any) => ({
+      value: s.id,
+      title: s.name,
+    }));
+  console.log('Filtered series for autocomplete:', series);
+  return series;
+});
+
+// Check if we should show the "Create new series" option
+const shouldShowCreateSeriesOption = computed(() => {
+  if (!seriesSearchText.value || seriesSearchText.value.length < 2) return false;
+  // Check if series already exists
+  const exists = structuresQuery.data.value?.some(
+    (s: any) => s.name.toLowerCase() === seriesSearchText.value.toLowerCase()
+  );
+  return !exists;
+});
 
 const selectedContentCategory = computed(() => {
   if (!contentCategories.value || !releaseItem.value.categoryId) {
@@ -222,6 +367,21 @@ onMounted(() => {
       ...props.initialData,
       metadata: props.initialData.metadata || {},
     };
+    
+    // If editing a TV episode, initialize the TV-specific fields
+    if (props.initialData.metadata?.seriesId) {
+      selectedSeriesId.value = props.initialData.metadata.seriesId as string;
+      seasonNumber.value = (props.initialData.metadata.seasonNumber as number) || 1;
+      episodeNumber.value = (props.initialData.metadata.episodeNumber as number) || 1;
+      selectedSeasonId.value = (props.initialData.metadata.seasonId as string) || '';
+      
+      console.log('Initialized TV episode fields:', {
+        seriesId: selectedSeriesId.value,
+        seasonNumber: seasonNumber.value,
+        episodeNumber: episodeNumber.value,
+        seasonId: selectedSeasonId.value
+      });
+    }
   }
 });
 
@@ -229,6 +389,15 @@ onMounted(() => {
 watch(() => releaseItem.value.categoryId, () => {
   if (!releaseItem.value.metadata) {
     releaseItem.value.metadata = {};
+  }
+});
+
+// Watch for series selection changes
+watch(selectedSeriesId, (newId) => {
+  console.log('Selected series ID changed:', newId);
+  if (newId) {
+    // When a series is selected, trigger season handling
+    handleSeasonChange();
   }
 });
 
@@ -244,30 +413,166 @@ const readyToSave = computed(() => {
   return undefined;
 });
 
-const handleOnSubmit = () => {
+// Create a new TV series
+const createNewSeries = async () => {
+  if (!seriesSearchText.value) return;
+  
+  console.log('Creating new series:', seriesSearchText.value);
+  
+  try {
+    const response = await addStructureMutation.mutateAsync({
+      name: seriesSearchText.value,
+      type: 'series',
+      description: '',
+      itemIds: [],
+    });
+    
+    console.log('Series creation response:', response);
+    
+    if (response.success) {
+      // The response might have the ID in different fields
+      const newSeriesId = response.id || response.hash;
+      if (newSeriesId) {
+        selectedSeriesId.value = newSeriesId;
+        console.log('Series created with ID:', newSeriesId);
+        // Refetch structures to include the new series
+        await structuresQuery.refetch();
+        
+        // Clear the search text
+        seriesSearchText.value = '';
+      } else {
+        console.error('No ID returned from series creation');
+      }
+    } else {
+      console.error('Series creation failed:', response);
+    }
+  } catch (error) {
+    console.error('Failed to create series:', error);
+    emit('update:error', `Failed to create series: ${error.message}`);
+  }
+};
+
+// Handle season change - check if we need to create a new season structure
+const handleSeasonChange = async () => {
+  if (!selectedSeriesId.value || !seasonNumber.value) return;
+  
+  console.log('Handling season change:', { seriesId: selectedSeriesId.value, seasonNumber: seasonNumber.value });
+  
+  // Check if season structure already exists
+  const seasonName = `Season ${seasonNumber.value}`;
+  const existingSeason = structuresQuery.data.value?.find(
+    (s: any) => s.type === 'season' && 
+        s.parentId === selectedSeriesId.value && 
+        s.name === seasonName
+  );
+  
+  if (existingSeason) {
+    console.log('Found existing season:', existingSeason);
+    selectedSeasonId.value = existingSeason.id;
+  } else {
+    console.log('Creating new season:', seasonName);
+    try {
+      // Create new season structure
+      const response = await addStructureMutation.mutateAsync({
+        name: seasonName,
+        type: 'season',
+        parentId: selectedSeriesId.value,
+        order: seasonNumber.value,
+        itemIds: [],
+      });
+      
+      console.log('Season creation response:', response);
+      
+      if (response.success) {
+        const newSeasonId = response.id || response.hash;
+        if (newSeasonId) {
+          selectedSeasonId.value = newSeasonId;
+          console.log('Season created with ID:', newSeasonId);
+          await structuresQuery.refetch();
+        } else {
+          console.error('No ID returned from season creation');
+        }
+      } else {
+        console.error('Season creation failed:', response);
+      }
+    } catch (error) {
+      console.error('Failed to create season:', error);
+    }
+  }
+};
+
+const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
 
   const data = readyToSave.value;
+  
+  // If this is a TV episode, ensure we have the proper structure hierarchy
+  if (isTVCategory.value && selectedSeriesId.value) {
+    console.log('Processing TV episode submission:', {
+      seriesId: selectedSeriesId.value,
+      seasonNumber: seasonNumber.value,
+      episodeNumber: episodeNumber.value
+    });
+    
+    // Ensure season structure exists
+    await handleSeasonChange();
+    
+    // Add episode metadata
+    if (!data.metadata) data.metadata = {};
+    data.metadata.seasonNumber = seasonNumber.value;
+    data.metadata.episodeNumber = episodeNumber.value;
+    data.metadata.seriesId = selectedSeriesId.value;
+    data.metadata.seasonId = selectedSeasonId.value;
+    
+    console.log('Episode metadata set:', data.metadata);
+  }
 
   if (props.mode === 'edit' && data.id) {
-    editReleaseMutation.mutate({
-    id: data.id,
-    name: data.name!,
-    categoryId: data.categoryId!,
-    contentCID: data.contentCID!,
-    thumbnailCID: data.thumbnailCID,
-    metadata: data.metadata,
-    siteAddress: data.siteAddress!,
-    postedBy: data.postedBy!,
-  });
+    const response = await editReleaseMutation.mutateAsync({
+      id: data.id,
+      name: data.name!,
+      categoryId: data.categoryId!,
+      contentCID: data.contentCID!,
+      thumbnailCID: data.thumbnailCID,
+      metadata: data.metadata,
+      siteAddress: data.siteAddress!,
+      postedBy: data.postedBy as any,
+    });
+    
+    // If TV episode and successful, add to season's itemIds
+    if (isTVCategory.value && selectedSeasonId.value && response.success) {
+      await updateSeasonWithEpisode(response.id!);
+    }
   } else {
-    addReleaseMutation.mutate({
-    name: data.name!,
-    categoryId: data.categoryId!,
-    contentCID: data.contentCID!,
-    thumbnailCID: data.thumbnailCID,
-    metadata: data.metadata,
-  });
+    const response = await addReleaseMutation.mutateAsync({
+      name: data.name!,
+      categoryId: data.categoryId!,
+      contentCID: data.contentCID!,
+      thumbnailCID: data.thumbnailCID,
+      metadata: data.metadata,
+    });
+    
+    // If TV episode and successful, add to season's itemIds
+    if (isTVCategory.value && selectedSeasonId.value && response.success) {
+      await updateSeasonWithEpisode(response.id!);
+    }
+  }
+};
+
+// Add episode to season's itemIds
+const updateSeasonWithEpisode = async (episodeId: string) => {
+  if (!selectedSeasonId.value) return;
+  
+  // Fetch current season structure
+  const seasons = await structuresQuery.refetch();
+  const season = seasons.data.value?.find((s: any) => s.id === selectedSeasonId.value);
+  
+  if (season && !season.itemIds.includes(episodeId)) {
+    // Update season with new episode
+    await editStructureMutation.mutateAsync({
+      ...season,
+      itemIds: [...season.itemIds, episodeId],
+    });
   }
 };
 

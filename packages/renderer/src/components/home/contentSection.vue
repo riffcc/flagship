@@ -38,5 +38,4 @@ defineProps<{
   onPrevious?: () => void;
   onNext?: () => void;
 }>();
-
 </script>

@@ -1,5 +1,6 @@
 import { inject, type Ref } from 'vue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { API_URL } from '../router';
 import type {
   HashResponse,
   IdResponse,
@@ -343,6 +344,297 @@ export function useDeleteSubscriptionMutation(options?: {
     onSuccess: (response) => {
       options?.onSuccess?.(response);
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+// #### STRUCTURE QUERIES & MUTATIONS ####
+export function useGetStructureQuery(id: string, options?: { enabled?: boolean | Ref<boolean> }) {
+  const { lensService } = useLensService();
+  return useQuery({
+    queryKey: ['structure', id],
+    queryFn: async () => {
+      try {
+        // Try API first for immediate data
+        const apiUrl = `${API_URL}/structures/${id}`;
+        try {
+          const response = await fetch(apiUrl);
+          if (response.ok) {
+            const structure = await response.json();
+            return structure ? {
+              ...structure,
+              metadata: structure.metadata ? JSON.parse(structure.metadata) : undefined,
+            } : null;
+          }
+        } catch (apiError) {
+          console.warn('API fetch failed, falling back to Peerbit:', apiError);
+        }
+        
+        // Fallback to Peerbit if API fails
+        const structure = await lensService.getStructure(id);
+        return structure ? {
+          ...structure,
+          metadata: structure.metadata ? JSON.parse(structure.metadata) : undefined,
+        } : null;
+      } catch (error) {
+        console.error('Failed to fetch structure:', error);
+        return null;
+      }
+    },
+    enabled: options?.enabled ?? true,
+    retry: 1,
+  });
+}
+
+export function useGetStructuresQuery(options?: {
+  enabled?: boolean | Ref<boolean>;
+  staleTime?: number;
+  searchOptions?: SearchOptions;
+}) {
+  const { lensService } = useLensService();
+  return useQuery({
+    queryKey: ['structures', options?.searchOptions],
+    queryFn: async () => {
+      try {
+        // Try API first for immediate data
+        const apiUrl = `${API_URL}/structures`;
+        try {
+          const response = await fetch(apiUrl);
+          if (response.ok) {
+            const structures = await response.json();
+            return structures.map((s: any) => ({
+              ...s,
+              metadata: s.metadata ? JSON.parse(s.metadata) : undefined,
+            }));
+          }
+        } catch (apiError) {
+          console.warn('API fetch failed, falling back to Peerbit:', apiError);
+        }
+        
+        // Fallback to Peerbit if API fails
+        const structures = await lensService.getStructures(options?.searchOptions);
+        return structures.map(s => ({
+          ...s,
+          metadata: s.metadata ? JSON.parse(s.metadata) : undefined,
+        }));
+      } catch (error) {
+        console.error('Failed to fetch structures:', error);
+        return [];
+      }
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 5,
+    retry: 1,
+  });
+}
+
+export function useAddStructureMutation(options?: {
+  onSuccess?: (response: HashResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: AddInput<{
+      name: string;
+      type: string;
+      description?: string;
+      thumbnailCID?: string;
+      bannerCID?: string;
+      parentId?: string;
+      itemIds?: string[];
+      metadata?: AnyObject;
+      order?: number;
+    }>) => {
+      return await lensService.addStructure({
+        ...data,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
+      });
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useEditStructureMutation(options?: {
+  onSuccess?: (response: HashResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: EditInput<{
+      name: string;
+      type: string;
+      description?: string;
+      thumbnailCID?: string;
+      bannerCID?: string;
+      parentId?: string;
+      itemIds?: string[];
+      metadata?: AnyObject;
+      order?: number;
+    }>) => {
+      return await lensService.editStructure({
+        ...data,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
+      });
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
+      queryClient.invalidateQueries({ queryKey: ['structure', response.id] });
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useDeleteStructureMutation(options?: {
+  onSuccess?: (response: IdResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return await lensService.deleteStructure(id);
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
+      queryClient.invalidateQueries({ queryKey: ['structure', response.id] });
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+// #### ARTIST QUERIES & MUTATIONS (convenience wrappers) ####
+export function useGetArtistQuery(id: string, options?: { enabled?: boolean | Ref<boolean> }) {
+  const { lensService } = useLensService();
+  return useQuery({
+    queryKey: ['artist', id],
+    queryFn: async () => {
+      const artist = await lensService.getArtist(id);
+      return artist ? {
+        ...artist,
+        metadata: artist.metadata ? JSON.parse(artist.metadata) : undefined,
+      } : undefined;
+    },
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useGetArtistsQuery(options?: {
+  enabled?: boolean | Ref<boolean>;
+  staleTime?: number;
+}) {
+  const { lensService } = useLensService();
+  return useQuery({
+    queryKey: ['artists'],
+    queryFn: async () => {
+      const artists = await lensService.getArtists();
+      return artists.map(a => ({
+        ...a,
+        metadata: a.metadata ? JSON.parse(a.metadata) : undefined,
+      }));
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 5,
+  });
+}
+
+export function useAddArtistMutation(options?: {
+  onSuccess?: (response: HashResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: AddInput<{
+      name: string;
+      bio?: string;
+      avatarCID?: string;
+      bannerCID?: string;
+      links?: string[];
+      metadata?: AnyObject;
+    }>) => {
+      return await lensService.addArtist({
+        ...data,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
+      });
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useEditArtistMutation(options?: {
+  onSuccess?: (response: HashResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: EditInput<{
+      name: string;
+      bio?: string;
+      avatarCID?: string;
+      bannerCID?: string;
+      links?: string[];
+      metadata?: AnyObject;
+    }>) => {
+      return await lensService.editArtist({
+        ...data,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
+      });
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+      queryClient.invalidateQueries({ queryKey: ['artist', response.id] });
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useDeleteArtistMutation(options?: {
+  onSuccess?: (response: IdResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return await lensService.deleteArtist(id);
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+      queryClient.invalidateQueries({ queryKey: ['artist', response.id] });
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
     },
     onError: (error) => {
       options?.onError?.(error);

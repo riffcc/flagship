@@ -1,6 +1,6 @@
 <template>
   <v-container
-    v-if="!isLensReady && !releases && !featuredReleases && !contentCategories"
+    v-if="showSpinner"
     class="h-screen"
   >
     <v-sheet
@@ -13,7 +13,7 @@
       ></v-progress-circular>
     </v-sheet>
   </v-container>
-  <v-app v-else>
+  <v-app v-else-if="isLensReady || releases || featuredReleases || contentCategories">
     <div class="app-header-border"></div>
     <gamepad-nav-bar />
     <v-main min-height="100vh" class="mt-12">
@@ -75,7 +75,11 @@ const MAGIC_KEY = 'magicmagic';
 const yetToType = ref(MAGIC_KEY);
 
 onKeyStroke(e => {
-  if (!yetToType.value.length) return;
+  if (!yetToType.value.length) {
+    // Reset for next time
+    yetToType.value = MAGIC_KEY;
+    return;
+  }
   if (e.key === yetToType.value[0]) {
     yetToType.value = yetToType.value.slice(1);
   } else {
@@ -84,23 +88,10 @@ onKeyStroke(e => {
 });
 
 watchEffect(() => {
-  if (!yetToType.value.length) showDefederation.value = true;
-});
-
-const CURTAIN_KEY = 'curtain';
-const yetToTypeCurtain = ref(CURTAIN_KEY);
-
-onKeyStroke(e => {
-  if (!yetToTypeCurtain.value.length) return;
-  if (e.key === yetToTypeCurtain.value[0]) {
-    yetToTypeCurtain.value = yetToTypeCurtain.value.slice(1);
-  } else {
-    yetToTypeCurtain.value = CURTAIN_KEY;
+  if (!yetToType.value.length) {
+    // Toggle defederation view when magic key is fully typed
+    showDefederation.value = !showDefederation.value;
   }
-});
-
-watchEffect(() => {
-  if (!yetToTypeCurtain.value.length) showDefederation.value = false;
 });
 
 onMounted(async () => {
@@ -132,6 +123,29 @@ const {  data: featuredReleases } = useGetFeaturedReleasesQuery({
 
 const { data: contentCategories } = useContentCategoriesQuery({
   enabled: isLensReady,
+});
+
+// Delay showing spinner for 100ms to make app feel faster
+const showSpinner = ref(false);
+let spinnerTimer: ReturnType<typeof setTimeout> | null = null;
+
+onMounted(() => {
+  spinnerTimer = setTimeout(() => {
+    if (!isLensReady.value && !releases.value && !featuredReleases.value && !contentCategories.value) {
+      showSpinner.value = true;
+    }
+  }, 100);
+});
+
+// Clear timer if data loads quickly
+watchEffect(() => {
+  if (isLensReady.value || releases.value || featuredReleases.value || contentCategories.value) {
+    if (spinnerTimer) {
+      clearTimeout(spinnerTimer);
+      spinnerTimer = null;
+    }
+    showSpinner.value = false;
+  }
 });
 </script>
 

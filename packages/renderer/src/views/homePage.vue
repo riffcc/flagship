@@ -61,7 +61,18 @@
             <content-card
               :item="item"
               cursor-pointer
-              @click="router.push(`/release/${item.id}`)"
+              @click="handleItemClick(item)"
+            />
+          </v-col>
+          <!-- Ghost items to maintain alignment -->
+          <v-col
+            v-for="n in Math.max(0, 8 - section.items.length)"
+            :key="`ghost-${section.id}-${n}`"
+            style="visibility: hidden;"
+          >
+            <content-card
+              :item="{}"
+              cursor-pointer
             />
           </v-col>
         </content-section>
@@ -78,7 +89,7 @@ import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import type { ReleaseItem } from '/@/types';
-import { useContentCategoriesQuery, useGetFeaturedReleasesQuery, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
+import { useContentCategoriesQuery, useGetFeaturedReleasesQuery, useGetReleasesQuery, useGetStructuresQuery } from '/@/plugins/lensService/hooks';
 import { filterActivedFeatured, filterPromotedFeatured } from '../utils';
 
 const router = useRouter();
@@ -96,6 +107,14 @@ const {
 } = useGetFeaturedReleasesQuery();
 
 const { data: contentCategories } = useContentCategoriesQuery();
+
+// Fetch structures for TV series - only load when needed and handle errors gracefully
+const { data: structures } = useGetStructuresQuery({
+  retry: 1,
+  retryDelay: 1000,
+  // Only enable if we have releases
+  enabled: computed(() => !!releases.value && releases.value.length > 0)
+});
 
 const activedFeaturedReleases = computed<ReleaseItem[]>(() => {
   if (!releases.value || !featuredReleases.value) return [];
@@ -130,12 +149,105 @@ const activeSections = computed(() => {
 
   return contentCategories.value
     .filter(category => category.featured)
+    .sort((a, b) => {
+      // Put TV Shows last
+      if (a.displayName === 'TV Shows') return 1;
+      if (b.displayName === 'TV Shows') return -1;
+      return 0;
+    })
     .map(featuredCategory => {
-      // Use the category's ID (UUID) to match releases, not the slug
-      const items = releasesByCategory.get(featuredCategory.id) || [];
+      // Collect releases from all federated category IDs
+      let items: ReleaseItem[] = [];
+      if (featuredCategory.allIds) {
+        // Merged category - get releases from all IDs
+        for (const catId of featuredCategory.allIds) {
+          items.push(...(releasesByCategory.get(catId) || []));
+        }
+      } else {
+        // Single category (backward compatibility)
+        items = releasesByCategory.get(featuredCategory.id) || [];
+      }
+      
+      // For TV shows, group episodes by series
+      // Check both categoryId and displayName for TV category (handle corrupted data)
+      if (featuredCategory.categoryId === 'tv-shows' || featuredCategory.displayName === 'TV Shows') {
+        const seriesMap = new Map<string, any>();
+        const seriesStructures = structures.value ? 
+          structures.value.filter((s: any) => s.type === 'series') : [];
+        
+        for (const release of items) {
+          const seriesId = release.metadata?.seriesId;
+          
+          if (seriesId) {
+            // Episode has a series ID
+            const series = seriesStructures.find((s: any) => s.id === seriesId);
+            
+            if (!seriesMap.has(seriesId)) {
+              if (series) {
+                seriesMap.set(seriesId, {
+                  id: series.id,
+                  name: series.name,
+                  categoryId: featuredCategory.id,
+                  thumbnailCID: series.thumbnailCID || release.thumbnailCID,
+                  contentCID: release.contentCID,
+                  description: series.description,
+                  metadata: {
+                    isSeries: true,
+                    episodeCount: 0,
+                    episodes: [],
+                    ...series.metadata
+                  }
+                });
+              } else {
+                // Series structure missing
+                seriesMap.set(seriesId, {
+                  id: seriesId,
+                  name: `Series ${seriesId.substring(0, 8)}...`,
+                  categoryId: featuredCategory.id,
+                  thumbnailCID: release.thumbnailCID,
+                  contentCID: release.contentCID,
+                  description: `TV Series`,
+                  metadata: {
+                    isSeries: true,
+                    isPseudoSeries: true,
+                    episodeCount: 0,
+                    episodes: []
+                  }
+                });
+              }
+            }
+            
+            seriesMap.get(seriesId).metadata.episodeCount++;
+            seriesMap.get(seriesId).metadata.episodes.push(release);
+            
+            // Sort episodes
+            seriesMap.get(seriesId).metadata.episodes.sort((a: any, b: any) => {
+              const aSeason = a.metadata?.seasonNumber || 0;
+              const bSeason = b.metadata?.seasonNumber || 0;
+              const aEpisode = a.metadata?.episodeNumber || 0;
+              const bEpisode = b.metadata?.episodeNumber || 0;
+              
+              if (aSeason !== bSeason) return aSeason - bSeason;
+              return aEpisode - bEpisode;
+            });
+          } else {
+            // Standalone episode without series
+            seriesMap.set(release.id, {
+              ...release,
+              metadata: {
+                ...release.metadata,
+                isStandaloneEpisode: true
+              }
+            });
+          }
+        }
+        
+        items = Array.from(seriesMap.values());
+      }
+      
       return {
         id: featuredCategory.categoryId,
-        title: featuredCategory.categoryId === 'tv-shows' ? featuredCategory.displayName : `Featured ${featuredCategory.displayName}`,
+        title: featuredCategory.categoryId === 'tv-shows' ? 'Featured TV' : `Featured ${featuredCategory.displayName}`,
         items: items.slice(0, limitPerCategory),
         navigationPath: `/featured/${featuredCategory.categoryId}`,
       };
@@ -160,4 +272,14 @@ const noContent = computed(() => {
   }
   return releases.value?.length === 0 && featuredReleases.value?.length === 0;
 });
+
+// Handle clicking on items - navigate to series or release page
+const handleItemClick = (item: any) => {
+  if (item.metadata?.isSeries) {
+    // Navigate to the series view page
+    router.push(`/series/${item.id}`);
+  } else {
+    router.push(`/release/${item.id}`);
+  }
+};
 </script>

@@ -31,6 +31,9 @@
           lgAndUp ? item.contentCID : `${item.contentCID.slice(0, 6)}...${item.contentCID.slice(-6)}`
         }}</span>
       </template>
+      <template #item.category="{ item }">
+        {{ getCategoryName(item.categoryId) }}
+      </template>
       <template #item.actions="{ item }">
         <v-menu v-if="smAndDown">
           <template #activator="{ props }">
@@ -179,12 +182,13 @@ import {
   parseUrlOrCid,
   // getStatusColor,
 } from '/@/utils';
-import { useDeleteReleaseMutation, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
+import { useDeleteReleaseMutation, useGetReleasesQuery, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 
 
 const { lgAndUp, smAndDown } = useDisplay();
 
 const { data: releases, isLoading } = useGetReleasesQuery();
+const { data: contentCategories } = useContentCategoriesQuery();
 const deleteReleaseMutation = useDeleteReleaseMutation({
   onSuccess: () => {
     openSnackbar('Release deleted successfully.', 'success');
@@ -229,6 +233,12 @@ const targetReleaseToEdit = ref<ReleaseItem | null>(null);
 const targetReleaseToDelete = ref<ReleaseItem | null>(null);
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
+
+// Get category display name from category ID
+const getCategoryName = (categoryId: string): string => {
+  const category = contentCategories.value?.find(c => c.id === categoryId);
+  return category?.displayName || categoryId;
+};
 
 function handleSuccess(message: string) {
   openSnackbar(message, 'success');

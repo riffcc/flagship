@@ -15,6 +15,7 @@ const ReleasePage = () => import('/@/views/releasePage.vue');
 const TermsPage = () => import('/@/views/termsPage.vue');
 const UploadPage = () => import('/@/views/uploadPage.vue');
 const CategoryPage = () => import('../views/categoryPage.vue');
+const SeriesPage = () => import('../views/seriesPage.vue');
 
 /**
  * Parses the VITE_LENS_NODE environment variable to build the base API URL.
@@ -222,6 +223,12 @@ const routes: Array<RouteRecordRaw> = [
     path: '/featured/:category',
     component: CategoryPage,
     props: route => ({ ...route.params, showAll: true }),
+  },
+  {
+    path: '/series/:id',
+    name: 'Series',
+    component: SeriesPage,
+    props: true,
   },
 ];
 
