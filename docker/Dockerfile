@@ -12,7 +12,6 @@ WORKDIR /app
 
 # Copy package files and lens-sdk for local dependency
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY lens-sdk/ ./lens-sdk/
 
 # Install dependencies
 # Using --no-frozen-lockfile temporarily due to lens-sdk path mismatch

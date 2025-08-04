@@ -24,6 +24,14 @@ const SeriesPage = () => import('../views/seriesPage.vue');
  * @returns {string} The constructed base API URL.
  */
 function getApiUrl(): string {
+  // Check for explicit API URL override (for CDN/global endpoints)
+  const apiUrlOverride = import.meta.env.VITE_API_URL;
+  if (apiUrlOverride) {
+    console.log('🚀 Using CDN API endpoint:', apiUrlOverride);
+    return apiUrlOverride;
+  }
+
+  // Fall back to extracting from LENS_NODE multiaddr
   const lensNodeMaStr = import.meta.env.VITE_LENS_NODE;
 
   if (!lensNodeMaStr) {
