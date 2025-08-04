@@ -108,6 +108,34 @@ Flagship is Riff.CC's decentralized media platform for watching, sharing, and cu
 - Vite configs in each package control build behavior
 - Content is distributed via P2P network with configurable replication factors
 
+## CRITICAL DATA STRUCTURE NOTES
+
+### Category and Release Structure
+**Category object** has:
+- `id` - The hash/unique identifier for the category
+- `slug` - The slug identifier (e.g., 'tv-shows', 'music', 'movies')
+
+**Release object** has:
+- `categoryId` - References the category's hash ID
+- `categorySlug` - References the category's slug
+
+When filtering releases by category type, use `categorySlug` on the release, NOT `categoryId`!
+
+### Structures System
+Structures are completely generic organizational containers documented in `docs/STRUCTURES.md`. They can represent ANY hierarchical relationship - artists/albums, TV shows/seasons, book series/volumes, courses/lessons, etc. The system is designed for efficient PeerBit queries across arbitrary hierarchies using `parentId` relationships and content references via `metadata.structureId`.
+
+## Key Implementation Details
+
+### Series and Episodes
+- Series structures should only exist when they have actual episodes
+- Episodes link to series via `metadata.seriesId` matching the series structure's `id`
+- Seasons are tracked via `metadata.seasonNumber` on episodes
+
+### Important Reminders
+- Check this file before making assumptions about data structures
+- When something works on one page but not another, the issue is usually simple
+- Focus on fixing exactly what's requested without adding complexity
+
 ## Important Instructions
 - NEVER use git checkout to revert changes - this will throw away hours of work
 - Always manually revert specific changes using the Edit tool

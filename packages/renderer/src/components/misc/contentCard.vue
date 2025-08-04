@@ -179,12 +179,25 @@ const cardHeight = computed(() => {
 
 const cardTitle = computed(() => {
   const categoryId = props.item.categoryId;
+  const metadata = props.item.metadata;
+  
   if (categoryId === 'music') {
     return props.item.name;
   }
-  if (categoryId === 'tvShow') {
+  
+  // For TV content - check if it's a series or an episode
+  if (categoryId === 'tvShow' || metadata?.seriesId) {
+    // If it's a series tile (has isSeries flag)
+    if (metadata?.isSeries) {
+      return props.item.name;
+    }
+    // If it's an episode, show the series name if available
+    if (metadata?.seriesName) {
+      return metadata.seriesName;
+    }
     return props.item.name;
   }
+  
   if (categoryId === 'movie') {
     return props.item.name;
   }
@@ -193,12 +206,25 @@ const cardTitle = computed(() => {
 
 const cardSubtitle = computed(() => {
   const categoryId = props.item.categoryId;
+  const metadata = props.item.metadata;
+  
   if (categoryId === 'music') {
     return props.item.metadata?.['author'] ?? '';
   }
-  if (categoryId === 'tvShow') {
-    return props.item.metadata?.['seasons'] ? `${props.item.metadata['seasons']} Seasons` : undefined;
+  
+  // For TV content - check if it's a series or an episode
+  if (categoryId === 'tvShow' || metadata?.seriesId) {
+    // If it's a series tile
+    if (metadata?.isSeries) {
+      return metadata?.['seasons'] ? `${metadata['seasons']} Seasons` : undefined;
+    }
+    // If it's an episode, show season and episode info
+    if (metadata?.seasonNumber !== undefined && metadata?.episodeNumber !== undefined) {
+      return `S${String(metadata.seasonNumber).padStart(2, '0')}E${String(metadata.episodeNumber).padStart(2, '0')}: ${props.item.name}`;
+    }
+    return props.item.name;
   }
+  
   // Default
   if (categoryId === 'movie') {
     return props.item.metadata?.['releaseYear'] ? `(${props.item.metadata['releaseYear']})` : undefined;

@@ -49,6 +49,12 @@
         </v-tab>
         <v-tab
           slider-color="primary"
+          value="structures"
+        >
+          Structures
+        </v-tab>
+        <v-tab
+          slider-color="primary"
           value="maintenance"
         >
           Maintenance
@@ -92,6 +98,11 @@
           <categories-management></categories-management>
         </v-window-item>
         <v-window-item
+          value="structures"
+        >
+          <structures-management></structures-management>
+        </v-window-item>
+        <v-window-item
           value="maintenance"
         >
           <maintenance-management></maintenance-management>
@@ -110,6 +121,7 @@ import featuredManagement from '/@/components/admin/featuredManagement.vue';
 import subscriptionManagement from '/@/components/admin/subscriptionManagement.vue';
 import siteManagement from '/@/components/admin/siteManagement.vue';
 import categoriesManagement from '/@/components/admin/categoriesManagement.vue';
+import structuresManagement from '/@/components/admin/structuresManagement.vue';
 import maintenanceManagement from '/@/components/admin/maintenanceManagement.vue';
 import type { PartialFeaturedReleaseItem } from '/@//types';
 
