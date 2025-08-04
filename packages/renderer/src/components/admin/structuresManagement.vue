@@ -14,14 +14,14 @@
                 v-bind="activatorProps"
               ></v-btn>
             </template>
-            <v-sheet width="600px" max-height="620px" class="pa-8 ma-auto">
+            <v-card width="600px" max-height="620px" class="pa-8 ma-auto">
               <structure-form
                 :initial-type="currentStructureType"
                 :parent-context="parentContext"
                 @update:error="handleError"
                 @update:success="handleSuccess"
               />
-            </v-sheet>
+            </v-card>
           </v-dialog>
         </template>
         <h3>Manage Structures</h3>
@@ -182,8 +182,8 @@
         </div>
         
         <!-- Seasons List -->
+        <h5 class="mb-2">Seasons</h5>
         <template v-if="currentSeasons.length > 0">
-          <h5 class="mb-2">Seasons</h5>
           <v-list lines="two">
             <v-list-item
               v-for="season in currentSeasons"
@@ -224,6 +224,11 @@
               </template>
             </v-list-item>
           </v-list>
+        </template>
+        <template v-else>
+          <v-alert type="info" variant="tonal" class="mb-4">
+            No seasons found. Seasons will be automatically created when you add or edit episodes with season numbers.
+          </v-alert>
         </template>
         
         <!-- Episodes without seasons -->
@@ -723,23 +728,46 @@ const collections = computed(() => {
 
 const currentSeasons = computed(() => {
   if (!structures.value || !currentSeries.value) return [];
-  // Only show seasons that have episodes
+  // Show all seasons for this series
   return structures.value
     .filter((s: any) => 
       s.type === 'season' && 
-      s.parentId === currentSeries.value.id &&
-      getSeasonEpisodeCount(s.id, currentSeries.value.id, s.metadata?.seasonNumber) > 0
+      s.parentId === currentSeries.value.id
     )
+    .map((s: any) => {
+      // Parse metadata if it's a string
+      let metadata = s.metadata;
+      if (typeof metadata === 'string') {
+        try {
+          metadata = JSON.parse(metadata);
+        } catch (e) {
+          console.error('Failed to parse season metadata:', e);
+          metadata = {};
+        }
+      }
+      return { ...s, metadata };
+    })
     .sort((a: any, b: any) => (a.metadata?.seasonNumber || 0) - (b.metadata?.seasonNumber || 0));
 });
 
 const currentEpisodes = computed(() => {
   if (!releases.value || !currentSeason.value) return [];
   
+  // Get all TV category hashes for federation support
+  const tvCategoryIds = new Set<string>();
+  contentCategories.value?.forEach(cat => {
+    if (cat.categoryId === 'tv-shows') {
+      tvCategoryIds.add(cat.id);
+      if (cat.allIds) {
+        cat.allIds.forEach(id => tvCategoryIds.add(id));
+      }
+    }
+  });
+  
   // Episodes that belong to this season
   return releases.value
     .filter((r: any) => 
-      r.categorySlug === 'tv-shows' && 
+      tvCategoryIds.has(r.categoryId) && 
       r.metadata?.seriesId === currentSeries.value?.id &&
       r.metadata?.seasonNumber === currentSeason.value?.metadata?.seasonNumber
     )
@@ -749,10 +777,21 @@ const currentEpisodes = computed(() => {
 const orphanEpisodes = computed(() => {
   if (!releases.value || !currentSeries.value) return [];
   
+  // Get all TV category hashes for federation support
+  const tvCategoryIds = new Set<string>();
+  contentCategories.value?.forEach(cat => {
+    if (cat.categoryId === 'tv-shows') {
+      tvCategoryIds.add(cat.id);
+      if (cat.allIds) {
+        cat.allIds.forEach(id => tvCategoryIds.add(id));
+      }
+    }
+  });
+  
   // Episodes that belong to this series but have no season
   return releases.value
     .filter((r: any) => 
-      r.categorySlug === 'tv-shows' && 
+      tvCategoryIds.has(r.categoryId) && 
       r.metadata?.seriesId === currentSeries.value.id &&
       !r.metadata?.seasonNumber
     );
@@ -781,7 +820,22 @@ const allTVEpisodes = computed(() => {
     }
   });
   
-  return releases.value.filter((r: any) => tvCategoryIds.has(r.categoryId));
+  return releases.value
+    .filter((r: any) => tvCategoryIds.has(r.categoryId))
+    .map((episode: any) => {
+      // Find the series structure to get the name
+      const seriesId = episode.metadata?.seriesId;
+      const series = seriesId ? structures.value?.find((s: any) => s.id === seriesId && s.type === 'series') : null;
+      
+      // Enrich the episode with series name
+      return {
+        ...episode,
+        metadata: {
+          ...episode.metadata,
+          seriesName: series?.name || 'Unknown'
+        }
+      };
+    });
 });
 
 const allMusicReleases = computed(() => {
@@ -934,18 +988,29 @@ function formatEpisodeCount(count: number): string {
 function getSeasonEpisodeCount(seasonId: string, seriesId?: string, seasonNumber?: number): number {
   if (!releases.value) return 0;
   
+  // Get all TV category hashes for federation support
+  const tvCategoryIds = new Set<string>();
+  contentCategories.value?.forEach(cat => {
+    if (cat.categoryId === 'tv-shows') {
+      tvCategoryIds.add(cat.id);
+      if (cat.allIds) {
+        cat.allIds.forEach(id => tvCategoryIds.add(id));
+      }
+    }
+  });
+  
   // If we have series and season info, count actual episodes
   if (seriesId && seasonNumber !== undefined) {
     return releases.value.filter((r: any) => 
-      r.categoryId === 'tv-shows' && 
+      tvCategoryIds.has(r.categoryId) && 
       r.metadata?.seriesId === seriesId &&
       r.metadata?.seasonNumber === seasonNumber
     ).length;
   }
   
-  // Fallback to metadata count
+  // Fallback to checking season's itemIds
   const season = structures.value?.find((s: any) => s.id === seasonId);
-  return season?.metadata?.episodeCount || 0;
+  return season?.itemIds?.length || 0;
 }
 
 function getArtistReleaseCount(artistId: string): number {

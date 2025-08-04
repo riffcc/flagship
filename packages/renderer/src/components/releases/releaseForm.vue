@@ -461,9 +461,21 @@ const handleSeasonChange = async () => {
   // Check if season structure already exists
   const seasonName = `Season ${seasonNumber.value}`;
   const existingSeason = structuresQuery.data.value?.find(
-    (s: any) => s.type === 'season' && 
-        s.parentId === selectedSeriesId.value && 
-        s.name === seasonName
+    (s: any) => {
+      if (s.type !== 'season' || s.parentId !== selectedSeriesId.value) return false;
+      
+      // Check by metadata seasonNumber first, then by name
+      if (s.metadata) {
+        try {
+          const meta = typeof s.metadata === 'string' ? JSON.parse(s.metadata) : s.metadata;
+          if (meta.seasonNumber === seasonNumber.value) return true;
+        } catch (e) {
+          // Invalid metadata, fall through to name check
+        }
+      }
+      
+      return s.name === seasonName;
+    }
   );
   
   if (existingSeason) {
@@ -479,6 +491,7 @@ const handleSeasonChange = async () => {
         parentId: selectedSeriesId.value,
         order: seasonNumber.value,
         itemIds: [],
+        metadata: JSON.stringify({ seasonNumber: seasonNumber.value }),
       });
       
       console.log('Season creation response:', response);
@@ -540,8 +553,9 @@ const handleOnSubmit = async () => {
     });
     
     // If TV episode and successful, add to season's itemIds
+    // Use the original episode ID (data.id) not response.id since we're editing
     if (isTVCategory.value && selectedSeasonId.value && response.success) {
-      await updateSeasonWithEpisode(response.id!);
+      await updateSeasonWithEpisode(data.id);
     }
   } else {
     const response = await addReleaseMutation.mutateAsync({
@@ -567,12 +581,22 @@ const updateSeasonWithEpisode = async (episodeId: string) => {
   const seasons = await structuresQuery.refetch();
   const season = seasons.data.value?.find((s: any) => s.id === selectedSeasonId.value);
   
-  if (season && !season.itemIds.includes(episodeId)) {
-    // Update season with new episode
-    await editStructureMutation.mutateAsync({
-      ...season,
-      itemIds: [...season.itemIds, episodeId],
-    });
+  if (season) {
+    // Check if episode is already in itemIds
+    const currentItemIds = season.itemIds || [];
+    if (!currentItemIds.includes(episodeId)) {
+      console.log('Adding episode to season itemIds:', { seasonId: season.id, episodeId });
+      // Update season with new episode
+      await editStructureMutation.mutateAsync({
+        ...season,
+        itemIds: [...currentItemIds, episodeId],
+      });
+      console.log('Episode added to season successfully');
+    } else {
+      console.log('Episode already in season itemIds');
+    }
+  } else {
+    console.error('Season not found:', selectedSeasonId.value);
   }
 };
 
