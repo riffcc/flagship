@@ -142,3 +142,4 @@ Structures are completely generic organizational containers documented in `docs/
 - Do what has been asked; nothing more, nothing less
 - NEVER create files unless they're absolutely necessary
 - ALWAYS prefer editing existing files to creating new ones
+- Browser navigation rule: Unless explicitly stated, the USER navigates, Claude only screenshots - never use browser navigation tools without explicit permission

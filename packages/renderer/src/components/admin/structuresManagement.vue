@@ -764,14 +764,44 @@ const currentEpisodes = computed(() => {
     }
   });
   
+  // Get the season number from metadata (handle both parsed and string)
+  let seasonNumber = currentSeason.value?.metadata?.seasonNumber;
+  if (seasonNumber === undefined && typeof currentSeason.value?.metadata === 'string') {
+    try {
+      const parsed = JSON.parse(currentSeason.value.metadata);
+      seasonNumber = parsed.seasonNumber;
+    } catch (e) {
+      console.error('Failed to parse season metadata:', e);
+    }
+  }
+  
+  console.log('Looking for episodes with:', {
+    seriesId: currentSeries.value?.id,
+    seasonNumber,
+    categoryIds: Array.from(tvCategoryIds)
+  });
+  
   // Episodes that belong to this season
-  return releases.value
-    .filter((r: any) => 
-      tvCategoryIds.has(r.categoryId) && 
-      r.metadata?.seriesId === currentSeries.value?.id &&
-      r.metadata?.seasonNumber === currentSeason.value?.metadata?.seasonNumber
-    )
+  const episodes = releases.value
+    .filter((r: any) => {
+      const matches = tvCategoryIds.has(r.categoryId) && 
+        r.metadata?.seriesId === currentSeries.value?.id &&
+        r.metadata?.seasonNumber === seasonNumber;
+      if (r.metadata?.seriesId === currentSeries.value?.id) {
+        console.log('Episode check:', r.name, {
+          hasCategory: tvCategoryIds.has(r.categoryId),
+          seriesMatch: r.metadata?.seriesId === currentSeries.value?.id,
+          seasonMatch: r.metadata?.seasonNumber === seasonNumber,
+          episodeSeasonNumber: r.metadata?.seasonNumber,
+          lookingForSeasonNumber: seasonNumber
+        });
+      }
+      return matches;
+    })
     .sort((a: any, b: any) => (a.metadata?.episodeNumber || 0) - (b.metadata?.episodeNumber || 0));
+    
+  console.log('Found episodes:', episodes.length);
+  return episodes;
 });
 
 const orphanEpisodes = computed(() => {

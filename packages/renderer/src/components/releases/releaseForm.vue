@@ -271,11 +271,20 @@ const editStructureMutation = useEditStructureMutation({
   },
 });
 
-const contentCategoriesItems = computed(() => contentCategories.value?.map(item => ({
-  id: item.id,
-  value: item.id,
-  title: item.displayName,
-})));
+const contentCategoriesItems = computed(() => {
+  if (!contentCategories.value) return [];
+  
+  // Only show categories created by our own site (not federated ones)
+  const ourSiteAddress = import.meta.env.VITE_SITE_ADDRESS;
+  
+  return contentCategories.value
+    .filter(item => item.siteAddress === ourSiteAddress) // Only our site's categories
+    .map(item => ({
+      id: item.id,
+      value: item.id,
+      title: item.displayName,
+    }));
+});
 
 // Get list of series for autocomplete
 const seriesItems = computed(() => {
