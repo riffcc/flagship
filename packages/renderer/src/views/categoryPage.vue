@@ -7,7 +7,7 @@
       <!-- Show all releases with infinite scroll -->
       <p class="text-h6 text-sm-h5 font-weight-bold mb-4">{{ pageCategory?.displayName }}</p>
       <infinite-release-list
-        :category-filter="pageCategory?.id"
+        :category-slug="props.category"
         @release-click="handleItemClick"
       />
     </template>
@@ -106,11 +106,15 @@ const featuredReleasesInCategory = computed<ReleaseItem[]>(() => {
     .map(fr => fr.releaseId);
 
   // Filter releases that are both featured and in this category
-  const categoryReleases = releases.value.filter(r =>
-    r.id &&
-    activeFeaturedReleaseIds.includes(r.id) &&
-    r.categoryId === pageCategory.value?.id,
-  );
+  // Look up each release's category to check if it matches our target slug
+  const targetSlug = pageCategory.value?.categoryId; // e.g., 'music', 'tv-shows'
+  const categoryReleases = releases.value.filter(r => {
+    if (!r.id || !activeFeaturedReleaseIds.includes(r.id)) return false;
+    
+    // Look up this release's category
+    const releaseCategory = contentCategories.value?.find(c => c.id === r.categoryId);
+    return releaseCategory?.categoryId === targetSlug;
+  });
 
   // For TV shows, group by series and return series tiles
   if (isTVCategory.value) {

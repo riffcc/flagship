@@ -65,6 +65,28 @@
       </v-card-text>
     </v-card>
 
+    <v-card class="mt-6">
+      <v-card-title>Cleanup Empty Structures</v-card-title>
+      <v-card-text>
+        <p class="mb-4">Remove empty structures (TV series, seasons, artists, albums) that have no associated content.</p>
+        <v-btn
+          color="warning"
+          prepend-icon="$delete"
+          :loading="isCleaningUp"
+          @click="cleanupEmptyStructures"
+        >
+          Cleanup Empty Structures
+        </v-btn>
+        <v-alert
+          v-if="cleanupResults"
+          :type="cleanupResults.error ? 'error' : 'success'"
+          class="mt-4"
+        >
+          {{ cleanupResults.message }}
+        </v-alert>
+      </v-card-text>
+    </v-card>
+
     <v-dialog
       v-model="confirmDialog"
       max-width="500"
@@ -113,15 +135,17 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useDeleteFeaturedReleaseMutation, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
+import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useDeleteFeaturedReleaseMutation, useContentCategoriesQuery, useGetStructuresQuery, useDeleteStructureMutation } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import type { ReleaseItem } from '/@/types';
 
 const isExporting = ref(false);
 const isImporting = ref(false);
+const isCleaningUp = ref(false);
 const importMode = ref<'upsert' | 'replace'>('upsert');
 const importFile = ref<File | null>(null);
 const confirmDialog = ref(false);
+const cleanupResults = ref<{ message: string; error: boolean } | null>(null);
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
@@ -432,6 +456,115 @@ const performImport = async () => {
     openSnackbar('Import failed: ' + (error instanceof Error ? error.message : String(error)), 'error');
   } finally {
     isImporting.value = false;
+  }
+};
+
+// Structures query and mutation for cleanup
+const { data: structures } = useGetStructuresQuery();
+const deleteStructureMutation = useDeleteStructureMutation();
+
+// Cleanup empty structures
+const cleanupEmptyStructures = async () => {
+  isCleaningUp.value = true;
+  cleanupResults.value = null;
+  
+  try {
+    if (!structures.value || !releases.value) {
+      cleanupResults.value = { message: 'No structures or releases found', error: true };
+      return;
+    }
+    
+    let deletedCount = 0;
+    const errors: string[] = [];
+    
+    // Find empty series (series with no episodes)
+    const tvSeries = structures.value.filter((s: any) => s.type === 'series');
+    for (const series of tvSeries) {
+      const hasEpisodes = releases.value.some((r: any) => 
+        r.metadata?.seriesId === series.id
+      );
+      
+      if (!hasEpisodes) {
+        try {
+          await deleteStructureMutation.mutateAsync(series.id);
+          deletedCount++;
+          console.log(`Deleted empty series: ${series.name}`);
+        } catch (error) {
+          errors.push(`Failed to delete series ${series.name}: ${error}`);
+        }
+      }
+    }
+    
+    // Find empty seasons (seasons with no episodes)
+    const seasons = structures.value.filter((s: any) => s.type === 'season');
+    for (const season of seasons) {
+      const hasEpisodes = releases.value.some((r: any) => 
+        r.metadata?.seriesId === season.parentId &&
+        r.metadata?.seasonNumber === season.metadata?.seasonNumber
+      );
+      
+      if (!hasEpisodes) {
+        try {
+          await deleteStructureMutation.mutateAsync(season.id);
+          deletedCount++;
+          console.log(`Deleted empty season: ${season.name || `Season ${season.metadata?.seasonNumber}`}`);
+        } catch (error) {
+          errors.push(`Failed to delete season ${season.name}: ${error}`);
+        }
+      }
+    }
+    
+    // Find empty artists (artists with no releases)
+    const artists = structures.value.filter((s: any) => s.type === 'artist');
+    for (const artist of artists) {
+      const hasReleases = releases.value.some((r: any) => 
+        r.metadata?.artistId === artist.id || r.metadata?.structureId === artist.id
+      );
+      
+      if (!hasReleases) {
+        try {
+          await deleteStructureMutation.mutateAsync(artist.id);
+          deletedCount++;
+          console.log(`Deleted empty artist: ${artist.name}`);
+        } catch (error) {
+          errors.push(`Failed to delete artist ${artist.name}: ${error}`);
+        }
+      }
+    }
+    
+    // Find empty albums (albums with no tracks)
+    const albums = structures.value.filter((s: any) => s.type === 'album');
+    for (const album of albums) {
+      const hasTracks = releases.value.some((r: any) => 
+        r.metadata?.albumId === album.id || r.metadata?.structureId === album.id
+      );
+      
+      if (!hasTracks) {
+        try {
+          await deleteStructureMutation.mutateAsync(album.id);
+          deletedCount++;
+          console.log(`Deleted empty album: ${album.name}`);
+        } catch (error) {
+          errors.push(`Failed to delete album ${album.name}: ${error}`);
+        }
+      }
+    }
+    
+    if (errors.length > 0) {
+      cleanupResults.value = { 
+        message: `Deleted ${deletedCount} empty structures. Errors: ${errors.join(', ')}`, 
+        error: true 
+      };
+    } else {
+      cleanupResults.value = { 
+        message: `Successfully deleted ${deletedCount} empty structures`, 
+        error: false 
+      };
+    }
+  } catch (error) {
+    cleanupResults.value = { message: `Cleanup failed: ${error}`, error: true };
+  } finally {
+    isCleaningUp.value = false;
   }
 };
 </script>

@@ -49,7 +49,8 @@ import { useGetReleasesQuery, useGetStructuresQuery, useContentCategoriesQuery }
 import type { SearchOptions } from '@riffcc/lens-sdk';
 
 const props = defineProps<{
-  categoryFilter?: string;
+  categoryFilter?: string;  // Category ID (hash) to filter by
+  categorySlug?: string;    // Category slug (e.g., 'music', 'tv-shows') to filter by
   searchOptions?: SearchOptions;
   pageSize?: number;
 }>();
@@ -63,18 +64,14 @@ const PAGE_SIZE = props.pageSize || 60; // Show many items to fill ultrawide scr
 const currentPage = ref(1);
 
 // Fetch releases with the configured batch size (100)
-const { data: releases, isLoading } = useGetReleasesQuery({
-  searchOptions: props.searchOptions,
-});
+const { data: releases, isLoading } = useGetReleasesQuery();
 
 // Get content categories to check if this is a TV category
 const { data: contentCategories } = useContentCategoriesQuery();
 
 // Check if this is the TV shows category
 const isTVCategory = computed(() => {
-  if (!props.categoryFilter || !contentCategories.value) return false;
-  const category = contentCategories.value.find(c => c.id === props.categoryFilter);
-  return category?.displayName === 'TV Shows' || category?.categoryId === 'tv-shows';
+  return props.categorySlug === 'tv-shows' || props.categoryFilter === 'tv-shows';
 });
 
 // Fetch structures for TV series grouping
@@ -93,23 +90,31 @@ watch(structures, (newStructures) => {
   }
 }, { immediate: true });
 
-// Filter releases by category if needed
+// Filter releases client-side if we have a category filter
 const filteredReleases = computed(() => {
   if (!releases.value) return [];
 
   let categoryReleases = releases.value;
-  if (props.categoryFilter && contentCategories.value) {
-    // Find the category to get all its IDs (from different lenses)
-    const category = contentCategories.value.find(c => c.id === props.categoryFilter);
-    if (category && category.allIds) {
-      // Filter by all IDs from federated categories
-      categoryReleases = releases.value.filter(release => 
-        category.allIds.includes(release.categoryId)
-      );
-    } else {
-      // Fallback to single ID filter
-      categoryReleases = releases.value.filter(release => release.categoryId === props.categoryFilter);
+  
+  // Filter by category slug if specified (for federation support)
+  if (props.categorySlug && contentCategories.value) {
+    // Find all categories with this slug
+    const matchingCategories = contentCategories.value.filter(c => c.categoryId === props.categorySlug);
+    if (matchingCategories.length > 0) {
+      // Get all category IDs including federated ones
+      const allCategoryIds = new Set<string>();
+      for (const cat of matchingCategories) {
+        allCategoryIds.add(cat.id);
+        if (cat.allIds) {
+          cat.allIds.forEach(id => allCategoryIds.add(id));
+        }
+      }
+      // Filter releases that match any of these category IDs
+      categoryReleases = categoryReleases.filter(r => allCategoryIds.has(r.categoryId));
     }
+  } else if (props.categoryFilter) {
+    // Direct category ID filter (for non-federated)
+    categoryReleases = categoryReleases.filter(r => r.categoryId === props.categoryFilter);
   }
 
   // If this is a TV category, group episodes by series

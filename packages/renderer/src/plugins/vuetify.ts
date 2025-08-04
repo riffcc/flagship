@@ -50,6 +50,10 @@ import {
   mdiBlockHelper,
   mdiGamepad,
   mdiCursorDefaultOutline,
+  mdiTelevision,
+  mdiMusic,
+  mdiTag,
+  mdiFolder,
 } from '@mdi/js';
 
 const iconsAliasesMapping = {
@@ -92,6 +96,10 @@ const iconsAliasesMapping = {
   'block-helper': mdiBlockHelper,
   'gamepad': mdiGamepad,
   'cursor-default-outline': mdiCursorDefaultOutline,
+  'television': mdiTelevision,
+  'music': mdiMusic,
+  'tag': mdiTag,
+  'folder': mdiFolder,
 };
 
 const vuetify = createVuetify({

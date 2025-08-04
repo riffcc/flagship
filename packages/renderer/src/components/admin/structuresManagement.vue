@@ -669,14 +669,25 @@ const allSeasons = computed(() => {
   return structures.value.filter((s: any) => s.type === 'season');
 });
 
-// Auto-cleanup empty seasons and series
-watchEffect(async () => {
-  if (!releases.value || !structures.value) return;
+// Store references to empty structures for manual cleanup
+const emptyStructures = computed(() => {
+  if (!releases.value || !structures.value || !contentCategories.value) return { series: [], seasons: [] };
+  
+  // Get all TV show category IDs (including federated)
+  const tvCategoryIds = new Set<string>();
+  contentCategories.value.forEach(cat => {
+    if (cat.categoryId === 'tv-shows') {
+      tvCategoryIds.add(cat.id);
+      if (cat.allIds) {
+        cat.allIds.forEach(id => tvCategoryIds.add(id));
+      }
+    }
+  });
   
   // Find empty seasons (seasons with no episodes)
   const emptySeasons = allSeasons.value.filter(season => {
     const episodeCount = releases.value?.filter((r: any) => 
-      r.categorySlug === 'tv-shows' && 
+      tvCategoryIds.has(r.categoryId) && 
       r.metadata?.seriesId === season.parentId &&
       r.metadata?.seasonNumber === season.metadata?.seasonNumber
     ).length || 0;
@@ -684,30 +695,15 @@ watchEffect(async () => {
     return episodeCount === 0;
   });
   
-  // Delete empty seasons
-  for (const emptySeason of emptySeasons) {
-    console.log(`Deleting empty season: ${emptySeason.name || `Season ${emptySeason.metadata?.seasonNumber}`}`);
-    try {
-      await deleteStructureMutation.mutateAsync(emptySeason.id);
-    } catch (error) {
-      console.error('Failed to delete empty season:', error);
-    }
-  }
-  
   // Find empty series (series with no episodes)
   const emptySeries = tvSeries.value.filter(series => {
     return getSeriesEpisodeCount(series.id) === 0;
   });
   
-  // Delete empty series
-  for (const emptySeriesItem of emptySeries) {
-    console.log(`Deleting empty series: ${emptySeriesItem.name}`);
-    try {
-      await deleteStructureMutation.mutateAsync(emptySeriesItem.id);
-    } catch (error) {
-      console.error('Failed to delete empty series:', error);
-    }
-  }
+  return {
+    series: emptySeries,
+    seasons: emptySeasons
+  };
 });
 
 const artists = computed(() => {
@@ -772,13 +768,37 @@ const currentArtistReleases = computed(() => {
 });
 
 const allTVEpisodes = computed(() => {
-  if (!releases.value) return [];
-  return releases.value.filter((r: any) => r.categorySlug === 'tv-shows');
+  if (!releases.value || !contentCategories.value) return [];
+  
+  // Get all TV show category IDs (including federated)
+  const tvCategoryIds = new Set<string>();
+  contentCategories.value.forEach(cat => {
+    if (cat.categoryId === 'tv-shows') {
+      tvCategoryIds.add(cat.id);
+      if (cat.allIds) {
+        cat.allIds.forEach(id => tvCategoryIds.add(id));
+      }
+    }
+  });
+  
+  return releases.value.filter((r: any) => tvCategoryIds.has(r.categoryId));
 });
 
 const allMusicReleases = computed(() => {
-  if (!releases.value) return [];
-  return releases.value.filter((r: any) => r.categorySlug === 'music');
+  if (!releases.value || !contentCategories.value) return [];
+  
+  // Get all music category IDs (including federated)
+  const musicCategoryIds = new Set<string>();
+  contentCategories.value.forEach(cat => {
+    if (cat.categoryId === 'music') {
+      musicCategoryIds.add(cat.id);
+      if (cat.allIds) {
+        cat.allIds.forEach(id => musicCategoryIds.add(id));
+      }
+    }
+  });
+  
+  return releases.value.filter((r: any) => musicCategoryIds.has(r.categoryId));
 });
 
 // Counts
@@ -855,23 +875,45 @@ const musicTableHeaders = [
 
 // Helper functions
 function getSeriesEpisodeCount(seriesId: string): number {
-  if (!releases.value) return 0;
+  if (!releases.value || !contentCategories.value) return 0;
+  
+  // Get all TV show category IDs (including federated)
+  const tvCategoryIds = new Set<string>();
+  contentCategories.value.forEach(cat => {
+    if (cat.categoryId === 'tv-shows') {
+      tvCategoryIds.add(cat.id);
+      if (cat.allIds) {
+        cat.allIds.forEach(id => tvCategoryIds.add(id));
+      }
+    }
+  });
   
   // Count episodes that belong to this series
   return releases.value.filter((r: any) => 
-    r.categorySlug === 'tv-shows' && 
+    tvCategoryIds.has(r.categoryId) && 
     r.metadata?.seriesId === seriesId
   ).length;
 }
 
 function getSeriesSeasonCount(seriesId: string): number {
-  if (!releases.value) return 0;
+  if (!releases.value || !contentCategories.value) return 0;
+  
+  // Get all TV show category IDs (including federated)
+  const tvCategoryIds = new Set<string>();
+  contentCategories.value.forEach(cat => {
+    if (cat.categoryId === 'tv-shows') {
+      tvCategoryIds.add(cat.id);
+      if (cat.allIds) {
+        cat.allIds.forEach(id => tvCategoryIds.add(id));
+      }
+    }
+  });
   
   // Get unique season numbers from episodes of this series
   const seasonNumbers = new Set(
     releases.value
       .filter((r: any) => 
-        r.categorySlug === 'tv-shows' && 
+        tvCategoryIds.has(r.categoryId) && 
         r.metadata?.seriesId === seriesId && 
         r.metadata?.seasonNumber !== undefined
       )
