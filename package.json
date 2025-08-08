@@ -83,6 +83,7 @@
     "jsmediatags": "^3.9.7",
     "luxon": "^3.6.1",
     "multiformats": "^13.3.7",
+    "uuid": "^11.1.0",
     "vue": "^3.5.17",
     "vue-router": "^4.5.1",
     "vuetify": "^3.8.11"

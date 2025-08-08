@@ -12,6 +12,7 @@ const initLensService = async () => {
   const { lensService } = useLensService();
   const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
   const lensNode = import.meta.env.VITE_LENS_NODE;
+  const viteBootstrappers = import.meta.env.VITE_BOOTSTRAPPERS;
 
   // --- Environment Variable Checks (Good, no changes needed) ---
   if (!siteAddress) {
@@ -29,9 +30,15 @@ const initLensService = async () => {
 
     // 1. Construct a clean, unified list of all addresses to dial.
     //    - `lensNode` is treated as a single string (no spread).
+    //    - `viteBootstrappers` can be a comma-separated string of addresses.
     //    - `RIFFCC_PEERBIT_BOOTSTRAPPERS` is correctly spread if it's an array.
+    const bootstrappersList = viteBootstrappers 
+      ? viteBootstrappers.split(',').map((addr: string) => addr.trim())
+      : [];
+    
     const allAddressesToDial = [
       lensNode,
+      ...bootstrappersList,
       ...RIFFCC_PEERBIT_BOOTSTRAPPERS,
     ].filter(Boolean); // .filter(Boolean) removes any empty or null strings.
 
