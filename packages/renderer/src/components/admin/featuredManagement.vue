@@ -27,9 +27,9 @@
               :rules="releaseRules"
               @update:search="searchQuery = $event"
             >
-              <template #item="{ props, item }">
+              <template #item="{ props: itemProps, item }">
                 <v-list-item
-                  v-bind="props"
+                  v-bind="itemProps"
                   :title="item.raw.name"
                   :subtitle="`ID: ${item.raw.id.substring(0, 8)}...`"
                 />
@@ -96,8 +96,8 @@
                 @dragend="onDragEnd"
                 @dragover="onDragOver(index, $event)"
                 @drop="onDrop(index, $event)"
-                @click="filterActivedFeatured(featuredRelease) ? editFeaturedRelease(featuredRelease) : null"
-                :style="{ cursor: filterActivedFeatured(featuredRelease) ? 'pointer' : 'default' }"
+                @click="editFeaturedRelease(featuredRelease)"
+                style="cursor: pointer"
               >
                 <template #prepend>
                   <v-icon
@@ -229,7 +229,7 @@
       message="Remove this ended featured release from the list?"
       :dialog-open="Boolean(featuredItemToRemove)"
       :on-close="() => featuredItemToRemove = null"
-      :on-confirm="confirmRemoveFeaturedRelease"
+      :on-confirm="handleRemoveFeaturedRelease"
     ></confirmation-dialog>
   </v-container>
   <v-snackbar
@@ -255,12 +255,11 @@ import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import { filterActivedFeatured, filterPromotedFeatured } from '/@/utils';
 import type { FeaturedReleaseItem, ReleaseItem } from '/@/types';
-import { 
-  useAddFeaturedReleaseMutation, 
-  useEditFeaturedReleaseMutation, 
+import {
+  useAddFeaturedReleaseMutation,
+  useEditFeaturedReleaseMutation,
   useGetFeaturedReleasesQuery,
   useGetReleasesQuery,
-  useGetReleaseQuery,
   useDeleteFeaturedReleaseMutation
 } from '/@/plugins/lensService/hooks';
 
@@ -285,7 +284,7 @@ const featuredWithReleases = computed(() => {
     ...featured,
     releaseName: releases.value?.find(r => r.id === featured.releaseId)?.name || 'Unknown Release',
     // Ensure order exists for TypeScript, but it might be undefined
-    order: (featured as any).order
+    order: (featured as FeaturedReleaseItem & { order?: number }).order
   }));
   
   // Sort by order field if present, otherwise by created date
@@ -471,7 +470,7 @@ const readyToSave = computed(() => {
     
     // Calculate the next order number
     const maxOrder = featuredReleases.value?.reduce((max, item) => {
-      const itemOrder = (item as any).order;
+      const itemOrder = (item as FeaturedReleaseItem & { order?: number }).order;
       return itemOrder !== undefined && itemOrder > max ? itemOrder : max;
     }, -1) ?? -1;
 
@@ -530,10 +529,12 @@ const confirmEndFeaturedRelease = async () => {
   featuredItemIdToEnd.value = null;
 };
 
-const confirmRemoveFeaturedRelease = (featured?: FeaturedReleaseItem) => {
-  if (featured) {
-    featuredItemToRemove.value = featured;
-  } else if (featuredItemToRemove.value) {
+const confirmRemoveFeaturedRelease = (featured: FeaturedReleaseItem) => {
+  featuredItemToRemove.value = featured;
+};
+
+const handleRemoveFeaturedRelease = () => {
+  if (featuredItemToRemove.value) {
     deleteFeaturedReleaseMutation.mutate(featuredItemToRemove.value.id);
     featuredItemToRemove.value = null;
   }
