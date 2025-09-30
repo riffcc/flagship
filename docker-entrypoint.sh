@@ -6,6 +6,20 @@ set -e
 
 echo "Flagship entrypoint starting for PORT=$PORT"
 
+# Check if we can read VITE_SITE_ADDRESS from writer-data config
+if [ -f "/app/writer-data/config.json" ]; then
+    echo "Found writer-data config, reading site address..."
+    WRITER_SITE_ADDRESS=$(jq -r '.address' /app/writer-data/config.json 2>/dev/null || echo "")
+    if [ -n "$WRITER_SITE_ADDRESS" ] && [ "$WRITER_SITE_ADDRESS" != "null" ]; then
+        echo "Using site address from writer-data: $WRITER_SITE_ADDRESS"
+        export VITE_SITE_ADDRESS="$WRITER_SITE_ADDRESS"
+    else
+        echo "Could not read valid address from writer-data config"
+    fi
+else
+    echo "No writer-data config found at /app/writer-data/config.json"
+fi
+
 # Determine which lens node we're connecting to based on PORT
 if [ "$PORT" = "5175" ]; then
     echo "Configuring Flagship for Primary lens node..."
@@ -92,9 +106,12 @@ if [ -z "$RELAY_MULTIADDR" ]; then
 fi
 
 # Generate .env file
+# Use writer-data site address if available, otherwise use the one from shared files
+FINAL_SITE_ADDRESS=${VITE_SITE_ADDRESS:-$SITE_ADDRESS}
+
 cat > /app/.env << EOF
 # Auto-generated environment for Flagship
-VITE_SITE_ADDRESS=$SITE_ADDRESS
+VITE_SITE_ADDRESS=$FINAL_SITE_ADDRESS
 VITE_LENS_NODE=$MULTIADDR
 VITE_BOOTSTRAPPERS=$RELAY_MULTIADDR
 VITE_API_URL=http://localhost:$API_PORT/api/v1
@@ -102,7 +119,7 @@ PORT=$PORT
 EOF
 
 echo "Generated .env with:"
-echo "  SITE_ADDRESS: $SITE_ADDRESS"
+echo "  SITE_ADDRESS: $FINAL_SITE_ADDRESS"
 echo "  LENS_NODE: $MULTIADDR"
 echo "  BOOTSTRAPPERS: $RELAY_MULTIADDR"
 echo "  API_PORT: $API_PORT"

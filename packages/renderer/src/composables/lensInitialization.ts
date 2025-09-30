@@ -29,15 +29,19 @@ const initLensService = async () => {
     // --- REFINED DIALING LOGIC ---
 
     // 1. Construct a clean, unified list of all addresses to dial.
-    //    - `lensNode` is treated as a single string (no spread).
+    //    - `lensNode` can be a comma-separated string of addresses.
     //    - `viteBootstrappers` can be a comma-separated string of addresses.
     //    - `RIFFCC_PEERBIT_BOOTSTRAPPERS` is correctly spread if it's an array.
-    const bootstrappersList = viteBootstrappers 
+    const lensNodesList = lensNode
+      ? lensNode.split(',').map((addr: string) => addr.trim())
+      : [];
+
+    const bootstrappersList = viteBootstrappers
       ? viteBootstrappers.split(',').map((addr: string) => addr.trim())
       : [];
-    
+
     const allAddressesToDial = [
-      lensNode,
+      ...lensNodesList,
       ...bootstrappersList,
       ...RIFFCC_PEERBIT_BOOTSTRAPPERS,
     ].filter(Boolean); // .filter(Boolean) removes any empty or null strings.

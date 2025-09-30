@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install pnpm and required build tools
 RUN npm install -g pnpm && \
-    apk add --no-cache python3 make g++ git
+    apk add --no-cache python3 make g++ git jq
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
