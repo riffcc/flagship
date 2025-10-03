@@ -15,6 +15,9 @@
       >
         <span class="tab-text">{{ tab.name }}</span>
       </router-link>
+      <div class="search-container">
+        <SearchBar />
+      </div>
       <div class="profile-link">
         <account-menu v-if="userData" />
         <router-link v-else to="/account" :data-navigable="true">
@@ -30,6 +33,7 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useUserSession } from '/@/composables/userSession';
 import accountMenu from '/@/components/account/accountMenu.vue';
+import SearchBar from '/@/components/search/SearchBar.vue';
 
 const route = useRoute();
 const { userData } = useUserSession();
@@ -168,5 +172,14 @@ const currentPath = computed(() => route.path);
 .tab-text {
   position: relative;
   z-index: 1;
+}
+
+.search-container {
+  position: absolute;
+  right: 20%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 300px;
+  z-index: 10;
 }
 </style>
