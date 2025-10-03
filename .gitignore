@@ -54,3 +54,7 @@ lens-sdk
 
 # env
 .env.production
+
+# Rust
+target/
+**/*.rs.bk
