@@ -1,0 +1,16 @@
+[package]
+name = "lens-v2-sdk"
+version = "0.1.0"
+edition = "2021"
+authors = ["Riff.CC Team"]
+description = "Core types and traits for Lens Node v2"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+mockall = { workspace = true }
