@@ -116,6 +116,9 @@
         </router-link>
       </template>
     </div>
+    <div class="search-container d-none d-md-flex mx-4">
+      <SearchBar />
+    </div>
     <account-menu v-if="userData"></account-menu>
   </v-app-bar>
 </template>
@@ -126,6 +129,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useUserSession } from '/@/composables/userSession';
 import { useAccountStatusQuery, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 import accountMenu from '/@/components/account/accountMenu.vue';
+import SearchBar from '/@/components/search/SearchBar.vue';
 
 const router = useRouter();
 const route = useRoute();

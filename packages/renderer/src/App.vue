@@ -58,6 +58,7 @@ import { useGamepadNavigation } from '/@/composables/useGamepadNavigation';
 import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useContentCategoriesQuery } from './plugins/lensService';
 import { useGlobalPlayback } from '/@/composables/globalPlayback';
 import { useInputMethod } from '/@/composables/useInputMethod';
+import { useLocalSearch } from '/@/composables/useLocalSearch';
 
 const { showDefederation } = useShowDefederation();
 const { activeTrack } = useAudioAlbum();
@@ -123,6 +124,31 @@ const {  data: featuredReleases } = useGetFeaturedReleasesQuery({
 
 const { data: contentCategories } = useContentCategoriesQuery({
   enabled: isLensReady,
+});
+
+// Setup search indexing
+const { indexContent } = useLocalSearch();
+
+// Index catalog data when releases load
+watchEffect(() => {
+  if (releases.value && releases.value.length > 0) {
+    const searchableContent = releases.value.map(release => ({
+      id: release.id,
+      title: release.name,
+      artist: release.artistName,
+      description: release.description,
+      category: release.categoryId || 'other',
+      tags: release.tags || [],
+      year: release.releaseDate ? new Date(release.releaseDate).getFullYear() : undefined,
+      type: (release.categoryId === 'music' ? 'music' :
+             release.categoryId === 'movies' ? 'movie' :
+             release.categoryId === 'tv-shows' ? 'tv' :
+             'other') as 'music' | 'movie' | 'tv' | 'other',
+    }));
+
+    indexContent(searchableContent);
+    console.log(`[App] Indexed ${searchableContent.length} releases for search`);
+  }
 });
 
 // Delay showing spinner for 100ms to make app feel faster
