@@ -20,6 +20,7 @@
     "lint": "eslint . --fix",
     "format": "prettier --write \"**/*.{js,mjs,cjs,ts,mts,cts,vue,json}\"",
     "typecheck": "vue-tsc --noEmit -p packages/renderer/tsconfig.json",
+    "typecheck:renderer": "vue-tsc --noEmit -p packages/renderer/tsconfig.json",
     "test": "vitest run",
     "test:unit": "vitest run --dir tests/unit",
     "test:e2e": "playwright test",
