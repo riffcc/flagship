@@ -18,7 +18,7 @@
       <div class="profile-link">
         <account-menu v-if="userData" />
         <router-link v-else to="/account" :data-navigable="true">
-          <v-icon size="32" color="white">mdi-account</v-icon>
+          <v-icon size="32" color="white" icon="account" />
         </router-link>
       </div>
     </div>
