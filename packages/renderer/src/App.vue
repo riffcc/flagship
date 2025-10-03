@@ -135,11 +135,11 @@ watchEffect(() => {
     const searchableContent = releases.value.map(release => ({
       id: release.id,
       title: release.name,
-      artist: release.artistName,
-      description: release.description,
+      artist: release.metadata?.artist as string | undefined,
+      description: release.metadata?.description as string | undefined,
       category: release.categoryId || 'other',
-      tags: release.tags || [],
-      year: release.releaseDate ? new Date(release.releaseDate).getFullYear() : undefined,
+      tags: (release.metadata?.tags as string[]) || [],
+      year: release.metadata?.year as number | undefined,
       type: (release.categoryId === 'music' ? 'music' :
              release.categoryId === 'movies' ? 'movie' :
              release.categoryId === 'tv-shows' ? 'tv' :

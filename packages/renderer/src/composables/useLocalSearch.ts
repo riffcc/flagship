@@ -148,7 +148,7 @@ export function useLocalSearch() {
         }
       });
 
-      return results.slice(0, 50) as SearchResult[]; // Limit to top 50 results
+      return results.slice(0, 50) as unknown as SearchResult[]; // Limit to top 50 results
     } catch (error) {
       console.error('[LocalSearch] Error searching:', error);
       return [];
