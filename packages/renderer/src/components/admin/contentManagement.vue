@@ -3,7 +3,7 @@
   <v-container>
     <v-data-table
       :headers="smAndDown ? smTableHeaders : tableHeaders"
-      :items="releases"
+      :items="nonArtistReleases"
       :loading="isLoading"
       :items-per-page="20"
       hide-default-header
@@ -171,7 +171,7 @@
   </v-snackbar>
 </template>
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useDisplay } from 'vuetify';
 import ReleaseForm from '/@/components/releases/releaseForm.vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
@@ -189,6 +189,12 @@ const { lgAndUp, smAndDown } = useDisplay();
 
 const { data: releases, isLoading } = useGetReleasesQuery();
 const { data: contentCategories } = useContentCategoriesQuery();
+
+// Filter out artists from content list (artists are managed in Meta tab)
+const nonArtistReleases = computed(() => {
+  if (!releases.value) return [];
+  return releases.value.filter((r: any) => r.metadata?.type !== 'artist');
+});
 const deleteReleaseMutation = useDeleteReleaseMutation({
   onSuccess: () => {
     openSnackbar('Release deleted successfully.', 'success');

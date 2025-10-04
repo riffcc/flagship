@@ -9,13 +9,13 @@ export interface SearchableContent {
   category: string;
   tags?: string[];
   year?: number;
-  type: 'music' | 'movie' | 'tv' | 'other';
+  type: 'music' | 'movie' | 'tv' | 'artist' | 'other';
   thumbnailCID?: string;
 }
 
 export interface SearchFilters {
   category?: string;
-  type?: 'music' | 'movie' | 'tv' | 'other';
+  type?: 'music' | 'movie' | 'tv' | 'artist' | 'other';
   year?: number;
 }
 

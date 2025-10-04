@@ -1,4 +1,16 @@
 <template>
+  <!-- Full viewport background artwork (The Slip specific) -->
+  <TransitionGroup name="artwork-fade">
+    <div
+      v-if="!isLoading && currentTrackArtwork"
+      :key="currentTrackArtwork"
+      class="track-artwork-background"
+      :style="{
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url(${currentTrackArtwork})`,
+      }"
+    ></div>
+  </TransitionGroup>
+
   <v-sheet
     v-if="isLoading"
     color="transparent"
@@ -9,7 +21,7 @@
   </v-sheet>
   <v-sheet
     v-else
-    class="text-body-2 mx-auto my-4"
+    class="text-body-2 mx-auto my-4 album-content"
     max-width="960px"
   >
     <v-container fluid>
@@ -39,9 +51,32 @@
         >
           <p class="text-h5 text-md-h4 font-weight-medium">{{ props.release.name }}</p>
           <p v-if="metadata?.description">{{ metadata.description }}</p>
-          <p v-if="metadata?.author">{{ metadata.author }}</p>
+          <p v-if="metadata?.author">
+            <span v-if="metadata?.artistId">
+              <a
+                @click.prevent="router.push(`/artist/${metadata.artistId}`)"
+                class="artist-link"
+                style="cursor: pointer; color: rgb(var(--v-theme-primary)); text-decoration: none;"
+              >{{ metadata.author }}</a>
+            </span>
+            <span v-else>{{ metadata.author }}</span>
+          </p>
           <p>{{ albumFiles.length }} Songs<span v-if="totalDuration"> • {{ totalDuration }}</span></p>
           <p v-if="metadata?.releaseYear">{{ metadata.releaseYear }}</p>
+
+          <!-- Quality and License Badges -->
+          <div class="d-flex gap-2 mt-2">
+            <QualityBadge
+              v-if="metadata?.audioQuality"
+              :quality="metadata.audioQuality"
+              size="small"
+            />
+            <LicenseBadge
+              v-if="metadata?.license"
+              :license="metadata.license"
+              size="small"
+            />
+          </div>
         </v-col>
       </v-row>
       
@@ -96,11 +131,16 @@
             </template>
             <template #default>
               <div class="ml-2 my-1 d-flex align-center">
-                <v-sheet
-                  position="relative"
-                  :width="xs ? '48px' : '60px'"
-                  :height="xs ? '48px' : '60px'"
-                  border
+                <div
+                  class="track-artwork-box"
+                  :style="{
+                    position: 'relative',
+                    width: xs ? '48px' : '60px',
+                    height: xs ? '48px' : '60px',
+                    border: '1px solid rgba(var(--v-border-color), var(--v-border-opacity))',
+                    borderRadius: '4px',
+                    ...getTrackArtworkStyle(i)
+                  }"
                 >
                   <v-btn
                     location="center"
@@ -110,7 +150,7 @@
                     readonly
                     :size="xs ? 'small' : 'default'"
                   ></v-btn>
-                </v-sheet>
+                </div>
                 <div class="ml-4">
                   <p class="text-subtitle-2 text-md-subtitle-1">{{ file.title }}</p>
                 </div>
@@ -166,6 +206,8 @@ import {useFloatingVideo} from '/@/composables/floatingVideo';
 import { parseUrlOrCid } from '/@/utils';
 import type { ReleaseItem } from '/@/types';
 import { useAccountStatusQuery, useEditReleaseMutation } from '/@/plugins/lensService/hooks';
+import QualityBadge from '/@/components/badges/QualityBadge.vue';
+import LicenseBadge from '/@/components/badges/LicenseBadge.vue';
 // @ts-ignore
 import jsmediatags from 'jsmediatags/dist/jsmediatags.min.js';
 
@@ -189,6 +231,74 @@ const metadata = computed(() => {
   }
   return props.release.metadata;
 });
+
+// Per-track artwork support (generic for any album)
+// Fallback for The Slip (can be stored in metadata.trackArtwork in the future)
+const SLIP_ARTWORK_BASE = '/synthesis/nin-the-slip';
+const THE_SLIP_ID = 'b9103d29-3e20-4855-96f1-1b2774bdb5da';
+
+const defaultSlipArtwork: Record<number, string> = {
+  0: `${SLIP_ARTWORK_BASE}/track-01-999999.jpg`,         // Track 1: 999,999
+  1: `${SLIP_ARTWORK_BASE}/track-02-1000000.jpg`,        // Track 2: 1,000,000
+  2: `${SLIP_ARTWORK_BASE}/track-03-letting-you.jpg`,    // Track 3: Letting You
+  3: `${SLIP_ARTWORK_BASE}/track-04-discipline.jpg`,     // Track 4: Discipline
+  4: `${SLIP_ARTWORK_BASE}/track-05-echoplex.jpg`,       // Track 5: Echoplex
+  5: `${SLIP_ARTWORK_BASE}/track-06-head-down.jpg`,      // Track 6: Head Down
+  6: `${SLIP_ARTWORK_BASE}/track-07-lights-in-the-sky.jpg`, // Track 7: Lights in the Sky
+  7: `${SLIP_ARTWORK_BASE}/track-08-corona-radiata.jpg`, // Track 8: Corona Radiata
+  8: `${SLIP_ARTWORK_BASE}/track-09-four-of-us-dying.jpg`, // Track 9: The Four of Us Are Dying
+  9: `${SLIP_ARTWORK_BASE}/track-10-demon-seed.jpg`,     // Track 10: Demon Seed
+};
+
+// Get track artwork map from metadata or fallback
+const trackArtworkMap = computed(() => {
+  // Check if metadata has trackArtwork array/object
+  if (metadata.value?.trackArtwork) {
+    try {
+      const artwork = typeof metadata.value.trackArtwork === 'string'
+        ? JSON.parse(metadata.value.trackArtwork)
+        : metadata.value.trackArtwork;
+
+      // Convert array to object if needed
+      if (Array.isArray(artwork)) {
+        return artwork.reduce((acc, url, index) => ({ ...acc, [index]: url }), {});
+      }
+      return artwork;
+    } catch (e) {
+      console.error('Failed to parse trackArtwork:', e);
+    }
+  }
+
+  // Fallback for The Slip (temporary until metadata is updated)
+  if (props.release.id === THE_SLIP_ID) {
+    return defaultSlipArtwork;
+  }
+
+  return null;
+});
+
+// Check if album has per-track artwork
+const hasTrackArtwork = computed(() => trackArtworkMap.value !== null);
+
+// Get current track artwork for full background
+const currentTrackArtwork = computed(() => {
+  if (!hasTrackArtwork.value || !activeTrack.value) return null;
+  return trackArtworkMap.value?.[activeTrack.value.index] || null;
+});
+
+// Get track artwork style for thumbnail
+function getTrackArtworkStyle(trackIndex: number) {
+  if (!hasTrackArtwork.value) return {};
+
+  const artwork = trackArtworkMap.value?.[trackIndex];
+  if (!artwork) return {};
+
+  return {
+    backgroundImage: `url(${artwork})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  };
+}
 
 // Calculate total album duration
 const totalDuration = computed(() => {
@@ -637,3 +747,45 @@ onUnmounted(() => {
   audioElements.value = [];
 });
 </script>
+
+<style scoped>
+.track-artwork-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(100% - var(--v-layout-footer-height, 0px));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  opacity: 0.9;
+  z-index: 0;
+}
+
+.artwork-fade-enter-active,
+.artwork-fade-leave-active {
+  transition: opacity 0.25s ease-in-out;
+}
+
+.artwork-fade-enter-from {
+  opacity: 0;
+}
+
+.artwork-fade-leave-to {
+  opacity: 0;
+}
+
+.album-content {
+  position: relative;
+  z-index: 1;
+  backdrop-filter: blur(2px);
+  background-color: rgba(var(--v-theme-surface), 0.85) !important;
+}
+</style>
+
+<style>
+/* Make main transparent when background artwork is showing */
+main:has(.track-artwork-background) {
+  background-color: transparent !important;
+}
+</style>

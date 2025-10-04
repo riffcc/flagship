@@ -34,8 +34,18 @@
 
         <template #append>
           <v-chip size="x-small" variant="tonal">
-            {{ result.category || result.type }}
+            {{ result.type }}
           </v-chip>
+          <v-btn
+            v-if="canAccessAdminPanel"
+            icon
+            size="x-small"
+            variant="text"
+            class="ml-2"
+            @click.stop="goToEdit(result)"
+          >
+            <v-icon size="18">mdi-pencil</v-icon>
+          </v-btn>
         </template>
       </v-list-item>
 
@@ -51,23 +61,49 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { parseUrlOrCid } from '/@/utils';
+import { useAccountStatusQuery } from '/@/plugins/lensService/hooks';
+
+const router = useRouter();
+const { data: accountStatus } = useAccountStatusQuery();
 
 defineProps<{
   results: any[];
   query: string;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   select: [result: any];
   close: [];
 }>();
+
+const canAccessAdminPanel = computed(() => {
+  if (!accountStatus.value) return false;
+  if (accountStatus.value.isAdmin) return true;
+  if (accountStatus.value.roles.includes('moderator')) return true;
+  return false;
+});
+
+function goToEdit(result: any) {
+  emit('close');
+
+  // For artists, navigate to the artist page
+  if (result.type === 'artist') {
+    // Navigate to artist page - the page will handle opening the edit modal
+    router.push(`/artists/${result.id}?edit=true`);
+  } else {
+    router.push(`/admin/releases/${result.id}/edit`);
+  }
+}
 
 /**
  * Get icon for content type
  */
 function getIconForType(type: string): string {
   const iconMap: Record<string, string> = {
+    artist: 'mdi-account-music',
     music: 'mdi-music',
     movie: 'mdi-movie',
     tv: 'mdi-television',

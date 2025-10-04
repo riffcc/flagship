@@ -58,12 +58,15 @@ export function useAccountStatusQuery(options?: { enabled?: boolean | Ref<boolea
   });
 }
 
-export function useGetReleaseQuery(id: string, options?: { enabled?: boolean | Ref<boolean> }) {
+export function useGetReleaseQuery(id: string | Ref<string>, options?: { enabled?: boolean | Ref<boolean> }) {
   const { lensService } = useLensService();
+
+  const actualId = computed(() => unref(id));
+
   return useQuery<ReleaseItem | undefined>({
-    queryKey: ['release', id],
+    queryKey: () => ['release', actualId.value],
     queryFn: async () => {
-      const r = await lensService.getRelease(id);
+      const r = await lensService.getRelease(actualId.value);
       return r ?
         {
           ...r,
@@ -86,12 +89,9 @@ export function useGetReleasesQuery(options?: {
   return useQuery<ReleaseItem[]>({
     queryKey: ['releases'],
     queryFn: async () => {
-      // When Peerbit is disabled, return from cache or fetch from HTTP API
+      // When Peerbit is disabled, fetch from HTTP API
       if (!USE_PEERBIT) {
-        const cached = queryClient.getQueryData<ReleaseItem[]>(['releases']);
-        if (cached) return cached;
-
-        // Fallback: fetch from HTTP API if cache miss
+        // Always fetch fresh data from HTTP API (don't return stale cache)
         const response = await fetch(`${API_URL}/releases`);
         return await response.json();
       }
@@ -257,10 +257,30 @@ export function useAddReleaseMutation(options?: {
   onSuccess?: (response: HashResponse) => void;
   onError?: (e: Error) => void;
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: AddInput<ReleaseData<AnyObject>>) => {
+      if (!USE_PEERBIT) {
+        // Use HTTP API when Peerbit is disabled
+        const response = await fetch(`${API_URL}/releases`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...data,
+            metadata: data.metadata,
+          }),
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to create release: ${response.statusText}`);
+        }
+        const result = await response.json();
+        // Immediately invalidate queries after successful HTTP API call
+        queryClient.invalidateQueries({ queryKey: ['releases'] });
+        return result;
+      }
+
       return await lensService.addRelease({
         ...data,
         metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
@@ -268,6 +288,7 @@ export function useAddReleaseMutation(options?: {
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
+      // Also invalidate here for Peerbit path
       queryClient.invalidateQueries({ queryKey: ['releases'] });
     },
     onError: (error) => {
@@ -280,10 +301,41 @@ export function useEditReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: EditInput<ReleaseData<AnyObject>>) => {
+      if (!USE_PEERBIT) {
+        // Use HTTP API when Peerbit is disabled
+        // Extract the data payload (could be nested as data.data or flat)
+        const payload = (data as any).data || data;
+        const releaseId = data.id;
+
+        const response = await fetch(`${API_URL}/releases/${releaseId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: payload.name,
+            categoryId: payload.categoryId,
+            contentCID: payload.contentCID,
+            thumbnailCID: payload.thumbnailCID,
+            metadata: payload.metadata,
+            siteAddress: payload.siteAddress,
+            postedBy: payload.postedBy,
+          }),
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to update release: ${response.statusText}`);
+        }
+        const result = await response.json();
+        // Immediately invalidate queries after successful HTTP API call
+        queryClient.invalidateQueries({ queryKey: ['releases'] });
+        queryClient.invalidateQueries({ queryKey: ['releases', releaseId] });
+        queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+        return result;
+      }
+
       return await lensService.editRelease({
         ...data,
         metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
@@ -291,9 +343,9 @@ export function useEditReleaseMutation(options?: {
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
+      // Also invalidate here for Peerbit path
       queryClient.invalidateQueries({ queryKey: ['releases'] });
       queryClient.invalidateQueries({ queryKey: ['releases', response.id] });
-      // Also invalidate featured releases in case this release is featured
       queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
     },
     onError: (error) => {

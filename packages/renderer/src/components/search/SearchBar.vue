@@ -83,6 +83,8 @@ function getRouteForContent(content: any): string | null {
 
   // Map content type to route
   switch (content.type) {
+    case 'artist':
+      return `/artists/${content.id}`;
     case 'music':
       return `/release/${content.id}`;
     case 'movie':

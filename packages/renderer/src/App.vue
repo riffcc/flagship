@@ -157,10 +157,11 @@ watchEffect(() => {
       category: release.categoryId || 'other',
       tags: (release.metadata?.tags as string[]) || [],
       year: release.metadata?.year as number | undefined,
-      type: (release.categoryId === 'music' ? 'music' :
+      type: (release.metadata?.type === 'artist' ? 'artist' :
+             release.categoryId === 'music' ? 'music' :
              release.categoryId === 'movies' ? 'movie' :
              release.categoryId === 'tv-shows' ? 'tv' :
-             'other') as 'music' | 'movie' | 'tv' | 'other',
+             'other') as 'music' | 'movie' | 'tv' | 'artist' | 'other',
       thumbnailCID: release.thumbnailCID,
     }));
 
