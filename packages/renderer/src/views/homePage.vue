@@ -133,10 +133,19 @@ const promotedFeaturedReleases = computed<ReleaseItem[]>(() => {
   return releases.value.filter(r => r.id && promotedActivedFeaturedReleasesIds.includes(r.id));
 });
 
+// Non-promoted featured releases for category sections
+const nonPromotedFeaturedReleases = computed<ReleaseItem[]>(() => {
+  if (!releases.value || !featuredReleases.value) return [];
+  const nonPromotedFeaturedIds = featuredReleases.value
+    .filter(filterActivedFeatured)
+    .filter(fr => !filterPromotedFeatured(fr)) // NOT promoted
+    .map(fr => fr.releaseId);
+  return releases.value.filter(r => r.id && nonPromotedFeaturedIds.includes(r.id));
+});
 
 const activeSections = computed(() => {
   const limitPerCategory = 8;
-  if (!contentCategories.value || !activedFeaturedReleases.value) return [];
+  if (!contentCategories.value || !nonPromotedFeaturedReleases.value) return [];
 
   return contentCategories.value
     .filter(category => category.featured)
@@ -148,7 +157,7 @@ const activeSections = computed(() => {
     })
     .map(featuredCategory => {
       // Collect releases that match this category (by ID or slug)
-      let items: ReleaseItem[] = activedFeaturedReleases.value.filter(release => {
+      let items: ReleaseItem[] = nonPromotedFeaturedReleases.value.filter(release => {
         if (!release.categoryId) return false;
 
         // Match by category ID (hash)
