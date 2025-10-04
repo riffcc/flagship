@@ -49,7 +49,7 @@ import { watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import albumViewer from '/@/components/releases/albumViewer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
-import { useGetReleaseQuery, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
+import { useGetReleaseQuery } from '/@/plugins/lensService/hooks';
 
 const props = defineProps<{
   id: string;
@@ -58,13 +58,10 @@ const props = defineProps<{
 const router = useRouter();
 
 const { data: targetRelease, isLoading } = useGetReleaseQuery(props.id);
-const { data: contentCategories } = useContentCategoriesQuery();
 
-// Get the category slug for the release
+// Get the category slug for the release (use the categorySlug field directly)
 const categorySlug = computed(() => {
-  if (!targetRelease.value || !contentCategories.value) return null;
-  const category = contentCategories.value.find(cat => cat.id === targetRelease.value.categoryId);
-  return category?.categoryId || null;
+  return targetRelease.value?.categorySlug || null;
 });
 
 watch(targetRelease, (r) => {
