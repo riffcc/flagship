@@ -1,6 +1,8 @@
 mod routes;
 
+use routes::{initialize_registry, AppState};
 use std::env;
+use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -22,8 +24,15 @@ async fn main() -> anyhow::Result<()> {
     let addr = format!("0.0.0.0:{}", port);
     tracing::info!("Starting Lens Node v2 on {}", addr);
 
-    // Create the router
-    let app = routes::create_router();
+    // Initialize schema registry with built-in schemas
+    let registry = Arc::new(initialize_registry());
+    tracing::info!("Initialized schema registry");
+
+    // Create application state
+    let state = AppState { registry };
+
+    // Create the router with state
+    let app = routes::create_router(state);
 
     // Start the server
     let listener = tokio::net::TcpListener::bind(&addr).await?;

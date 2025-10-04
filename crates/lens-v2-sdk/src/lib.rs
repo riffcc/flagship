@@ -1,14 +1,9 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+/// Versioned schema system for flexible P2P data exchange
+pub mod schema;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Core data models
+pub mod models;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+// Re-export commonly used types
+pub use schema::{SchemaDefinition, SchemaRegistry, SchemaVersion, Versioned, VersionNegotiation};
+pub use models::*;
