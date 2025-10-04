@@ -356,8 +356,9 @@ router.beforeEach(async (to, from, next) => {
     const results = await Promise.allSettled(promises);
 
     console.groupCollapsed('API Pre-fetch Responses & Cache Seeding');
-    // Process each result
-    results.forEach(async (result, index) => {
+    // Process each result - use for...of to properly await async operations
+    for (let index = 0; index < results.length; index++) {
+      const result = results[index];
       const key = prefetchKeys[index];
       const config = PREFETCH_CONFIG[key];
 
@@ -378,7 +379,7 @@ router.beforeEach(async (to, from, next) => {
             metadataSchema: c.metadataSchema,
           }));
         }
-        
+
         queryClient.setQueryData(config.queryKey, data);
         console.log(`✅ [SUCCESS & CACHE SEEDED] ${key}:`, data);
       } else if (result.status === 'fulfilled' && !result.value.ok) {
@@ -386,7 +387,7 @@ router.beforeEach(async (to, from, next) => {
       } else if (result.status === 'rejected') {
         console.error(`❌ [FETCH FAILED] for ${key}:`, result.reason.message);
       }
-    });
+    }
 
     console.groupEnd();
 
