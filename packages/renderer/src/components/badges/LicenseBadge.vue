@@ -117,7 +117,7 @@ function handleClick() {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 2px 4px;
+  padding: 4px 4px 3px 4px;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.3px;
@@ -145,6 +145,7 @@ function handleClick() {
   height: 10px;
   filter: invert(100%) sepia(0%) saturate(7438%) hue-rotate(78deg) brightness(109%) contrast(95%);
   opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .license-tooltip {

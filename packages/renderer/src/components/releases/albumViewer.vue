@@ -65,7 +65,7 @@
           <p v-if="metadata?.releaseYear">{{ metadata.releaseYear }}</p>
 
           <!-- Quality and License Badges -->
-          <div class="d-flex gap-2 mt-2">
+          <div class="d-flex mt-2" style="gap: 3.5px">
             <QualityBadge
               v-if="metadata?.audioQuality"
               :quality="metadata.audioQuality"

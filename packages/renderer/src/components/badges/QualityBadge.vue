@@ -146,7 +146,7 @@ function handleClick() {
 .quality-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 4px;
+  padding: 4px 4px 3px 4px;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.3px;
