@@ -249,6 +249,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "consensus-peerexc"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "bytes",
+ "consensus-common",
+ "consensus-tgp",
+ "futures",
+ "indexmap",
+ "rand",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "consensus-proofs"
 version = "0.1.0"
 dependencies = [
@@ -745,6 +762,7 @@ version = "0.1.0"
 dependencies = [
  "consensus-bft",
  "consensus-common",
+ "consensus-peerexc",
  "consensus-tgp",
  "futures",
  "js-sys",

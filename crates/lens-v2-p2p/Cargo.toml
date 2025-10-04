@@ -17,6 +17,7 @@ lens-v2-sdk = { path = "../lens-v2-sdk" }
 consensus-bft = { path = "../../../pal/crates/consensus/bft", optional = true }
 consensus-tgp = { path = "../../../pal/crates/consensus/tgp", optional = true }
 consensus-common = { path = "../../../pal/crates/consensus/common", optional = true }
+consensus-peerexc = { path = "../../../pal/crates/consensus/peerexc", optional = true }
 
 # Serialization (minimal, wasm-friendly)
 serde = { workspace = true }
@@ -51,7 +52,7 @@ wasm-bindgen-test = "0.3"
 
 [features]
 default = ["consensus"]
-# Consensus support (BFT + TGP)
-consensus = ["consensus-bft", "consensus-tgp", "consensus-common"]
+# Consensus support (BFT + TGP + PeerExc)
+consensus = ["consensus-bft", "consensus-tgp", "consensus-common", "consensus-peerexc"]
 # Optional tokio support for native builds
 tokio-runtime = ["tokio"]
