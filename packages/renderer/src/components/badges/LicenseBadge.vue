@@ -117,7 +117,7 @@ function handleClick() {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 1px 4px;
+  padding: 2px 4px;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.3px;
@@ -126,7 +126,7 @@ function handleClick() {
   border: 1px solid #22c55e; /* green-500 */
   color: #22c55e;
   background: transparent;
-  line-height: 1.4;
+  line-height: 1;
   opacity: 0.8;
   transition: opacity 0.2s ease;
   text-decoration: none;

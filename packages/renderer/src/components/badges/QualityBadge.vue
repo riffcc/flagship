@@ -144,15 +144,16 @@ function handleClick() {
 
 <style scoped>
 .quality-badge {
-  display: inline-block;
-  padding: 1px 4px;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 4px;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.3px;
   text-transform: uppercase;
   border-radius: 2px;
   background: transparent;
-  line-height: 1.4;
+  line-height: 1;
   opacity: 0.8;
   transition: opacity 0.2s ease, filter 0.2s ease, brightness 0.15s ease;
 }
