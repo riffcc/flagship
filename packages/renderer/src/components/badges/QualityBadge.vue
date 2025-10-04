@@ -15,13 +15,11 @@ import type { AudioQuality } from '/@/types/badges';
 
 const props = withDefaults(defineProps<{
   quality?: AudioQuality | null;
-  size?: 'x-small' | 'small' | 'default' | 'large';
   clickable?: boolean;
-  showIcon?: boolean;
+  playerMode?: boolean; // Desaturated when in player
 }>(), {
-  size: 'x-small',
   clickable: false,
-  showIcon: true,
+  playerMode: false,
 });
 
 const emit = defineEmits<{
@@ -119,10 +117,23 @@ const borderColor = computed(() => {
 /**
  * Badge styling
  */
-const badgeStyle = computed(() => ({
-  border: `1px solid ${borderColor.value}`,
-  color: borderColor.value,
-}));
+const badgeStyle = computed(() => {
+  const color = borderColor.value;
+
+  if (props.playerMode) {
+    // Desaturated in player mode
+    return {
+      border: `1px solid ${color}`,
+      color: color,
+      filter: 'saturate(0.3)',
+    };
+  }
+
+  return {
+    border: `1px solid ${color}`,
+    color: color,
+  };
+});
 
 function handleClick() {
   if (props.clickable) {
@@ -143,7 +154,7 @@ function handleClick() {
   background: transparent;
   line-height: 1.4;
   opacity: 0.8;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, filter 0.2s ease, brightness 0.15s ease;
 }
 
 .quality-badge--clickable {
@@ -152,5 +163,10 @@ function handleClick() {
 
 .quality-badge--clickable:hover {
   opacity: 1;
+  filter: saturate(1) !important; /* Full color on hover */
+}
+
+.quality-badge--clickable:active {
+  filter: saturate(1) brightness(1.3) !important; /* Brighten on click */
 }
 </style>

@@ -94,6 +94,7 @@
             <QualityBadge
               v-if="albumQuality"
               :quality="albumQuality"
+              player-mode
             />
           </div>
           <v-slider
