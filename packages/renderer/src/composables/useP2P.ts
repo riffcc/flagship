@@ -92,7 +92,9 @@ export function useP2P() {
   const relayUrl = computed(() => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002'
     const wsUrl = apiUrl.replace('http://', 'ws://').replace('https://', 'wss://')
-    return `${wsUrl}/api/v1/relay/ws`
+    // Remove trailing /api/v1 if present, then add the relay path
+    const baseUrl = wsUrl.replace(/\/api\/v1\/?$/, '')
+    return `${baseUrl}/api/v1/relay/ws`
   })
 
   // ICE servers for NAT traversal (using Google's public STUN server)
