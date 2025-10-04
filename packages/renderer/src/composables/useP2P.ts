@@ -46,6 +46,23 @@ interface SignalingMessage {
   sdp_m_line_index?: number | null
 }
 
+interface Block {
+  id: string
+  data: ArrayBuffer
+  height?: number
+}
+
+interface RollupRequest {
+  rollup_id: number
+  blocks: string[]
+  priority: number
+}
+
+interface RollupResponse {
+  rollup_id: number
+  blocks: Block[]
+}
+
 interface PeerConnection {
   peer_id: string
   pc: RTCPeerConnection
@@ -60,6 +77,10 @@ export function useP2P() {
   const generation = ref(0)
   const localBlocks = ref<Set<string>>(new Set())
   const neededBlocks = ref<Set<string>>(new Set())
+
+  // Block storage - IndexedDB for persistence
+  const blockStore = ref<Map<string, Block>>(new Map())
+  const pendingRollups = ref<Map<number, RollupRequest>>(new Map())
 
   // WebRTC peer connections
   const myPeerId = ref<string>('')
@@ -128,11 +149,33 @@ export function useP2P() {
 
       channel.onopen = () => {
         console.log(`[P2P] Data channel with ${peerId} opened`)
+        peerConn.connected = true
       }
 
-      channel.onmessage = (msgEvent) => {
-        console.log(`[P2P] Received block data from ${peerId}:`, msgEvent.data)
-        // TODO: Handle received block data
+      channel.onmessage = async (msgEvent) => {
+        console.log(`[P2P] Received message from ${peerId}`, msgEvent.data)
+
+        // Handle incoming block rollup responses
+        if (msgEvent.data instanceof ArrayBuffer || msgEvent.data instanceof Blob) {
+          const buffer = msgEvent.data instanceof Blob
+            ? await msgEvent.data.arrayBuffer()
+            : msgEvent.data
+
+          try {
+            const text = new TextDecoder().decode(buffer)
+            const response: RollupResponse = JSON.parse(text)
+            await handleRollupResponse(response, peerId)
+          } catch (e) {
+            console.error(`[P2P] Failed to parse rollup response from ${peerId}:`, e)
+          }
+        } else if (typeof msgEvent.data === 'string') {
+          try {
+            const response: RollupResponse = JSON.parse(msgEvent.data)
+            await handleRollupResponse(response, peerId)
+          } catch (e) {
+            console.error(`[P2P] Failed to parse rollup response from ${peerId}:`, e)
+          }
+        }
       }
     }
 
@@ -153,11 +196,33 @@ export function useP2P() {
 
     dataChannel.onopen = () => {
       console.log(`[P2P] Data channel opened with ${peerId}`)
+      peerConn.connected = true
     }
 
-    dataChannel.onmessage = (event) => {
-      console.log(`[P2P] Received block from ${peerId}:`, event.data)
-      // TODO: Handle received block data
+    dataChannel.onmessage = async (event) => {
+      console.log(`[P2P] Received message from ${peerId}`, event.data)
+
+      // Handle incoming block rollup responses
+      if (event.data instanceof ArrayBuffer || event.data instanceof Blob) {
+        const buffer = event.data instanceof Blob
+          ? await event.data.arrayBuffer()
+          : event.data
+
+        try {
+          const text = new TextDecoder().decode(buffer)
+          const response: RollupResponse = JSON.parse(text)
+          await handleRollupResponse(response, peerId)
+        } catch (e) {
+          console.error(`[P2P] Failed to parse rollup response from ${peerId}:`, e)
+        }
+      } else if (typeof event.data === 'string') {
+        try {
+          const response: RollupResponse = JSON.parse(event.data)
+          await handleRollupResponse(response, peerId)
+        } catch (e) {
+          console.error(`[P2P] Failed to parse rollup response from ${peerId}:`, e)
+        }
+      }
     }
 
     // Create and send offer
@@ -365,11 +430,95 @@ export function useP2P() {
     sendWantList()
   }
 
-  const addLocalBlock = (blockId: string) => {
+  const addLocalBlock = (blockId: string, data?: ArrayBuffer) => {
     localBlocks.value.add(blockId)
     neededBlocks.value.delete(blockId)
+
+    if (data) {
+      blockStore.value.set(blockId, { id: blockId, data })
+    }
+
     console.log(`[P2P] Added local block: ${blockId}`)
     sendWantList()
+  }
+
+  // Handle incoming rollup response
+  const handleRollupResponse = async (response: RollupResponse, fromPeer: string) => {
+    console.log(`[P2P] Received rollup ${response.rollup_id} from ${fromPeer} with ${response.blocks.length} blocks`)
+
+    let storedCount = 0
+    for (const block of response.blocks) {
+      try {
+        // Store block in local cache
+        blockStore.value.set(block.id, block)
+
+        // Update local blocks set
+        localBlocks.value.add(block.id)
+        neededBlocks.value.delete(block.id)
+
+        storedCount++
+        console.log(`[P2P] Stored block ${block.id} (${block.data.byteLength} bytes)`)
+      } catch (e) {
+        console.error(`[P2P] Failed to store block ${block.id}:`, e)
+      }
+    }
+
+    console.log(`[P2P] Stored ${storedCount}/${response.blocks.length} blocks from rollup ${response.rollup_id}`)
+
+    // Remove from pending rollups
+    pendingRollups.value.delete(response.rollup_id)
+
+    // Update WantList
+    if (storedCount > 0) {
+      sendWantList()
+    }
+  }
+
+  // Request blocks from a specific peer via rollup
+  const requestBlocksFromPeer = async (peerId: string, blockIds: string[]) => {
+    const peerConn = peerConnections.value.get(peerId)
+    if (!peerConn || !peerConn.dataChannel || !peerConn.connected) {
+      console.warn(`[P2P] Cannot request blocks from ${peerId}: not connected`)
+      return
+    }
+
+    // Filter out blocks we already have
+    const needed = blockIds.filter(id => !localBlocks.value.has(id))
+    if (needed.length === 0) {
+      console.log(`[P2P] No blocks needed from ${peerId}`)
+      return
+    }
+
+    // Create rollup request
+    const rollup: RollupRequest = {
+      rollup_id: Math.floor(Math.random() * 0xFFFFFFFF),
+      blocks: needed,
+      priority: 128,
+    }
+
+    // Track pending rollup
+    pendingRollups.value.set(rollup.rollup_id, rollup)
+
+    // Send via data channel
+    const message = JSON.stringify(rollup)
+    console.log(`[P2P] Sending rollup request ${rollup.rollup_id} to ${peerId} (${needed.length} blocks)`)
+
+    try {
+      peerConn.dataChannel.send(message)
+    } catch (e) {
+      console.error(`[P2P] Failed to send rollup request to ${peerId}:`, e)
+      pendingRollups.value.delete(rollup.rollup_id)
+    }
+  }
+
+  // Get a block from local storage
+  const getBlock = (blockId: string): Block | undefined => {
+    return blockStore.value.get(blockId)
+  }
+
+  // Check if we have a block
+  const hasBlock = (blockId: string): boolean => {
+    return localBlocks.value.has(blockId)
   }
 
   // Cleanup on unmount
@@ -383,6 +532,7 @@ export function useP2P() {
     peers,
     localBlocks: computed(() => Array.from(localBlocks.value)),
     neededBlocks: computed(() => Array.from(neededBlocks.value)),
+    blockStore: computed(() => blockStore.value),
 
     // WebRTC State
     myPeerId: computed(() => myPeerId.value),
@@ -395,5 +545,10 @@ export function useP2P() {
     requestBlock,
     addLocalBlock,
     sendWantList,
+
+    // BoTG Block Exchange
+    requestBlocksFromPeer,
+    getBlock,
+    hasBlock,
   }
 }
