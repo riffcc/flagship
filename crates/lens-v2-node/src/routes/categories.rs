@@ -11,6 +11,7 @@ pub struct ContentCategory {
     pub metadata_schema: Option<serde_json::Value>,
     #[serde(rename = "siteAddress")]
     pub site_address: String,
+    pub featured: bool,
 }
 
 /// GET /api/v1/content-categories - List all content categories
@@ -30,6 +31,7 @@ pub async fn list_categories() -> impl IntoResponse {
                 "trackMetadata": "string"
             })),
             site_address: site_address.clone(),
+            featured: true,
         },
         ContentCategory {
             id: "movies".to_string(),
@@ -42,6 +44,7 @@ pub async fn list_categories() -> impl IntoResponse {
                 "classification": "string"
             })),
             site_address: site_address.clone(),
+            featured: true,
         },
         ContentCategory {
             id: "tv-shows".to_string(),
@@ -53,6 +56,7 @@ pub async fn list_categories() -> impl IntoResponse {
                 "releaseYear": "string"
             })),
             site_address: site_address.clone(),
+            featured: true,
         },
         ContentCategory {
             id: "books".to_string(),
@@ -65,6 +69,7 @@ pub async fn list_categories() -> impl IntoResponse {
                 "publicationYear": "string"
             })),
             site_address: site_address.clone(),
+            featured: false,
         },
         ContentCategory {
             id: "audiobooks".to_string(),
@@ -76,6 +81,7 @@ pub async fn list_categories() -> impl IntoResponse {
                 "duration": "string"
             })),
             site_address: site_address.clone(),
+            featured: false,
         },
         ContentCategory {
             id: "games".to_string(),
@@ -87,6 +93,7 @@ pub async fn list_categories() -> impl IntoResponse {
                 "releaseYear": "string"
             })),
             site_address,
+            featured: false,
         },
     ];
 

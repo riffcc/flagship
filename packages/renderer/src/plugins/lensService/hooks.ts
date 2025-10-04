@@ -79,6 +79,7 @@ export function useGetReleasesQuery(options?: {
   staleTime?: number,
   searchOptions?: SearchOptions,
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
   return useQuery<ReleaseItem[]>({
     queryKey: ['releases'],
@@ -97,7 +98,8 @@ export function useGetReleasesQuery(options?: {
         };
       });
     },
-    enabled: options?.enabled ?? true,
+    // When Peerbit is disabled, don't run queryFn - data is pre-fetched from HTTP API by router
+    enabled: USE_PEERBIT ? (options?.enabled ?? true) : false,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
   });
@@ -118,6 +120,7 @@ export function useGetFeaturedReleasesQuery(options?: {
   staleTime?: number,
   searchOptions?: SearchOptions,
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
   return useQuery<FeaturedReleaseItem[]>({
     queryKey: ['featuredReleases'],
@@ -130,7 +133,8 @@ export function useGetFeaturedReleasesQuery(options?: {
       };
       return await lensService.getFeaturedReleases(searchOptions);
     },
-    enabled: options?.enabled ?? true,
+    // When Peerbit is disabled, don't run queryFn - data is pre-fetched from HTTP API by router
+    enabled: USE_PEERBIT ? (options?.enabled ?? true) : false,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
   });
@@ -139,6 +143,7 @@ export function useGetFeaturedReleasesQuery(options?: {
 export function useContentCategoriesQuery(options?: {
   enabled?: boolean | Ref<boolean>;
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
   return useQuery<ContentCategoryItem[]>({
     queryKey: ['contentCategories'],
@@ -177,7 +182,8 @@ export function useContentCategoriesQuery(options?: {
         return [];
       }
     },
-    enabled: options?.enabled ?? true,
+    // When Peerbit is disabled, don't run queryFn - data is pre-fetched from HTTP API by router
+    enabled: USE_PEERBIT ? (options?.enabled ?? true) : false,
   });
 }
 
