@@ -1,5 +1,6 @@
 pub mod health;
 pub mod schemas;
+pub mod sync;
 
 use axum::{routing::get, Router};
 

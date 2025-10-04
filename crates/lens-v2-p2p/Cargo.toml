@@ -1,0 +1,57 @@
+[package]
+name = "lens-v2-p2p"
+version = "0.1.0"
+edition = "2021"
+authors = ["Riff.CC Team"]
+description = "Pure Rust P2P layer with BFT consensus and TGP - WASM-optimized < 500KiB"
+license = "MIT OR Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# SDK
+lens-v2-sdk = { path = "../lens-v2-sdk" }
+
+# Consensus crates (symlinked from pal)
+consensus-bft = { path = "../../../pal/crates/consensus/bft", optional = true }
+consensus-tgp = { path = "../../../pal/crates/consensus/tgp", optional = true }
+consensus-common = { path = "../../../pal/crates/consensus/common", optional = true }
+
+# Serialization (minimal, wasm-friendly)
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling (minimal)
+thiserror = { workspace = true }
+
+# Async (wasm-compatible)
+futures = { version = "0.3", default-features = false, features = ["alloc"] }
+
+# WASM bindings
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "WebSocket",
+    "MessageEvent",
+    "ErrorEvent",
+    "CloseEvent",
+    "BinaryType",
+] }
+
+# Native async runtime (not included in WASM)
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { workspace = true, optional = true }
+
+[dev-dependencies]
+# Testing (not compiled into WASM)
+wasm-bindgen-test = "0.3"
+
+[features]
+default = ["consensus"]
+# Consensus support (BFT + TGP)
+consensus = ["consensus-bft", "consensus-tgp", "consensus-common"]
+# Optional tokio support for native builds
+tokio-runtime = ["tokio"]

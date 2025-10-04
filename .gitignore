@@ -58,3 +58,6 @@ lens-sdk
 # Rust
 target/
 **/*.rs.bk
+
+# Research papers
+synthesis/

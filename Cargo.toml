@@ -2,6 +2,7 @@
 members = [
     "crates/lens-v2-sdk",
     "crates/lens-v2-node",
+    "crates/lens-v2-p2p",
 ]
 resolver = "2"
 
