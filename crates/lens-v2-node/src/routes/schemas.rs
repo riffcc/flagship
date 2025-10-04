@@ -125,7 +125,12 @@ pub fn initialize_registry() -> SchemaRegistry {
         eprintln!("Failed to register Release schema: {}", e);
     }
 
-    // Future: Add more schemas here as they're implemented
+    // Register universal ContentItem schema
+    if let Err(e) = registry.register(lens_v2_sdk::ContentItem::schema_definition()) {
+        eprintln!("Failed to register ContentItem schema: {}", e);
+    }
+
+    // Future: Add more specialized schemas here as they're implemented
     // registry.register(Track::schema_definition()).ok();
     // registry.register(Account::schema_definition()).ok();
 
