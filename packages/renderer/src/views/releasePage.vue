@@ -5,7 +5,7 @@
   >
     <template v-if="targetRelease">
       <video-player
-        v-if="['videos', 'movies'].includes(categorySlug)"
+        v-if="['videos', 'movies', 'tv-shows'].includes(categorySlug)"
         :content-cid="targetRelease.contentCID"
         :release-id="targetRelease.id"
         :release-name="targetRelease.name"

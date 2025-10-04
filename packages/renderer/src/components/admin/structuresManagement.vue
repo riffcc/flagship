@@ -15,7 +15,14 @@
               ></v-btn>
             </template>
             <v-card width="600px" max-height="620px" class="pa-8 ma-auto">
+              <artist-form
+                v-if="currentStructureType === 'artist'"
+                mode="create"
+                @update:error="handleError"
+                @update:success="handleSuccess"
+              />
               <structure-form
+                v-else
                 :initial-type="currentStructureType"
                 :parent-context="parentContext"
                 @update:error="handleError"
@@ -24,7 +31,7 @@
             </v-card>
           </v-dialog>
         </template>
-        <h3>Manage Structures</h3>
+        <h3>Manage Artists</h3>
       </v-list-item>
       <v-divider class="mt-2 mb-4"></v-divider>
       
@@ -52,30 +59,15 @@
         class="mt-4"
       ></v-progress-linear>
       
-      <!-- Main Categories View -->
+      <!-- Artists View -->
       <div v-else-if="currentView === 'categories'">
         <v-row>
-          <!-- TV Shows Category -->
-          <v-col cols="12" md="6">
-            <v-card @click="navigateToCategory('tv')">
-              <v-card-title class="d-flex align-center">
-                <v-icon icon="$television" class="mr-2"></v-icon>
-                TV Shows
-                <v-spacer></v-spacer>
-                <v-chip>{{ tvSeriesCount }}</v-chip>
-              </v-card-title>
-              <v-card-text>
-                Manage TV series, seasons, and episodes
-              </v-card-text>
-            </v-card>
-          </v-col>
-          
-          <!-- Music Category -->
-          <v-col cols="12" md="6">
+          <!-- Music/Artists - auto-navigate -->
+          <v-col cols="12" md="12">
             <v-card @click="navigateToCategory('music')">
               <v-card-title class="d-flex align-center">
                 <v-icon icon="$music" class="mr-2"></v-icon>
-                Music
+                Artists
                 <v-spacer></v-spacer>
                 <v-chip>{{ artistCount }}</v-chip>
               </v-card-title>
@@ -577,10 +569,18 @@
   <v-dialog v-model="editStructureDialog" max-width="600px">
     <v-card class="py-3">
       <v-card-title>
-        <span class="text-h6 ml-2">Edit Structure</span>
+        <span class="text-h6 ml-2">{{ editedStructure?.metadata?.type === 'artist' ? 'Edit Artist' : 'Edit Structure' }}</span>
       </v-card-title>
       <v-card-text>
+        <artist-form
+          v-if="editedStructure?.metadata?.type === 'artist'"
+          :initial-data="editedStructure"
+          mode="edit"
+          @update:error="handleError"
+          @update:success="handleSuccess"
+        />
         <structure-form
+          v-else
           :initial-data="editedStructure"
           mode="edit"
           @update:error="handleError"
@@ -634,6 +634,7 @@ import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import { parseUrlOrCid } from '/@/utils';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import structureForm from '/@/components/admin/structureForm.vue';
+import artistForm from '/@/components/admin/artistForm.vue';
 
 const router = useRouter();
 const { data: structures, isLoading: isStructuresLoading } = useGetStructuresQuery();
@@ -712,8 +713,8 @@ const emptyStructures = computed(() => {
 });
 
 const artists = computed(() => {
-  if (!structures.value) return [];
-  return structures.value.filter((s: any) => s.type === 'artist');
+  if (!releases.value) return [];
+  return releases.value.filter((r: any) => r.metadata?.type === 'artist');
 });
 
 const tags = computed(() => {
@@ -1144,8 +1145,15 @@ function handleError(message: string) {
 }
 
 function editStructure(structure: any) {
-  editedStructure.value = { ...structure };
-  editStructureDialog.value = true;
+  // For artists (releases), use the release edit dialog
+  if (structure.metadata?.type === 'artist') {
+    editedStructure.value = { ...structure };
+    editStructureDialog.value = true;
+  } else {
+    // For other structures, use the dialog
+    editedStructure.value = { ...structure };
+    editStructureDialog.value = true;
+  }
 }
 
 function deleteStructure(structure: any) {

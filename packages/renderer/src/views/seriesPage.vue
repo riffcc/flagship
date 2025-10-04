@@ -72,8 +72,8 @@
             </v-chip>
           </div>
 
-          <p v-if="series.description" class="text-body-1 mb-4">
-            {{ series.description }}
+          <p v-if="series.metadata?.description" class="text-body-1 mb-4">
+            {{ series.metadata.description }}
           </p>
 
           <!-- Play first episode button -->
@@ -172,49 +172,66 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { 
-  useGetStructureQuery, 
-  useGetStructuresQuery,
-  useGetReleasesQuery 
+import { useRouter } from 'vue-router';
+import {
+  useGetReleaseQuery,
+  useGetReleasesQuery
 } from '/@/plugins/lensService/hooks';
 import { parseUrlOrCid } from '/@/utils';
 import type { ReleaseItem } from '/@/types';
 
-const route = useRoute();
+const props = defineProps<{
+  id: string;
+}>();
+
 const router = useRouter();
 
-// Get series ID from route
-const seriesId = computed(() => route.params.id as string);
+// Fetch the series release - props.id is reactive
+const { data: series, isLoading: isSeriesLoading } = useGetReleaseQuery(props.id);
 
-// Fetch the series structure
-const { data: series, isLoading: isSeriesLoading } = useGetStructureQuery(seriesId.value);
-
-// Fetch all structures to get seasons
-const { data: structures, isLoading: isStructuresLoading } = useGetStructuresQuery({
-  searchOptions: { fetch: 1000 }
-});
+// Get series ID for filtering episodes
+const seriesId = computed(() => props.id);
 
 // Fetch all releases to get episodes
 const { data: releases, isLoading: isReleasesLoading } = useGetReleasesQuery({
   searchOptions: { fetch: 1000 }
 });
 
-const isLoading = computed(() => 
-  isSeriesLoading.value || isStructuresLoading.value || isReleasesLoading.value
+const isLoading = computed(() =>
+  isSeriesLoading.value || isReleasesLoading.value
 );
 
-// Get all seasons for this series
+// Get all episodes for this series
+const episodes = computed<ReleaseItem[]>(() => {
+  if (!releases.value || !seriesId.value) return [];
+
+  return releases.value.filter(
+    (r: ReleaseItem) => r.metadata?.seriesId === seriesId.value
+  );
+});
+
+// Get all seasons for this series (derived from episode metadata)
 const seasons = computed(() => {
-  if (!structures.value || !seriesId.value) return [];
-  
-  return structures.value
-    .filter((s: any) => s.type === 'season' && s.parentId === seriesId.value)
-    .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+  if (!episodes.value || episodes.value.length === 0) return [];
+
+  // Get unique season numbers from episodes
+  const seasonNumbers = new Set(
+    episodes.value.map((e: ReleaseItem) => e.metadata?.seasonNumber || 1)
+  );
+
+  return Array.from(seasonNumbers)
+    .sort((a, b) => a - b)
+    .map(num => ({
+      id: `season-${num}`,
+      name: `Season ${num}`,
+      seasonNumber: num
+    }));
 });
 
 // Get total number of seasons
-const totalSeasons = computed(() => seasons.value.length || 1);
+const totalSeasons = computed(() =>
+  series.value?.metadata?.totalSeasons || seasons.value.length || 1
+);
 
 // Selected season tab
 const selectedSeasonTab = ref<string>('');
@@ -227,41 +244,32 @@ watch(seasons, (newSeasons) => {
 }, { immediate: true });
 
 // Get selected season
-const selectedSeason = computed(() => 
+const selectedSeason = computed(() =>
   seasons.value.find((s: any) => s.id === selectedSeasonTab.value)
 );
-
-// Get all episodes for this series
-const episodes = computed<ReleaseItem[]>(() => {
-  if (!releases.value || !seriesId.value) return [];
-  
-  return releases.value.filter(
-    (r: ReleaseItem) => r.metadata?.seriesId === seriesId.value
-  );
-});
 
 // Get episodes for current season
 const currentSeasonEpisodes = computed<ReleaseItem[]>(() => {
   if (!episodes.value) return [];
-  
-  // If we have seasons, filter by selected season
+
+  // If we have seasons, filter by selected season number
   if (selectedSeason.value) {
     return episodes.value
-      .filter((e: ReleaseItem) => e.metadata?.seasonId === selectedSeason.value.id)
+      .filter((e: ReleaseItem) => e.metadata?.seasonNumber === selectedSeason.value.seasonNumber)
       .sort((a: ReleaseItem, b: ReleaseItem) => {
         const aNum = a.metadata?.episodeNumber || 0;
         const bNum = b.metadata?.episodeNumber || 0;
         return aNum - bNum;
       });
   }
-  
+
   // No seasons, show all episodes
   return episodes.value.sort((a: ReleaseItem, b: ReleaseItem) => {
     const aSeason = a.metadata?.seasonNumber || 1;
     const bSeason = b.metadata?.seasonNumber || 1;
     const aEpisode = a.metadata?.episodeNumber || 0;
     const bEpisode = b.metadata?.episodeNumber || 0;
-    
+
     if (aSeason !== bSeason) return aSeason - bSeason;
     return aEpisode - bEpisode;
   });

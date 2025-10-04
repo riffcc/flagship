@@ -270,6 +270,12 @@ const activeSections = computed(() => {
 });
 
 const isLoading = computed(() => {
+  // When Peerbit is disabled, queries don't fetch but data comes from cache
+  // Check if we have data instead of checking loading state
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
+  if (!USE_PEERBIT) {
+    return !releases.value || !featuredReleases.value || !contentCategories.value;
+  }
   return isReleasesLoading.value || isFeaturedReleasesLoading.value;
 });
 

@@ -93,30 +93,16 @@
       >
         {{ item.displayName }}
       </router-link>
-
-      <template v-if="canUpload || canAccessAdminPanel">
-        <v-divider
-          vertical
-          class="mx-4"
-        ></v-divider>
-        <router-link
-          to="/upload"
-          class="text-decoration-none mx-2 text-subtitle-1 text-white"
-          active-class="text-primary-lighten-1"
-        >
-          Upload
-        </router-link>
-        <router-link
-          v-if="canAccessAdminPanel"
-          to="/admin"
-          class="text-decoration-none mx-2 text-subtitle-1 text-white"
-          active-class="text-primary-lighten-1"
-        >
-          Admin
-        </router-link>
-      </template>
+      <router-link
+        to="/books"
+        class="text-decoration-none mx-2 text-subtitle-1 text-white"
+        active-class="text-primary-lighten-1"
+      >
+        Books
+      </router-link>
     </div>
-    <div class="search-container d-none d-md-flex mx-4">
+    <v-spacer></v-spacer>
+    <div class="search-container d-none d-sm-flex mx-2" style="max-width: 400px; width: 100%;">
       <SearchBar />
     </div>
     <account-menu v-if="userData"></account-menu>

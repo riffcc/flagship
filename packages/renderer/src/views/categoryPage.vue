@@ -211,6 +211,11 @@ const featuredReleasesInCategory = computed<ReleaseItem[]>(() => {
     return Array.from(seriesMap.values());
   }
 
+  // For music category, exclude artist pages
+  if (props.category === 'music') {
+    return categoryReleases.filter(r => r.metadata?.type !== 'artist');
+  }
+
   return categoryReleases;
 });
 

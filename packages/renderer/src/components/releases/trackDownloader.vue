@@ -13,7 +13,7 @@
 
       <template #text>
         <v-list>
-          <v-header>Select a quality:</v-header>
+          <v-list-subheader>Select a quality:</v-list-subheader>
           <v-list-item>
             <template #title>Original</template>
 

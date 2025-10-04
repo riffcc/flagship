@@ -65,31 +65,40 @@
           color="transparent"
           class="flex-1-0 d-flex flex-column px-2 px-md-4"
         >
-          <p class="text-subtitle-2 d-flex align-center ga-1">
-            <span v-if="activeTrack?.artist">{{ activeTrack.artist }}</span>
-            <span 
-              v-if="activeTrack?.artist && activeTrack?.title"
-              :style="{
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: '1.2em',
-                lineHeight: '1'
-              }"
-            >
-              ›
-            </span>
-            <span
-              v-if="activeTrack?.title"
-              class="track-name"
-              :style="{
-                color: 'rgba(168, 85, 247, 1)',
-                textShadow: '0 0 10px rgba(168, 85, 247, 0.7)',
-                fontWeight: '500'
-              }"
-            >
-              {{ activeTrack.title }}
-            </span>
-          </p>
+          <div class="d-flex align-center ga-1">
+            <p class="text-subtitle-2 d-flex align-center ga-1 mb-0">
+              <span v-if="activeTrack?.artist">{{ activeTrack.artist }}</span>
+              <span
+                v-if="activeTrack?.artist && activeTrack?.title"
+                :style="{
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '1.2em',
+                  lineHeight: '1'
+                }"
+              >
+                ›
+              </span>
+              <span
+                v-if="activeTrack?.title"
+                class="track-name"
+                :style="{
+                  color: 'rgba(168, 85, 247, 1)',
+                  textShadow: '0 0 10px rgba(168, 85, 247, 0.7)',
+                  fontWeight: '500'
+                }"
+              >
+                {{ activeTrack.title }}
+              </span>
+            </p>
+            <QualityBadge
+              v-if="albumQuality"
+              :quality="albumQuality"
+              size="x-small"
+              :show-icon="false"
+              :style="{ opacity: 0.5 }"
+            />
+          </div>
           <v-slider
             v-model="progress"
             :max="audioPlayerRef?.duration"
@@ -181,6 +190,7 @@ import {usePlaybackController} from '/@/composables/playbackController';
 import {usePlayerVolume} from '/@/composables/playerVolume';
 import {useGlobalPlayback} from '/@/composables/globalPlayback';
 import { parseUrlOrCid } from '/@/utils';
+import QualityBadge from '/@/components/badges/QualityBadge.vue';
 
 const {xs, smAndDown} = useDisplay();
 const router = useRouter();
@@ -205,6 +215,7 @@ const {
   activeTrack,
   repeat,
   shuffle,
+  albumQuality,
   handlePrevious,
   handleNext,
   handleOnClose,

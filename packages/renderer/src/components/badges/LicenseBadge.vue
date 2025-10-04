@@ -25,13 +25,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-
-export interface LicenseInfo {
-  type: 'cc0' | 'cc-by' | 'cc-by-sa' | 'cc-by-nd' | 'cc-by-nc' | 'cc-by-nc-sa' | 'cc-by-nc-nd';
-  version?: string;
-  url?: string;
-  attribution?: string;
-}
+import type { LicenseInfo } from '/@/types/badges';
 
 const props = withDefaults(defineProps<{
   license?: LicenseInfo | null;

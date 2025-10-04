@@ -1,4 +1,5 @@
 import {ref, watch} from 'vue';
+import type { AudioQuality } from '/@/types/badges';
 
 export type AudioTrack = {
   index: number;
@@ -14,6 +15,7 @@ const albumFiles = ref<AudioTrack[]>([]);
 const activeTrack = ref<AudioTrack>();
 const repeat = ref(false);
 const shuffle = ref(false);
+const albumQuality = ref<AudioQuality | null>(null);
 
 const toggleRepeat = () => (repeat.value ? (repeat.value = false) : (repeat.value = true));
 const toggleShuffle = () => (shuffle.value ? (shuffle.value = false) : (shuffle.value = true));
@@ -74,6 +76,7 @@ export const useAudioAlbum = () => {
     activeTrack,
     repeat,
     shuffle,
+    albumQuality,
     handlePlay,
     handlePrevious,
     handleNext,

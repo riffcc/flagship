@@ -356,7 +356,7 @@ const canEditRelease = computed(() => {
          (accountStatus.value?.publicKey && props.release.postedBy?.toString() === accountStatus.value.publicKey);
 });
 
-const {albumFiles, handlePlay, activeTrack} = useAudioAlbum();
+const {albumFiles, handlePlay, activeTrack, albumQuality} = useAudioAlbum();
 const {closeFloatingVideo} = useFloatingVideo();
 
 // Edit release mutation
@@ -718,13 +718,21 @@ async function loadTrackMetadataAndVerify() {
 
 onMounted(async () => {
   closeFloatingVideo();
+
+  // Set album quality from metadata
+  if (metadata.value?.audioQuality) {
+    albumQuality.value = metadata.value.audioQuality;
+  } else {
+    albumQuality.value = null;
+  }
+
   // Only load the audio tracks if they are not currently playing or if the active track's album is different from the browsed album.
   if (!activeTrack.value || (activeTrack.value && activeTrack.value.album !== props.release.name)) {
     albumFiles.value = [];
     activeTrack.value = undefined;
     const ipfsFiles = await fetchIPFSFiles(props.release.contentCID);
     albumFiles.value = ipfsFiles;
-    
+
     // Load track metadata after initial files are loaded
     isLoading.value = false; // Show content immediately
     loadTrackMetadataAndVerify(); // Load metadata and verify in background

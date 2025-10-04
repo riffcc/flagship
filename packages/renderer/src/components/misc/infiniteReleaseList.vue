@@ -124,19 +124,35 @@ const filteredReleases = computed(() => {
   // If this is a TV category, group episodes by series
   if (isTVCategory.value) {
     const seriesMap = new Map<string, any>();
-    const seriesStructures = structures.value ? 
+    const seriesStructures = structures.value ?
       structures.value.filter((s: any) => s.type === 'series') : [];
-    
+
+    // First pass: collect all series releases
+    for (const release of categoryReleases) {
+      if (release.metadata?.type === 'series') {
+        seriesMap.set(release.id, {
+          ...release,
+          metadata: {
+            ...release.metadata,
+            isSeries: true,
+            episodeCount: 0,
+            episodes: []
+          }
+        });
+      }
+    }
+
+    // Second pass: process episodes and add to series or standalone
     for (const release of categoryReleases) {
       const seriesId = release.metadata?.seriesId;
-      
+
       if (seriesId) {
         // Episode belongs to a series
         const series = seriesStructures.find((s: any) => s.id === seriesId);
-        
+
         if (!seriesMap.has(seriesId)) {
           if (series) {
-            // Create series tile
+            // Create series tile from Structure
             seriesMap.set(seriesId, {
               id: series.id,
               name: series.name,
@@ -155,7 +171,7 @@ const filteredReleases = computed(() => {
             // Fallback series tile - try to extract series name from episode
             // Episodes might have the series name in their name like "SeriesName - S01E01 - Episode Title"
             let seriesName = `Series ${seriesId.substring(0, 8)}...`;
-            
+
             // Try to extract series name from episode name if it follows a pattern
             const episodeName = release.name || '';
             // Common patterns: "Series Name - S01E01", "Series Name S01E01", "Series Name 1x01"
@@ -163,7 +179,7 @@ const filteredReleases = computed(() => {
             if (seriesMatch) {
               seriesName = seriesMatch[1].trim();
             }
-            
+
             seriesMap.set(seriesId, {
               id: seriesId,
               name: seriesName,
@@ -179,12 +195,14 @@ const filteredReleases = computed(() => {
             });
           }
         }
-        
-        // Add episode to series
-        seriesMap.get(seriesId).metadata.episodeCount++;
-        seriesMap.get(seriesId).metadata.episodes.push(release);
-      } else {
-        // Standalone episode
+
+        // Add episode to series (only if not the series itself)
+        if (release.metadata?.type !== 'series') {
+          seriesMap.get(seriesId).metadata.episodeCount++;
+          seriesMap.get(seriesId).metadata.episodes.push(release);
+        }
+      } else if (release.metadata?.type !== 'series') {
+        // Standalone episode (not series, no seriesId)
         seriesMap.set(release.id, {
           ...release,
           metadata: {
@@ -194,8 +212,13 @@ const filteredReleases = computed(() => {
         });
       }
     }
-    
+
     return Array.from(seriesMap.values());
+  }
+
+  // For music category, exclude artist pages
+  if (props.categorySlug === 'music') {
+    return categoryReleases.filter(r => r.metadata?.type !== 'artist');
   }
 
   return categoryReleases;

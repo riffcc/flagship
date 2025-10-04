@@ -2,7 +2,7 @@
 members = [
     "crates/lens-v2-sdk",
     "crates/lens-v2-node",
-    "crates/lens-v2-p2p",
+    "crates/lens-v2-p2p", "packages/epub-wasm",
 ]
 resolver = "2"
 

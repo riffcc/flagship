@@ -16,6 +16,14 @@ const TermsPage = () => import('/@/views/termsPage.vue');
 const UploadPage = () => import('/@/views/uploadPage.vue');
 const CategoryPage = () => import('../views/categoryPage.vue');
 const SeriesPage = () => import('../views/seriesPage.vue');
+const ArtistPage = () => import('../views/artistPage.vue');
+const AlbumPage = () => import('../views/albumPage.vue');
+const PodcastPage = () => import('../views/podcastPage.vue');
+const PodcastEpisodePage = () => import('../views/podcastEpisodePage.vue');
+const AudiobookPage = () => import('../views/audiobookPage.vue');
+const BookPage = () => import('../views/bookPage.vue');
+const ReaderPage = () => import('../views/readerPage.vue');
+const BooksPage = () => import('../views/booksPage.vue');
 
 /**
  * Parses the VITE_LENS_NODE environment variable to build the base API URL.
@@ -290,8 +298,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/books',
-    component: CategoryPage,
-    props: () => ({ category: 'books', showAll: true }),
+    component: BooksPage,
   },
   {
     path: '/audiobooks',
@@ -314,6 +321,336 @@ const routes: Array<RouteRecordRaw> = [
     name: 'Series',
     component: SeriesPage,
     props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Series page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Series Guard: Pre-fetching data for series ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for series ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const seriesData = await response.json();
+          queryClient.setQueryData(queryKey, seriesData);
+          console.log(`✅ Cache seeded for series ${id}.`);
+        } else {
+          console.error(`API Error fetching series ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for series ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/artist/:id',
+    name: 'Artist',
+    component: ArtistPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Artist page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Artist Guard: Pre-fetching data for artist ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for artist ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const artistData = await response.json();
+          queryClient.setQueryData(queryKey, artistData);
+          console.log(`✅ Cache seeded for artist ${id}.`);
+        } else {
+          console.error(`API Error fetching artist ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for artist ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/album/:id',
+    name: 'Album',
+    component: AlbumPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Album page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Album Guard: Pre-fetching data for album ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for album ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const albumData = await response.json();
+          queryClient.setQueryData(queryKey, albumData);
+          console.log(`✅ Cache seeded for album ${id}.`);
+        } else {
+          console.error(`API Error fetching album ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for album ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/podcast/:id',
+    name: 'Podcast',
+    component: PodcastPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Podcast page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Podcast Guard: Pre-fetching data for podcast ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for podcast ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const podcastData = await response.json();
+          queryClient.setQueryData(queryKey, podcastData);
+          console.log(`✅ Cache seeded for podcast ${id}.`);
+        } else {
+          console.error(`API Error fetching podcast ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for podcast ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/podcast-episode/:id',
+    name: 'PodcastEpisode',
+    component: PodcastEpisodePage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Podcast episode page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Podcast Episode Guard: Pre-fetching data for episode ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for podcast episode ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const episodeData = await response.json();
+          queryClient.setQueryData(queryKey, episodeData);
+          console.log(`✅ Cache seeded for podcast episode ${id}.`);
+        } else {
+          console.error(`API Error fetching podcast episode ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for podcast episode ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/audiobook/:id',
+    name: 'Audiobook',
+    component: AudiobookPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Audiobook page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Audiobook Guard: Pre-fetching data for audiobook ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for audiobook ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const audiobookData = await response.json();
+          queryClient.setQueryData(queryKey, audiobookData);
+          console.log(`✅ Cache seeded for audiobook ${id}.`);
+        } else {
+          console.error(`API Error fetching audiobook ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for audiobook ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/book/:id',
+    name: 'Book',
+    component: BookPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Book page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Book Guard: Pre-fetching data for book ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for book ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const bookData = await response.json();
+          queryClient.setQueryData(queryKey, bookData);
+          console.log(`✅ Cache seeded for book ${id}.`);
+        } else {
+          console.error(`API Error fetching book ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for book ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/read/:id',
+    name: 'Reader',
+    component: ReaderPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Reader page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Reader Guard: Pre-fetching data for book ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for reader ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const bookData = await response.json();
+          queryClient.setQueryData(queryKey, bookData);
+          console.log(`✅ Cache seeded for reader ${id}.`);
+        } else {
+          console.error(`API Error fetching book for reader ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for reader ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
   },
 ];
 

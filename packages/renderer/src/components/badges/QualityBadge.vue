@@ -14,14 +14,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-
-export interface AudioQuality {
-  format?: 'flac' | 'mp3' | 'aac' | 'opus' | 'other';
-  bitrate?: number;
-  sampleRate?: number;
-  bitDepth?: number;
-  codec?: string;
-}
+import type { AudioQuality } from '/@/types/badges';
 
 const props = withDefaults(defineProps<{
   quality?: AudioQuality | null;

@@ -51,7 +51,7 @@
           slider-color="primary"
           value="structures"
         >
-          Structures
+          Meta
         </v-tab>
         <v-tab
           slider-color="primary"
