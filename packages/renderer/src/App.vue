@@ -29,11 +29,22 @@
     ></video-player>
     <app-footer />
     <gamepad-hints :gamepad-state="gamepadState" />
-    <div 
+    <div
       v-show="showCursor"
       id="gamepad-cursor"
       class="gamepad-cursor"
     ></div>
+    <!-- P2P Status Indicator -->
+    <v-chip
+      v-if="connected || peers.length > 0"
+      size="small"
+      variant="tonal"
+      class="p2p-status-indicator"
+      :color="connected ? 'success' : 'warning'"
+    >
+      <v-icon start>{{ connected ? 'mdi-cloud-check' : 'mdi-cloud-off' }}</v-icon>
+      P2P: {{ peers.length }} peers
+    </v-chip>
     <start-menu v-model="showStartMenu" />
   </v-app>
 </template>
@@ -59,8 +70,10 @@ import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useContentCategoriesQ
 import { useGlobalPlayback } from '/@/composables/globalPlayback';
 import { useInputMethod } from '/@/composables/useInputMethod';
 import { useLocalSearch } from '/@/composables/useLocalSearch';
+import { useP2P } from '/@/composables/useP2P';
 
 const { showDefederation } = useShowDefederation();
+const { connected, peers, connect } = useP2P();
 const { activeTrack } = useAudioAlbum();
 const { floatingVideoSource, floatingVideoRelease } = useFloatingVideo();
 
@@ -97,12 +110,20 @@ watchEffect(() => {
 
 onMounted(async () => {
   initLensService();
-  
+
+  // Connect to P2P relay for peer discovery
+  try {
+    connect();
+    console.log('[App] P2P relay connection initiated');
+  } catch (error) {
+    console.warn('[App] Failed to connect to P2P relay:', error);
+  }
+
   // Setup gamepad controls
   onButtonPress('start', () => {
     showStartMenu.value = true;
   });
-  
+
   // Setup L3/R3 for play/pause
   const { globalTogglePlay } = useGlobalPlayback();
   onButtonPress('leftStickButton', () => {
@@ -144,6 +165,7 @@ watchEffect(() => {
              release.categoryId === 'movies' ? 'movie' :
              release.categoryId === 'tv-shows' ? 'tv' :
              'other') as 'music' | 'movie' | 'tv' | 'other',
+      thumbnailCID: release.thumbnailCID,
     }));
 
     indexContent(searchableContent);
@@ -326,5 +348,19 @@ v-container:focus {
 /* Prevent text selection with gamepad */
 body.input-gamepad * {
   user-select: none;
+}
+
+/* P2P Status Indicator */
+.p2p-status-indicator {
+  position: fixed !important;
+  bottom: 16px;
+  right: 16px;
+  z-index: 4999;
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+}
+
+.p2p-status-indicator:hover {
+  opacity: 1;
 }
 </style>
