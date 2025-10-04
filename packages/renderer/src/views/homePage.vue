@@ -261,7 +261,7 @@ const activeSections = computed(() => {
 
       return {
         id: featuredCategory.categoryId,
-        title: featuredCategory.categoryId === 'tv-shows' ? 'Featured TV' : `Featured ${featuredCategory.displayName}`,
+        title: featuredCategory.categoryId === 'tv-shows' ? 'Featured TV' : `Featured ${featuredCategory.name || featuredCategory.displayName}`,
         items: items.slice(0, limitPerCategory),
         navigationPath: routeMap[featuredCategory.categoryId] || `/featured/${featuredCategory.categoryId}`,
       };
