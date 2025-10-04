@@ -1,6 +1,6 @@
 mod routes;
 
-use routes::{initialize_registry, AppState};
+use routes::{initialize_registry, AppState, RelayState};
 use std::env;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -31,8 +31,12 @@ async fn main() -> anyhow::Result<()> {
     // Create application state
     let state = AppState { registry };
 
+    // Create relay state for P2P peer discovery
+    let relay_state = RelayState::new();
+    tracing::info!("Initialized P2P relay");
+
     // Create the router with state
-    let app = routes::create_router(state);
+    let app = routes::create_router(state, relay_state);
 
     // Start the server
     let listener = tokio::net::TcpListener::bind(&addr).await?;
