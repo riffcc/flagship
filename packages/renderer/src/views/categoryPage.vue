@@ -106,17 +106,22 @@ const featuredReleasesInCategory = computed<ReleaseItem[]>(() => {
     .map(fr => fr.releaseId);
 
   // Filter releases that are both featured and in this category
-  // Look up each release's category to check if it matches our target slug
   const targetSlug = pageCategory.value?.categoryId; // e.g., 'music', 'tv-shows'
   const categoryReleases = releases.value.filter(r => {
     if (!r.id || !activeFeaturedReleaseIds.includes(r.id)) return false;
 
-    // Look up this release's category
-    // Handle both cases: release.categoryId might be the hash ID or the slug
-    const releaseCategory = contentCategories.value?.find(c =>
-      c.id === r.categoryId || c.categoryId === r.categoryId
-    );
-    return releaseCategory?.categoryId === targetSlug;
+    // Direct match on categoryId (releases store the slug directly)
+    if (r.categoryId === targetSlug) return true;
+
+    // Also check via category lookup for federated categories
+    if (contentCategories.value) {
+      const releaseCategory = contentCategories.value.find(c =>
+        c.id === r.categoryId || c.categoryId === r.categoryId
+      );
+      if (releaseCategory?.categoryId === targetSlug) return true;
+    }
+
+    return false;
   });
 
   // For TV shows, group by series and return series tiles

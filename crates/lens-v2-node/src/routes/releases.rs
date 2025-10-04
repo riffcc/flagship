@@ -81,6 +81,8 @@ pub struct SuccessResponse {
 pub struct ReleasesState {
     /// Map of release IDs to releases
     pub releases: Arc<RwLock<HashMap<String, Release>>>,
+    /// Map of featured release IDs to featured release data
+    pub featured_releases: Arc<RwLock<HashMap<String, super::featured::FeaturedRelease>>>,
     /// Account state for authorization
     pub account_state: AccountState,
 }
@@ -89,6 +91,7 @@ impl ReleasesState {
     pub fn new(account_state: AccountState) -> Self {
         Self {
             releases: Arc::new(RwLock::new(HashMap::new())),
+            featured_releases: Arc::new(RwLock::new(HashMap::new())),
             account_state,
         }
     }

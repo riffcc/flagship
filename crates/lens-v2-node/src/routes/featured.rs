@@ -1,4 +1,9 @@
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
 use serde::{Deserialize, Serialize};
 use super::releases::{Release, ReleasesState};
 
@@ -61,20 +66,21 @@ pub struct FeaturedRelease {
 pub async fn list_featured_releases(
     State(state): State<ReleasesState>,
 ) -> impl IntoResponse {
-    let releases = state.releases.read().await;
+    // Check if we have persisted featured releases
+    let mut featured_store = state.featured_releases.write().await;
 
-    // Get first 12 releases (or all if less than 12)
-    let mut releases_vec: Vec<Release> = releases.values().cloned().collect();
+    // If the store is empty, auto-populate it with the newest releases
+    if featured_store.is_empty() {
+        let releases = state.releases.read().await;
 
-    // Sort by creation date (newest first)
-    releases_vec.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        // Get first 12 releases (or all if less than 12)
+        let mut releases_vec: Vec<Release> = releases.values().cloned().collect();
 
-    // Take first 12 and convert to comprehensive FeaturedRelease structures
-    let featured: Vec<FeaturedRelease> = releases_vec
-        .into_iter()
-        .take(12)
-        .enumerate()
-        .map(|(index, release)| {
+        // Sort by creation date (newest first)
+        releases_vec.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+
+        // Take first 12 and convert to comprehensive FeaturedRelease structures
+        for (index, release) in releases_vec.into_iter().take(12).enumerate() {
             // Auto-assign priority based on recency (12 = newest, 1 = oldest)
             let priority = (12 - index) as i32 * 10;
 
@@ -88,8 +94,9 @@ pub async fn list_featured_releases(
             let now = chrono::Utc::now();
             let thirty_days_from_now = now + chrono::Duration::days(30);
 
-            FeaturedRelease {
-                id: uuid::Uuid::new_v4().to_string(),
+            let featured_id = uuid::Uuid::new_v4().to_string();
+            let featured_release = FeaturedRelease {
+                id: featured_id.clone(),
                 release_id: release.id,
                 priority,
                 promoted: index == 0, // Promote the newest
@@ -107,11 +114,93 @@ pub async fn list_featured_releases(
                 metadata: None,
                 created_at: chrono::Utc::now().to_rfc3339(),
                 updated_at: None,
-            }
-        })
-        .collect();
+            };
 
-    tracing::debug!("Returning {} featured releases with intelligent defaults", featured.len());
+            featured_store.insert(featured_id, featured_release);
+        }
+
+        drop(releases);
+        tracing::debug!("Auto-populated {} featured releases with intelligent defaults", featured_store.len());
+    }
+
+    // Return the featured releases from the store
+    let featured: Vec<FeaturedRelease> = featured_store.values().cloned().collect();
+    drop(featured_store);
 
     Json(featured)
+}
+
+/// Request to update a featured release
+#[derive(Debug, Deserialize)]
+pub struct UpdateFeaturedReleaseRequest {
+    pub id: String,
+    #[serde(rename = "releaseId")]
+    pub release_id: Option<String>,
+    pub priority: Option<i32>,
+    pub promoted: Option<bool>,
+    pub tags: Option<Vec<String>>,
+    #[serde(rename = "startTime")]
+    pub start_time: Option<String>,
+    #[serde(rename = "endTime")]
+    pub end_time: Option<String>,
+    #[serde(rename = "customTitle")]
+    pub custom_title: Option<String>,
+    #[serde(rename = "customDescription")]
+    pub custom_description: Option<String>,
+    #[serde(rename = "customThumbnail")]
+    pub custom_thumbnail: Option<String>,
+    pub regions: Option<Vec<String>>,
+    pub languages: Option<Vec<String>>,
+    pub variant: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Response for successful operations
+#[derive(Debug, Serialize)]
+pub struct SuccessResponse {
+    pub id: String,
+}
+
+/// PUT /api/v1/admin/featured-releases/:id - Update a featured release
+pub async fn update_featured_release(
+    Path(id): Path<String>,
+    State(state): State<ReleasesState>,
+    Json(req): Json<UpdateFeaturedReleaseRequest>,
+) -> Result<Json<SuccessResponse>, (StatusCode, String)> {
+    let mut featured = state.featured_releases.write().await;
+
+    // Check if the featured release exists
+    let existing = featured
+        .get(&id)
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Featured release {} not found", id)))?
+        .clone();
+
+    // Update the featured release with provided fields
+    let updated = FeaturedRelease {
+        id: existing.id.clone(),
+        release_id: req.release_id.unwrap_or(existing.release_id),
+        priority: req.priority.unwrap_or(existing.priority),
+        promoted: req.promoted.unwrap_or(existing.promoted),
+        tags: req.tags.unwrap_or(existing.tags),
+        start_time: req.start_time.or(existing.start_time),
+        end_time: req.end_time.or(existing.end_time),
+        custom_title: req.custom_title.or(existing.custom_title),
+        custom_description: req.custom_description.or(existing.custom_description),
+        custom_thumbnail: req.custom_thumbnail.or(existing.custom_thumbnail),
+        regions: req.regions.or(existing.regions),
+        languages: req.languages.or(existing.languages),
+        views: existing.views,
+        clicks: existing.clicks,
+        variant: req.variant.or(existing.variant),
+        metadata: req.metadata.or(existing.metadata),
+        created_at: existing.created_at,
+        updated_at: Some(chrono::Utc::now().to_rfc3339()),
+    };
+
+    featured.insert(id.clone(), updated);
+    drop(featured);
+
+    tracing::info!("Updated featured release {}", id);
+
+    Ok(Json(SuccessResponse { id }))
 }

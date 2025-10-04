@@ -58,6 +58,7 @@ pub fn create_router(state: AppState, relay_state: RelayState, account_state: Ac
         .route("/api/v1/releases/:id", put(releases::update_release))
         .route("/api/v1/releases/:id", delete(releases::delete_release))
         .route("/api/v1/featured-releases", get(featured::list_featured_releases))
+        .route("/api/v1/admin/featured-releases/:id", put(featured::update_featured_release))
         .route("/api/v1/import", post(import_export::import_releases))
         .route("/api/v1/export", get(import_export::export_releases))
         .route("/api/v1/admin/releases", delete(import_export::delete_all_releases))

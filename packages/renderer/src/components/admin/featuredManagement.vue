@@ -103,7 +103,7 @@
                     <v-chip
                       v-bind="chipProps"
                       closable
-                      :text="item"
+                      :text="typeof item === 'string' ? item : item?.value || item?.title || String(item)"
                     ></v-chip>
                   </template>
                 </v-combobox>
@@ -153,7 +153,7 @@
                     <v-chip
                       v-bind="chipProps"
                       closable
-                      :text="item"
+                      :text="typeof item === 'string' ? item : item?.value || item?.title || String(item)"
                     ></v-chip>
                   </template>
                 </v-combobox>
@@ -172,7 +172,7 @@
                     <v-chip
                       v-bind="chipProps"
                       closable
-                      :text="item"
+                      :text="typeof item === 'string' ? item : item?.value || item?.title || String(item)"
                     ></v-chip>
                   </template>
                 </v-combobox>
@@ -325,13 +325,11 @@
         <v-card-title class="d-flex justify-space-between align-center">
           <span>Edit Featured Release</span>
           <div v-if="editingFeatured.views !== undefined || editingFeatured.clicks !== undefined" class="text-caption text-medium-emphasis">
-            <v-chip size="small" class="mr-2">
+            <v-chip size="small" class="mr-2" :text="`${Number(editingFeatured.views || 0)} views`">
               <v-icon icon="mdi-eye" size="small" class="mr-1"></v-icon>
-              {{ editingFeatured.views || 0 }} views
             </v-chip>
-            <v-chip size="small">
+            <v-chip size="small" :text="`${Number(editingFeatured.clicks || 0)} clicks`">
               <v-icon icon="mdi-cursor-default-click" size="small" class="mr-1"></v-icon>
-              {{ editingFeatured.clicks || 0 }} clicks
             </v-chip>
           </div>
         </v-card-title>
@@ -403,7 +401,7 @@
                     <v-chip
                       v-bind="chipProps"
                       closable
-                      :text="item"
+                      :text="typeof item === 'string' ? item : item?.value || item?.title || String(item)"
                     ></v-chip>
                   </template>
                 </v-combobox>
@@ -453,7 +451,7 @@
                     <v-chip
                       v-bind="chipProps"
                       closable
-                      :text="item"
+                      :text="typeof item === 'string' ? item : item?.value || item?.title || String(item)"
                     ></v-chip>
                   </template>
                 </v-combobox>
@@ -472,7 +470,7 @@
                     <v-chip
                       v-bind="chipProps"
                       closable
-                      :text="item"
+                      :text="typeof item === 'string' ? item : item?.value || item?.title || String(item)"
                     ></v-chip>
                   </template>
                 </v-combobox>

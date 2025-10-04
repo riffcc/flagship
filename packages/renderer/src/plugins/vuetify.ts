@@ -54,6 +54,15 @@ import {
   mdiMusic,
   mdiTag,
   mdiFolder,
+  mdiEye,
+  mdiCursorDefaultClick,
+  mdiCloseCircle,
+  mdiMagnify,
+  mdiMenuDown,
+  mdiDragVertical,
+  mdiCloudCheck,
+  mdiPageFirst,
+  mdiPageLast,
 } from '@mdi/js';
 
 const iconsAliasesMapping = {
@@ -100,6 +109,15 @@ const iconsAliasesMapping = {
   'music': mdiMusic,
   'tag': mdiTag,
   'folder': mdiFolder,
+  'eye': mdiEye,
+  'cursor-default-click': mdiCursorDefaultClick,
+  'close-circle': mdiCloseCircle,
+  'magnify': mdiMagnify,
+  'menu-down': mdiMenuDown,
+  'drag-vertical': mdiDragVertical,
+  'cloud-check': mdiCloudCheck,
+  'page-first': mdiPageFirst,
+  'page-last': mdiPageLast,
 };
 
 const vuetify = createVuetify({

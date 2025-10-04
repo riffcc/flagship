@@ -97,24 +97,25 @@ const filteredReleases = computed(() => {
   let categoryReleases = releases.value;
   
   // Filter by category slug if specified (for federation support)
-  if (props.categorySlug && contentCategories.value) {
-    // Find all categories with this slug
-    const matchingCategories = contentCategories.value.filter(c => c.categoryId === props.categorySlug);
-    if (matchingCategories.length > 0) {
-      // Get all category IDs including federated ones
-      const allCategoryIds = new Set<string>();
+  if (props.categorySlug) {
+    const allCategoryIds = new Set<string>();
+
+    // Always add the slug itself for releases that use slugs directly
+    allCategoryIds.add(props.categorySlug);
+
+    // If we have categories loaded, also include federated IDs
+    if (contentCategories.value) {
+      const matchingCategories = contentCategories.value.filter(c => c.categoryId === props.categorySlug);
       for (const cat of matchingCategories) {
         allCategoryIds.add(cat.id);
         if (cat.allIds) {
           cat.allIds.forEach(id => allCategoryIds.add(id));
         }
       }
-      // Also add the slug itself for releases that use slugs directly
-      allCategoryIds.add(props.categorySlug);
-
-      // Filter releases that match any of these category IDs OR the slug
-      categoryReleases = categoryReleases.filter(r => allCategoryIds.has(r.categoryId));
     }
+
+    // Filter releases that match any of these category IDs OR the slug
+    categoryReleases = categoryReleases.filter(r => allCategoryIds.has(r.categoryId));
   } else if (props.categoryFilter) {
     // Direct category ID filter (for non-federated)
     categoryReleases = categoryReleases.filter(r => r.categoryId === props.categoryFilter);

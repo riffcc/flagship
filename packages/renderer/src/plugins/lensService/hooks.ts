@@ -81,9 +81,21 @@ export function useGetReleasesQuery(options?: {
 }) {
   const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+
   return useQuery<ReleaseItem[]>({
     queryKey: ['releases'],
     queryFn: async () => {
+      // When Peerbit is disabled, return from cache or fetch from HTTP API
+      if (!USE_PEERBIT) {
+        const cached = queryClient.getQueryData<ReleaseItem[]>(['releases']);
+        if (cached) return cached;
+
+        // Fallback: fetch from HTTP API if cache miss
+        const response = await fetch(`${API_URL}/releases`);
+        return await response.json();
+      }
+
       // PeerBit-only loading with optimized timeouts
       // Default to fetching 100 releases at a time
       const searchOptions = {
@@ -98,8 +110,7 @@ export function useGetReleasesQuery(options?: {
         };
       });
     },
-    // When Peerbit is disabled, don't run queryFn - data is pre-fetched from HTTP API by router
-    enabled: USE_PEERBIT ? (options?.enabled ?? true) : false,
+    enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
   });
@@ -122,9 +133,21 @@ export function useGetFeaturedReleasesQuery(options?: {
 }) {
   const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+
   return useQuery<FeaturedReleaseItem[]>({
     queryKey: ['featuredReleases'],
     queryFn: async () => {
+      // When Peerbit is disabled, return from cache or fetch from HTTP API
+      if (!USE_PEERBIT) {
+        const cached = queryClient.getQueryData<FeaturedReleaseItem[]>(['featuredReleases']);
+        if (cached) return cached;
+
+        // Fallback: fetch from HTTP API if cache miss
+        const response = await fetch(`${API_URL}/featured-releases`);
+        return await response.json();
+      }
+
       // PeerBit-only loading with optimized timeouts
       // Fetch all featured releases (up to 1000 - should be more than enough)
       const searchOptions = {
@@ -133,8 +156,7 @@ export function useGetFeaturedReleasesQuery(options?: {
       };
       return await lensService.getFeaturedReleases(searchOptions);
     },
-    // When Peerbit is disabled, don't run queryFn - data is pre-fetched from HTTP API by router
-    enabled: USE_PEERBIT ? (options?.enabled ?? true) : false,
+    enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
   });
@@ -145,9 +167,31 @@ export function useContentCategoriesQuery(options?: {
 }) {
   const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+
   return useQuery<ContentCategoryItem[]>({
     queryKey: ['contentCategories'],
     queryFn: async () => {
+      // When Peerbit is disabled, return from cache or fetch from HTTP API
+      if (!USE_PEERBIT) {
+        const cached = queryClient.getQueryData<ContentCategoryItem[]>(['contentCategories']);
+        if (cached) return cached;
+
+        // Fallback: fetch from HTTP API if cache miss
+        const response = await fetch(`${API_URL}/content-categories`);
+        const categories = await response.json();
+        return categories.map((c: any) => ({
+          id: c.id,
+          categoryId: c.id,
+          name: c.name,
+          displayName: c.name,
+          slug: c.slug,
+          metadataSchema: c.metadata_schema,
+          siteAddress: c.siteAddress,
+          featured: c.featured,
+        }));
+      }
+
       try {
         // Try API first for immediate data
         const apiUrl = `${API_URL}/content-categories`;
@@ -182,8 +226,7 @@ export function useContentCategoriesQuery(options?: {
         return [];
       }
     },
-    // When Peerbit is disabled, don't run queryFn - data is pre-fetched from HTTP API by router
-    enabled: USE_PEERBIT ? (options?.enabled ?? true) : false,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -305,11 +348,25 @@ export function useEditFeaturedReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { lensService } = useLensService();
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (data: EditInput<FeaturedReleaseData>) => {
-      return await lensService.editFeaturedRelease(data);
+      const { API_URL } = await import('../router');
+      const response = await fetch(`${API_URL}/admin/featured-releases/${data.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to edit featured release: ${error}`);
+      }
+
+      return await response.json();
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
