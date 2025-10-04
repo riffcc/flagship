@@ -157,7 +157,8 @@ export function useP2P() {
       channel.onmessage = async (msgEvent) => {
         console.log(`[P2P] Received message from ${peerId}`, msgEvent.data)
 
-        // Handle incoming block rollup responses
+        // Parse incoming message
+        let message: any
         if (msgEvent.data instanceof ArrayBuffer || msgEvent.data instanceof Blob) {
           const buffer = msgEvent.data instanceof Blob
             ? await msgEvent.data.arrayBuffer()
@@ -165,18 +166,27 @@ export function useP2P() {
 
           try {
             const text = new TextDecoder().decode(buffer)
-            const response: RollupResponse = JSON.parse(text)
-            await handleRollupResponse(response, peerId)
+            message = JSON.parse(text)
           } catch (e) {
-            console.error(`[P2P] Failed to parse rollup response from ${peerId}:`, e)
+            console.error(`[P2P] Failed to parse message from ${peerId}:`, e)
+            return
           }
         } else if (typeof msgEvent.data === 'string') {
           try {
-            const response: RollupResponse = JSON.parse(msgEvent.data)
-            await handleRollupResponse(response, peerId)
+            message = JSON.parse(msgEvent.data)
           } catch (e) {
-            console.error(`[P2P] Failed to parse rollup response from ${peerId}:`, e)
+            console.error(`[P2P] Failed to parse message from ${peerId}:`, e)
+            return
           }
+        }
+
+        // Handle rollup response (blocks being sent to us)
+        if (message.rollup_id && message.blocks && Array.isArray(message.blocks)) {
+          await handleRollupResponse(message as RollupResponse, peerId)
+        }
+        // Handle rollup request (peer requesting blocks from us)
+        else if (message.rollup_id && message.blocks && Array.isArray(message.blocks) && message.priority !== undefined) {
+          await handleRollupRequest(message as RollupRequest, peerId)
         }
       }
     }
@@ -204,7 +214,8 @@ export function useP2P() {
     dataChannel.onmessage = async (event) => {
       console.log(`[P2P] Received message from ${peerId}`, event.data)
 
-      // Handle incoming block rollup responses
+      // Parse incoming message
+      let message: any
       if (event.data instanceof ArrayBuffer || event.data instanceof Blob) {
         const buffer = event.data instanceof Blob
           ? await event.data.arrayBuffer()
@@ -212,18 +223,27 @@ export function useP2P() {
 
         try {
           const text = new TextDecoder().decode(buffer)
-          const response: RollupResponse = JSON.parse(text)
-          await handleRollupResponse(response, peerId)
+          message = JSON.parse(text)
         } catch (e) {
-          console.error(`[P2P] Failed to parse rollup response from ${peerId}:`, e)
+          console.error(`[P2P] Failed to parse message from ${peerId}:`, e)
+          return
         }
       } else if (typeof event.data === 'string') {
         try {
-          const response: RollupResponse = JSON.parse(event.data)
-          await handleRollupResponse(response, peerId)
+          message = JSON.parse(event.data)
         } catch (e) {
-          console.error(`[P2P] Failed to parse rollup response from ${peerId}:`, e)
+          console.error(`[P2P] Failed to parse message from ${peerId}:`, e)
+          return
         }
+      }
+
+      // Handle rollup response (blocks being sent to us)
+      if (message.rollup_id && message.blocks && Array.isArray(message.blocks)) {
+        await handleRollupResponse(message as RollupResponse, peerId)
+      }
+      // Handle rollup request (peer requesting blocks from us)
+      else if (message.rollup_id && message.blocks && Array.isArray(message.blocks) && message.priority !== undefined) {
+        await handleRollupRequest(message as RollupRequest, peerId)
       }
     }
 
@@ -444,7 +464,48 @@ export function useP2P() {
     sendWantList()
   }
 
-  // Handle incoming rollup response
+  // Handle incoming rollup request (peer wants blocks from us)
+  const handleRollupRequest = async (request: RollupRequest, fromPeer: string) => {
+    console.log(`[P2P] Received rollup request ${request.rollup_id} from ${fromPeer} for ${request.blocks.length} blocks`)
+
+    const peerConn = peerConnections.value.get(fromPeer)
+    if (!peerConn || !peerConn.dataChannel || !peerConn.connected) {
+      console.warn(`[P2P] Cannot respond to ${fromPeer}: not connected`)
+      return
+    }
+
+    // Collect blocks we have
+    const blocksToSend: Block[] = []
+    for (const blockId of request.blocks) {
+      const block = blockStore.value.get(blockId)
+      if (block) {
+        blocksToSend.push(block)
+      }
+    }
+
+    if (blocksToSend.length === 0) {
+      console.log(`[P2P] No blocks to send for rollup ${request.rollup_id}`)
+      return
+    }
+
+    // Create rollup response
+    const response: RollupResponse = {
+      rollup_id: request.rollup_id,
+      blocks: blocksToSend,
+    }
+
+    // Send response
+    const message = JSON.stringify(response)
+    console.log(`[P2P] Sending ${blocksToSend.length} blocks to ${fromPeer} for rollup ${request.rollup_id}`)
+
+    try {
+      peerConn.dataChannel.send(message)
+    } catch (e) {
+      console.error(`[P2P] Failed to send rollup response to ${fromPeer}:`, e)
+    }
+  }
+
+  // Handle incoming rollup response (peer sent us blocks)
   const handleRollupResponse = async (response: RollupResponse, fromPeer: string) => {
     console.log(`[P2P] Received rollup ${response.rollup_id} from ${fromPeer} with ${response.blocks.length} blocks`)
 

@@ -1,19 +1,5 @@
 <template>
-  <v-container
-    v-if="showSpinner"
-    class="h-screen"
-  >
-    <v-sheet
-      color="transparent"
-      class="d-flex w-100 fill-height align-center justify-center"
-    >
-      <v-progress-circular
-        indeterminate
-        color="primary"
-      ></v-progress-circular>
-    </v-sheet>
-  </v-container>
-  <v-app v-else-if="isLensReady || releases || featuredReleases || contentCategories">
+  <v-app>
     <div class="app-header-border"></div>
     <gamepad-nav-bar />
     <v-main min-height="100vh" class="mt-12">
@@ -173,28 +159,8 @@ watchEffect(() => {
   }
 });
 
-// Delay showing spinner for 100ms to make app feel faster
-const showSpinner = ref(false);
-let spinnerTimer: ReturnType<typeof setTimeout> | null = null;
-
-onMounted(() => {
-  spinnerTimer = setTimeout(() => {
-    if (!isLensReady.value && !releases.value && !featuredReleases.value && !contentCategories.value) {
-      showSpinner.value = true;
-    }
-  }, 100);
-});
-
-// Clear timer if data loads quickly
-watchEffect(() => {
-  if (isLensReady.value || releases.value || featuredReleases.value || contentCategories.value) {
-    if (spinnerTimer) {
-      clearTimeout(spinnerTimer);
-      spinnerTimer = null;
-    }
-    showSpinner.value = false;
-  }
-});
+// UI now loads immediately - no spinner needed
+// Loading states are shown inline within components
 </script>
 
 <style>
