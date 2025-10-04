@@ -110,9 +110,12 @@ const featuredReleasesInCategory = computed<ReleaseItem[]>(() => {
   const targetSlug = pageCategory.value?.categoryId; // e.g., 'music', 'tv-shows'
   const categoryReleases = releases.value.filter(r => {
     if (!r.id || !activeFeaturedReleaseIds.includes(r.id)) return false;
-    
+
     // Look up this release's category
-    const releaseCategory = contentCategories.value?.find(c => c.id === r.categoryId);
+    // Handle both cases: release.categoryId might be the hash ID or the slug
+    const releaseCategory = contentCategories.value?.find(c =>
+      c.id === r.categoryId || c.categoryId === r.categoryId
+    );
     return releaseCategory?.categoryId === targetSlug;
   });
 

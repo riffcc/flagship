@@ -10,6 +10,7 @@ export interface SearchableContent {
   tags?: string[];
   year?: number;
   type: 'music' | 'movie' | 'tv' | 'other';
+  thumbnailCID?: string;
 }
 
 export interface SearchFilters {
@@ -32,7 +33,7 @@ export function useLocalSearch() {
   if (!searchIndex) {
     searchIndex = new MiniSearch({
       fields: ['title', 'artist', 'description', 'tags'],
-      storeFields: ['id', 'title', 'artist', 'category', 'type', 'year', 'tags'],
+      storeFields: ['id', 'title', 'artist', 'category', 'type', 'year', 'tags', 'thumbnailCID'],
       searchOptions: {
         boost: { title: 3, artist: 2, tags: 1.5 },
         fuzzy: 0.2,

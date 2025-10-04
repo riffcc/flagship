@@ -138,15 +138,6 @@ const activeSections = computed(() => {
   const limitPerCategory = 8;
   if (!contentCategories.value || !activedFeaturedReleases.value) return [];
 
-  const releasesByCategory = new Map<string, ReleaseItem[]>();
-  for (const release of activedFeaturedReleases.value) {
-    if (!release.categoryId) continue;
-    if (!releasesByCategory.has(release.categoryId)) {
-      releasesByCategory.set(release.categoryId, []);
-    }
-    releasesByCategory.get(release.categoryId)!.push(release);
-  }
-
   return contentCategories.value
     .filter(category => category.featured)
     .sort((a, b) => {
@@ -156,17 +147,21 @@ const activeSections = computed(() => {
       return 0;
     })
     .map(featuredCategory => {
-      // Collect releases from all federated category IDs
-      let items: ReleaseItem[] = [];
-      if (featuredCategory.allIds) {
-        // Merged category - get releases from all IDs
-        for (const catId of featuredCategory.allIds) {
-          items.push(...(releasesByCategory.get(catId) || []));
-        }
-      } else {
-        // Single category (backward compatibility)
-        items = releasesByCategory.get(featuredCategory.id) || [];
-      }
+      // Collect releases that match this category (by ID or slug)
+      let items: ReleaseItem[] = activedFeaturedReleases.value.filter(release => {
+        if (!release.categoryId) return false;
+
+        // Match by category ID (hash)
+        if (release.categoryId === featuredCategory.id) return true;
+
+        // Match by category slug
+        if (release.categoryId === featuredCategory.categoryId) return true;
+
+        // Match by federated IDs
+        if (featuredCategory.allIds && featuredCategory.allIds.includes(release.categoryId)) return true;
+
+        return false;
+      });
       
       // For TV shows, group episodes by series
       // Check both categoryId and displayName for TV category (handle corrupted data)
@@ -245,11 +240,21 @@ const activeSections = computed(() => {
         items = Array.from(seriesMap.values());
       }
       
+      // Map category slugs to simple routes
+      const routeMap: Record<string, string> = {
+        'music': '/music',
+        'movies': '/movies',
+        'tv-shows': '/tv',
+        'books': '/books',
+        'audiobooks': '/audiobooks',
+        'games': '/games',
+      };
+
       return {
         id: featuredCategory.categoryId,
         title: featuredCategory.categoryId === 'tv-shows' ? 'Featured TV' : `Featured ${featuredCategory.displayName}`,
         items: items.slice(0, limitPerCategory),
-        navigationPath: `/featured/${featuredCategory.categoryId}`,
+        navigationPath: routeMap[featuredCategory.categoryId] || `/featured/${featuredCategory.categoryId}`,
       };
     })
     .filter(section => section.items.length > 0);

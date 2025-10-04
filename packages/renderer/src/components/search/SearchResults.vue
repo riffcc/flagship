@@ -8,7 +8,19 @@
         class="search-result-item"
       >
         <template #prepend>
-          <v-icon :icon="getIconForType(result.type)" />
+          <v-avatar
+            v-if="result.thumbnailCID"
+            size="48"
+            rounded="sm"
+            class="thumbnail-avatar"
+          >
+            <v-img
+              :src="parseUrlOrCid(result.thumbnailCID)"
+              cover
+              :alt="result.title"
+            />
+          </v-avatar>
+          <v-icon v-else :icon="getIconForType(result.type)" />
         </template>
 
         <v-list-item-title>
@@ -39,6 +51,8 @@
 </template>
 
 <script setup lang="ts">
+import { parseUrlOrCid } from '/@/utils';
+
 defineProps<{
   results: any[];
   query: string;
@@ -94,10 +108,12 @@ function escapeRegex(str: string): string {
 .search-results {
   position: absolute;
   top: 100%;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   margin-top: 8px;
-  max-height: 400px;
+  width: 800px;
+  max-width: 90vw;
+  max-height: 500px;
   overflow-y: auto;
   z-index: 1000;
 }
@@ -105,10 +121,17 @@ function escapeRegex(str: string): string {
 .search-result-item {
   cursor: pointer;
   transition: background-color 0.2s ease;
+  min-height: 64px;
 }
 
 .search-result-item:hover {
   background-color: rgba(138, 43, 226, 0.1);
+}
+
+.thumbnail-avatar {
+  margin-right: 8px;
+  border: 1px solid rgba(138, 43, 226, 0.3);
+  overflow: hidden;
 }
 
 .year {
@@ -124,5 +147,10 @@ function escapeRegex(str: string): string {
 :deep(strong) {
   color: #8a2be2;
   font-weight: 600;
+}
+
+:deep(.v-list-item-title) {
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 </style>

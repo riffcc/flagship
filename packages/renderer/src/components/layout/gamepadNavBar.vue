@@ -40,9 +40,9 @@ const { userData } = useUserSession();
 
 const tabs = [
   { name: 'Home', path: '/' },
-  { name: 'Music', path: '/featured/music' },
-  { name: 'Movies', path: '/featured/movies' },
-  { name: 'TV Shows', path: '/featured/tv-shows' },
+  { name: 'Music', path: '/music' },
+  { name: 'Movies', path: '/movies' },
+  { name: 'TV', path: '/tv' },
 ];
 
 const currentPath = computed(() => route.path);

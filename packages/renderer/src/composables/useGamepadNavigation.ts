@@ -30,13 +30,17 @@ export function useGamepadNavigation() {
   
   // Track which control method was used last
   const lastControlMethod = ref<'leftStick' | 'rightStick'>('leftStick');
-  
+
+  // Navigation timing to prevent rapid repeated navigation
+  const lastNavigationTime = ref(0);
+  const navigationCooldown = 200; // ms
+
   // Cursor timeout
   let cursorTimeoutId: number | undefined;
   
   // Tab navigation
   const currentTabIndex = ref(0);
-  const tabs = ['/', '/featured/music', '/featured/movies', '/featured/tv-shows'];
+  const tabs = ['/', '/music', '/movies', '/tv'];
   
   // Update navigable elements
   function updateNavigableElements() {
@@ -149,47 +153,52 @@ export function useGamepadNavigation() {
     }
     
     // D-pad navigation (instant snap)
-    if (buttons.up) {
-      const element = findNearestElement('up');
-      if (element) {
-        focusElement(element);
-        lastNavigationTime.value = now;
+    const now = Date.now();
+    const canNavigate = now - lastNavigationTime.value > navigationCooldown;
+
+    if (canNavigate) {
+      if (buttons.up) {
+        const element = findNearestElement('up');
+        if (element) {
+          focusElement(element);
+          lastNavigationTime.value = now;
+        }
+      } else if (buttons.down) {
+        const element = findNearestElement('down');
+        if (element) {
+          focusElement(element);
+          lastNavigationTime.value = now;
+        }
+      } else if (buttons.left) {
+        const element = findNearestElement('left');
+        if (element) {
+          focusElement(element);
+          lastNavigationTime.value = now;
+        }
+      } else if (buttons.right) {
+        const element = findNearestElement('right');
+        if (element) {
+          focusElement(element);
+          lastNavigationTime.value = now;
+        }
       }
-    } else if (buttons.down) {
-      const element = findNearestElement('down');
-      if (element) {
-        focusElement(element);
-        lastNavigationTime.value = now;
-      }
-    } else if (buttons.left) {
-      const element = findNearestElement('left');
-      if (element) {
-        focusElement(element);
-        lastNavigationTime.value = now;
-      }
-    } else if (buttons.right) {
-      const element = findNearestElement('right');
-      if (element) {
-        focusElement(element);
-        lastNavigationTime.value = now;
-      }
-    }
-    
-    // Left stick navigation (snap to elements, no free movement)
-    if (Math.abs(stick.x) > 0.6 || Math.abs(stick.y) > 0.6) {
-      let direction: 'up' | 'down' | 'left' | 'right';
-      
-      // Determine primary direction with stronger threshold
-      if (Math.abs(stick.x) > Math.abs(stick.y)) {
-        direction = stick.x > 0 ? 'right' : 'left';
-      } else {
-        direction = stick.y > 0 ? 'down' : 'up';
-      }
-      
-      const element = findNearestElement(direction);
-      if (element) {
-        focusElement(element);
-        lastNavigationTime.value = now;
+
+      // Left stick navigation (snap to elements, no free movement)
+      else if (Math.abs(stick.x) > 0.6 || Math.abs(stick.y) > 0.6) {
+        let direction: 'up' | 'down' | 'left' | 'right';
+
+        // Determine primary direction with stronger threshold
+        if (Math.abs(stick.x) > Math.abs(stick.y)) {
+          direction = stick.x > 0 ? 'right' : 'left';
+        } else {
+          direction = stick.y > 0 ? 'down' : 'up';
+        }
+
+        const element = findNearestElement(direction);
+        if (element) {
+          focusElement(element);
+          lastNavigationTime.value = now;
+        }
       }
     }
   });

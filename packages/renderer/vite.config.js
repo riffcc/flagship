@@ -81,6 +81,7 @@ const config = {
   },
   base: '',
   server: {
+    port: parseInt(process.env.PORT) || 5175,
     fs: {
       strict: true,
     },

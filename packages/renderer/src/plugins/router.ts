@@ -227,6 +227,38 @@ const routes: Array<RouteRecordRaw> = [
       }
     },
   },
+  // Simplified category routes
+  {
+    path: '/music',
+    component: CategoryPage,
+    props: () => ({ category: 'music', showAll: true }),
+  },
+  {
+    path: '/movies',
+    component: CategoryPage,
+    props: () => ({ category: 'movies', showAll: true }),
+  },
+  {
+    path: '/tv',
+    component: CategoryPage,
+    props: () => ({ category: 'tv-shows', showAll: true }),
+  },
+  {
+    path: '/books',
+    component: CategoryPage,
+    props: () => ({ category: 'books', showAll: true }),
+  },
+  {
+    path: '/audiobooks',
+    component: CategoryPage,
+    props: () => ({ category: 'audiobooks', showAll: true }),
+  },
+  {
+    path: '/games',
+    component: CategoryPage,
+    props: () => ({ category: 'games', showAll: true }),
+  },
+  // Legacy route for backwards compatibility
   {
     path: '/featured/:category',
     component: CategoryPage,

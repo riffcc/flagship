@@ -13,7 +13,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "cd packages/renderer && cross-env WEB=true vite --port 5175",
+    "dev": "cd packages/renderer && cross-env WEB=true vite",
     "dev:stub": "cross-env VITE_STUB_DATA=true pnpm dev",
     "build": "cd packages/renderer && cross-env MODE=production WEB=true NODE_OPTIONS='--max-old-space-size=8192' vite build",
     "preview": "pnpm build && cd packages/renderer && vite preview --outDir ./dist/web",

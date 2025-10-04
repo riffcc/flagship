@@ -109,7 +109,10 @@ const filteredReleases = computed(() => {
           cat.allIds.forEach(id => allCategoryIds.add(id));
         }
       }
-      // Filter releases that match any of these category IDs
+      // Also add the slug itself for releases that use slugs directly
+      allCategoryIds.add(props.categorySlug);
+
+      // Filter releases that match any of these category IDs OR the slug
       categoryReleases = categoryReleases.filter(r => allCategoryIds.has(r.categoryId));
     }
   } else if (props.categoryFilter) {
@@ -228,39 +231,16 @@ const onIntersect = (isIntersecting: boolean) => {
 }
 
 .grid-container {
-  display: flex;
-  justify-content: center;
   width: 100%;
+  max-width: 100%;
 }
 
 .releases-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
-  gap: 0.5rem;
-  justify-content: start;
-  max-width: 100%;
-}
-
-/* Firefox fallback using feature detection */
-@supports (-moz-appearance: none) {
-  .grid-container {
-    /* Simplify container for Firefox */
-    display: block;
-    width: 100%;
-  }
-  
-  .releases-grid {
-    /* Keep same sizing but fix Firefox grid issues */
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
-    gap: 0.5rem;
-    width: 100%;
-    margin: 0 auto;
-    justify-content: center;
-    /* Firefox-specific grid fixes */
-    grid-auto-flow: row;
-    align-items: start;
-  }
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  width: 100%;
+  padding: 0 1rem;
 }
 
 /* Disable all transitions for instant appearance */

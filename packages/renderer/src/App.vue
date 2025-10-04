@@ -36,14 +36,14 @@
     ></div>
     <!-- P2P Status Indicator -->
     <v-chip
-      v-if="connected || peers.length > 0"
+      v-if="connected || peers.length > 0 || directPeersConnected > 0"
       size="small"
       variant="tonal"
       class="p2p-status-indicator"
-      :color="connected ? 'success' : 'warning'"
+      :color="directPeersConnected > 0 ? 'success' : (connected ? 'primary' : 'warning')"
     >
-      <v-icon start>{{ connected ? 'mdi-cloud-check' : 'mdi-cloud-off' }}</v-icon>
-      P2P: {{ peers.length }} peers
+      <v-icon start>{{ directPeersConnected > 0 ? 'mdi-lan-connect' : (connected ? 'mdi-cloud-check' : 'mdi-cloud-off') }}</v-icon>
+      P2P: {{ peers.length }} relay{{ directPeersConnected > 0 ? ` | ${directPeersConnected} direct` : '' }}
     </v-chip>
     <start-menu v-model="showStartMenu" />
   </v-app>
@@ -73,7 +73,7 @@ import { useLocalSearch } from '/@/composables/useLocalSearch';
 import { useP2P } from '/@/composables/useP2P';
 
 const { showDefederation } = useShowDefederation();
-const { connected, peers, connect } = useP2P();
+const { connected, peers, directPeersConnected, connect } = useP2P();
 const { activeTrack } = useAudioAlbum();
 const { floatingVideoSource, floatingVideoRelease } = useFloatingVideo();
 
