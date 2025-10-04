@@ -147,13 +147,58 @@ const routes: Array<RouteRecordRaw> = [
     path: '/admin',
     name: 'Admin Website',
     component: AdminPage,
-    beforeEnter: (to, from, next) => {
-      // Example for a more complex check. You would create a dedicated helper for this.
-      const accountStatus = queryClient.getQueryData<AccountStatusResponse>(['accountStatus']);
-      const isAdmin = accountStatus?.isAdmin || accountStatus?.roles.includes('moderator') || false;
-      if (isAdmin) {
-        next();
-      } else {
+    beforeEnter: async (to, from, next) => {
+      // Check admin status using new identity system
+      try {
+        // Try to get identity from localStorage
+        const identitySeed = localStorage.getItem('lens_identity_seed');
+        if (!identitySeed) {
+          console.warn('[Router] No identity found, redirecting to home');
+          next({ path: '/' });
+          return;
+        }
+
+        // Derive public key (simplified - matches useIdentity.ts logic)
+        const seedBytes = new Uint8Array(identitySeed.length / 2);
+        for (let i = 0; i < identitySeed.length; i += 2) {
+          seedBytes[i / 2] = parseInt(identitySeed.substring(i, i + 2), 16);
+        }
+
+        // Import and derive key
+        const keyMaterial = await crypto.subtle.importKey('raw', seedBytes, { name: 'HKDF' }, false, ['deriveBits']);
+        const derivedBits = await crypto.subtle.deriveBits(
+          { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: new TextEncoder().encode('lens-ed25519-v2') },
+          keyMaterial,
+          256
+        );
+        const privateKeyBytes = new Uint8Array(derivedBits);
+        const publicKeyHash = await crypto.subtle.digest('SHA-256', privateKeyBytes);
+        const publicKeyBytes = new Uint8Array(publicKeyHash);
+        const publicKeyHex = Array.from(publicKeyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        const publicKey = `ed25119p/${publicKeyHex}`;
+
+        // Check authorization status
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002/api/v1';
+        const encodedKey = encodeURIComponent(publicKey);
+        const response = await fetch(`${apiUrl}/account/${encodedKey}`);
+
+        if (response.ok) {
+          const accountStatus = await response.json();
+          const isAdmin = accountStatus?.isAdmin || accountStatus?.roles?.includes('moderator') || false;
+
+          if (isAdmin) {
+            console.log('[Router] Admin access granted');
+            next();
+          } else {
+            console.warn('[Router] Not an admin, redirecting to home');
+            next({ path: '/' });
+          }
+        } else {
+          console.warn('[Router] Failed to check admin status, redirecting to home');
+          next({ path: '/' });
+        }
+      } catch (error) {
+        console.error('[Router] Error checking admin status:', error);
         next({ path: '/' });
       }
     },
@@ -318,17 +363,19 @@ router.beforeEach(async (to, from, next) => {
 
       if (result.status === 'fulfilled' && result.value.ok) {
         let data = await result.value.json();
-        
+
         // Transform the data to match what the query hooks return
         if (key === 'initialReleases' && Array.isArray(data)) {
           data = data.map((r: any) => ({
             ...r,
-            metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
+            // metadata is already an object from the API, no need to parse
+            metadata: r.metadata,
           }));
         } else if (key === 'initialContentCategories' && Array.isArray(data)) {
           data = data.map((c: any) => ({
             ...c,
-            metadataSchema: c.metadataSchema ? JSON.parse(c.metadataSchema) : undefined,
+            // metadataSchema is already an object from the API, no need to parse
+            metadataSchema: c.metadataSchema,
           }));
         }
         

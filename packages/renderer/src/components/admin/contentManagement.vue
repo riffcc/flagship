@@ -236,8 +236,8 @@ const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackb
 
 // Get category display name from category ID
 const getCategoryName = (categoryId: string): string => {
-  const category = contentCategories.value?.find(c => c.id === categoryId);
-  return category?.displayName || categoryId;
+  const category = contentCategories.value?.find(c => c.id === categoryId || c.categoryId === categoryId);
+  return category?.displayName || category?.name || categoryId;
 };
 
 function handleSuccess(message: string) {

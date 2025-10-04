@@ -20,6 +20,8 @@
       :items="contentCategoriesItems"
       :rules="[rules.required]"
       label="Category"
+      item-title="title"
+      item-value="value"
     />
     
     <!-- TV Show Fields -->
@@ -272,18 +274,25 @@ const editStructureMutation = useEditStructureMutation({
 });
 
 const contentCategoriesItems = computed(() => {
-  if (!contentCategories.value) return [];
-  
-  // Only show categories created by our own site (not federated ones)
-  const ourSiteAddress = import.meta.env.VITE_SITE_ADDRESS;
-  
-  return contentCategories.value
-    .filter(item => item.siteAddress === ourSiteAddress) // Only our site's categories
-    .map(item => ({
-      id: item.id,
-      value: item.id,
-      title: item.displayName,
-    }));
+  if (!contentCategories.value) {
+    console.log('[ReleaseForm] No content categories available');
+    return [];
+  }
+
+  console.log('[ReleaseForm] Processing categories:', {
+    total: contentCategories.value.length,
+    categories: contentCategories.value
+  });
+
+  // Map all categories - removed siteAddress filter for single-node deployments
+  const items = contentCategories.value.map(item => ({
+    id: item.id,
+    value: item.id,
+    title: item.displayName || item.name,
+  }));
+
+  console.log('[ReleaseForm] Mapped category items:', items);
+  return items;
 });
 
 // Get list of series for autocomplete

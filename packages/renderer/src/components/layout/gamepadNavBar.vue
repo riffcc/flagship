@@ -29,21 +29,64 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useUserSession } from '/@/composables/userSession';
+import { useIdentity } from '/@/composables/useIdentity';
 import accountMenu from '/@/components/account/accountMenu.vue';
 import SearchBar from '/@/components/search/SearchBar.vue';
 
 const route = useRoute();
 const { userData } = useUserSession();
+const { publicKey } = useIdentity();
 
-const tabs = [
+const isAdmin = ref(false);
+
+// Check admin status
+async function checkAdminStatus() {
+  if (!publicKey.value) return;
+
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002/api/v1';
+    const encodedKey = encodeURIComponent(publicKey.value);
+    const response = await fetch(`${apiUrl}/account/${encodedKey}`);
+
+    if (response.ok) {
+      const accountStatus = await response.json();
+      isAdmin.value = accountStatus?.isAdmin || accountStatus?.roles?.includes('moderator') || false;
+    }
+  } catch (error) {
+    console.error('[NavBar] Error checking admin status:', error);
+  }
+}
+
+watch(publicKey, () => {
+  if (publicKey.value) {
+    checkAdminStatus();
+  }
+});
+
+onMounted(() => {
+  setTimeout(() => {
+    if (publicKey.value) {
+      checkAdminStatus();
+    }
+  }, 500);
+});
+
+const baseTabs = [
   { name: 'Home', path: '/' },
   { name: 'Music', path: '/music' },
   { name: 'Movies', path: '/movies' },
   { name: 'TV', path: '/tv' },
 ];
+
+const tabs = computed(() => {
+  if (isAdmin.value) {
+    return [...baseTabs, { name: '⚡ Admin', path: '/admin' }];
+  }
+  return baseTabs;
+});
 
 const currentPath = computed(() => route.path);
 </script>

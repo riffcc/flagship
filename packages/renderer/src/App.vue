@@ -57,6 +57,7 @@ import { useGlobalPlayback } from '/@/composables/globalPlayback';
 import { useInputMethod } from '/@/composables/useInputMethod';
 import { useLocalSearch } from '/@/composables/useLocalSearch';
 import { useP2P } from '/@/composables/useP2P';
+import { useIdentity } from '/@/composables/useIdentity';
 
 const { showDefederation } = useShowDefederation();
 const { connected, peers, directPeersConnected, connect } = useP2P();
@@ -67,6 +68,7 @@ const { isLensReady, initLensService } = useLensInitialization();
 const { gamepadState, onButtonPress } = useGamepad();
 const { showCursor } = useGamepadNavigation();
 const { currentInputMethod } = useInputMethod();
+const { initialize: initializeIdentity } = useIdentity();
 
 const showStartMenu = ref(false);
 
@@ -95,6 +97,14 @@ watchEffect(() => {
 });
 
 onMounted(async () => {
+  // Initialize ed25519 identity first
+  try {
+    await initializeIdentity();
+    console.log('[App] Identity initialized');
+  } catch (error) {
+    console.error('[App] Failed to initialize identity:', error);
+  }
+
   initLensService();
 
   // Connect to P2P relay for peer discovery

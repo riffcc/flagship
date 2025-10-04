@@ -143,13 +143,39 @@ export function useContentCategoriesQuery(options?: {
   return useQuery<ContentCategoryItem[]>({
     queryKey: ['contentCategories'],
     queryFn: async () => {
-      const result = await lensService.getContentCategories();
-      return result.map((c) => {
-        return {
-          ...c,
-          metadataSchema: c.metadataSchema ? JSON.parse(c.metadataSchema) : undefined,
-        };
-      });
+      try {
+        // Try API first for immediate data
+        const apiUrl = `${API_URL}/content-categories`;
+        try {
+          const response = await fetch(apiUrl);
+          if (response.ok) {
+            const categories = await response.json();
+            return categories.map((c: any) => ({
+              id: c.id,
+              categoryId: c.id, // Map for compatibility
+              name: c.name,
+              displayName: c.name, // Map for compatibility
+              slug: c.slug,
+              metadataSchema: c.metadata_schema, // Already an object from API
+              siteAddress: c.siteAddress, // For filtering by site
+            }));
+          }
+        } catch (apiError) {
+          console.warn('[ContentCategories] API fetch failed, trying Peerbit:', apiError);
+        }
+
+        // Fallback to Peerbit if API fails
+        const result = await lensService.getContentCategories();
+        return result.map((c) => {
+          return {
+            ...c,
+            metadataSchema: c.metadataSchema ? JSON.parse(c.metadataSchema) : undefined,
+          };
+        });
+      } catch (error) {
+        console.error('[ContentCategories] Failed to fetch categories:', error);
+        return [];
+      }
     },
     enabled: options?.enabled ?? true,
   });

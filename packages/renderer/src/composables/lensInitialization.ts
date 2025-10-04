@@ -1,14 +1,23 @@
 import { ref } from 'vue';
-import { useLensService } from '/@/plugins/lensService/hooks';
 import { RIFFCC_PEERBIT_BOOTSTRAPPERS } from '../constants/config';
 
 // This state will be shared across the entire application
 const isLensReady = ref(false);
 
+const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
+
 const initLensService = async () => {
+  // Check if we should use legacy Peerbit
+  if (!USE_PEERBIT) {
+    console.log('[Lens] Peerbit disabled, using Lens V2 SDK identity system');
+    isLensReady.value = true;
+    return;
+  }
+
   // Prevent re-initialization
   if (isLensReady.value) return;
 
+  const { useLensService } = await import('/@/plugins/lensService/hooks');
   const { lensService } = useLensService();
   const siteAddress = import.meta.env.VITE_SITE_ADDRESS;
   const lensNode = import.meta.env.VITE_LENS_NODE;
