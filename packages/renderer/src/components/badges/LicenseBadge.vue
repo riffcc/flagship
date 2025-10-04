@@ -54,13 +54,15 @@ const emit = defineEmits<{
 }>();
 
 /**
- * Get short display text for the license
+ * Get short display text for the license (without CC- prefix since logo shows it)
  */
 const displayText = computed(() => {
   if (!props.license) return null;
 
   const version = props.license.version || '4.0';
-  return `${props.license.type.toUpperCase()} ${version}`;
+  // Remove 'cc-' prefix since the logo already shows CC
+  const type = props.license.type === 'cc0' ? '0' : props.license.type.replace('cc-', '').toUpperCase();
+  return `${type} ${version}`;
 });
 
 /**
