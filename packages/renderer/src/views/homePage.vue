@@ -274,14 +274,18 @@ const isLoading = computed(() => {
 });
 
 const noFeaturedContent = computed(() => {
-  if (!isReleasesFetched.value || !isFeaturedReleasesFetched.value) {
+  // When Peerbit is disabled, queries don't fetch but data comes from cache
+  // Check if we have data instead of checking isFetched
+  if (!releases.value || !featuredReleases.value) {
     return false;
   }
   return promotedFeaturedReleases.value.length === 0 && activeSections.value.length === 0;
 });
 
 const noContent = computed(() => {
-  if (!isReleasesFetched.value || !isFeaturedReleasesFetched.value) {
+  // When Peerbit is disabled, queries don't fetch but data comes from cache
+  // Check if we have data instead of checking isFetched
+  if (!releases.value || !featuredReleases.value) {
     return false;
   }
   return releases.value?.length === 0 && featuredReleases.value?.length === 0;
