@@ -1,20 +1,25 @@
 <template>
   <v-tooltip v-if="license" location="bottom">
     <template #activator="{ props: tooltipProps }">
-      <v-chip
+      <a
+        v-if="linkable"
+        :href="licenseUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="license-badge license-badge--linkable"
         v-bind="tooltipProps"
-        :size="size"
-        variant="tonal"
-        color="green"
-        :class="['license-badge', { 'license-badge--linkable': linkable }]"
-        :href="linkable ? licenseUrl : undefined"
-        :target="linkable ? '_blank' : undefined"
-        :rel="linkable ? 'noopener noreferrer' : undefined"
-        @click="handleClick"
       >
-        <v-icon icon="mdi-creative-commons" size="12" class="mr-1" />
+        <v-icon icon="mdi-creative-commons" size="10" class="cc-icon" />
         {{ displayText }}
-      </v-chip>
+      </a>
+      <div
+        v-else
+        class="license-badge"
+        v-bind="tooltipProps"
+      >
+        <v-icon icon="mdi-creative-commons" size="10" class="cc-icon" />
+        {{ displayText }}
+      </div>
     </template>
     <div class="license-tooltip">
       <div class="font-weight-bold mb-1">{{ fullLicenseName }}</div>
@@ -99,23 +104,34 @@ function handleClick() {
 
 <style scoped>
 .license-badge {
-  font-size: 10px;
-  font-weight: 500;
-  opacity: 0.85;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  border-radius: 2px;
+  border: 1px solid #22c55e; /* green-500 */
+  color: #22c55e;
+  background: transparent;
+  line-height: 1.4;
+  opacity: 0.8;
   transition: opacity 0.2s ease;
+  text-decoration: none;
 }
 
 .license-badge--linkable {
   cursor: pointer;
-  text-decoration: none;
 }
 
 .license-badge--linkable:hover {
   opacity: 1;
 }
 
-.license-badge :deep(.v-chip__content) {
-  padding-inline: 6px;
+.cc-icon {
+  opacity: 0.9;
 }
 
 .license-tooltip {

@@ -1,15 +1,12 @@
 <template>
-  <v-chip
+  <div
     v-if="displayText"
-    :size="size"
-    variant="tonal"
-    :color="color"
     :class="['quality-badge', { 'quality-badge--clickable': clickable }]"
+    :style="badgeStyle"
     @click="handleClick"
   >
-    <v-icon v-if="icon" :icon="icon" size="12" class="mr-1" />
     {{ displayText }}
-  </v-chip>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -83,59 +80,49 @@ const displayText = computed(() => {
 });
 
 /**
- * Get color based on quality tier
+ * Get border color based on quality tier
  */
-const color = computed(() => {
-  if (!props.quality) return 'default';
+const borderColor = computed(() => {
+  if (!props.quality) return '#666';
 
   const { format, bitDepth, bitrate } = props.quality;
 
-  // Highest quality: 24-bit FLAC
+  // Highest quality: 24-bit FLAC - Purple/Violet
   if (format === 'flac' && bitDepth === 24) {
-    return 'purple';
+    return '#9333ea'; // purple-600
   }
 
-  // High quality: FLAC or high bitrate
-  if (format === 'flac' || (bitrate && bitrate >= 320)) {
-    return 'indigo';
+  // High quality: FLAC - Golden yellow
+  if (format === 'flac') {
+    return '#eab308'; // yellow-500
   }
 
-  // Good quality: 256kbps+
+  // High bitrate MP3/AAC: 320kbps - Orange
+  if (bitrate && bitrate >= 320) {
+    return '#f97316'; // orange-500
+  }
+
+  // Good quality: 256kbps+ - Blue
   if (bitrate && bitrate >= 256) {
-    return 'blue';
+    return '#3b82f6'; // blue-500
   }
 
-  // Medium quality: 192-255kbps
+  // Medium quality: 192-255kbps - Cyan
   if (bitrate && bitrate >= 192) {
-    return 'cyan';
+    return '#06b6d4'; // cyan-500
   }
 
-  // Lower quality
-  return 'grey';
+  // Lower quality - Grey
+  return '#6b7280'; // gray-500
 });
 
 /**
- * Get icon based on format
+ * Badge styling
  */
-const icon = computed(() => {
-  if (!props.showIcon || !props.quality) return null;
-
-  const { format, bitDepth } = props.quality;
-
-  if (format === 'flac') {
-    return bitDepth === 24 ? 'mdi-music-note-plus' : 'mdi-music-note';
-  }
-
-  if (format === 'mp3' || format === 'aac') {
-    return 'mdi-file-music-outline';
-  }
-
-  if (format === 'opus') {
-    return 'mdi-audio-input-stereo-minijack';
-  }
-
-  return 'mdi-music';
-});
+const badgeStyle = computed(() => ({
+  border: `1px solid ${borderColor.value}`,
+  color: borderColor.value,
+}));
 
 function handleClick() {
   if (props.clickable) {
@@ -146,9 +133,16 @@ function handleClick() {
 
 <style scoped>
 .quality-badge {
-  font-size: 10px;
-  font-weight: 500;
-  opacity: 0.85;
+  display: inline-block;
+  padding: 1px 4px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  border-radius: 2px;
+  background: transparent;
+  line-height: 1.4;
+  opacity: 0.8;
   transition: opacity 0.2s ease;
 }
 
@@ -158,9 +152,5 @@ function handleClick() {
 
 .quality-badge--clickable:hover {
   opacity: 1;
-}
-
-.quality-badge :deep(.v-chip__content) {
-  padding-inline: 6px;
 }
 </style>

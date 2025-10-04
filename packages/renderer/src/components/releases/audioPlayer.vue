@@ -94,9 +94,6 @@
             <QualityBadge
               v-if="albumQuality"
               :quality="albumQuality"
-              size="x-small"
-              :show-icon="false"
-              :style="{ opacity: 0.5 }"
             />
           </div>
           <v-slider

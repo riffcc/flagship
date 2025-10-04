@@ -69,12 +69,11 @@
             <QualityBadge
               v-if="metadata?.audioQuality"
               :quality="metadata.audioQuality"
-              size="small"
             />
             <LicenseBadge
               v-if="metadata?.license"
               :license="metadata.license"
-              size="small"
+              linkable
             />
           </div>
         </v-col>
