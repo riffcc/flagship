@@ -13,11 +13,11 @@ crate-type = ["cdylib", "rlib"]
 # SDK
 lens-v2-sdk = { path = "../lens-v2-sdk" }
 
-# Consensus crates (symlinked from pal)
-consensus-bft = { path = "../../../pal/crates/consensus/bft", optional = true }
-consensus-tgp = { path = "../../../pal/crates/consensus/tgp", optional = true }
-consensus-common = { path = "../../../pal/crates/consensus/common", optional = true }
-consensus-peerexc = { path = "../../../pal/crates/consensus/peerexc", optional = true }
+# Consensus crates (symlinked from palace)
+consensus-bft = { path = "../../../palace/crates/consensus/bft", optional = true }
+consensus-tgp = { path = "../../../palace/crates/consensus/tgp", optional = true }
+consensus-common = { path = "../../../palace/crates/consensus/common", optional = true }
+consensus-peerexc = { path = "../../../palace/crates/consensus/peerexc", optional = true }
 
 # Serialization (minimal, wasm-friendly)
 serde = { workspace = true }

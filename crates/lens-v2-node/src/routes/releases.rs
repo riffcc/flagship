@@ -4,12 +4,10 @@ use axum::{
     response::IntoResponse,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use uuid::Uuid;
 
 use super::account::AccountState;
+use crate::db::{Database, prefixes, make_key};
 
 /// Release data structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -79,21 +77,41 @@ pub struct SuccessResponse {
 /// Releases state shared across handlers
 #[derive(Clone)]
 pub struct ReleasesState {
-    /// Map of release IDs to releases
-    pub releases: Arc<RwLock<HashMap<String, Release>>>,
-    /// Map of featured release IDs to featured release data
-    pub featured_releases: Arc<RwLock<HashMap<String, super::featured::FeaturedRelease>>>,
+    /// RocksDB database for persistent storage
+    pub db: Database,
     /// Account state for authorization
     pub account_state: AccountState,
 }
 
 impl ReleasesState {
+    /// Create new ReleasesState without database (for testing)
     pub fn new(account_state: AccountState) -> Self {
+        // This creates a temporary in-memory database for testing
+        let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", uuid::Uuid::new_v4()));
+        let db = Database::open(&temp_dir).expect("Failed to create test database");
         Self {
-            releases: Arc::new(RwLock::new(HashMap::new())),
-            featured_releases: Arc::new(RwLock::new(HashMap::new())),
+            db,
             account_state,
         }
+    }
+
+    /// Create new ReleasesState with database and load existing releases
+    pub fn with_db(account_state: AccountState, db: Database) -> anyhow::Result<Self> {
+        let state = Self {
+            db,
+            account_state,
+        };
+
+        // Load existing releases count
+        if let Ok(count) = state.db.count_prefix(prefixes::RELEASE.as_bytes()) {
+            tracing::info!("Loaded {} releases from RocksDB", count);
+        }
+
+        if let Ok(count) = state.db.count_prefix(prefixes::FEATURED.as_bytes()) {
+            tracing::info!("Loaded {} featured releases from RocksDB", count);
+        }
+
+        Ok(state)
     }
 
     /// Check if a public key has upload permission
@@ -110,9 +128,19 @@ impl ReleasesState {
 
 /// GET /api/v1/releases - List all releases
 pub async fn list_releases(State(state): State<ReleasesState>) -> impl IntoResponse {
-    let releases = state.releases.read().await;
-    let releases_vec: Vec<Release> = releases.values().cloned().collect();
-    Json(releases_vec)
+    match state.db.get_all_with_prefix::<Release>(prefixes::RELEASE) {
+        Ok(releases) => Json(releases).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to list releases: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to list releases"
+                })),
+            )
+                .into_response()
+        }
+    }
 }
 
 /// GET /api/v1/releases/:id - Get a specific release
@@ -120,17 +148,27 @@ pub async fn get_release(
     State(state): State<ReleasesState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let releases = state.releases.read().await;
+    let key = make_key(prefixes::RELEASE, &id);
 
-    match releases.get(&id) {
-        Some(release) => (StatusCode::OK, Json(release.clone())).into_response(),
-        None => (
+    match state.db.get::<_, Release>(&key) {
+        Ok(Some(release)) => (StatusCode::OK, Json(release)).into_response(),
+        Ok(None) => (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({
                 "error": "Release not found"
             })),
         )
             .into_response(),
+        Err(e) => {
+            tracing::error!("Failed to get release {}: {}", id, e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to get release"
+                })),
+            )
+                .into_response()
+        }
     }
 }
 
@@ -171,10 +209,20 @@ pub async fn create_release(
         created_at: chrono::Utc::now().to_rfc3339(),
     };
 
-    // Store release
-    state.releases.write().await.insert(id.clone(), release);
+    // Store release in RocksDB
+    let key = make_key(prefixes::RELEASE, &id);
+    if let Err(e) = state.db.put(&key, &release) {
+        tracing::error!("Failed to save release {}: {}", id, e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to save release"
+            })),
+        )
+            .into_response();
+    }
 
-    tracing::info!("Release created: {}", id);
+    tracing::info!("Release created and saved: {}", id);
 
     (
         StatusCode::CREATED,
@@ -197,14 +245,24 @@ pub async fn update_release(
     let public_key = "ed25119p/test_admin_key_12345";
 
     // Check if release exists
-    let mut releases = state.releases.write().await;
-    let existing_release = match releases.get(&id) {
-        Some(r) => r.clone(),
-        None => {
+    let key = make_key(prefixes::RELEASE, &id);
+    let existing_release = match state.db.get::<_, Release>(&key) {
+        Ok(Some(r)) => r,
+        Ok(None) => {
             return (
                 StatusCode::NOT_FOUND,
                 Json(serde_json::json!({
                     "error": "Release not found"
+                })),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            tracing::error!("Failed to get release {}: {}", id, e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to get release"
                 })),
             )
                 .into_response();
@@ -239,9 +297,19 @@ pub async fn update_release(
         created_at: existing_release.created_at,
     };
 
-    releases.insert(id.clone(), updated_release);
+    // Save updated release to RocksDB
+    if let Err(e) = state.db.put(&key, &updated_release) {
+        tracing::error!("Failed to update release {}: {}", id, e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to update release"
+            })),
+        )
+            .into_response();
+    }
 
-    tracing::info!("Release updated: {}", id);
+    tracing::info!("Release updated and saved: {}", id);
 
     (
         StatusCode::OK,
@@ -263,14 +331,24 @@ pub async fn delete_release(
     let public_key = "ed25119p/test_admin_key_12345";
 
     // Check if release exists
-    let mut releases = state.releases.write().await;
-    let existing_release = match releases.get(&id) {
-        Some(r) => r.clone(),
-        None => {
+    let key = make_key(prefixes::RELEASE, &id);
+    let existing_release = match state.db.get::<_, Release>(&key) {
+        Ok(Some(r)) => r,
+        Ok(None) => {
             return (
                 StatusCode::NOT_FOUND,
                 Json(serde_json::json!({
                     "error": "Release not found"
+                })),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            tracing::error!("Failed to get release {}: {}", id, e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to get release"
                 })),
             )
                 .into_response();
@@ -291,9 +369,19 @@ pub async fn delete_release(
             .into_response();
     }
 
-    releases.remove(&id);
+    // Delete from RocksDB
+    if let Err(e) = state.db.delete(&key) {
+        tracing::error!("Failed to delete release {}: {}", id, e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to delete release"
+            })),
+        )
+            .into_response();
+    }
 
-    tracing::info!("Release deleted: {}", id);
+    tracing::info!("Release deleted from database: {}", id);
 
     (
         StatusCode::OK,

@@ -14,7 +14,7 @@ path = "src/main.rs"
 # SDK
 lens-v2-sdk = { path = "../lens-v2-sdk" }
 lens-v2-p2p = { path = "../lens-v2-p2p" }
-consensus-peerexc = { path = "../../../pal/crates/consensus/peerexc" }
+consensus-peerexc = { path = "../../../palace/crates/consensus/peerexc" }
 
 # HTTP server
 axum = { workspace = true, features = ["ws"] }
@@ -45,6 +45,9 @@ uuid = { version = "1.10", features = ["v4", "serde"] }
 
 # Date/time
 chrono = "0.4"
+
+# Database
+rocksdb = { version = "0.22", default-features = false, features = ["snappy"] }
 
 [dev-dependencies]
 # Testing

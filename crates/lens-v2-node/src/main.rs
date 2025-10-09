@@ -1,4 +1,5 @@
 mod routes;
+mod db;
 
 use routes::{initialize_registry, AppState, RelayState, AccountState, ReleasesState};
 use std::env;
@@ -24,6 +25,11 @@ async fn main() -> anyhow::Result<()> {
     let addr = format!("0.0.0.0:{}", port);
     tracing::info!("Starting Lens Node v2 on {}", addr);
 
+    // Initialize RocksDB database
+    let db_path = env::var("DB_PATH").unwrap_or_else(|_| ".lens-node-data/rocksdb".to_string());
+    let db = db::Database::open(&db_path)?;
+    tracing::info!("Initialized RocksDB at: {}", db_path);
+
     // Initialize schema registry with built-in schemas
     let registry = Arc::new(initialize_registry());
     tracing::info!("Initialized schema registry");
@@ -39,9 +45,9 @@ async fn main() -> anyhow::Result<()> {
     let account_state = AccountState::new();
     tracing::info!("Initialized account management");
 
-    // Create releases state for content management
-    let releases_state = ReleasesState::new(account_state.clone());
-    tracing::info!("Initialized releases management");
+    // Create releases state for content management with RocksDB persistence
+    let releases_state = ReleasesState::with_db(account_state.clone(), db.clone())?;
+    tracing::info!("Initialized releases management with RocksDB persistence");
 
     // Create the router with state
     let app = routes::create_router(state, relay_state, account_state, releases_state);

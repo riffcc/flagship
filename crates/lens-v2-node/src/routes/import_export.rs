@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::releases::{Release, ReleasesState};
-use super::account::AccountState;
+use crate::db::{prefixes, make_key};
 
 /// Legacy Lens SDK v1 export format
 #[derive(Debug, Deserialize)]
@@ -100,11 +100,11 @@ pub async fn import_releases(
             tracing::info!("Importing {} releases from legacy format v{}",
                 legacy_export.releases.len(), legacy_export.version);
 
-            let mut releases_lock = state.releases.write().await;
-
             for legacy_release in legacy_export.releases {
+                let key = make_key(prefixes::RELEASE, &legacy_release.id);
+
                 // Check if release already exists
-                if releases_lock.contains_key(&legacy_release.id) {
+                if let Ok(true) = state.db.exists(&key) {
                     tracing::debug!("Skipping existing release: {}", legacy_release.id);
                     skipped += 1;
                     continue;
@@ -129,8 +129,11 @@ pub async fn import_releases(
                     created_at: chrono::Utc::now().to_rfc3339(),
                 };
 
-                releases_lock.insert(legacy_release.id.clone(), release);
-                imported += 1;
+                if let Err(e) = state.db.put(&key, &release) {
+                    errors.push(format!("Failed to save release {}: {}", legacy_release.id, e));
+                } else {
+                    imported += 1;
+                }
             }
 
             tracing::info!("Import complete: {} imported, {} skipped", imported, skipped);
@@ -157,18 +160,28 @@ pub async fn import_releases(
 pub async fn export_releases(
     State(state): State<ReleasesState>,
 ) -> impl IntoResponse {
-    let releases = state.releases.read().await;
-    let releases_vec: Vec<Release> = releases.values().cloned().collect();
+    match state.db.get_all_with_prefix::<Release>(prefixes::RELEASE) {
+        Ok(releases) => {
+            let export_data = ExportData {
+                version: "2.0".to_string(),
+                export_date: chrono::Utc::now().to_rfc3339(),
+                releases,
+            };
 
-    let export_data = ExportData {
-        version: "2.0".to_string(),
-        export_date: chrono::Utc::now().to_rfc3339(),
-        releases: releases_vec,
-    };
-
-    tracing::info!("Exporting {} releases", export_data.releases.len());
-
-    Json(export_data)
+            tracing::info!("Exporting {} releases", export_data.releases.len());
+            Json(export_data).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to export releases: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to export releases"
+                })),
+            )
+                .into_response()
+        }
+    }
 }
 
 /// DELETE /api/v1/releases - Delete ALL releases (use with caution!)
@@ -177,19 +190,37 @@ pub async fn delete_all_releases(
     State(state): State<ReleasesState>,
 ) -> impl IntoResponse {
     // TODO: Add admin check here
-    let mut releases = state.releases.write().await;
-    let count = releases.len();
-    releases.clear();
+    match state.db.iter_prefix::<Release>(prefixes::RELEASE.as_bytes()) {
+        Ok(items) => {
+            let count = items.len();
+            for (key, _) in items {
+                if let Err(e) = state.db.delete(&key) {
+                    tracing::error!("Failed to delete release {}: {}", key, e);
+                }
+            }
 
-    tracing::warn!("Deleted all {} releases", count);
+            tracing::warn!("Deleted all {} releases", count);
 
-    (
-        StatusCode::OK,
-        Json(serde_json::json!({
-            "success": true,
-            "deleted": count
-        })),
-    )
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "deleted": count
+                })),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to delete releases: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to delete releases"
+                })),
+            )
+                .into_response()
+        }
+    }
 }
 
 #[cfg(test)]

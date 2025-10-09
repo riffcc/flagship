@@ -6,6 +6,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use super::releases::{Release, ReleasesState};
+use crate::db::{prefixes, make_key};
 
 /// Featured release structure - comprehensive curation and tagging system
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,14 +68,20 @@ pub async fn list_featured_releases(
     State(state): State<ReleasesState>,
 ) -> impl IntoResponse {
     // Check if we have persisted featured releases
-    let mut featured_store = state.featured_releases.write().await;
+    let featured_count = state.db.count_prefix(prefixes::FEATURED.as_bytes()).unwrap_or(0);
 
     // If the store is empty, auto-populate it with the newest releases
-    if featured_store.is_empty() {
-        let releases = state.releases.read().await;
+    if featured_count == 0 {
+        let releases_vec_result = state.db.get_all_with_prefix::<Release>(prefixes::RELEASE);
 
         // Get first 12 releases (or all if less than 12)
-        let mut releases_vec: Vec<Release> = releases.values().cloned().collect();
+        let mut releases_vec = match releases_vec_result {
+            Ok(vec) => vec,
+            Err(e) => {
+                tracing::error!("Failed to get releases: {}", e);
+                return Json(vec![]);
+            }
+        };
 
         // Sort by creation date (newest first)
         releases_vec.sort_by(|a, b| b.created_at.cmp(&a.created_at));
@@ -116,18 +123,23 @@ pub async fn list_featured_releases(
                 updated_at: None,
             };
 
-            featured_store.insert(featured_id, featured_release);
+            let key = make_key(prefixes::FEATURED, &featured_id);
+            if let Err(e) = state.db.put(&key, &featured_release) {
+                tracing::error!("Failed to save featured release: {}", e);
+            }
         }
 
-        drop(releases);
-        tracing::debug!("Auto-populated {} featured releases with intelligent defaults", featured_store.len());
+        tracing::debug!("Auto-populated featured releases with intelligent defaults");
     }
 
-    // Return the featured releases from the store
-    let featured: Vec<FeaturedRelease> = featured_store.values().cloned().collect();
-    drop(featured_store);
-
-    Json(featured)
+    // Return the featured releases from the database
+    match state.db.get_all_with_prefix::<FeaturedRelease>(prefixes::FEATURED) {
+        Ok(featured) => Json(featured),
+        Err(e) => {
+            tracing::error!("Failed to get featured releases: {}", e);
+            Json(vec![])
+        }
+    }
 }
 
 /// Request to update a featured release
@@ -167,13 +179,12 @@ pub async fn update_featured_release(
     State(state): State<ReleasesState>,
     Json(req): Json<UpdateFeaturedReleaseRequest>,
 ) -> Result<Json<SuccessResponse>, (StatusCode, String)> {
-    let mut featured = state.featured_releases.write().await;
+    let key = make_key(prefixes::FEATURED, &id);
 
     // Check if the featured release exists
-    let existing = featured
-        .get(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Featured release {} not found", id)))?
-        .clone();
+    let existing = state.db.get::<_, FeaturedRelease>(&key)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Featured release {} not found", id)))?;
 
     // Update the featured release with provided fields
     let updated = FeaturedRelease {
@@ -197,8 +208,8 @@ pub async fn update_featured_release(
         updated_at: Some(chrono::Utc::now().to_rfc3339()),
     };
 
-    featured.insert(id.clone(), updated);
-    drop(featured);
+    state.db.put(&key, &updated)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to save: {}", e)))?;
 
     tracing::info!("Updated featured release {}", id);
 
