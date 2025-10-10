@@ -1,0 +1,67 @@
+# Docker Compose for local 41-node testing
+# Production uses Kubernetes + anycast
+
+version: '3.8'
+
+services:
+  # Anycast proxy (simulates anycast in local dev)
+  anycast:
+    image: nginx:alpine
+    ports:
+      - "10.7.1.200:5002:80"
+    volumes:
+      - ./anycast-nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      lens-network:
+        ipv4_address: 172.20.0.2
+
+  # Generate 41 lens nodes
+  lens-node-0:
+    build: .
+    environment:
+      - LENS_NODE_ID=0
+      - LENS_CLUSTER_ID=lens-cluster-local
+      - LENS_ANYCAST_IP=172.20.0.2
+      - PORT=5002
+    volumes:
+      - lens-data-0:/data
+    networks:
+      - lens-network
+
+  lens-node-1:
+    build: .
+    environment:
+      - LENS_NODE_ID=1
+      - LENS_CLUSTER_ID=lens-cluster-local
+      - LENS_ANYCAST_IP=172.20.0.2
+      - PORT=5002
+    volumes:
+      - lens-data-1:/data
+    networks:
+      - lens-network
+
+  lens-node-2:
+    build: .
+    environment:
+      - LENS_NODE_ID=2
+      - LENS_CLUSTER_ID=lens-cluster-local
+      - LENS_ANYCAST_IP=172.20.0.2
+      - PORT=5002
+    volumes:
+      - lens-data-2:/data
+    networks:
+      - lens-network
+
+  # TODO: Add nodes 3-40 (generated via script or Kubernetes)
+
+volumes:
+  lens-data-0:
+  lens-data-1:
+  lens-data-2:
+
+networks:
+  lens-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

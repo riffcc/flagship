@@ -79,24 +79,26 @@ impl SyncOrchestrator {
 
     /// Single sync iteration
     async fn sync_iteration(&self) -> Result<()> {
-        debug!("Starting sync iteration");
+        info!("🔄 Starting sync iteration");
 
         // 1. Build WantList from current state
         let wantlist = self.build_wantlist().await?;
+        info!("📋 Built WantList: gen={}, needs={}, offers={}",
+            wantlist.generation, wantlist.has_needs(), wantlist.has_offers());
 
         // 2. Send WantList to relay for peer discovery
-        if wantlist.has_needs() || wantlist.has_offers() {
-            info!("Sending WantList to network");
-            self.network.send_wantlist(&wantlist).await?;
-        }
+        // Always send WantList, even if empty, to announce our presence
+        info!("📤 Sending WantList to network");
+        self.network.send_wantlist(&wantlist).await?;
 
         // 3. Check for missing blocks
         let missing = self.p2p_manager.missing_blocks()?;
         if !missing.is_empty() {
-            info!("Need to fetch {} missing blocks", missing.len());
+            info!("📥 Need to fetch {} missing blocks", missing.len());
 
             // 4. Request missing blocks from peers
             let peers = self.network.peers().await;
+            info!("👥 Have {} known peers", peers.len());
             if !peers.is_empty() {
                 // Round-robin through peers
                 for (i, block_id) in missing.iter().enumerate() {
@@ -105,16 +107,32 @@ impl SyncOrchestrator {
                     self.p2p_manager.mark_downloading(block_id.clone())?;
                 }
             }
+        } else {
+            info!("✅ No missing blocks");
         }
 
-        // 5. Process incoming network events
-        while let Some(event) = self.network.next_event().await {
-            if let Err(e) = self.handle_network_event(event).await {
-                warn!("Failed to handle network event: {}", e);
+        // 5. Process incoming network events (non-blocking)
+        // Process all available events without blocking
+        let mut event_count = 0;
+        loop {
+            match self.network.try_next_event().await {
+                Some(event) => {
+                    event_count += 1;
+                    if let Err(e) = self.handle_network_event(event).await {
+                        warn!("Failed to handle network event: {}", e);
+                    }
+                }
+                None => break, // No more events available
             }
         }
 
-        debug!("Sync iteration complete");
+        if event_count > 0 {
+            info!("📨 Processed {} network events", event_count);
+        } else {
+            info!("📭 No network events to process");
+        }
+
+        info!("✅ Sync iteration complete");
         Ok(())
     }
 

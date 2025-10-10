@@ -60,20 +60,6 @@ async fn main() -> anyhow::Result<()> {
     let sync_state = SyncState { p2p: p2p_manager.clone() };
     tracing::info!("Initialized P2P sync manager");
 
-    // Create and start sync orchestrator
-    let relay_ws_url = format!("ws://localhost:{}/api/v1/relay/ws", port);
-    let orchestrator = Arc::new(SyncOrchestrator::new(
-        relay_ws_url,
-        p2p_manager.clone(),
-        db.clone(),
-    ));
-
-    if let Err(e) = orchestrator.clone().start().await {
-        tracing::error!("Failed to start sync orchestrator: {}", e);
-    } else {
-        tracing::info!("Started P2P sync orchestrator");
-    }
-
     // Create the router with state
     let app = routes::create_router(state, relay_state, account_state, releases_state, sync_state);
 
@@ -84,6 +70,29 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("  curl -X POST http://127.0.0.1:{}/api/v1/admin/authorize \\", port);
     tracing::info!("    -H 'Content-Type: application/json' \\");
     tracing::info!("    -d '{{\"publicKey\": \"YOUR_PUBLIC_KEY_HERE\"}}'");
+
+    // Start sync orchestrator AFTER server is listening
+    // If LENS_RELAY_URL is set, use it; otherwise connect to own relay
+    let relay_ws_url = env::var("LENS_RELAY_URL")
+        .unwrap_or_else(|_| format!("ws://localhost:{}/api/v1/relay/ws", port));
+    tracing::info!("Using relay URL: {}", relay_ws_url);
+
+    let orchestrator = Arc::new(SyncOrchestrator::new(
+        relay_ws_url,
+        p2p_manager.clone(),
+        db.clone(),
+    ));
+
+    tokio::spawn(async move {
+        // Give the server a moment to fully start
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        if let Err(e) = orchestrator.start().await {
+            tracing::error!("Failed to start sync orchestrator: {}", e);
+        } else {
+            tracing::info!("Started P2P sync orchestrator");
+        }
+    });
 
     axum::serve(listener, app).await?;
 

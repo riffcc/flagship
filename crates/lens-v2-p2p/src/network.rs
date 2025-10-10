@@ -3,13 +3,14 @@
 //! Handles peer-to-peer networking for lens nodes.
 //! All nodes are equal peers - no client/server dichotomy.
 
-use crate::{BlockId, BlockMeta, P2pError, Result};
-use futures::StreamExt;
+use crate::{BlockId, P2pError, Result};
+use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
-use tokio_tungstenite::{connect_async, tungstenite::Message};
+use tokio_tungstenite::{connect_async, tungstenite::Message, WebSocketStream, MaybeTlsStream};
+use tokio::net::TcpStream;
 use tracing::{debug, info, warn, error};
 
 /// Peer ID (string identifier assigned by relay)
@@ -78,6 +79,9 @@ pub struct P2pNetwork {
     /// Channel for sending network events
     event_tx: mpsc::UnboundedSender<NetworkEvent>,
 
+    /// Channel for sending outgoing WebSocket messages
+    ws_tx: Arc<RwLock<Option<mpsc::UnboundedSender<Message>>>>,
+
     /// Relay WebSocket URL
     relay_url: String,
 }
@@ -92,6 +96,7 @@ impl P2pNetwork {
             peers: Arc::new(RwLock::new(HashMap::new())),
             event_rx: Arc::new(RwLock::new(event_rx)),
             event_tx,
+            ws_tx: Arc::new(RwLock::new(None)),
             relay_url,
         }
     }
@@ -117,6 +122,20 @@ impl P2pNetwork {
         info!("Connected to relay");
 
         let (mut write, mut read) = ws_stream.split();
+
+        // Create channel for outgoing messages
+        let (ws_tx, mut ws_rx) = mpsc::unbounded_channel::<Message>();
+        *self.ws_tx.write().await = Some(ws_tx);
+
+        // Spawn task to handle outgoing messages
+        tokio::spawn(async move {
+            while let Some(msg) = ws_rx.recv().await {
+                if let Err(e) = write.send(msg).await {
+                    error!("Failed to send WebSocket message: {}", e);
+                    break;
+                }
+            }
+        });
 
         let event_tx = self.event_tx.clone();
         let peer_id = self.peer_id.clone();
@@ -202,8 +221,18 @@ impl P2pNetwork {
         info!("Sending WantList: gen={}, needs={}, offers={}",
             wantlist.generation, wantlist.has_needs(), wantlist.has_offers());
 
-        // TODO: Send via WebSocket
-        // For now, just log
+        // Serialize WantList to JSON
+        let json = serde_json::to_string(wantlist)
+            .map_err(|e| P2pError::Network(format!("Failed to serialize WantList: {}", e)))?;
+
+        // Send via WebSocket
+        if let Some(tx) = self.ws_tx.read().await.as_ref() {
+            tx.send(Message::Text(json))
+                .map_err(|e| P2pError::Network(format!("Failed to send WantList: {}", e)))?;
+            info!("Sent WantList to relay");
+        } else {
+            warn!("Cannot send WantList: not connected to relay");
+        }
 
         Ok(())
     }
@@ -218,9 +247,14 @@ impl P2pNetwork {
         Ok(())
     }
 
-    /// Receive next network event
+    /// Receive next network event (blocking)
     pub async fn next_event(&self) -> Option<NetworkEvent> {
         self.event_rx.write().await.recv().await
+    }
+
+    /// Try to receive next network event without blocking
+    pub async fn try_next_event(&self) -> Option<NetworkEvent> {
+        self.event_rx.write().await.try_recv().ok()
     }
 }
 
