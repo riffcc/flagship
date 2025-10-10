@@ -2,6 +2,8 @@ mod routes;
 mod db;
 
 use routes::{initialize_registry, AppState, RelayState, AccountState, ReleasesState};
+use routes::sync::SyncState;
+use lens_v2_p2p::{P2pManager, P2pConfig};
 use std::env;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -49,8 +51,14 @@ async fn main() -> anyhow::Result<()> {
     let releases_state = ReleasesState::with_db(account_state.clone(), db.clone())?;
     tracing::info!("Initialized releases management with RocksDB persistence");
 
+    // Create P2P manager for sync status tracking
+    let p2p_config = P2pConfig::default();
+    let p2p_manager = Arc::new(P2pManager::new(p2p_config));
+    let sync_state = SyncState { p2p: p2p_manager };
+    tracing::info!("Initialized P2P sync manager");
+
     // Create the router with state
-    let app = routes::create_router(state, relay_state, account_state, releases_state);
+    let app = routes::create_router(state, relay_state, account_state, releases_state, sync_state);
 
     // Start the server
     let listener = tokio::net::TcpListener::bind(&addr).await?;

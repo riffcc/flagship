@@ -17,9 +17,10 @@ pub use schemas::{initialize_registry, AppState};
 pub use relay::RelayState;
 pub use account::AccountState;
 pub use releases::ReleasesState;
+pub use sync::SyncState;
 
 /// Create the main API router with all endpoints
-pub fn create_router(state: AppState, relay_state: RelayState, account_state: AccountState, releases_state: ReleasesState) -> Router {
+pub fn create_router(state: AppState, relay_state: RelayState, account_state: AccountState, releases_state: ReleasesState, sync_state: sync::SyncState) -> Router {
     // Configure CORS to allow all origins for development
     // In production, you should restrict this to specific origins
     let cors = CorsLayer::new()
@@ -29,6 +30,8 @@ pub fn create_router(state: AppState, relay_state: RelayState, account_state: Ac
 
     Router::new()
         .route("/api/v1/health", get(health::health_check))
+        .route("/api/v1/ready", get(sync::ready_handler))
+        .with_state(sync_state)
         .route("/api/v1/schemas", get(schemas::list_schemas))
         .route(
             "/api/v1/schemas/:schema_name",
@@ -69,11 +72,14 @@ pub fn create_router(state: AppState, relay_state: RelayState, account_state: Ac
 #[cfg(test)]
 pub fn create_test_app() -> Router {
     use std::sync::Arc;
+    use lens_v2_p2p::{P2pManager, P2pConfig};
 
     let registry = Arc::new(initialize_registry());
     let state = AppState { registry };
     let relay_state = RelayState::new();
     let account_state = AccountState::new();
     let releases_state = ReleasesState::new(account_state.clone());
-    create_router(state, relay_state, account_state, releases_state)
+    let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
+    let sync_state = SyncState { p2p: p2p_manager };
+    create_router(state, relay_state, account_state, releases_state, sync_state)
 }
