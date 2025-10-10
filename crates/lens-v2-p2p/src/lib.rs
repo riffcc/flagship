@@ -19,9 +19,19 @@ pub mod wasm;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native;
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "network"))]
+pub mod network;
+
 // Re-exports
 pub use manager::{P2pConfig, P2pManager};
 pub use sync::SyncTracker;
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "network"))]
+pub use network::P2pNetwork;
+
+// Re-export WantList from consensus-peerexc if available
+#[cfg(feature = "consensus")]
+pub use consensus_peerexc::wantlist::WantList;
 
 /// P2P errors
 #[derive(Debug, Error)]

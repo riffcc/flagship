@@ -19,6 +19,9 @@ consensus-tgp = { path = "../../../palace/crates/consensus/tgp", optional = true
 consensus-common = { path = "../../../palace/crates/consensus/common", optional = true }
 consensus-peerexc = { path = "../../../palace/crates/consensus/peerexc", optional = true }
 
+# Citadel DHT for peer discovery
+citadel-core = { path = "../../../citadel/crates/citadel-core", optional = true }
+
 # Serialization (minimal, wasm-friendly)
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -45,14 +48,20 @@ web-sys = { version = "0.3", features = [
 # Native async runtime (not included in WASM)
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { workspace = true, optional = true }
+tokio-tungstenite = { version = "0.21", optional = true }
+tracing = { workspace = true }
 
 [dev-dependencies]
 # Testing (not compiled into WASM)
 wasm-bindgen-test = "0.3"
 
 [features]
-default = ["consensus"]
+default = ["consensus", "network"]
 # Consensus support (BFT + TGP + PeerExc)
 consensus = ["consensus-bft", "consensus-tgp", "consensus-common", "consensus-peerexc"]
+# DHT-based peer discovery via Citadel
+dht = ["citadel-core"]
+# Network support with WebSocket
+network = ["tokio", "tokio-tungstenite", "dht"]
 # Optional tokio support for native builds
 tokio-runtime = ["tokio"]

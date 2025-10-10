@@ -253,7 +253,12 @@ curl http://localhost:5002/api/v1/ready | jq .
 - [x] P2P manager infrastructure
 - [x] Sync status tracking
 - [x] `/ready` endpoint
-- [ ] Active P2P replication (in progress)
+- [x] P2P network layer with WebSocket relay
+- [x] Citadel DHT integration for peer discovery
+- [x] Sync orchestrator coordinating network + consensus + persistence
+- [ ] Block serialization/deserialization (Release ↔ BlockData)
+- [ ] TGP-based block exchange
+- [ ] Full integration testing
 
 ## Comparison to Legacy Lens-Node
 

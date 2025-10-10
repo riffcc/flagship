@@ -1,9 +1,12 @@
 mod routes;
 mod db;
+mod sync_orchestrator;
+mod block_codec;
 
 use routes::{initialize_registry, AppState, RelayState, AccountState, ReleasesState};
 use routes::sync::SyncState;
 use lens_v2_p2p::{P2pManager, P2pConfig};
+use sync_orchestrator::SyncOrchestrator;
 use std::env;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -54,8 +57,22 @@ async fn main() -> anyhow::Result<()> {
     // Create P2P manager for sync status tracking
     let p2p_config = P2pConfig::default();
     let p2p_manager = Arc::new(P2pManager::new(p2p_config));
-    let sync_state = SyncState { p2p: p2p_manager };
+    let sync_state = SyncState { p2p: p2p_manager.clone() };
     tracing::info!("Initialized P2P sync manager");
+
+    // Create and start sync orchestrator
+    let relay_ws_url = format!("ws://localhost:{}/api/v1/relay/ws", port);
+    let orchestrator = Arc::new(SyncOrchestrator::new(
+        relay_ws_url,
+        p2p_manager.clone(),
+        db.clone(),
+    ));
+
+    if let Err(e) = orchestrator.clone().start().await {
+        tracing::error!("Failed to start sync orchestrator: {}", e);
+    } else {
+        tracing::info!("Started P2P sync orchestrator");
+    }
 
     // Create the router with state
     let app = routes::create_router(state, relay_state, account_state, releases_state, sync_state);
