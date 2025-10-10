@@ -155,12 +155,31 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
 
                     info!("Relay: Found {} providers for {}", providers.len(), peer_id);
 
-                    // Send peer referrals back with peer IDs
-                    if !providers.is_empty() {
+                    // Get all connected peers for peer discovery
+                    let all_peers = {
+                        let relay = state.relay.read().await;
+                        relay.get_peers()
+                    };
+
+                    // Filter out self and combine with providers
+                    let mut peers_to_send: Vec<_> = all_peers
+                        .into_iter()
+                        .filter(|p| p.peer_id != peer_id)
+                        .collect();
+
+                    // Add specific providers if available
+                    for provider in providers {
+                        if !peers_to_send.iter().any(|p| p.peer_id == provider.peer_id) {
+                            peers_to_send.push(provider);
+                        }
+                    }
+
+                    // Always send referrals (for peer discovery even when no blocks needed)
+                    if !peers_to_send.is_empty() {
                         let referral = serde_json::json!({
                             "type": "peer_referral",
                             "your_peer_id": peer_id,
-                            "peers": providers.into_iter().take(5).map(|p| {
+                            "peers": peers_to_send.into_iter().take(10).map(|p| {
                                 serde_json::json!({
                                     "peer_id": p.peer_id,
                                     "latest_height": p.latest_height,
@@ -169,14 +188,20 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                             }).collect::<Vec<_>>(),
                         });
 
+                        info!("Relay: Sending referral to {} with {} peers", peer_id, referral["peers"].as_array().map(|a| a.len()).unwrap_or(0));
+
                         let senders = state.peer_senders.read().await;
                         if let Some(tx) = senders.get(&peer_id) {
                             if let Ok(json) = serde_json::to_string(&referral) {
                                 if let Err(e) = tx.send(Message::Text(json)) {
                                     warn!("Relay: Failed to send referral to {}: {}", peer_id, e);
+                                } else {
+                                    info!("Relay: Successfully sent peer referral to {}", peer_id);
                                 }
                             }
                         }
+                    } else {
+                        info!("Relay: No other peers to refer to {}", peer_id);
                     }
                 }
             }

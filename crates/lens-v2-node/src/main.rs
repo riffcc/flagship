@@ -83,18 +83,25 @@ async fn main() -> anyhow::Result<()> {
         db.clone(),
     ));
 
-    tokio::spawn(async move {
-        // Give the server a moment to fully start
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-        if let Err(e) = orchestrator.start().await {
-            tracing::error!("Failed to start sync orchestrator: {}", e);
-        } else {
-            tracing::info!("Started P2P sync orchestrator");
+    // Spawn server in background
+    let server_handle = tokio::spawn(async move {
+        if let Err(e) = axum::serve(listener, app).await {
+            tracing::error!("Server error: {}", e);
         }
     });
 
-    axum::serve(listener, app).await?;
+    // Give server a moment to start accepting connections
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    // Now start the orchestrator (this will connect to relay)
+    if let Err(e) = orchestrator.start().await {
+        tracing::error!("Failed to start sync orchestrator: {}", e);
+    } else {
+        tracing::info!("✅ P2P sync orchestrator started successfully");
+    }
+
+    // Wait for server to complete (which it never will unless there's an error)
+    server_handle.await?;
 
     Ok(())
 }

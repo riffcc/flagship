@@ -1,6 +1,6 @@
 use axum::{
     extract::{Json, Path, State},
-    http::StatusCode,
+    http::{StatusCode, HeaderMap},
     response::IntoResponse,
 };
 use serde::{Deserialize, Serialize};
@@ -176,11 +176,22 @@ pub async fn get_release(
 /// Requires upload permission
 pub async fn create_release(
     State(state): State<ReleasesState>,
+    headers: HeaderMap,
     Json(req): Json<CreateReleaseRequest>,
 ) -> impl IntoResponse {
-    // TODO: Extract public key from Authorization header
-    // For now, using a placeholder until we implement proper auth headers
-    let public_key = "ed25119p/test_admin_key_12345";
+    // Extract public key from X-Public-Key header
+    let public_key = match headers.get("X-Public-Key") {
+        Some(key) => key.to_str().unwrap_or(""),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Missing X-Public-Key header"
+                })),
+            )
+                .into_response();
+        }
+    };
 
     // Check permissions
     if !state.can_upload(public_key).await {
@@ -238,11 +249,23 @@ pub async fn create_release(
 /// Requires admin permission or ownership
 pub async fn update_release(
     State(state): State<ReleasesState>,
+    headers: HeaderMap,
     Path(id): Path<String>,
     Json(req): Json<UpdateReleaseRequest>,
 ) -> impl IntoResponse {
-    // TODO: Extract public key from Authorization header
-    let public_key = "ed25119p/test_admin_key_12345";
+    // Extract public key from X-Public-Key header
+    let public_key = match headers.get("X-Public-Key") {
+        Some(key) => key.to_str().unwrap_or(""),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Missing X-Public-Key header"
+                })),
+            )
+                .into_response();
+        }
+    };
 
     // Check if release exists
     let key = make_key(prefixes::RELEASE, &id);
@@ -325,10 +348,22 @@ pub async fn update_release(
 /// Requires admin permission or ownership
 pub async fn delete_release(
     State(state): State<ReleasesState>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    // TODO: Extract public key from Authorization header
-    let public_key = "ed25119p/test_admin_key_12345";
+    // Extract public key from X-Public-Key header
+    let public_key = match headers.get("X-Public-Key") {
+        Some(key) => key.to_str().unwrap_or(""),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Missing X-Public-Key header"
+                })),
+            )
+                .into_response();
+        }
+    };
 
     // Check if release exists
     let key = make_key(prefixes::RELEASE, &id);

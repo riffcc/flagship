@@ -17,6 +17,7 @@ sleep 1
 echo "Starting 3 nodes..."
 
 # Node 0 - acts as relay
+RUST_LOG=info \
 PORT=5002 \
 DB_PATH=/tmp/lens-test/node0/rocksdb \
 LENS_NODE_ID=0 \
@@ -26,6 +27,7 @@ echo "Node 0 PID: $!"
 sleep 2
 
 # Node 1 - connects to node 0
+RUST_LOG=info \
 PORT=5003 \
 DB_PATH=/tmp/lens-test/node1/rocksdb \
 LENS_NODE_ID=1 \
@@ -36,6 +38,7 @@ echo "Node 1 PID: $!"
 sleep 2
 
 # Node 2 - connects to node 0
+RUST_LOG=info \
 PORT=5004 \
 DB_PATH=/tmp/lens-test/node2/rocksdb \
 LENS_NODE_ID=2 \

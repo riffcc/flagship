@@ -212,8 +212,19 @@ impl SyncOrchestrator {
 
             NetworkEvent::PeerReferral(peers) => {
                 info!("Received referral for {} peers", peers.len());
-                for peer in peers {
+                for peer in &peers {
                     info!("  - {} at height {} (score: {})", peer.peer_id, peer.latest_height, peer.score);
+
+                    // Convert string peer_id to u64 for P2pManager tracking
+                    // Use hash of peer_id string
+                    let peer_id_hash = hash_peer_id(&peer.peer_id);
+
+                    // Add peer to P2pManager
+                    if let Err(e) = self.p2p_manager.add_peer(peer_id_hash) {
+                        warn!("Failed to add peer {} to P2pManager: {}", peer.peer_id, e);
+                    } else {
+                        info!("✅ Added peer {} (hash={}) to P2pManager", peer.peer_id, peer_id_hash);
+                    }
                 }
             }
 
@@ -261,6 +272,19 @@ impl SyncOrchestrator {
 
         Ok(())
     }
+}
+
+/// Hash a string peer ID to u64 for P2pManager tracking
+///
+/// Uses a simple FNV-1a hash to convert string peer IDs from the relay
+/// (like "peer-12345") into u64 values that P2pManager can use.
+fn hash_peer_id(peer_id: &str) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = DefaultHasher::new();
+    peer_id.hash(&mut hasher);
+    hasher.finish()
 }
 
 #[cfg(test)]
