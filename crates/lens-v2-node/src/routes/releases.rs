@@ -433,7 +433,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_can_upload() {
-        let account_state = AccountState::new();
+        let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", uuid::Uuid::new_v4()));
+        let db = crate::db::Database::open(&temp_dir).unwrap();
+        let account_state = AccountState::new(db.clone());
         let state = ReleasesState::new(account_state.clone());
 
         // Initially cannot upload

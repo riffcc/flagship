@@ -73,11 +73,15 @@ pub fn create_router(state: AppState, relay_state: RelayState, account_state: Ac
 pub fn create_test_app() -> Router {
     use std::sync::Arc;
     use lens_v2_p2p::{P2pManager, P2pConfig};
+    use crate::db::Database;
+
+    let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", uuid::Uuid::new_v4()));
+    let db = Database::open(&temp_dir).unwrap();
 
     let registry = Arc::new(initialize_registry());
     let state = AppState { registry };
     let relay_state = RelayState::new();
-    let account_state = AccountState::new();
+    let account_state = AccountState::new(db.clone());
     let releases_state = ReleasesState::new(account_state.clone());
     let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
     let sync_state = SyncState { p2p: p2p_manager };
