@@ -498,6 +498,56 @@ export function useDeleteReleaseMutation(options?: {
   });
 }
 
+export function useBulkDeleteAllReleasesMutation(options?: {
+  onSuccess?: (response: { success: boolean; deleted: number; delete_transaction_id: string }) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { publicKey, sign } = useIdentity();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      // Sign the request
+      const timestamp = Date.now().toString();
+      const messageToSign = `${timestamp}:DELETE:/releases`;
+      const signature = await sign(messageToSign);
+
+      const headers: Record<string, string> = {
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
+      };
+
+      const response = await fetch(`${API_URL}/releases`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(error.error || `Failed to delete all releases: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      // Immediately invalidate queries after successful bulk delete
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+      return result;
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
 export function useAddFeaturedReleaseMutation(options?: {
   onSuccess?: (response: HashResponse) => void;
   onError?: (e: Error) => void;

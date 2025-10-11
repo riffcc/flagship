@@ -135,7 +135,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useDeleteFeaturedReleaseMutation, useContentCategoriesQuery, useGetStructuresQuery, useDeleteStructureMutation } from '/@/plugins/lensService/hooks';
+import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useWasmP2pDeleteReleaseMutation, useWasmP2pDeleteFeaturedReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useContentCategoriesQuery, useGetStructuresQuery, useDeleteStructureMutation, useBulkDeleteAllReleasesMutation } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import type { ReleaseItem } from '/@/types';
 
@@ -163,8 +163,12 @@ const editReleaseMutation = useEditReleaseMutation({
   onError: (e) => console.error('Failed to edit release:', e),
 });
 
-const deleteReleaseMutation = useDeleteReleaseMutation({
+const deleteReleaseMutation = useWasmP2pDeleteReleaseMutation({
   onError: (e) => console.error('Failed to delete release:', e),
+});
+
+const bulkDeleteAllReleasesMutation = useBulkDeleteAllReleasesMutation({
+  onError: (e) => console.error('Failed to bulk delete releases:', e),
 });
 
 const addFeaturedReleaseMutation = useAddFeaturedReleaseMutation({
@@ -175,7 +179,7 @@ const editFeaturedReleaseMutation = useEditFeaturedReleaseMutation({
   onError: (e) => console.error('Failed to edit featured release:', e),
 });
 
-const deleteFeaturedReleaseMutation = useDeleteFeaturedReleaseMutation({
+const deleteFeaturedReleaseMutation = useWasmP2pDeleteFeaturedReleaseMutation({
   onError: (e) => console.error('Failed to delete featured release:', e),
 });
 
@@ -260,8 +264,16 @@ const importAll = async () => {
 
 const confirmReplaceAll = async () => {
   confirmDialog.value = false;
-  await deleteAllData();
-  await performImport();
+  isImporting.value = true;
+
+  try {
+    await deleteAllData();
+    await performImport();
+  } catch (error) {
+    console.error('Replace all failed:', error);
+    openSnackbar('Replace all failed: ' + (error instanceof Error ? error.message : String(error)), 'error');
+    isImporting.value = false;
+  }
 };
 
 const deleteAllData = async () => {
@@ -269,38 +281,37 @@ const deleteAllData = async () => {
     let featuredDeleted = 0;
     let releasesDeleted = 0;
 
-    // Delete all featured releases first
+    // Delete all featured releases first (still one-by-one as there's no bulk endpoint yet)
     if (featuredReleases.value && featuredReleases.value.length > 0) {
-      console.log(`Deleting ${featuredReleases.value.length} featured releases...`);
+      openSnackbar(`Deleting ${featuredReleases.value.length} featured releases...`, 'info');
       for (const featured of featuredReleases.value) {
         try {
           const result = await deleteFeaturedReleaseMutation.mutateAsync(featured.id);
-          if (result.success) {
+          // WASM P2P mutations return {id: "..."} on success
+          if (result && result.id) {
             featuredDeleted++;
-          } else {
-            console.error(`Failed to delete featured release ${featured.id}:`, result.error);
           }
         } catch (err) {
-          console.error(`Error deleting featured release ${featured.id}:`, err);
+          // Continue on error
         }
       }
+    } else {
+      openSnackbar('No featured releases to delete', 'info');
     }
 
-    // Then delete all releases
+    // Then delete all releases using bulk delete (efficient single UBTS block)
     if (releases.value && releases.value.length > 0) {
-      console.log(`Deleting ${releases.value.length} releases...`);
-      for (const release of releases.value) {
-        try {
-          const result = await deleteReleaseMutation.mutateAsync(release.id);
-          if (result.success) {
-            releasesDeleted++;
-          } else {
-            console.error(`Failed to delete release ${release.id}:`, result.error);
-          }
-        } catch (err) {
-          console.error(`Error deleting release ${release.id}:`, err);
-        }
+      openSnackbar(`Deleting ${releases.value.length} releases in bulk...`, 'info');
+      try {
+        const result = await bulkDeleteAllReleasesMutation.mutateAsync();
+        releasesDeleted = result.deleted;
+        openSnackbar(`Bulk delete complete: ${releasesDeleted} releases deleted (transaction: ${result.delete_transaction_id})`, 'success');
+      } catch (err) {
+        openSnackbar('Bulk delete failed: ' + (err instanceof Error ? err.message : String(err)), 'error');
+        throw err;
       }
+    } else {
+      openSnackbar('No releases to delete', 'info');
     }
 
     // Wait a bit for queries to update
