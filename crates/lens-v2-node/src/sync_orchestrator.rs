@@ -298,13 +298,30 @@ impl SyncOrchestrator {
                 info!("🔍 Received WantList from {}: gen={}, have={} blocks",
                     peer_id, wantlist.generation, wantlist.have_blocks.len());
 
-                // Compare peer's have_blocks against our local blocks to detect missing
-                let local_blocks = self.get_local_blocks().await?;
-                let local_block_ids: std::collections::HashSet<_> = local_blocks
-                    .iter()
-                    .map(|b| b.id.clone())
-                    .collect();
+                // Build complete local block set (releases + auth txs + delete txs)
+                let mut local_block_ids = std::collections::HashSet::new();
 
+                // Add release block IDs
+                let local_blocks = self.get_local_blocks().await?;
+                for block in local_blocks {
+                    local_block_ids.insert(block.id);
+                }
+
+                // Add authorization transaction IDs
+                use crate::routes::account::AuthorizationTransaction;
+                let authorizations: Vec<AuthorizationTransaction> = self.db.get_all_with_prefix(prefixes::AUTHORIZATION)?;
+                for auth in authorizations {
+                    local_block_ids.insert(auth.id);
+                }
+
+                // Add delete transaction IDs
+                use crate::ubts::UBTSBlock;
+                let delete_txs: Vec<UBTSBlock> = self.db.get_all_with_prefix(prefixes::DELETE_TRANSACTION)?;
+                for delete_tx in delete_txs {
+                    local_block_ids.insert(delete_tx.id);
+                }
+
+                // Find missing blocks
                 let mut missing_from_peer = Vec::new();
                 for peer_block_id in &wantlist.have_blocks {
                     if !local_block_ids.contains(peer_block_id) {

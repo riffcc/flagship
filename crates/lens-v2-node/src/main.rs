@@ -2,6 +2,9 @@ mod routes;
 mod db;
 mod sync_orchestrator;
 mod block_codec;
+mod delete_block;
+mod ubts;
+mod webrtc_manager;
 
 use routes::{initialize_registry, AppState, RelayState, AccountState, ReleasesState};
 use routes::sync::SyncState;
@@ -42,17 +45,63 @@ async fn main() -> anyhow::Result<()> {
     // Create application state
     let state = AppState { registry };
 
-    // Create relay state for P2P peer discovery
-    let relay_state = RelayState::new();
-    tracing::info!("Initialized P2P relay");
+    // Initialize WebRTC manager for browser-to-node connections
+    let webrtc_manager = Arc::new(webrtc_manager::WebRTCManager::new()?);
+    tracing::info!("Initialized WebRTC manager for browser peers");
 
-    // Create account state for authorization
-    let account_state = AccountState::new();
-    tracing::info!("Initialized account management");
+    // Create relay state for P2P peer discovery with WebRTC support
+    let relay_state = RelayState::new().with_webrtc(webrtc_manager.clone());
+    tracing::info!("Initialized P2P relay with WebRTC support");
+
+    // Create broadcast channel for immediate WantList updates
+    let (block_notify_tx, block_notify_rx) = tokio::sync::mpsc::unbounded_channel();
+
+    // Create account state for authorization (UBTS-based, syncs via SPORE)
+    let account_state = AccountState::new(db.clone()).with_notify(block_notify_tx);
+    tracing::info!("Initialized account management with UBTS transaction storage and instant broadcast");
 
     // Create releases state for content management with RocksDB persistence
     let releases_state = ReleasesState::with_db(account_state.clone(), db.clone())?;
     tracing::info!("Initialized releases management with RocksDB persistence");
+
+    // Reconcile delete transactions on startup
+    // Process all delete transactions that exist in the database to ensure consistency
+    tracing::info!("🔄 Reconciling delete transactions from database...");
+    use ubts::UBTSBlock;
+    use db::{prefixes, make_key};
+
+    let delete_txs: Vec<UBTSBlock> = db.get_all_with_prefix(prefixes::DELETE_TRANSACTION)?;
+    let mut deleted_count = 0;
+
+    for delete_tx_block in delete_txs {
+        for tx in &delete_tx_block.transactions {
+            match tx {
+                ubts::UBTSTransaction::DeleteRelease { id, .. } => {
+                    let release_key = make_key(prefixes::RELEASE, id);
+                    if db.exists(&release_key)? {
+                        db.delete(&release_key)?;
+                        deleted_count += 1;
+                        tracing::debug!("🗑️ Reconciled delete for release: {}", id);
+                    }
+                }
+                ubts::UBTSTransaction::DeleteFeaturedRelease { id, .. } => {
+                    let featured_key = make_key(prefixes::FEATURED_RELEASE, id);
+                    if db.exists(&featured_key)? {
+                        db.delete(&featured_key)?;
+                        deleted_count += 1;
+                        tracing::debug!("🗑️ Reconciled delete for featured release: {}", id);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    if deleted_count > 0 {
+        tracing::info!("✅ Reconciliation complete: processed {} delete transactions", deleted_count);
+    } else {
+        tracing::info!("✅ Reconciliation complete: no pending deletes");
+    }
 
     // Create P2P manager for sync status tracking
     let p2p_config = P2pConfig::default();
@@ -81,6 +130,7 @@ async fn main() -> anyhow::Result<()> {
         relay_ws_url,
         p2p_manager.clone(),
         db.clone(),
+        block_notify_rx,
     ));
 
     // Spawn server in background
