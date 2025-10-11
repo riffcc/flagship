@@ -1,6 +1,7 @@
 import { inject, type Ref, computed, unref } from 'vue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { API_URL } from '../router';
+import { useIdentity } from '/@/composables/useIdentity';
 import type {
   HashResponse,
   IdResponse,
@@ -47,14 +48,39 @@ export function usePeerIdQuery(options?: { enabled?: boolean | Ref<boolean> }) {
 }
 
 export function useAccountStatusQuery(options?: { enabled?: boolean | Ref<boolean> }) {
-  const { lensService } = useLensService();
+  const { publicKey, isInitialized } = useIdentity();
   return useQuery({
     queryKey: ['accountStatus'],
     queryFn: async () => {
-      return await lensService.getAccountStatus();
+      if (!publicKey.value) {
+        console.warn('[useAccountStatusQuery] Public key not available yet');
+        return { isAdmin: false, roles: [], permissions: [] };
+      }
+
+      const encodedKey = encodeURIComponent(publicKey.value);
+      console.log('[useAccountStatusQuery] Fetching account status for:', publicKey.value);
+      const response = await fetch(`${API_URL}/account/${encodedKey}`);
+
+      if (!response.ok) {
+        console.warn('[useAccountStatusQuery] API returned error:', response.status);
+        return { isAdmin: false, roles: [], permissions: [] };
+      }
+
+      const result = await response.json();
+      console.log('[useAccountStatusQuery] Account status:', result);
+      return result;
     },
     refetchInterval: 15000,
-    enabled: options?.enabled ?? true,
+    // Only run when identity is initialized and publicKey is available
+    enabled: computed(() => {
+      const shouldEnable = (options?.enabled !== false) && isInitialized.value && !!publicKey.value;
+      console.log('[useAccountStatusQuery] Query enabled:', shouldEnable, {
+        optionsEnabled: options?.enabled,
+        isInitialized: isInitialized.value,
+        hasPublicKey: !!publicKey.value
+      });
+      return shouldEnable;
+    }),
   });
 }
 
@@ -111,7 +137,7 @@ export function useGetReleasesQuery(options?: {
       });
     },
     enabled: options?.enabled ?? true,
-    staleTime: options?.staleTime ?? 1000 * 60 * 5,
+    staleTime: options?.staleTime ?? 0, // Always fetch fresh data
     gcTime: 1000 * 60 * 15,
   });
 }
@@ -157,7 +183,7 @@ export function useGetFeaturedReleasesQuery(options?: {
       return await lensService.getFeaturedReleases(searchOptions);
     },
     enabled: options?.enabled ?? true,
-    staleTime: options?.staleTime ?? 1000 * 60 * 5,
+    staleTime: options?.staleTime ?? 0, // Always fetch fresh data
     gcTime: 1000 * 60 * 15,
   });
 }
@@ -259,21 +285,59 @@ export function useAddReleaseMutation(options?: {
 }) {
   const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
+  const { publicKey, sign } = useIdentity();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: AddInput<ReleaseData<AnyObject>>) => {
       if (!USE_PEERBIT) {
         // Use HTTP API when Peerbit is disabled
+        if (!publicKey.value) {
+          throw new Error('Identity not initialized');
+        }
+
+        // Create request payload
+        const payload = JSON.stringify({
+          ...data,
+          metadata: data.metadata,
+        });
+
+        // Sign the payload
+        const timestamp = Date.now().toString();
+        const messageToSign = `${timestamp}:${payload}`;
+        const signature = await sign(messageToSign);
+
+        console.log('[AddRelease] Signing request:', {
+          publicKey: publicKey.value,
+          timestamp,
+          signatureLength: signature.length,
+          payloadLength: payload.length,
+        });
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'X-Public-Key': publicKey.value,
+          'X-Signature': signature,
+          'X-Timestamp': timestamp,
+        };
+
         const response = await fetch(`${API_URL}/releases`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...data,
-            metadata: data.metadata,
-          }),
+          headers,
+          body: payload,
         });
         if (!response.ok) {
-          throw new Error(`Failed to create release: ${response.statusText}`);
+          const error = await response.json().catch(() => ({ error: response.statusText }));
+          console.error('[AddRelease] Request failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            error,
+            headers: {
+              publicKey: headers['X-Public-Key'],
+              timestamp: headers['X-Timestamp'],
+              signatureLength: headers['X-Signature']?.length,
+            },
+          });
+          throw new Error(error.error || `Failed to create release: ${response.statusText}`);
         }
         const result = await response.json();
         // Immediately invalidate queries after successful HTTP API call
@@ -303,30 +367,51 @@ export function useEditReleaseMutation(options?: {
 }) {
   const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
+  const { publicKey, sign } = useIdentity();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: EditInput<ReleaseData<AnyObject>>) => {
       if (!USE_PEERBIT) {
         // Use HTTP API when Peerbit is disabled
+        if (!publicKey.value) {
+          throw new Error('Identity not initialized');
+        }
+
         // Extract the data payload (could be nested as data.data or flat)
         const payload = (data as any).data || data;
         const releaseId = data.id;
 
+        // Create request payload
+        const payloadStr = JSON.stringify({
+          name: payload.name,
+          categoryId: payload.categoryId,
+          contentCID: payload.contentCID,
+          thumbnailCID: payload.thumbnailCID,
+          metadata: payload.metadata,
+          siteAddress: payload.siteAddress,
+          postedBy: payload.postedBy,
+        });
+
+        // Sign the payload
+        const timestamp = Date.now().toString();
+        const messageToSign = `${timestamp}:${payloadStr}`;
+        const signature = await sign(messageToSign);
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'X-Public-Key': publicKey.value,
+          'X-Signature': signature,
+          'X-Timestamp': timestamp,
+        };
+
         const response = await fetch(`${API_URL}/releases/${releaseId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: payload.name,
-            categoryId: payload.categoryId,
-            contentCID: payload.contentCID,
-            thumbnailCID: payload.thumbnailCID,
-            metadata: payload.metadata,
-            siteAddress: payload.siteAddress,
-            postedBy: payload.postedBy,
-          }),
+          headers,
+          body: payloadStr,
         });
         if (!response.ok) {
-          throw new Error(`Failed to update release: ${response.statusText}`);
+          const error = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(error.error || `Failed to update release: ${response.statusText}`);
         }
         const result = await response.json();
         // Immediately invalidate queries after successful HTTP API call
@@ -405,7 +490,9 @@ export function useEditFeaturedReleaseMutation(options?: {
   return useMutation({
     mutationFn: async (data: EditInput<FeaturedReleaseData>) => {
       const { API_URL } = await import('../router');
-      const response = await fetch(`${API_URL}/admin/featured-releases/${data.id}`, {
+      // URL-encode the ID to handle special characters
+      const encodedId = encodeURIComponent(data.id);
+      const response = await fetch(`${API_URL}/admin/featured-releases/${encodedId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -778,6 +865,221 @@ export function useDeleteArtistMutation(options?: {
       queryClient.invalidateQueries({ queryKey: ['structures'] });
     },
     onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+// HTTP-based hooks for direct API calls (UBTS transactions)
+
+function useHttpLensService() {
+  return inject<any>('httpLensService');
+}
+
+export function useHttpDeleteReleaseMutation(options?: {
+  onSuccess?: (response: any) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { publicKey, sign } = useIdentity();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      // Sign the request
+      const timestamp = Date.now().toString();
+      const messageToSign = `${timestamp}:DELETE:/releases/${id}`;
+      const signature = await sign(messageToSign);
+
+      console.log('[DeleteRelease] Signing request:', {
+        publicKey: publicKey.value,
+        timestamp,
+        releaseId: id,
+        signatureLength: signature.length,
+      });
+
+      const headers: Record<string, string> = {
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
+      };
+
+      const response = await fetch(`${API_URL}/releases/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        console.error('[DeleteRelease] Request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error,
+          headers: {
+            publicKey: headers['X-Public-Key'],
+            timestamp: headers['X-Timestamp'],
+            signatureLength: headers['X-Signature']?.length,
+          },
+        });
+        throw new Error(error.error || `Failed to delete release: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result;
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+      queryClient.invalidateQueries({ queryKey: ['releases', response.id] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useHttpDeleteFeaturedReleaseMutation(options?: {
+  onSuccess?: (response: any) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { publicKey, sign } = useIdentity();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      // Sign the request
+      const timestamp = Date.now().toString();
+      const messageToSign = `${timestamp}:DELETE:/admin/featured-releases/${id}`;
+      const signature = await sign(messageToSign);
+
+      console.log('[DeleteFeaturedRelease] Signing request:', {
+        publicKey: publicKey.value,
+        timestamp,
+        featuredReleaseId: id,
+        signatureLength: signature.length,
+      });
+
+      const headers: Record<string, string> = {
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
+      };
+
+      // URL-encode the ID to handle special characters
+      const encodedId = encodeURIComponent(id);
+      const response = await fetch(`${API_URL}/admin/featured-releases/${encodedId}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        console.error('[DeleteFeaturedRelease] Request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error,
+          headers: {
+            publicKey: headers['X-Public-Key'],
+            timestamp: headers['X-Timestamp'],
+            signatureLength: headers['X-Signature']?.length,
+          },
+        });
+        throw new Error(error.error || `Failed to delete featured release: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result;
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases', response.id] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useHttpAuthorizeAdminMutation(options?: {
+  onSuccess?: (response: any) => void;
+  onError?: (e: Error) => void;
+}) {
+  const httpLensService = useHttpLensService();
+  return useMutation({
+    mutationFn: async (publicKey: string) => {
+      return await httpLensService.authorizeAdmin(publicKey);
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+// WASM P2P hooks for browser-based P2P participation
+
+function useWasmP2pService() {
+  return inject<any>('wasmP2pService');
+}
+
+export function useWasmP2pDeleteReleaseMutation(options?: {
+  onSuccess?: () => void;
+  onError?: (e: Error) => void;
+}) {
+  const wasmP2pService = useWasmP2pService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!wasmP2pService) {
+        throw new Error('WASM P2P service not initialized');
+      }
+
+      // Ensure service is initialized
+      if (!wasmP2pService.isInitialized()) {
+        await wasmP2pService.initialize();
+      }
+
+      // Delete via P2P
+      await wasmP2pService.deleteRelease(id);
+      return { id };
+    },
+    onSuccess: async (data) => {
+      // Call user's onSuccess callback
+      options?.onSuccess?.();
+
+      // Optimistically remove the deleted release from cache (immediate UI update)
+      queryClient.setQueryData(['releases'], (old: any) => {
+        if (!old) return old;
+        return old.filter((release: any) => release.id !== data.id);
+      });
+
+      queryClient.setQueryData(['featuredReleases'], (old: any) => {
+        if (!old) return old;
+        return old.filter((release: any) => release.id !== data.id);
+      });
+
+      // Small delay to let nodes process the delete before refetching
+      // Network latency + node processing is typically 50-200ms
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['releases'] });
+        queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+        queryClient.invalidateQueries({ queryKey: ['release', data.id] });
+      }, 200);
+    },
+    onError: (error, variables, context) => {
+      // Revert optimistic updates on error
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
       options?.onError?.(error);
     },
   });

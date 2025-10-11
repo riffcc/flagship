@@ -8,6 +8,11 @@ use serde::{Deserialize, Serialize};
 use super::releases::{Release, ReleasesState};
 use crate::db::{prefixes, make_key};
 
+/// Default timestamp for backward compatibility
+fn default_timestamp() -> String {
+    chrono::Utc::now().to_rfc3339()
+}
+
 /// Featured release structure - comprehensive curation and tagging system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeaturedRelease {
@@ -19,12 +24,15 @@ pub struct FeaturedRelease {
     pub release_id: String,
 
     /// Priority/weight for sorting (higher = more prominent)
+    #[serde(default)]
     pub priority: i32,
 
     /// Promoted to hero/banner positions
+    #[serde(default)]
     pub promoted: bool,
 
     /// Flexible tags for categorization (seasonal, trending, staff-pick, new, etc.)
+    #[serde(default)]
     pub tags: Vec<String>,
 
     /// Visibility scheduling
@@ -46,7 +54,9 @@ pub struct FeaturedRelease {
     pub languages: Option<Vec<String>>,
 
     /// Analytics tracking
+    #[serde(default)]
     pub views: u64,
+    #[serde(default)]
     pub clicks: u64,
 
     /// A/B testing variant identifier
@@ -56,9 +66,9 @@ pub struct FeaturedRelease {
     pub metadata: Option<serde_json::Value>,
 
     /// Timestamps
-    #[serde(rename = "createdAt")]
+    #[serde(rename = "createdAt", alias = "created_at", default = "default_timestamp")]
     pub created_at: String,
-    #[serde(rename = "updatedAt")]
+    #[serde(rename = "updatedAt", alias = "updated_at")]
     pub updated_at: Option<String>,
 }
 
@@ -212,6 +222,34 @@ pub async fn update_featured_release(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to save: {}", e)))?;
 
     tracing::info!("Updated featured release {}", id);
+
+    Ok(Json(SuccessResponse { id }))
+}
+
+/// DELETE /api/v1/admin/featured-releases/:id - Delete a featured release
+/// Returns 200 OK even if the item doesn't exist (idempotent delete)
+pub async fn delete_featured_release(
+    Path(id): Path<String>,
+    State(state): State<ReleasesState>,
+) -> Result<Json<SuccessResponse>, (StatusCode, String)> {
+    let key = make_key(prefixes::FEATURED, &id);
+
+    // Check if the featured release exists
+    match state.db.get::<_, FeaturedRelease>(&key) {
+        Ok(Some(_)) => {
+            // Delete the featured release
+            state.db.delete(&key)
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to delete: {}", e)))?;
+            tracing::info!("Deleted featured release {}", id);
+        }
+        Ok(None) => {
+            // Already deleted - this is fine, return success (idempotent)
+            tracing::debug!("Featured release {} already deleted", id);
+        }
+        Err(e) => {
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)));
+        }
+    }
 
     Ok(Json(SuccessResponse { id }))
 }
