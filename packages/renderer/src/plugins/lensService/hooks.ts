@@ -443,14 +443,51 @@ export function useDeleteReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
+  const { publicKey, sign } = useIdentity();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      if (!USE_PEERBIT) {
+        // Use HTTP API when Peerbit is disabled
+        if (!publicKey.value) {
+          throw new Error('Identity not initialized');
+        }
+
+        // Sign the request
+        const timestamp = Date.now().toString();
+        const messageToSign = `${timestamp}:DELETE:/releases/${id}`;
+        const signature = await sign(messageToSign);
+
+        const headers: Record<string, string> = {
+          'X-Public-Key': publicKey.value,
+          'X-Signature': signature,
+          'X-Timestamp': timestamp,
+        };
+
+        const response = await fetch(`${API_URL}/releases/${id}`, {
+          method: 'DELETE',
+          headers,
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(error.error || `Failed to delete release: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        // Immediately invalidate queries after successful HTTP API call
+        queryClient.invalidateQueries({ queryKey: ['releases'] });
+        queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+        return result;
+      }
+
       return await lensService.deleteRelease(id);
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
+      // Also invalidate here for Peerbit path
       queryClient.invalidateQueries({ queryKey: ['releases'] });
       queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
       queryClient.invalidateQueries({ queryKey: ['releases', response.id] });
@@ -1079,6 +1116,53 @@ export function useWasmP2pDeleteReleaseMutation(options?: {
     onError: (error, variables, context) => {
       // Revert optimistic updates on error
       queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useWasmP2pDeleteFeaturedReleaseMutation(options?: {
+  onSuccess?: () => void;
+  onError?: (e: Error) => void;
+}) {
+  const wasmP2pService = useWasmP2pService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!wasmP2pService) {
+        throw new Error('WASM P2P service not initialized');
+      }
+
+      // Ensure service is initialized
+      if (!wasmP2pService.isInitialized()) {
+        await wasmP2pService.initialize();
+      }
+
+      // Delete featured release via P2P
+      await wasmP2pService.deleteFeaturedRelease(id);
+      return { id };
+    },
+    onSuccess: async (data) => {
+      // Call user's onSuccess callback
+      options?.onSuccess?.();
+
+      // Optimistically remove the deleted featured release from cache (immediate UI update)
+      queryClient.setQueryData(['featuredReleases'], (old: any) => {
+        if (!old) return old;
+        return old.filter((featured: any) => featured.id !== data.id);
+      });
+
+      // Small delay to let nodes process the delete before refetching
+      // Network latency + node processing is typically 50-200ms
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+        queryClient.invalidateQueries({ queryKey: ['featuredRelease', data.id] });
+      }, 200);
+    },
+    onError: (error, variables, context) => {
+      // Revert optimistic updates on error
       queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
       options?.onError?.(error);
     },
