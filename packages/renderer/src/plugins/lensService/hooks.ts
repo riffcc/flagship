@@ -512,7 +512,7 @@ export function useBulkDeleteAllReleasesMutation(options?: {
 
       // Sign the request
       const timestamp = Date.now().toString();
-      const messageToSign = `${timestamp}:DELETE:/releases`;
+      const messageToSign = `${timestamp}:DELETE:/admin/releases`;
       const signature = await sign(messageToSign);
 
       const headers: Record<string, string> = {
@@ -521,7 +521,7 @@ export function useBulkDeleteAllReleasesMutation(options?: {
         'X-Timestamp': timestamp,
       };
 
-      const response = await fetch(`${API_URL}/releases`, {
+      const response = await fetch(`${API_URL}/admin/releases`, {
         method: 'DELETE',
         headers,
       });
