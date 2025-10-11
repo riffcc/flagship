@@ -372,6 +372,26 @@ impl SyncOrchestrator {
                     }
                 }
 
+                // Check for delete transaction blocks
+                use crate::ubts::UBTSBlock;
+                let delete_txs: Vec<UBTSBlock> = self.db.get_all_with_prefix(prefixes::DELETE_TRANSACTION)?;
+                for delete_tx in delete_txs {
+                    if block_ids.contains(&delete_tx.id) {
+                        // Encode delete transaction as block data
+                        let delete_json = serde_json::to_vec(&delete_tx)?;
+                        let network_block = lens_v2_p2p::network::BlockData {
+                            id: delete_tx.id.clone(),
+                            height: 0, // Delete transactions are flat (no height)
+                            data: delete_json,
+                            prev: None, // No chain
+                            timestamp: delete_tx.timestamp,
+                        };
+
+                        blocks_to_send.push(network_block);
+                        info!("  - Prepared delete transaction {}", delete_tx.id);
+                    }
+                }
+
                 if !blocks_to_send.is_empty() {
                     info!("📤 Sending {} blocks to {}", blocks_to_send.len(), peer_id);
                     self.network.send_blocks(&peer_id, blocks_to_send).await?;
