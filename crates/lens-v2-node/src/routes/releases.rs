@@ -404,6 +404,31 @@ pub async fn delete_release(
             .into_response();
     }
 
+    // Create and save delete transaction block for P2P sync
+    use crate::ubts::{UBTSBlock, UBTSTransaction};
+
+    let delete_tx = UBTSTransaction::DeleteRelease {
+        id: id.clone(),
+        signature: Some(public_key.to_string()),
+    };
+
+    let ubts_block = UBTSBlock::new(0, None, vec![delete_tx]);
+
+    // Save delete transaction to database for SPORE sync
+    let delete_key = make_key(prefixes::DELETE_TRANSACTION, &ubts_block.id);
+    if let Err(e) = state.db.put(&delete_key, &ubts_block) {
+        tracing::error!("Failed to save delete transaction {}: {}", ubts_block.id, e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to save delete transaction"
+            })),
+        )
+            .into_response();
+    }
+
+    tracing::info!("Delete transaction saved: {} for release {}", ubts_block.id, id);
+
     // Delete from RocksDB
     if let Err(e) = state.db.delete(&key) {
         tracing::error!("Failed to delete release {}: {}", id, e);

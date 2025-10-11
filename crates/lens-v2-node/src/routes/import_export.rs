@@ -189,10 +189,56 @@ pub async fn export_releases(
 pub async fn delete_all_releases(
     State(state): State<ReleasesState>,
 ) -> impl IntoResponse {
+    use crate::ubts::{UBTSBlock, UBTSTransaction};
+
     // TODO: Add admin check here
     match state.db.iter_prefix::<Release>(prefixes::RELEASE.as_bytes()) {
         Ok(items) => {
             let count = items.len();
+
+            // Collect all release IDs
+            let release_ids: Vec<String> = items.iter()
+                .filter_map(|(_, release)| Some(release.id.clone()))
+                .collect();
+
+            if release_ids.is_empty() {
+                tracing::info!("No releases to delete");
+                return (
+                    StatusCode::OK,
+                    Json(serde_json::json!({
+                        "success": true,
+                        "deleted": 0
+                    })),
+                )
+                    .into_response();
+            }
+
+            // Create a single UBTS block with all delete transactions
+            let delete_transactions: Vec<UBTSTransaction> = release_ids.iter()
+                .map(|id| UBTSTransaction::DeleteRelease {
+                    id: id.clone(),
+                    signature: Some("system".to_string()), // System-initiated bulk delete
+                })
+                .collect();
+
+            let ubts_block = UBTSBlock::new(0, None, delete_transactions);
+
+            // Save the delete transaction block for SPORE sync
+            let delete_key = make_key(prefixes::DELETE_TRANSACTION, &ubts_block.id);
+            if let Err(e) = state.db.put(&delete_key, &ubts_block) {
+                tracing::error!("Failed to save bulk delete transaction {}: {}", ubts_block.id, e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({
+                        "error": "Failed to save delete transaction"
+                    })),
+                )
+                    .into_response();
+            }
+
+            tracing::info!("Created bulk delete transaction {} for {} releases", ubts_block.id, release_ids.len());
+
+            // Now delete all releases from database
             for (key, _) in items {
                 if let Err(e) = state.db.delete(&key) {
                     tracing::error!("Failed to delete release {}: {}", key, e);
@@ -205,7 +251,8 @@ pub async fn delete_all_releases(
                 StatusCode::OK,
                 Json(serde_json::json!({
                     "success": true,
-                    "deleted": count
+                    "deleted": count,
+                    "delete_transaction_id": ubts_block.id
                 })),
             )
                 .into_response()
@@ -226,6 +273,9 @@ pub async fn delete_all_releases(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::routes::account::AccountState;
+    use crate::db::Database;
+    use uuid::Uuid;
 
     #[test]
     fn test_convert_legacy_public_key() {
@@ -241,5 +291,75 @@ mod tests {
         let result = convert_legacy_public_key(&legacy_key);
         assert!(result.starts_with("ed25119p/"));
         assert_eq!(result.len(), 9 + 64); // prefix + 32 bytes in hex
+    }
+
+    #[tokio::test]
+    async fn test_bulk_delete_creates_single_ubts_block() {
+        use crate::ubts::UBTSBlock;
+
+        let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
+        let db = Database::open(&temp_dir).unwrap();
+        let account_state = AccountState::new(db.clone());
+        let state = ReleasesState::with_db(account_state, db.clone()).unwrap();
+
+        // Create multiple test releases
+        for i in 0..5 {
+            let release = Release {
+                id: format!("test-release-{}", i),
+                name: format!("Test Release {}", i),
+                category_id: "test".to_string(),
+                category_slug: "test".to_string(),
+                content_cid: format!("QmTest{}", i),
+                thumbnail_cid: None,
+                metadata: None,
+                site_address: "local".to_string(),
+                posted_by: "test-user".to_string(),
+                created_at: "2025-01-01T00:00:00Z".to_string(),
+            };
+
+            let key = make_key(prefixes::RELEASE, &release.id);
+            db.put(&key, &release).unwrap();
+        }
+
+        // Verify we have 5 releases
+        let releases: Vec<Release> = db.get_all_with_prefix(prefixes::RELEASE).unwrap();
+        assert_eq!(releases.len(), 5, "Should have 5 releases before delete");
+
+        // Delete all releases
+        let response = delete_all_releases(axum::extract::State(state)).await;
+
+        // Verify response
+        let (status, json_response) = match response.into_response().status() {
+            axum::http::StatusCode::OK => {
+                // Extract JSON from response (this is simplified - in real test would parse properly)
+                (axum::http::StatusCode::OK, true)
+            }
+            _ => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, false),
+        };
+
+        assert_eq!(status, axum::http::StatusCode::OK);
+        assert!(json_response, "Delete should succeed");
+
+        // Verify all releases are deleted
+        let releases_after: Vec<Release> = db.get_all_with_prefix(prefixes::RELEASE).unwrap();
+        assert_eq!(releases_after.len(), 0, "All releases should be deleted");
+
+        // Verify a single UBTS delete transaction block was created
+        let delete_txs: Vec<UBTSBlock> = db.get_all_with_prefix(prefixes::DELETE_TRANSACTION).unwrap();
+        assert_eq!(delete_txs.len(), 1, "Should have exactly 1 bulk delete transaction block");
+
+        // Verify the delete transaction block contains 5 DeleteRelease transactions
+        let delete_tx_block = &delete_txs[0];
+        assert_eq!(delete_tx_block.transactions.len(), 5, "Delete block should contain 5 DeleteRelease transactions");
+
+        // Verify all transactions are DeleteRelease types
+        for tx in &delete_tx_block.transactions {
+            match tx {
+                crate::ubts::UBTSTransaction::DeleteRelease { id, .. } => {
+                    assert!(id.starts_with("test-release-"), "Transaction should be for a test release");
+                }
+                _ => panic!("Transaction should be DeleteRelease type"),
+            }
+        }
     }
 }
