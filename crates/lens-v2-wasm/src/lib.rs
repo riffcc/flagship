@@ -44,6 +44,7 @@ pub struct P2pClient {
     peer_hex: u64,  // Hex coordinate for TGP routing
     on_block: Arc<Mutex<Option<js_sys::Function>>>,
     on_peer_discovered: Arc<Mutex<Option<js_sys::Function>>>,
+    on_dht_response: Arc<Mutex<Option<js_sys::Function>>>,  // DHT response callback
     peer_connections: Arc<Mutex<HashMap<String, PeerConnection>>>,
     dht_client: DHTClient,  // Direct DHT operations (no WebSocket!)
 }
@@ -61,6 +62,9 @@ impl P2pClient {
         console_log!("🌐 Creating WebRTC P2P client with peer_id: {}", peer_id);
         console_log!("🔷 Peer hex coordinate: {:016x}", peer_hex);
 
+        // Create DHT client
+        let dht_client = DHTClient::new(relay_url.clone());
+
         P2pClient {
             relay_url,
             websocket: Arc::new(Mutex::new(None)),
@@ -68,7 +72,9 @@ impl P2pClient {
             peer_hex,
             on_block: Arc::new(Mutex::new(None)),
             on_peer_discovered: Arc::new(Mutex::new(None)),
+            on_dht_response: Arc::new(Mutex::new(None)),
             peer_connections: Arc::new(Mutex::new(HashMap::new())),
+            dht_client,
         }
     }
 
@@ -211,6 +217,12 @@ impl P2pClient {
     /// Set callback for when new browser peers are discovered
     pub fn on_peer_discovered(&mut self, callback: js_sys::Function) {
         *self.on_peer_discovered.lock().unwrap() = Some(callback);
+    }
+
+    /// Set callback for when DHT responses are received
+    /// Callback receives: { key: string (hex), value: Uint8Array | null }
+    pub fn on_dht_response(&mut self, callback: js_sys::Function) {
+        *self.on_dht_response.lock().unwrap() = Some(callback);
     }
 
     /// Broadcast a UBTS block to the network
@@ -472,6 +484,93 @@ impl P2pClient {
 
         if sent_count == 0 {
             return Err(JsValue::from_str("No active DataChannels available"));
+        }
+
+        Ok(())
+    }
+
+    /// Send DHT GET request over WebRTC DataChannels (TGP packet)
+    /// Returns a promise that resolves when the request is sent
+    pub async fn dht_get(&self, key_hex: String) -> Result<(), JsValue> {
+        // Decode hex key to bytes
+        let key_bytes = hex::decode(&key_hex)
+            .map_err(|e| JsValue::from_str(&format!("Invalid hex key: {}", e)))?;
+
+        if key_bytes.len() != 32 {
+            return Err(JsValue::from_str("Key must be 32 bytes"));
+        }
+
+        let mut key = [0u8; 32];
+        key.copy_from_slice(&key_bytes);
+
+        // Create DHT GET request
+        let request = serde_json::json!({
+            "key": key,
+        });
+
+        let request_payload = serde_json::to_vec(&request)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        // Create TGP packet
+        // TODO: Calculate destination hex from key hash for proper routing
+        let dest_hex = peer_id_to_hex(&key_hex); // Route to node responsible for this key
+        let packet = create_tgp_packet(
+            packet_types::DHT_GET,
+            self.peer_hex,
+            dest_hex,
+            &request_payload
+        );
+
+        // Send via WebSocket relay (will be upgraded to WebRTC later)
+        let ws = self.websocket.lock().unwrap();
+        if let Some(ref ws) = *ws {
+            ws.send_with_u8_array(&packet)?;
+            console_log!("📤 Sent DHT GET request for key={}", key_hex);
+        } else {
+            return Err(JsValue::from_str("WebSocket not connected"));
+        }
+
+        Ok(())
+    }
+
+    /// Send DHT PUT request over WebRTC DataChannels (TGP packet)
+    pub async fn dht_put(&self, key_hex: String, value: Vec<u8>) -> Result<(), JsValue> {
+        // Decode hex key to bytes
+        let key_bytes = hex::decode(&key_hex)
+            .map_err(|e| JsValue::from_str(&format!("Invalid hex key: {}", e)))?;
+
+        if key_bytes.len() != 32 {
+            return Err(JsValue::from_str("Key must be 32 bytes"));
+        }
+
+        let mut key = [0u8; 32];
+        key.copy_from_slice(&key_bytes);
+
+        // Create DHT PUT request
+        let request = serde_json::json!({
+            "key": key,
+            "value": value,
+        });
+
+        let request_payload = serde_json::to_vec(&request)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        // Create TGP packet
+        let dest_hex = peer_id_to_hex(&key_hex); // Route to node responsible for this key
+        let packet = create_tgp_packet(
+            packet_types::DHT_PUT,
+            self.peer_hex,
+            dest_hex,
+            &request_payload
+        );
+
+        // Send via WebSocket relay
+        let ws = self.websocket.lock().unwrap();
+        if let Some(ref ws) = *ws {
+            ws.send_with_u8_array(&packet)?;
+            console_log!("📤 Sent DHT PUT request for key={} value_len={}", key_hex, value.len());
+        } else {
+            return Err(JsValue::from_str("WebSocket not connected"));
         }
 
         Ok(())
