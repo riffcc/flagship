@@ -98,8 +98,8 @@
               icon="$contentCopy"
               variant="text"
               size="small"
-              @click.stop="copyIPFSLink(file)"
-              title="Copy IPFS CID"
+              @click.stop="copyContentId(file)"
+              title="Copy Content ID"
             ></v-btn>
             <v-btn
               icon="$delete"
@@ -503,9 +503,9 @@ function onDragEnd() {
   dropTarget.value = null;
 }
 
-function copyIPFSLink(file: VirtualFile) {
+function copyContentId(file: VirtualFile) {
   navigator.clipboard.writeText(file.ipfs_cid);
-  alert(`Copied CID: ${file.ipfs_cid}`);
+  alert(`Copied Content ID: ${file.ipfs_cid}`);
 }
 
 function formatBytes(bytes: number): string {

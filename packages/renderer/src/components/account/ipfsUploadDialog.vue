@@ -5,7 +5,7 @@
   >
     <v-card>
       <v-card-title class="text-h5 pa-4">
-        Upload to IPFS
+        Upload Files
       </v-card-title>
 
       <v-card-text class="px-4 pb-4">
