@@ -117,6 +117,6 @@ function handleUploadSuccess() {
 function goToCreateRelease() {
   // The existing upload page flow for creating releases
   // In future, could show release form here or navigate to it
-  openSnackbar('Navigate to Admin panel to create releases from uploaded files', 'info');
+  openSnackbar('Navigate to Admin panel to create releases from uploaded files', 'success');
 }
 </script>
