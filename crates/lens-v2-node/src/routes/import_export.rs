@@ -127,6 +127,11 @@ pub async fn import_releases(
                     site_address: legacy_release.site_address,
                     posted_by,
                     created_at: chrono::Utc::now().to_rfc3339(),
+                    vector_clock: std::collections::HashMap::new(),  // Imported releases start with empty vector clock
+                    is_tombstone: false,
+                    tombstone_type: None,
+                    deleted_at: None,
+                    deleted_by: None,
                 };
 
                 if let Err(e) = state.db.put(&key, &release) {
@@ -238,14 +243,27 @@ pub async fn delete_all_releases(
 
             tracing::info!("Created bulk delete transaction {} for {} releases", ubts_block.id, release_ids.len());
 
-            // Now delete all releases from database
-            for (key, _) in items {
-                if let Err(e) = state.db.delete(&key) {
-                    tracing::error!("Failed to delete release {}: {}", key, e);
+            // Convert all releases to temporary tombstones (proof of erasure)
+            let mut tombstoned = 0;
+            for (key, mut release) in items {
+                // Convert to temporary tombstone
+                release.is_tombstone = true;
+                release.tombstone_type = Some(crate::routes::releases::TombstoneType::Temporary);
+                release.deleted_at = Some(chrono::Utc::now().to_rfc3339());
+                release.deleted_by = Some("bulk-delete".to_string());
+
+                // Increment vector clock for this delete operation
+                release.increment_clock("bulk-delete".to_string());
+
+                // Save tombstone (proof of erasure - content deleted but metadata remains)
+                if let Err(e) = state.db.put(&key, &release) {
+                    tracing::error!("Failed to create tombstone for release {}: {}", key, e);
+                } else {
+                    tombstoned += 1;
                 }
             }
 
-            tracing::warn!("Deleted all {} releases", count);
+            tracing::warn!("Created {} temporary tombstones (proof of erasure for all releases)", tombstoned);
 
             (
                 StatusCode::OK,
@@ -315,6 +333,11 @@ mod tests {
                 site_address: "local".to_string(),
                 posted_by: "test-user".to_string(),
                 created_at: "2025-01-01T00:00:00Z".to_string(),
+                vector_clock: std::collections::HashMap::new(),
+                is_tombstone: false,
+                tombstone_type: None,
+                deleted_at: None,
+                deleted_by: None,
             };
 
             let key = make_key(prefixes::RELEASE, &release.id);
@@ -340,9 +363,19 @@ mod tests {
         assert_eq!(status, axum::http::StatusCode::OK);
         assert!(json_response, "Delete should succeed");
 
-        // Verify all releases are deleted
+        // Verify all releases are now tombstones (proof of erasure)
         let releases_after: Vec<Release> = db.get_all_with_prefix(prefixes::RELEASE).unwrap();
-        assert_eq!(releases_after.len(), 0, "All releases should be deleted");
+        assert_eq!(releases_after.len(), 5, "Tombstones should still exist in database");
+
+        // Verify all releases are tombstones
+        for release in &releases_after {
+            assert!(release.is_tombstone, "Release {} should be a tombstone", release.id);
+            assert_eq!(release.tombstone_type, Some(crate::routes::releases::TombstoneType::Temporary),
+                "Release {} should have Temporary tombstone type", release.id);
+            assert!(release.deleted_at.is_some(), "Release {} should have deleted_at timestamp", release.id);
+            assert_eq!(release.deleted_by, Some("bulk-delete".to_string()),
+                "Release {} should have deleted_by set to bulk-delete", release.id);
+        }
 
         // Verify a single UBTS delete transaction block was created
         let delete_txs: Vec<UBTSBlock> = db.get_all_with_prefix(prefixes::DELETE_TRANSACTION).unwrap();
