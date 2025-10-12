@@ -396,7 +396,13 @@ mod tests {
         assert_eq!(releases.len(), 5, "Should have 5 releases before delete");
 
         // Delete all releases
-        let response = delete_all_releases(axum::extract::State(state)).await;
+        let delete_req = DeleteAllRequest {
+            public_key: "test-admin".to_string(),
+        };
+        let response = delete_all_releases(
+            axum::extract::State(state),
+            axum::Json(delete_req)
+        ).await;
 
         // Verify response
         let (status, json_response) = match response.into_response().status() {

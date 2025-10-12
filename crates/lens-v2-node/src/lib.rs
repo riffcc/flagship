@@ -4,6 +4,7 @@
 
 pub mod routes;
 pub mod db;
+pub mod storage;
 pub mod sync_orchestrator;
 pub mod block_codec;
 pub mod delete_block;

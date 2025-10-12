@@ -1,6 +1,6 @@
 [package]
 name = "lens-v2-node"
-version = "0.1.0"
+version = "0.5.3"
 edition = "2021"
 authors = ["Riff.CC Team"]
 description = "Lens Node v2 - High-performance Rust backend with P2P capabilities"
@@ -22,6 +22,7 @@ consensus-peerexc = { path = "../../../palace/crates/consensus/peerexc" }
 
 # Citadel DHT for hexagonal routing
 citadel-core = { path = "../../../citadel/crates/citadel-core" }
+citadel-dht = { path = "../../../citadel/crates/citadel-dht" }
 
 # HTTP server
 axum = { workspace = true, features = ["ws"] }
@@ -30,6 +31,7 @@ tower-http = { workspace = true }
 
 # Async runtime
 tokio = { workspace = true }
+async-trait = "0.1"
 
 # Serialization
 serde = { workspace = true }
@@ -52,6 +54,7 @@ webrtc = "0.11"
 # Cryptography
 hex = "0.4"
 sha2 = "0.10"
+blake3 = "1.8"
 
 # Random IDs
 rand = "0.8"
