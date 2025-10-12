@@ -4,10 +4,23 @@ use axum::{
     response::IntoResponse,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::account::AccountState;
 use crate::db::{Database, prefixes, make_key};
+
+/// Tombstone type for deleted releases
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TombstoneType {
+    /// Temporary deletion - anyone can re-upload
+    Temporary,
+    /// Soft deletion - only admin/moderator can re-upload
+    Soft,
+    /// Permanent deletion - CID is blacklisted, nobody can ever re-upload
+    Permanent,
+}
 
 /// Release data structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,11 +42,95 @@ pub struct Release {
     pub posted_by: String,
     #[serde(rename = "createdAt")]
     pub created_at: String,
+
+    /// Vector clock for causal ordering (node_id -> counter)
+    /// Default to empty map for backward compatibility
+    #[serde(rename = "vectorClock", default)]
+    pub vector_clock: HashMap<String, u64>,
+
+    /// Tombstone flag - true if this release is deleted
+    #[serde(rename = "isTombstone", default)]
+    pub is_tombstone: bool,
+
+    /// Tombstone type - determines who can re-upload
+    #[serde(rename = "tombstoneType", skip_serializing_if = "Option::is_none")]
+    pub tombstone_type: Option<TombstoneType>,
+
+    /// When this release was tombstoned (RFC3339 timestamp)
+    #[serde(rename = "deletedAt", skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<String>,
+
+    /// Who tombstoned this release
+    #[serde(rename = "deletedBy", skip_serializing_if = "Option::is_none")]
+    pub deleted_by: Option<String>,
+}
+
+impl Release {
+    /// Check if this release happened-before another release
+    /// Returns true if self causally precedes other
+    pub fn happened_before(&self, other: &Release) -> bool {
+        // Self happened before other if:
+        // - All of self's counters are <= other's counters
+        // - At least one counter is strictly less OR self has fewer entries
+
+        if self.vector_clock.is_empty() && other.vector_clock.is_empty() {
+            return false; // Can't determine ordering for releases without vector clocks
+        }
+
+        let mut at_least_one_less = false;
+
+        for (node_id, &self_count) in &self.vector_clock {
+            let other_count = other.vector_clock.get(node_id).copied().unwrap_or(0);
+
+            if self_count > other_count {
+                // Self has a higher counter - not happened-before
+                return false;
+            }
+
+            if self_count < other_count {
+                at_least_one_less = true;
+            }
+        }
+
+        // Check if other has any nodes we don't have (meaning other is strictly later)
+        for node_id in other.vector_clock.keys() {
+            if !self.vector_clock.contains_key(node_id) {
+                at_least_one_less = true;
+                break;
+            }
+        }
+
+        at_least_one_less
+    }
+
+    /// Check if this release is concurrent with another release
+    /// Returns true if neither happened-before the other
+    pub fn is_concurrent(&self, other: &Release) -> bool {
+        !self.happened_before(other) && !other.happened_before(self)
+    }
+
+    /// Increment the vector clock for a given node
+    /// Call this when modifying a release
+    pub fn increment_clock(&mut self, node_id: String) {
+        let counter = self.vector_clock.entry(node_id).or_insert(0);
+        *counter += 1;
+    }
+
+    /// Merge vector clocks from another release (taking maximum of each node's counter)
+    /// Call this when receiving a release from another node during sync
+    pub fn merge_clock(&mut self, other: &Release) {
+        for (node_id, &other_count) in &other.vector_clock {
+            let self_count = self.vector_clock.entry(node_id.clone()).or_insert(0);
+            *self_count = (*self_count).max(other_count);
+        }
+    }
 }
 
 /// Request to create a new release
 #[derive(Debug, Deserialize)]
 pub struct CreateReleaseRequest {
+    #[serde(rename = "publicKey")]
+    pub public_key: String,
     pub name: String,
     #[serde(rename = "categoryId")]
     pub category_id: String,
@@ -53,6 +150,8 @@ fn default_category_slug() -> String {
 /// Request to update a release
 #[derive(Debug, Deserialize)]
 pub struct UpdateReleaseRequest {
+    #[serde(rename = "publicKey")]
+    pub public_key: String,
     pub name: String,
     #[serde(rename = "categoryId")]
     pub category_id: String,
@@ -124,12 +223,44 @@ impl ReleasesState {
                 .iter()
                 .any(|r| r == "creator" || r == "moderator")
     }
+
+    /// Check if a CID is permanently tombstoned (blacklisted)
+    pub async fn is_cid_permanently_tombstoned(&self, cid: &str) -> bool {
+        // Get all tombstones and check if any are permanent for this CID
+        match self.db.get_all_with_prefix::<Release>(prefixes::RELEASE) {
+            Ok(releases) => {
+                releases.iter().any(|r| {
+                    r.is_tombstone
+                        && r.content_cid == cid
+                        && r.tombstone_type == Some(TombstoneType::Permanent)
+                })
+            }
+            Err(_) => false,
+        }
+    }
+
+    /// Get tombstone by CID (any type)
+    pub async fn get_tombstone_by_cid(&self, cid: &str) -> Option<Release> {
+        match self.db.get_all_with_prefix::<Release>(prefixes::RELEASE) {
+            Ok(releases) => releases
+                .into_iter()
+                .find(|r| r.is_tombstone && r.content_cid == cid),
+            Err(_) => None,
+        }
+    }
 }
 
-/// GET /api/v1/releases - List all releases
+/// GET /api/v1/releases - List all releases (excluding tombstones)
 pub async fn list_releases(State(state): State<ReleasesState>) -> impl IntoResponse {
     match state.db.get_all_with_prefix::<Release>(prefixes::RELEASE) {
-        Ok(releases) => Json(releases).into_response(),
+        Ok(releases) => {
+            // Filter out tombstoned releases
+            let active_releases: Vec<Release> = releases
+                .into_iter()
+                .filter(|r| !r.is_tombstone)
+                .collect();
+            Json(active_releases).into_response()
+        }
         Err(e) => {
             tracing::error!("Failed to list releases: {}", e);
             (
@@ -176,22 +307,10 @@ pub async fn get_release(
 /// Requires upload permission
 pub async fn create_release(
     State(state): State<ReleasesState>,
-    headers: HeaderMap,
     Json(req): Json<CreateReleaseRequest>,
 ) -> impl IntoResponse {
-    // Extract public key from X-Public-Key header
-    let public_key = match headers.get("X-Public-Key") {
-        Some(key) => key.to_str().unwrap_or(""),
-        None => {
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({
-                    "error": "Missing X-Public-Key header"
-                })),
-            )
-                .into_response();
-        }
-    };
+    // Extract public key from request body
+    let public_key = &req.public_key;
 
     // Check permissions
     if !state.can_upload(public_key).await {
@@ -207,7 +326,42 @@ pub async fn create_release(
     // Generate new release ID
     let id = Uuid::new_v4().to_string();
 
-    let release = Release {
+    // Get node ID from environment or use site_address as fallback
+    let node_id = std::env::var("NODE_ID")
+        .unwrap_or_else(|_| format!("node-{}", public_key));
+
+    // Check if this CID is permanently tombstoned
+    if state.is_cid_permanently_tombstoned(&req.content_cid).await {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "error": "This CID is permanently blacklisted and cannot be uploaded"
+            })),
+        )
+            .into_response();
+    }
+
+    // Check if this CID has a soft tombstone (only admin/moderator can re-upload)
+    if let Some(tombstone) = state.get_tombstone_by_cid(&req.content_cid).await {
+        if tombstone.tombstone_type == Some(TombstoneType::Soft) {
+            // Check if user is admin or moderator
+            let is_admin = state.account_state.is_admin(public_key).await;
+            let roles = state.account_state.get_roles(public_key).await;
+            let is_moderator = roles.iter().any(|r| r == "moderator");
+
+            if !is_admin && !is_moderator {
+                return (
+                    StatusCode::FORBIDDEN,
+                    Json(serde_json::json!({
+                        "error": "This CID has been soft-deleted and can only be re-uploaded by admins or moderators"
+                    })),
+                )
+                    .into_response();
+            }
+        }
+    }
+
+    let mut release = Release {
         id: id.clone(),
         name: req.name,
         category_id: req.category_id,
@@ -218,7 +372,15 @@ pub async fn create_release(
         site_address: "local".to_string(), // TODO: Get from config
         posted_by: public_key.to_string(),
         created_at: chrono::Utc::now().to_rfc3339(),
+        vector_clock: HashMap::new(),
+        is_tombstone: false,
+        tombstone_type: None,
+        deleted_at: None,
+        deleted_by: None,
     };
+
+    // Increment vector clock for this node (initial creation)
+    release.increment_clock(node_id);
 
     // Store release in RocksDB
     let key = make_key(prefixes::RELEASE, &id);
@@ -249,23 +411,11 @@ pub async fn create_release(
 /// Requires admin permission or ownership
 pub async fn update_release(
     State(state): State<ReleasesState>,
-    headers: HeaderMap,
     Path(id): Path<String>,
     Json(req): Json<UpdateReleaseRequest>,
 ) -> impl IntoResponse {
-    // Extract public key from X-Public-Key header
-    let public_key = match headers.get("X-Public-Key") {
-        Some(key) => key.to_str().unwrap_or(""),
-        None => {
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({
-                    "error": "Missing X-Public-Key header"
-                })),
-            )
-                .into_response();
-        }
-    };
+    // Extract public key from request body
+    let public_key = &req.public_key;
 
     // Check if release exists
     let key = make_key(prefixes::RELEASE, &id);
@@ -294,7 +444,7 @@ pub async fn update_release(
 
     // Check permissions - must be admin or original poster
     let is_admin = state.account_state.is_admin(public_key).await;
-    let is_owner = existing_release.posted_by == public_key;
+    let is_owner = existing_release.posted_by == *public_key;
 
     if !is_admin && !is_owner {
         return (
@@ -306,8 +456,12 @@ pub async fn update_release(
             .into_response();
     }
 
+    // Get node ID from environment or use site_address as fallback
+    let node_id = std::env::var("NODE_ID")
+        .unwrap_or_else(|_| format!("node-{}", public_key));
+
     // Update release
-    let updated_release = Release {
+    let mut updated_release = Release {
         id: id.clone(),
         name: req.name,
         category_id: req.category_id,
@@ -318,7 +472,15 @@ pub async fn update_release(
         site_address: req.site_address,
         posted_by: req.posted_by,
         created_at: existing_release.created_at,
+        vector_clock: existing_release.vector_clock.clone(),
+        is_tombstone: existing_release.is_tombstone,
+        tombstone_type: existing_release.tombstone_type,
+        deleted_at: existing_release.deleted_at,
+        deleted_by: existing_release.deleted_by,
     };
+
+    // Increment vector clock for this modification
+    updated_release.increment_clock(node_id);
 
     // Save updated release to RocksDB
     if let Err(e) = state.db.put(&key, &updated_release) {
@@ -344,30 +506,26 @@ pub async fn update_release(
         .into_response()
 }
 
-/// DELETE /api/v1/releases/:id - Delete a release
+/// Delete release request with public key
+#[derive(Debug, Deserialize)]
+pub struct DeleteReleaseRequest {
+    #[serde(rename = "publicKey")]
+    pub public_key: String,
+}
+
+/// DELETE /api/v1/releases/:id - Delete a release (creates temporary tombstone)
 /// Requires admin permission or ownership
 pub async fn delete_release(
     State(state): State<ReleasesState>,
-    headers: HeaderMap,
     Path(id): Path<String>,
+    Json(req): Json<DeleteReleaseRequest>,
 ) -> impl IntoResponse {
-    // Extract public key from X-Public-Key header
-    let public_key = match headers.get("X-Public-Key") {
-        Some(key) => key.to_str().unwrap_or(""),
-        None => {
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({
-                    "error": "Missing X-Public-Key header"
-                })),
-            )
-                .into_response();
-        }
-    };
+    // Extract public key from request body
+    let public_key = &req.public_key;
 
     // Check if release exists
     let key = make_key(prefixes::RELEASE, &id);
-    let existing_release = match state.db.get::<_, Release>(&key) {
+    let mut existing_release = match state.db.get::<_, Release>(&key) {
         Ok(Some(r)) => r,
         Ok(None) => {
             return (
@@ -392,7 +550,7 @@ pub async fn delete_release(
 
     // Check permissions - must be admin or original poster
     let is_admin = state.account_state.is_admin(public_key).await;
-    let is_owner = existing_release.posted_by == public_key;
+    let is_owner = existing_release.posted_by == *public_key;
 
     if !is_admin && !is_owner {
         return (
@@ -404,52 +562,215 @@ pub async fn delete_release(
             .into_response();
     }
 
-    // Create and save delete transaction block for P2P sync
-    use crate::ubts::{UBTSBlock, UBTSTransaction};
+    // Get node ID for vector clock
+    let node_id = std::env::var("NODE_ID")
+        .unwrap_or_else(|_| format!("node-{}", public_key));
 
-    let delete_tx = UBTSTransaction::DeleteRelease {
-        id: id.clone(),
-        signature: Some(public_key.to_string()),
-    };
+    // Mark as temporary tombstone (anyone can re-upload)
+    existing_release.is_tombstone = true;
+    existing_release.tombstone_type = Some(TombstoneType::Temporary);
+    existing_release.deleted_at = Some(chrono::Utc::now().to_rfc3339());
+    existing_release.deleted_by = Some(public_key.to_string());
+    existing_release.increment_clock(node_id);
 
-    let ubts_block = UBTSBlock::new(0, None, vec![delete_tx]);
-
-    // Save delete transaction to database for SPORE sync
-    let delete_key = make_key(prefixes::DELETE_TRANSACTION, &ubts_block.id);
-    if let Err(e) = state.db.put(&delete_key, &ubts_block) {
-        tracing::error!("Failed to save delete transaction {}: {}", ubts_block.id, e);
+    // Save tombstone to database (don't actually delete!)
+    if let Err(e) = state.db.put(&key, &existing_release) {
+        tracing::error!("Failed to save tombstone for release {}: {}", id, e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({
-                "error": "Failed to save delete transaction"
+                "error": "Failed to save tombstone"
             })),
         )
             .into_response();
     }
 
-    tracing::info!("Delete transaction saved: {} for release {}", ubts_block.id, id);
-
-    // Delete from RocksDB
-    if let Err(e) = state.db.delete(&key) {
-        tracing::error!("Failed to delete release {}: {}", id, e);
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({
-                "error": "Failed to delete release"
-            })),
-        )
-            .into_response();
-    }
-
-    tracing::info!("Release deleted from database: {}", id);
+    tracing::info!("Release tombstoned (temporary): {}", id);
 
     (
         StatusCode::OK,
         Json(serde_json::json!({
-            "success": true
+            "success": true,
+            "tombstoneType": "temporary"
         })),
     )
         .into_response()
+}
+
+/// Tombstone request with public key
+#[derive(Debug, Deserialize)]
+pub struct TombstoneRequest {
+    #[serde(rename = "publicKey")]
+    pub public_key: String,
+}
+
+/// POST /api/v1/admin/tombstone/soft/:id - Create soft tombstone
+/// Only admin/moderator can re-upload this CID
+/// Requires admin permission
+pub async fn create_soft_tombstone(
+    State(state): State<ReleasesState>,
+    Path(id): Path<String>,
+    Json(req): Json<TombstoneRequest>,
+) -> impl IntoResponse {
+    let public_key = &req.public_key;
+
+    if !state.account_state.is_admin(public_key).await {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "Admin permission required"})),
+        )
+            .into_response();
+    }
+
+    let key = make_key(prefixes::RELEASE, &id);
+    let mut release = match state.db.get::<_, Release>(&key) {
+        Ok(Some(r)) => r,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({"error": "Release not found"})),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            tracing::error!("Failed to get release: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "Failed to get release"})),
+            )
+                .into_response();
+        }
+    };
+
+    let node_id = std::env::var("NODE_ID")
+        .unwrap_or_else(|_| format!("node-{}", public_key));
+
+    release.is_tombstone = true;
+    release.tombstone_type = Some(TombstoneType::Soft);
+    release.deleted_at = Some(chrono::Utc::now().to_rfc3339());
+    release.deleted_by = Some(public_key.to_string());
+    release.increment_clock(node_id);
+
+    if let Err(e) = state.db.put(&key, &release) {
+        tracing::error!("Failed to save soft tombstone: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "Failed to save tombstone"})),
+        )
+            .into_response();
+    }
+
+    tracing::info!("Release soft-tombstoned: {} by admin {}", id, public_key);
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "tombstoneType": "soft",
+            "cid": release.content_cid
+        })),
+    )
+        .into_response()
+}
+
+/// POST /api/v1/admin/tombstone/permanent/:id - Create permanent tombstone + BadBits entry
+/// CID is permanently blacklisted, nobody can ever re-upload
+/// Requires admin permission
+pub async fn create_permanent_tombstone(
+    State(state): State<ReleasesState>,
+    Path(id): Path<String>,
+    Json(req): Json<TombstoneRequest>,
+) -> impl IntoResponse {
+    let public_key = &req.public_key;
+
+    if !state.account_state.is_admin(public_key).await {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "Admin permission required"})),
+        )
+            .into_response();
+    }
+
+    let key = make_key(prefixes::RELEASE, &id);
+    let mut release = match state.db.get::<_, Release>(&key) {
+        Ok(Some(r)) => r,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({"error": "Release not found"})),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            tracing::error!("Failed to get release: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "Failed to get release"})),
+            )
+                .into_response();
+        }
+    };
+
+    let node_id = std::env::var("NODE_ID")
+        .unwrap_or_else(|_| format!("node-{}", public_key));
+
+    // Generate BadBits denylist entry (base58btc-encoded multihash)
+    let badbits_hash = generate_badbits_hash(&release.content_cid);
+
+    release.is_tombstone = true;
+    release.tombstone_type = Some(TombstoneType::Permanent);
+    release.deleted_at = Some(chrono::Utc::now().to_rfc3339());
+    release.deleted_by = Some(public_key.to_string());
+    release.increment_clock(node_id);
+
+    if let Err(e) = state.db.put(&key, &release) {
+        tracing::error!("Failed to save permanent tombstone: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "Failed to save tombstone"})),
+        )
+            .into_response();
+    }
+
+    // TODO: Add to local BadBits denylist file
+    // Format: /ipfs/{badbits_hash}
+    // Path: /etc/lens/badbits.deny or ~/.config/lens/badbits.deny
+
+    tracing::warn!(
+        "Release permanently tombstoned: {} (CID: {}) by admin {}. BadBits hash: {}",
+        id,
+        release.content_cid,
+        public_key,
+        badbits_hash
+    );
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "tombstoneType": "permanent",
+            "cid": release.content_cid,
+            "badbitsHash": badbits_hash,
+            "warning": "This CID is now permanently blacklisted"
+        })),
+    )
+        .into_response()
+}
+
+/// Generate BadBits denylist hash for a CID
+/// Uses base58btc-encoded multihash format per IPFS spec
+fn generate_badbits_hash(cid: &str) -> String {
+    use sha2::{Sha256, Digest};
+
+    // Hash the CID path
+    let path = format!("/ipfs/{}", cid);
+    let mut hasher = Sha256::new();
+    hasher.update(path.as_bytes());
+    let hash = hasher.finalize();
+
+    // Convert to hex (legacy format) or base58btc (modern format)
+    // For now, using hex format for simplicity
+    hex::encode(hash)
 }
 
 #[cfg(test)]

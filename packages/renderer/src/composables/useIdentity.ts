@@ -1,8 +1,9 @@
 import { ref, computed } from 'vue'
+import * as ed25519 from '@noble/ed25519'
 
 /**
- * Identity management using ed25519 cryptography
- * This replaces Peerbit and provides Lens V2 SDK compatible keys
+ * Identity management using REAL ed25519 cryptography
+ * Uses @noble/ed25519 for proper cryptographic operations
  */
 
 const STORAGE_KEY = 'lens_identity_seed'
@@ -23,54 +24,16 @@ function bytesToHex(bytes: Uint8Array): string {
     .join('')
 }
 
-// Generate a random 32-byte seed
+// Generate a random 32-byte seed for ed25519
 function generateSeed(): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(32))
 }
 
-// Derive ed25519 keypair from seed using Web Crypto API
-async function deriveKeypair(seed: Uint8Array): Promise<{
-  publicKey: Uint8Array
-  privateKey: Uint8Array
-}> {
-  // Import seed as raw key material
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    seed,
-    { name: 'HKDF' },
-    false,
-    ['deriveBits']
-  )
-
-  // Derive 32 bytes for ed25519 private key
-  const derivedBits = await crypto.subtle.deriveBits(
-    {
-      name: 'HKDF',
-      hash: 'SHA-256',
-      salt: new Uint8Array(0),
-      info: new TextEncoder().encode('lens-ed25519-v2')
-    },
-    keyMaterial,
-    256 // 32 bytes
-  )
-
-  const privateKeyBytes = new Uint8Array(derivedBits)
-
-  // For now, we'll use a simple derivation for the public key
-  // In production, you'd use a proper ed25519 library like @noble/ed25519
-  // For this implementation, we'll derive it from the private key using SHA-256
-  const publicKeyHash = await crypto.subtle.digest('SHA-256', privateKeyBytes)
-  const publicKeyBytes = new Uint8Array(publicKeyHash)
-
-  return {
-    publicKey: publicKeyBytes,
-    privateKey: privateKeyBytes
-  }
-}
-
 class Identity {
   private seed: Uint8Array | null = null
-  private _publicKey = ref<string>('')
+  private privateKey: Uint8Array | null = null
+  private publicKey: Uint8Array | null = null
+  private _publicKeyString = ref<string>('')
   private _isInitialized = ref(false)
 
   async initialize() {
@@ -86,18 +49,60 @@ class Identity {
       localStorage.setItem(STORAGE_KEY, bytesToHex(this.seed))
     }
 
-    // Derive keypair
-    const keypair = await deriveKeypair(this.seed)
+    // Generate proper ed25519 keypair from seed
+    // The seed IS the private key for ed25519
+    this.privateKey = this.seed
+
+    // Derive public key from private key using @noble/ed25519
+    this.publicKey = await ed25519.getPublicKeyAsync(this.privateKey)
 
     // Format public key as ed25119p/{hex}
-    this._publicKey.value = `ed25119p/${bytesToHex(keypair.publicKey)}`
+    this._publicKeyString.value = `ed25119p/${bytesToHex(this.publicKey)}`
     this._isInitialized.value = true
 
-    console.log('[Identity] Initialized with public key:', this._publicKey.value)
+    console.log('[Identity] Initialized with public key:', this._publicKeyString.value)
   }
 
-  get publicKey() {
-    return computed(() => this._publicKey.value)
+  // Sign a message using REAL ed25519 signatures
+  async sign(message: string): Promise<string> {
+    if (!this.privateKey) {
+      throw new Error('Identity not initialized')
+    }
+
+    // Convert message to bytes
+    const messageBytes = new TextEncoder().encode(message)
+
+    // Sign using @noble/ed25519 (proper ed25519 signature)
+    const signature = await ed25519.signAsync(messageBytes, this.privateKey)
+
+    // Return signature as hex
+    return bytesToHex(signature)
+  }
+
+  // Verify a signature (useful for testing)
+  async verify(message: string, signature: string, publicKey?: string): Promise<boolean> {
+    const messageBytes = new TextEncoder().encode(message)
+    const signatureBytes = hexToBytes(signature)
+
+    // Use provided public key or our own
+    let pubKeyBytes: Uint8Array
+    if (publicKey) {
+      // Strip ed25119p/ prefix if present
+      const pubKeyHex = publicKey.startsWith('ed25119p/')
+        ? publicKey.slice(9)
+        : publicKey
+      pubKeyBytes = hexToBytes(pubKeyHex)
+    } else if (this.publicKey) {
+      pubKeyBytes = this.publicKey
+    } else {
+      throw new Error('No public key available for verification')
+    }
+
+    return await ed25519.verifyAsync(signatureBytes, messageBytes, pubKeyBytes)
+  }
+
+  get publicKeyComputed() {
+    return computed(() => this._publicKeyString.value)
   }
 
   get isInitialized() {
@@ -108,12 +113,14 @@ class Identity {
   clearIdentity() {
     localStorage.removeItem(STORAGE_KEY)
     this.seed = null
-    this._publicKey.value = ''
+    this.privateKey = null
+    this.publicKey = null
+    this._publicKeyString.value = ''
     this._isInitialized.value = false
     console.log('[Identity] Identity cleared')
   }
 
-  // Export seed for backup (show as mnemonic or hex)
+  // Export seed for backup (show as hex)
   exportSeed(): string | null {
     if (!this.seed) return null
     return bytesToHex(this.seed)
@@ -125,11 +132,13 @@ class Identity {
       this.seed = hexToBytes(seedHex)
       localStorage.setItem(STORAGE_KEY, seedHex)
 
-      const keypair = await deriveKeypair(this.seed)
-      this._publicKey.value = `ed25119p/${bytesToHex(keypair.publicKey)}`
+      // Seed is the private key for ed25519
+      this.privateKey = this.seed
+      this.publicKey = await ed25519.getPublicKeyAsync(this.privateKey)
+      this._publicKeyString.value = `ed25119p/${bytesToHex(this.publicKey)}`
       this._isInitialized.value = true
 
-      console.log('[Identity] Imported identity with public key:', this._publicKey.value)
+      console.log('[Identity] Imported identity with public key:', this._publicKeyString.value)
       return true
     } catch (error) {
       console.error('[Identity] Failed to import seed:', error)
@@ -144,8 +153,11 @@ const identityInstance = new Identity()
 export function useIdentity() {
   return {
     initialize: () => identityInstance.initialize(),
-    publicKey: identityInstance.publicKey,
+    publicKey: identityInstance.publicKeyComputed,
     isInitialized: identityInstance.isInitialized,
+    sign: (message: string) => identityInstance.sign(message),
+    verify: (message: string, signature: string, publicKey?: string) =>
+      identityInstance.verify(message, signature, publicKey),
     clearIdentity: () => identityInstance.clearIdentity(),
     exportSeed: () => identityInstance.exportSeed(),
     importSeed: (seed: string) => identityInstance.importSeed(seed),

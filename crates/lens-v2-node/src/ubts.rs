@@ -311,6 +311,11 @@ mod tests {
                 site_address: "local".to_string(),
                 posted_by: "test-user".to_string(),
                 created_at: "2025-01-01T00:00:00Z".to_string(),
+                vector_clock: std::collections::HashMap::new(),
+                is_tombstone: false,
+                tombstone_type: None,
+                deleted_at: None,
+                deleted_by: None,
             },
             signature: None,
         };

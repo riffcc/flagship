@@ -453,20 +453,30 @@ impl SyncOrchestrator {
                         crate::ubts::UBTSTransaction::DeleteRelease { id, .. } => {
                             info!("🗑️ Processing DeleteRelease transaction for release {}", id);
 
-                            // Two-stage deletion:
-                            // Stage 1: Save the delete transaction to database
+                            // Save the delete transaction to database for historical record
                             let delete_key = make_key(prefixes::DELETE_TRANSACTION, &ubts_block.id);
                             self.db.put(&delete_key, &ubts_block)?;
                             info!("✅ Saved DeleteRelease transaction {} to database", ubts_block.id);
 
-                            // Stage 2: Mark the release for deletion (but don't delete yet - wait for consensus)
-                            // TODO: Implement consensus-based deletion
-                            // For now, immediately delete the release
+                            // Apply tombstone: Convert release to tombstone (proof of erasure)
                             let release_key = make_key(prefixes::RELEASE, id);
-                            if let Err(e) = self.db.delete(&release_key) {
-                                warn!("⚠️ Failed to delete release {}: {}", id, e);
+
+                            // Get existing release and convert to tombstone
+                            if let Ok(Some(mut release)) = self.db.get::<&str, Release>(&release_key) {
+                                // Convert to temporary tombstone (proof of erasure)
+                                release.is_tombstone = true;
+                                release.tombstone_type = Some(crate::routes::releases::TombstoneType::Temporary);
+                                release.deleted_at = Some(chrono::Utc::now().to_rfc3339());
+                                release.deleted_by = Some("sync".to_string());
+
+                                // Increment vector clock for delete operation
+                                release.increment_clock("sync".to_string());
+
+                                // Save tombstone (proof of erasure - content deleted but metadata remains)
+                                self.db.put(&release_key, &release)?;
+                                info!("✅ Created tombstone for release {} (proof of erasure)", id);
                             } else {
-                                info!("✅ Deleted release {}", id);
+                                warn!("⚠️ Release {} not found for deletion", id);
                             }
                         }
 
@@ -516,11 +526,74 @@ impl SyncOrchestrator {
         let releases = BlockCodec::decode_releases(&block_data)?;
         info!("Block contains {} releases", releases.len());
 
-        // Save each release to database
-        for release in releases {
-            let key = make_key(prefixes::RELEASE, &release.id);
-            self.db.put(&key, &release)?;
-            info!("Saved release: {}", release.id);
+        // Save each release to database with vector clock conflict resolution
+        for incoming_release in releases {
+            let key = make_key(prefixes::RELEASE, &incoming_release.id);
+
+            // Check if we already have this release
+            let existing_release: Option<Release> = self.db.get(&key)?;
+
+            match existing_release {
+                None => {
+                    // We don't have it - add it (could be active or tombstone)
+                    self.db.put(&key, &incoming_release)?;
+                    if incoming_release.is_tombstone {
+                        info!("💀 Saved tombstone for release: {}", incoming_release.id);
+                    } else {
+                        info!("📦 Saved new release: {}", incoming_release.id);
+                    }
+                }
+                Some(mut existing) => {
+                    // We have it - use vector clock to determine which version to keep
+                    if incoming_release.happened_before(&existing) {
+                        // Incoming is older, keep existing
+                        info!("⏪ Incoming release {} is older (keeping ours)", incoming_release.id);
+                        continue;
+                    } else if existing.happened_before(&incoming_release) {
+                        // Incoming is newer, take it (even if it's a tombstone!)
+                        self.db.put(&key, &incoming_release)?;
+                        if incoming_release.is_tombstone {
+                            info!("💀 Updated to tombstone for release: {} (proof of erasure)", incoming_release.id);
+                        } else {
+                            info!("✨ Updated release: {} (newer version)", incoming_release.id);
+                        }
+                    } else if incoming_release.is_concurrent(&existing) {
+                        // Concurrent - apply tie-breakers
+
+                        // TOMBSTONE PRIORITY: If one is a tombstone, tombstone wins!
+                        if incoming_release.is_tombstone && !existing.is_tombstone {
+                            self.db.put(&key, &incoming_release)?;
+                            info!("💀 Tombstone wins over active release: {} (concurrent, tombstone priority)", incoming_release.id);
+                            continue;
+                        } else if !incoming_release.is_tombstone && existing.is_tombstone {
+                            // Existing tombstone wins
+                            info!("💀 Keeping tombstone over active release: {} (concurrent, tombstone priority)", incoming_release.id);
+                            continue;
+                        }
+
+                        // Use lexicographic comparison as tie-breaker
+                        if incoming_release.posted_by > existing.posted_by {
+                            self.db.put(&key, &incoming_release)?;
+                            info!("🎲 Tie-breaker: incoming wins (concurrent, higher posted_by) - {}", incoming_release.id);
+                        } else if incoming_release.posted_by == existing.posted_by {
+                            // Same author - use latest timestamp
+                            if incoming_release.created_at > existing.created_at {
+                                self.db.put(&key, &incoming_release)?;
+                                info!("🎲 Tie-breaker: incoming wins (concurrent, newer timestamp) - {}", incoming_release.id);
+                            } else {
+                                info!("🎲 Tie-breaker: keeping ours (concurrent, older timestamp) - {}", incoming_release.id);
+                            }
+                        } else {
+                            info!("🎲 Tie-breaker: keeping ours (concurrent, lower posted_by) - {}", incoming_release.id);
+                        }
+                    } else {
+                        // Vector clocks are equal - merge them
+                        existing.merge_clock(&incoming_release);
+                        self.db.put(&key, &existing)?;
+                        info!("🔀 Merged vector clocks for release: {}", incoming_release.id);
+                    }
+                }
+            }
         }
 
         // Decode and save featured list if present
@@ -641,6 +714,11 @@ mod tests {
             site_address: "local".to_string(),
             posted_by: "test-user".to_string(),
             created_at: "2025-01-01T00:00:00Z".to_string(),
+            vector_clock: std::collections::HashMap::new(),
+            is_tombstone: false,
+            tombstone_type: None,
+            deleted_at: None,
+            deleted_by: None,
         };
 
         let release_key = make_key(prefixes::RELEASE, &release.id);
@@ -677,8 +755,12 @@ mod tests {
         // Process the delete transaction
         orchestrator.save_block(block_data).await.unwrap();
 
-        // Verify release is deleted
-        assert!(!db.exists(&release_key).unwrap(), "Release should be deleted after processing delete transaction");
+        // Verify release is now a tombstone (proof of erasure)
+        let tombstone: Option<Release> = db.get(&release_key).unwrap();
+        assert!(tombstone.is_some(), "Tombstone should exist");
+        let tombstone = tombstone.unwrap();
+        assert!(tombstone.is_tombstone, "Release should be tombstone after delete");
+        assert_eq!(tombstone.tombstone_type, Some(crate::routes::releases::TombstoneType::Temporary));
 
         // Verify delete transaction is saved
         let delete_key = make_key(prefixes::DELETE_TRANSACTION, &ubts_block.id);

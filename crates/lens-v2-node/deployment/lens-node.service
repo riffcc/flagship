@@ -1,0 +1,57 @@
+[Unit]
+Description=Lens Node v2 - Stateless IPFS Upload Service
+Documentation=https://github.com/riffcc/flagship/tree/main/crates/lens-v2-node
+After=network.target mfsmount.service ipfs-cluster.service
+Requires=mfsmount.service
+Wants=ipfs-cluster.service
+
+[Service]
+Type=simple
+User=lens-node
+Group=lens-node
+WorkingDirectory=/opt/lens-node
+
+# Main executable
+ExecStart=/opt/lens-node/lens-node
+
+# === Shared State (MooseFS) ===
+# All nodes must use the SAME paths on MooseFS
+Environment=UPLOAD_STAGING_DIR=/mnt/mfs/lens-uploads/staging
+Environment=UPLOAD_APPROVED_DIR=/mnt/mfs/lens-uploads/approved
+
+# === Local State (per-node) ===
+Environment=DB_PATH=/var/lib/lens-node/rocksdb
+
+# === Server Configuration ===
+Environment=PORT=5002
+Environment=RUST_LOG=info,lens_v2_node=debug
+
+# === P2P Relay (optional - for cross-site sync) ===
+# Use local relay if available, otherwise use central relay
+# Environment=LENS_RELAY_URL=ws://localhost:5002/api/v1/relay/ws
+Environment=LENS_RELAY_URL=ws://relay.palace.riff.cc/api/v1/relay/ws
+
+# === Resource Limits ===
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# === Security ===
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/mnt/mfs/lens-uploads /var/lib/lens-node
+
+# === Restart Policy ===
+Restart=on-failure
+RestartSec=5s
+StartLimitInterval=60s
+StartLimitBurst=3
+
+# === Logging ===
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lens-node
+
+[Install]
+WantedBy=multi-user.target

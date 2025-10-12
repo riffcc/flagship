@@ -155,6 +155,8 @@ pub async fn list_featured_releases(
 /// Request to update a featured release
 #[derive(Debug, Deserialize)]
 pub struct UpdateFeaturedReleaseRequest {
+    #[serde(rename = "publicKey")]
+    pub public_key: String,
     pub id: String,
     #[serde(rename = "releaseId")]
     pub release_id: Option<String>,
@@ -177,10 +179,89 @@ pub struct UpdateFeaturedReleaseRequest {
     pub metadata: Option<serde_json::Value>,
 }
 
+/// Request to create a new featured release
+#[derive(Debug, Deserialize)]
+pub struct CreateFeaturedReleaseRequest {
+    #[serde(rename = "publicKey")]
+    pub public_key: String,
+    #[serde(rename = "releaseId")]
+    pub release_id: String,
+    #[serde(default)]
+    pub priority: i32,
+    #[serde(default)]
+    pub promoted: bool,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(rename = "startTime")]
+    pub start_time: Option<String>,
+    #[serde(rename = "endTime")]
+    pub end_time: Option<String>,
+    #[serde(rename = "customTitle")]
+    pub custom_title: Option<String>,
+    #[serde(rename = "customDescription")]
+    pub custom_description: Option<String>,
+    #[serde(rename = "customThumbnail")]
+    pub custom_thumbnail: Option<String>,
+    pub regions: Option<Vec<String>>,
+    pub languages: Option<Vec<String>>,
+    pub variant: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
 /// Response for successful operations
 #[derive(Debug, Serialize)]
 pub struct SuccessResponse {
     pub id: String,
+}
+
+/// POST /api/v1/admin/featured-releases - Create a new featured release
+pub async fn create_featured_release(
+    State(state): State<ReleasesState>,
+    Json(req): Json<CreateFeaturedReleaseRequest>,
+) -> Result<Json<SuccessResponse>, (StatusCode, String)> {
+    // Check if requester is admin
+    if !state.account_state.is_admin(&req.public_key).await {
+        return Err((StatusCode::FORBIDDEN, "Admin permission required".to_string()));
+    }
+
+    // Verify the release exists
+    let release_key = make_key(prefixes::RELEASE, &req.release_id);
+    state.db.get::<_, Release>(&release_key)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Release {} not found", req.release_id)))?;
+
+    // Generate a new ID for the featured release
+    let featured_id = uuid::Uuid::new_v4().to_string();
+
+    // Create the featured release
+    let featured_release = FeaturedRelease {
+        id: featured_id.clone(),
+        release_id: req.release_id,
+        priority: req.priority,
+        promoted: req.promoted,
+        tags: req.tags,
+        start_time: req.start_time,
+        end_time: req.end_time,
+        custom_title: req.custom_title,
+        custom_description: req.custom_description,
+        custom_thumbnail: req.custom_thumbnail,
+        regions: req.regions,
+        languages: req.languages,
+        views: 0,
+        clicks: 0,
+        variant: req.variant,
+        metadata: req.metadata,
+        created_at: chrono::Utc::now().to_rfc3339(),
+        updated_at: None,
+    };
+
+    let key = make_key(prefixes::FEATURED, &featured_id);
+    state.db.put(&key, &featured_release)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to save: {}", e)))?;
+
+    tracing::info!("Created featured release {}", featured_id);
+
+    Ok(Json(SuccessResponse { id: featured_id }))
 }
 
 /// PUT /api/v1/admin/featured-releases/:id - Update a featured release
@@ -189,6 +270,11 @@ pub async fn update_featured_release(
     State(state): State<ReleasesState>,
     Json(req): Json<UpdateFeaturedReleaseRequest>,
 ) -> Result<Json<SuccessResponse>, (StatusCode, String)> {
+    // Check if requester is admin
+    if !state.account_state.is_admin(&req.public_key).await {
+        return Err((StatusCode::FORBIDDEN, "Admin permission required".to_string()));
+    }
+
     let key = make_key(prefixes::FEATURED, &id);
 
     // Check if the featured release exists

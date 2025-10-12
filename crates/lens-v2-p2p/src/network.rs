@@ -63,6 +63,12 @@ pub enum NetworkEvent {
 
     /// Assigned peer ID from relay
     PeerIdAssigned(PeerId),
+
+    /// Received WantList from peer (SPORE announcement)
+    WantListReceived(PeerId, consensus_peerexc::WantList),
+
+    /// Received block request from peer
+    BlockRequestReceived(PeerId, Vec<BlockId>),
 }
 
 /// P2P Network manager
@@ -186,6 +192,44 @@ impl P2pNetwork {
                                     }
                                 }
                             }
+                            // Try to parse as wantlist_announcement
+                            else if referral["type"] == "wantlist_announcement" {
+                                if let (Some(from_peer_id), Some(wantlist_json)) = (
+                                    referral["from_peer_id"].as_str(),
+                                    referral.get("wantlist"),
+                                ) {
+                                    if let Ok(wantlist) = serde_json::from_value::<consensus_peerexc::WantList>(wantlist_json.clone()) {
+                                        info!("Received WantList announcement from {}: gen={}, have={}, need={}",
+                                            from_peer_id, wantlist.generation, wantlist.have_blocks.len(), wantlist.need_blocks.len());
+                                        let _ = event_tx.send(NetworkEvent::WantListReceived(from_peer_id.to_string(), wantlist));
+                                    }
+                                }
+                            }
+                            // Try to parse as block_request
+                            else if referral["type"] == "block_request" {
+                                if let (Some(from_peer_id), Some(block_ids)) = (
+                                    referral["from_peer_id"].as_str(),
+                                    referral["block_ids"].as_array(),
+                                ) {
+                                    let block_ids: Vec<String> = block_ids
+                                        .iter()
+                                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                        .collect();
+                                    info!("Received block request from {} for {} blocks", from_peer_id, block_ids.len());
+                                    let _ = event_tx.send(NetworkEvent::BlockRequestReceived(from_peer_id.to_string(), block_ids));
+                                }
+                            }
+                            // Try to parse as block_response
+                            else if referral["type"] == "block_response" {
+                                if let Some(blocks_json) = referral["blocks"].as_array() {
+                                    for block_json in blocks_json {
+                                        if let Ok(block) = serde_json::from_value::<BlockData>(block_json.clone()) {
+                                            info!("Received block: {} at height {}", block.id, block.height);
+                                            let _ = event_tx.send(NetworkEvent::BlockReceived(block));
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         // Try to parse as block response
@@ -241,8 +285,58 @@ impl P2pNetwork {
     pub async fn request_blocks(&self, peer_id: &PeerId, block_ids: Vec<BlockId>) -> Result<()> {
         info!("Requesting {} blocks from peer {}", block_ids.len(), peer_id);
 
-        // TODO: Send block request to peer
-        // For now, just log
+        // Get our peer ID
+        let our_peer_id = self.peer_id.read().await.clone()
+            .ok_or_else(|| P2pError::Network("Not connected to relay".to_string()))?;
+
+        // Create block request message
+        let request = serde_json::json!({
+            "type": "block_request",
+            "from_peer_id": our_peer_id,
+            "to_peer_id": peer_id,
+            "block_ids": block_ids,
+        });
+
+        // Send via WebSocket
+        if let Some(tx) = self.ws_tx.read().await.as_ref() {
+            let json = serde_json::to_string(&request)
+                .map_err(|e| P2pError::Network(format!("Failed to serialize block request: {}", e)))?;
+            tx.send(Message::Text(json))
+                .map_err(|e| P2pError::Network(format!("Failed to send block request: {}", e)))?;
+            info!("Sent block request to {}", peer_id);
+        } else {
+            warn!("Cannot send block request: not connected to relay");
+        }
+
+        Ok(())
+    }
+
+    /// Send block response to a peer
+    pub async fn send_blocks(&self, peer_id: &PeerId, blocks: Vec<BlockData>) -> Result<()> {
+        info!("Sending {} blocks to peer {}", blocks.len(), peer_id);
+
+        // Get our peer ID
+        let our_peer_id = self.peer_id.read().await.clone()
+            .ok_or_else(|| P2pError::Network("Not connected to relay".to_string()))?;
+
+        // Create block response message
+        let response = serde_json::json!({
+            "type": "block_response",
+            "from_peer_id": our_peer_id,
+            "to_peer_id": peer_id,
+            "blocks": blocks,
+        });
+
+        // Send via WebSocket
+        if let Some(tx) = self.ws_tx.read().await.as_ref() {
+            let json = serde_json::to_string(&response)
+                .map_err(|e| P2pError::Network(format!("Failed to serialize block response: {}", e)))?;
+            tx.send(Message::Text(json))
+                .map_err(|e| P2pError::Network(format!("Failed to send block response: {}", e)))?;
+            info!("Sent {} blocks to {}", blocks.len(), peer_id);
+        } else {
+            warn!("Cannot send block response: not connected to relay");
+        }
 
         Ok(())
     }

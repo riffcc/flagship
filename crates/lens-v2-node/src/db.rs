@@ -132,6 +132,9 @@ pub mod prefixes {
     /// Featured release data: "featured:{id}"
     pub const FEATURED: &str = "featured:";
 
+    /// Featured release entity data: "featured_release:{id}"
+    pub const FEATURED_RELEASE: &str = "featured_release:";
+
     /// Category data: "category:{id}"
     pub const CATEGORY: &str = "category:";
 
@@ -140,6 +143,12 @@ pub mod prefixes {
 
     /// Schema data: "schema:{id}"
     pub const SCHEMA: &str = "schema:";
+
+    /// Authorization transaction data: "authorization:{uuid}"
+    pub const AUTHORIZATION: &str = "authorization:";
+
+    /// Delete transaction data: "delete_tx:{ubts_block_id}"
+    pub const DELETE_TRANSACTION: &str = "delete_tx:";
 }
 
 /// Helper to create a key with prefix

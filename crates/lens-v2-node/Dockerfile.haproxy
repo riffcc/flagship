@@ -1,0 +1,11 @@
+FROM debian:trixie-slim
+
+RUN apt-get update && \
+    apt-get install -y haproxy curl && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
+
+EXPOSE 80 8404
+
+CMD ["/usr/sbin/haproxy", "-f", "/usr/local/etc/haproxy/haproxy.cfg", "-db"]

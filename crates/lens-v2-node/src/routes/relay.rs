@@ -46,6 +46,7 @@ pub enum SignalingMessage {
 pub struct RelayState {
     pub relay: Arc<RwLock<RelayServer>>,
     pub peer_senders: Arc<RwLock<HashMap<String, mpsc::UnboundedSender<Message>>>>,
+    pub webrtc_manager: Option<Arc<crate::webrtc_manager::WebRTCManager>>,
 }
 
 impl RelayState {
@@ -53,7 +54,13 @@ impl RelayState {
         Self {
             relay: Arc::new(RwLock::new(RelayServer::new())),
             peer_senders: Arc::new(RwLock::new(HashMap::new())),
+            webrtc_manager: None,
         }
+    }
+
+    pub fn with_webrtc(mut self, manager: Arc<crate::webrtc_manager::WebRTCManager>) -> Self {
+        self.webrtc_manager = Some(manager);
+        self
     }
 }
 
@@ -113,8 +120,29 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
         match msg {
             Ok(Message::Text(text)) => {
                 info!("Relay: Received text from {}: {} bytes", peer_id, text.len());
+                info!("Relay: Message content: {}", text);
 
-                // Try to parse as SignalingMessage first
+                // Check for browser_announce first
+                if let Ok(msg_json) = serde_json::from_str::<serde_json::Value>(&text) {
+                    info!("Relay: Parsed JSON, type = {:?}", msg_json.get("type"));
+                    if let Some("browser_announce") = msg_json.get("type").and_then(|v| v.as_str()) {
+                        info!("Relay: Browser peer announced: {}", peer_id);
+
+                        // If WebRTC manager available, create connection to browser
+                        if let Some(ref webrtc_mgr) = state.webrtc_manager {
+                            let mgr = webrtc_mgr.clone();
+                            let browser_peer_id = peer_id.clone();
+                            tokio::spawn(async move {
+                                if let Err(e) = mgr.create_peer_connection(browser_peer_id.clone()).await {
+                                    warn!("Relay: Failed to create WebRTC connection to {}: {}", browser_peer_id, e);
+                                }
+                            });
+                        }
+                        continue;
+                    }
+                }
+
+                // Try to parse as SignalingMessage
                 if let Ok(sig_msg) = serde_json::from_str::<SignalingMessage>(&text) {
                     info!("Relay: Received signaling message: {:?}", sig_msg);
 
@@ -136,7 +164,7 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                         warn!("Relay: Target peer {} not connected", target_id);
                     }
                 }
-                // Try to parse as WantList
+                // Try to parse as WantList (must be before generic JSON check)
                 else if let Ok(wantlist) = serde_json::from_str::<WantList>(&text) {
                     info!("Relay: Received WantList from {}: gen={}, needs={}, offers={}",
                         peer_id, wantlist.generation, wantlist.has_needs(), wantlist.has_offers());
@@ -145,6 +173,30 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                     {
                         let mut relay = state.relay.write().await;
                         relay.index_wantlist(peer_id.clone(), &wantlist);
+                    }
+
+                    // Broadcast WantList to all other peers for SPORE comparison
+                    let wantlist_msg = serde_json::json!({
+                        "type": "wantlist_announcement",
+                        "from_peer_id": peer_id,
+                        "wantlist": wantlist,
+                    });
+
+                    if let Ok(json) = serde_json::to_string(&wantlist_msg) {
+                        let senders = state.peer_senders.read().await;
+                        let mut broadcast_count = 0;
+                        for (other_peer_id, tx) in senders.iter() {
+                            if other_peer_id != &peer_id {
+                                if let Err(e) = tx.send(Message::Text(json.clone())) {
+                                    warn!("Relay: Failed to broadcast WantList to {}: {}", other_peer_id, e);
+                                } else {
+                                    broadcast_count += 1;
+                                }
+                            }
+                        }
+                        if broadcast_count > 0 {
+                            info!("Relay: Broadcasted WantList from {} to {} peers", peer_id, broadcast_count);
+                        }
                     }
 
                     // Find providers for this peer's needs
@@ -202,6 +254,26 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                         }
                     } else {
                         info!("Relay: No other peers to refer to {}", peer_id);
+                    }
+                }
+                // Try to parse as block_request or block_response and route them
+                else if let Ok(msg_json) = serde_json::from_str::<serde_json::Value>(&text) {
+                    if let Some(msg_type) = msg_json.get("type").and_then(|v| v.as_str()) {
+                        if msg_type == "block_request" || msg_type == "block_response" {
+                            if let Some(to_peer_id) = msg_json.get("to_peer_id").and_then(|v| v.as_str()) {
+                                info!("Relay: Routing {} from {} to {}", msg_type, peer_id, to_peer_id);
+                                let senders = state.peer_senders.read().await;
+                                if let Some(target_tx) = senders.get(to_peer_id) {
+                                    if let Err(e) = target_tx.send(Message::Text(text.clone())) {
+                                        warn!("Relay: Failed to route {} to {}: {}", msg_type, to_peer_id, e);
+                                    } else {
+                                        info!("Relay: Routed {} from {} to {}", msg_type, peer_id, to_peer_id);
+                                    }
+                                } else {
+                                    warn!("Relay: Target peer {} not connected", to_peer_id);
+                                }
+                            }
+                        }
                     }
                 }
             }

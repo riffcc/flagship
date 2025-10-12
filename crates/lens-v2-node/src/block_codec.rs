@@ -157,6 +157,11 @@ mod tests {
             site_address: "local".to_string(),
             posted_by: "test_user".to_string(),
             created_at: chrono::Utc::now().to_rfc3339(),
+            vector_clock: std::collections::HashMap::new(),
+            is_tombstone: false,
+            tombstone_type: None,
+            deleted_at: None,
+            deleted_by: None,
         }
     }
 

@@ -1,0 +1,26 @@
+# Lens V2 Node Docker build ignore (for builds from /opt/castle/workspace)
+# EXCLUDE EVERYTHING by default, then whitelist only what we need
+
+# Exclude everything
+*
+
+# Include only what we need for the build:
+
+# Flagship workspace files
+!flagship/Cargo.toml
+!flagship/Cargo.lock
+!flagship/crates/
+!flagship/packages/
+
+# Citadel workspace (all needed for build)
+!citadel/
+!citadel/**
+
+# Palace workspace (all needed for build)
+!palace/
+!palace/**
+
+# But exclude target dirs even in included paths
+flagship/crates/**/target/
+citadel/**/target/
+palace/**/target/

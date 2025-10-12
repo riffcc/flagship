@@ -4,10 +4,11 @@ use axum::{
     response::IntoResponse,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use tokio::sync::RwLock;
-use super::persistence;
+use crate::db::{Database, prefixes, make_key};
+use crate::ubts::UBTSTransaction;
+use uuid::Uuid;
+use tokio::sync::mpsc;
 
 /// Account status response
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,97 +26,177 @@ pub struct AuthorizeRequest {
     pub public_key: String,
 }
 
+/// Authorization transaction - a UBTS flat transaction
+///
+/// This transaction authorizes a public key for admin access.
+/// Syncs via SPORE across all nodes - no local state files.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthorizationTransaction {
+    /// Unique ID for this transaction (UUID)
+    pub id: String,
+
+    /// Public key being authorized
+    pub public_key: String,
+
+    /// Timestamp when authorization was created
+    pub timestamp: u64,
+
+    /// Optional role (currently "admin" is the only role)
+    pub role: String,
+}
+
+/// Notification for immediate WantList broadcast
+#[derive(Debug, Clone)]
+pub enum BlockNotification {
+    /// New block created - broadcast WantList immediately
+    NewBlock(String),
+}
+
 /// Account state shared across handlers
+///
+/// Authorization is stored as UBTS transactions and synced via SPORE.
+/// No local state files - everything is UBTS transactions in the database.
 #[derive(Clone)]
 pub struct AccountState {
-    /// Map of public keys to their roles
-    pub authorized_keys: Arc<RwLock<HashMap<String, HashSet<String>>>>,
-    /// Set of admin public keys
-    pub admin_keys: Arc<RwLock<HashSet<String>>>,
+    /// Database for querying UBTS authorization transactions
+    pub db: Database,
+
+    /// Channel to notify sync orchestrator of new blocks (for immediate broadcast)
+    pub block_notify: Option<mpsc::UnboundedSender<BlockNotification>>,
 }
 
 impl AccountState {
-    pub fn new() -> Self {
-        let state = Self {
-            authorized_keys: Arc::new(RwLock::new(HashMap::new())),
-            admin_keys: Arc::new(RwLock::new(HashSet::new())),
+    pub fn new(db: Database) -> Self {
+        tracing::info!("AccountState: Using UBTS transactions for authorization (no local files)");
+        Self {
+            db,
+            block_notify: None,
+        }
+    }
+
+    pub fn with_notify(mut self, notify: mpsc::UnboundedSender<BlockNotification>) -> Self {
+        self.block_notify = Some(notify);
+        self
+    }
+
+    /// Check if a public key is authorized as admin by querying UBTS transactions
+    pub async fn is_admin(&self, public_key: &str) -> bool {
+        tracing::debug!("Checking admin status for {} in UBTS transactions", public_key);
+
+        // Query all authorization transactions from database
+        match self.db.get_all_with_prefix::<AuthorizationTransaction>(prefixes::AUTHORIZATION) {
+            Ok(authorizations) => {
+                // Check if any authorization transaction matches this public key
+                let is_admin = authorizations.iter().any(|auth| {
+                    auth.public_key == public_key && auth.role == "admin"
+                });
+
+                if is_admin {
+                    tracing::info!("✅ Public key {} is authorized as admin (found in UBTS)", public_key);
+                } else {
+                    tracing::debug!("❌ Public key {} not found in authorization transactions", public_key);
+                }
+
+                is_admin
+            }
+            Err(e) => {
+                tracing::error!("Failed to query authorization transactions: {}", e);
+                false
+            }
+        }
+    }
+
+    /// Get roles for a public key from UBTS transactions
+    pub async fn get_roles(&self, public_key: &str) -> Vec<String> {
+        tracing::debug!("Getting roles for {} from UBTS transactions", public_key);
+
+        match self.db.get_all_with_prefix::<AuthorizationTransaction>(prefixes::AUTHORIZATION) {
+            Ok(authorizations) => {
+                // Collect all roles for this public key
+                authorizations
+                    .iter()
+                    .filter(|auth| auth.public_key == public_key)
+                    .map(|auth| auth.role.clone())
+                    .collect()
+            }
+            Err(e) => {
+                tracing::error!("Failed to query authorization transactions: {}", e);
+                Vec::new()
+            }
+        }
+    }
+
+    /// Authorize a public key as admin by creating a UBTS transaction
+    ///
+    /// This creates an AuthorizeAdmin transaction which will be:
+    /// 1. Stored in local database
+    /// 2. Announced in WantLists
+    /// 3. Auto-synced to all other nodes via SPORE
+    pub async fn authorize_admin(&self, public_key: String) -> anyhow::Result<()> {
+        tracing::info!("Creating AuthorizeAdmin UBTS transaction for {}", public_key);
+
+        // Create authorization transaction with unique UUID
+        let auth_tx = AuthorizationTransaction {
+            id: Uuid::new_v4().to_string(),
+            public_key: public_key.clone(),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_secs(),
+            role: "admin".to_string(),
         };
 
-        // Try to load persisted admin keys
-        if let Ok(Some(admin_keys)) = persistence::load_json::<Vec<String>>("admin_keys.json") {
-            let admin_set: HashSet<String> = admin_keys.into_iter().collect();
-            if let Ok(mut keys) = state.admin_keys.try_write() {
-                *keys = admin_set.clone();
-                tracing::info!("Loaded {} admin keys from persistence", keys.len());
-            }
+        // Store in database with authorization prefix
+        let key = make_key(prefixes::AUTHORIZATION, &auth_tx.id);
+        self.db.put(&key, &auth_tx)?;
 
-            // Also populate authorized_keys
-            if let Ok(mut auth_keys) = state.authorized_keys.try_write() {
-                for key in admin_set {
-                    let mut roles = HashSet::new();
-                    roles.insert("admin".to_string());
-                    auth_keys.insert(key, roles);
-                }
+        tracing::info!("✅ Created authorization transaction {} for {}", auth_tx.id, public_key);
+
+        // Immediately notify sync orchestrator to broadcast updated WantList
+        if let Some(ref notify) = self.block_notify {
+            if let Err(e) = notify.send(BlockNotification::NewBlock(auth_tx.id.clone())) {
+                tracing::warn!("Failed to send block notification: {}", e);
+            } else {
+                tracing::info!("🚀 INSTANT BROADCAST triggered for authorization transaction");
             }
         }
 
-        state
+        Ok(())
     }
 
-    /// Save admin keys to disk
-    async fn save(&self) {
-        let admin_keys = self.admin_keys.read().await;
-        let keys_vec: Vec<String> = admin_keys.iter().cloned().collect();
+    /// Add a role to a public key via UBTS transaction
+    pub async fn add_role(&self, public_key: String, role: String) -> anyhow::Result<()> {
+        tracing::info!("Adding role {} to {} via UBTS transaction", role, public_key);
 
-        if let Err(e) = persistence::save_json("admin_keys.json", &keys_vec) {
-            tracing::error!("Failed to save admin keys: {}", e);
+        // Create authorization transaction with unique UUID
+        let auth_tx = AuthorizationTransaction {
+            id: Uuid::new_v4().to_string(),
+            public_key: public_key.clone(),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_secs(),
+            role: role.clone(),
+        };
+
+        // Store in database with authorization prefix
+        let key = make_key(prefixes::AUTHORIZATION, &auth_tx.id);
+        self.db.put(&key, &auth_tx)?;
+
+        tracing::info!("✅ Created role assignment transaction {} for {} with role {}", auth_tx.id, public_key, role);
+
+        // Immediately notify sync orchestrator to broadcast updated WantList
+        if let Some(ref notify) = self.block_notify {
+            if let Err(e) = notify.send(BlockNotification::NewBlock(auth_tx.id.clone())) {
+                tracing::warn!("Failed to send block notification: {}", e);
+            } else {
+                tracing::info!("🚀 INSTANT BROADCAST triggered for role assignment transaction");
+            }
         }
-    }
 
-    /// Check if a public key is authorized as admin
-    pub async fn is_admin(&self, public_key: &str) -> bool {
-        self.admin_keys.read().await.contains(public_key)
-    }
-
-    /// Get roles for a public key
-    pub async fn get_roles(&self, public_key: &str) -> Vec<String> {
-        self.authorized_keys
-            .read()
-            .await
-            .get(public_key)
-            .map(|roles| roles.iter().cloned().collect())
-            .unwrap_or_default()
-    }
-
-    /// Authorize a public key as admin
-    pub async fn authorize_admin(&self, public_key: String) {
-        self.admin_keys.write().await.insert(public_key.clone());
-
-        // Also add admin role to authorized_keys
-        let mut keys = self.authorized_keys.write().await;
-        keys.entry(public_key)
-            .or_insert_with(HashSet::new)
-            .insert("admin".to_string());
-
-        // Save to disk
-        drop(keys); // Release lock before saving
-        self.save().await;
-    }
-
-    /// Add a role to a public key
-    pub async fn add_role(&self, public_key: String, role: String) {
-        let mut keys = self.authorized_keys.write().await;
-        keys.entry(public_key)
-            .or_insert_with(HashSet::new)
-            .insert(role);
+        Ok(())
     }
 }
 
-impl Default for AccountState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+// Note: No Default implementation - AccountState requires a Database parameter
 
 /// GET /api/v1/account - Get account status
 pub async fn get_account(State(_state): State<AccountState>) -> impl IntoResponse {
@@ -182,17 +263,22 @@ pub async fn get_account_status(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_account_state() {
-        let state = AccountState::new();
+        // Create temporary database
+        let temp_dir = TempDir::new().unwrap();
+        let db = Database::open(temp_dir.path()).unwrap();
+        let state = AccountState::new(db);
+
         let public_key = "test_key_123".to_string();
 
         // Initially not admin
         assert!(!state.is_admin(&public_key).await);
 
         // Authorize as admin
-        state.authorize_admin(public_key.clone()).await;
+        state.authorize_admin(public_key.clone()).await.unwrap();
 
         // Now is admin
         assert!(state.is_admin(&public_key).await);
@@ -204,11 +290,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_add_role() {
-        let state = AccountState::new();
+        // Create temporary database
+        let temp_dir = TempDir::new().unwrap();
+        let db = Database::open(temp_dir.path()).unwrap();
+        let state = AccountState::new(db);
+
         let public_key = "test_key_456".to_string();
 
         // Add creator role
-        state.add_role(public_key.clone(), "creator".to_string()).await;
+        state.add_role(public_key.clone(), "creator".to_string()).await.unwrap();
 
         // Check role
         let roles = state.get_roles(&public_key).await;

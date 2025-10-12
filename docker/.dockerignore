@@ -1,0 +1,20 @@
+node_modules
+.git
+*.log
+.DS_Store
+packages/*/node_modules
+test-results
+playwright_launch_log.txt
+buildResources
+.electron-builder.config.cjs
+# Ignore Rust build artifacts (15GB!)
+target
+Cargo.lock
+# Ignore all crates - flagship doesn't need them
+crates
+# Ignore test data
+.lens-node-data
+*.sh
+docker-compose*.yml
+# Allow packages/renderer/dist/web for Docker builds
+!packages/renderer/dist/web

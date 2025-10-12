@@ -16,14 +16,23 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Initialize tracing
+    // Initialize tracing - default to info level for cleaner production logs
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "lens_v2_node=debug,tower_http=debug".into()),
+                .unwrap_or_else(|_| "lens_node=info,tower_http=info".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    // Force a flush to ensure logs appear immediately
+    eprintln!("=== Lens Node v2 - Version 0.5.2 - Starting ===");
+
+    // Print startup banner
+    tracing::info!("╔══════════════════════════════════════════════╗");
+    tracing::info!("║       Lens Node v2 - Version 0.5.2          ║");
+    tracing::info!("║   P2P Content Distribution & Sync Node       ║");
+    tracing::info!("╚══════════════════════════════════════════════╝");
 
     // Get port from environment or use default
     let port = env::var("PORT")
@@ -31,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
         .parse::<u16>()?;
 
     let addr = format!("0.0.0.0:{}", port);
-    tracing::info!("Starting Lens Node v2 on {}", addr);
+    tracing::info!("🚀 Starting server on {}", addr);
 
     // Initialize RocksDB database
     let db_path = env::var("DB_PATH").unwrap_or_else(|_| ".lens-node-data/rocksdb".to_string());
@@ -59,6 +68,18 @@ async fn main() -> anyhow::Result<()> {
     // Create account state for authorization (UBTS-based, syncs via SPORE)
     let account_state = AccountState::new(db.clone()).with_notify(block_notify_tx);
     tracing::info!("Initialized account management with UBTS transaction storage and instant broadcast");
+
+    // Auto-authorize admin keys from environment variable if set (comma-separated)
+    if let Ok(admin_keys) = env::var("ADMIN_PUBLIC_KEY") {
+        if !admin_keys.is_empty() {
+            for admin_key in admin_keys.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+                match account_state.authorize_admin(admin_key.to_string()).await {
+                    Ok(_) => tracing::info!("✅ Auto-authorized admin key: {}", admin_key),
+                    Err(e) => tracing::warn!("⚠️ Failed to auto-authorize admin key {}: {}", admin_key, e),
+                }
+            }
+        }
+    }
 
     // Create releases state for content management with RocksDB persistence
     let releases_state = ReleasesState::with_db(account_state.clone(), db.clone())?;

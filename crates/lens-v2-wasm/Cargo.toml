@@ -1,0 +1,43 @@
+[package]
+name = "lens-v2-wasm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde-wasm-bindgen = "0.6"
+web-sys = { version = "0.3", features = [
+    "WebSocket",
+    "MessageEvent",
+    "ErrorEvent",
+    "CloseEvent",
+    "BinaryType",
+    # WebRTC features for direct P2P with TGP packet format
+    "RtcPeerConnection",
+    "RtcConfiguration",
+    "RtcDataChannel",
+    "RtcDataChannelInit",
+    "RtcDataChannelState",
+    "RtcSdpType",
+    "RtcSessionDescription",
+    "RtcSessionDescriptionInit",
+    "RtcIceCandidate",
+    "RtcIceCandidateInit",
+    "RtcPeerConnectionIceEvent",
+    "RtcIceTransportPolicy",
+] }
+js-sys = "0.3"
+console_error_panic_hook = "0.1"
+getrandom = { version = "0.2", features = ["js"] }
+sha2 = "0.10"
+hex = "0.4"
+uuid = { version = "1.0", features = ["v4", "js"] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"

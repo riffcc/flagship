@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Riff.CC Team"]
 description = "Lens Node v2 - High-performance Rust backend with P2P capabilities"
-license = "MIT OR Apache-2.0"
+license = "AGPL-3.0-or-later"
+
+[lib]
+name = "lens_node"
+path = "src/lib.rs"
 
 [[bin]]
 name = "lens-node"
@@ -15,6 +19,9 @@ path = "src/main.rs"
 lens-v2-sdk = { path = "../lens-v2-sdk" }
 lens-v2-p2p = { path = "../lens-v2-p2p" }
 consensus-peerexc = { path = "../../../palace/crates/consensus/peerexc" }
+
+# Citadel DHT for hexagonal routing
+citadel-core = { path = "../../../citadel/crates/citadel-core" }
 
 # HTTP server
 axum = { workspace = true, features = ["ws"] }

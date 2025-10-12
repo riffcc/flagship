@@ -502,7 +502,7 @@ export function useBulkDeleteAllReleasesMutation(options?: {
   onSuccess?: (response: { success: boolean; deleted: number; delete_transaction_id: string }) => void;
   onError?: (e: Error) => void;
 }) {
-  const { publicKey, sign } = useIdentity();
+  const { publicKey } = useIdentity();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
@@ -510,20 +510,14 @@ export function useBulkDeleteAllReleasesMutation(options?: {
         throw new Error('Identity not initialized');
       }
 
-      // Sign the request
-      const timestamp = Date.now().toString();
-      const messageToSign = `${timestamp}:DELETE:/admin/releases`;
-      const signature = await sign(messageToSign);
-
-      const headers: Record<string, string> = {
-        'X-Public-Key': publicKey.value,
-        'X-Signature': signature,
-        'X-Timestamp': timestamp,
-      };
-
       const response = await fetch(`${API_URL}/admin/releases`, {
         method: 'DELETE',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          publicKey: publicKey.value,
+        }),
       });
 
       if (!response.ok) {
@@ -552,11 +546,33 @@ export function useAddFeaturedReleaseMutation(options?: {
   onSuccess?: (response: HashResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { lensService } = useLensService();
+  const { publicKey } = useIdentity();
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (data: AddInput<FeaturedReleaseData>) => {
-      return await lensService.addFeaturedRelease(data);
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      const { API_URL } = await import('../router');
+      const response = await fetch(`${API_URL}/admin/featured-releases`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          publicKey: publicKey.value,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to add featured release: ${errorText}`);
+      }
+
+      return await response.json();
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
@@ -572,10 +588,15 @@ export function useEditFeaturedReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
+  const { publicKey } = useIdentity();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: EditInput<FeaturedReleaseData>) => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
       const { API_URL } = await import('../router');
       // URL-encode the ID to handle special characters
       const encodedId = encodeURIComponent(data.id);
@@ -584,7 +605,10 @@ export function useEditFeaturedReleaseMutation(options?: {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          publicKey: publicKey.value,
+        }),
       });
 
       if (!response.ok) {
@@ -609,11 +633,34 @@ export function useDeleteFeaturedReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { lensService } = useLensService();
+  const { publicKey } = useIdentity();
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (id: string) => {
-      return await lensService.deleteFeaturedRelease(id);
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      const { API_URL } = await import('../router');
+      // URL-encode the ID to handle special characters
+      const encodedId = encodeURIComponent(id);
+      const response = await fetch(`${API_URL}/admin/featured-releases/${encodedId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          publicKey: publicKey.value,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to delete featured release: ${errorText}`);
+      }
+
+      return await response.json();
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);

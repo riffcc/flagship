@@ -135,9 +135,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
 import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useWasmP2pDeleteReleaseMutation, useWasmP2pDeleteFeaturedReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useContentCategoriesQuery, useGetStructuresQuery, useDeleteStructureMutation, useBulkDeleteAllReleasesMutation } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
+import { useIdentity } from '/@/composables/useIdentity';
 import type { ReleaseItem } from '/@/types';
+
+const queryClient = useQueryClient();
 
 const isExporting = ref(false);
 const isImporting = ref(false);
@@ -148,6 +152,7 @@ const confirmDialog = ref(false);
 const cleanupResults = ref<{ message: string; error: boolean } | null>(null);
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
+const { publicKey } = useIdentity();
 
 // Queries
 const { data: releases } = useGetReleasesQuery();
@@ -373,98 +378,57 @@ const performImport = async () => {
     const text = await importFile.value.text();
     const importData = JSON.parse(text);
 
-    if (!importData.version || !importData.releases || !importData.featuredReleases) {
+    if (!importData.version || !importData.releases) {
       throw new Error('Invalid import file format');
     }
 
-    let releasesImported = 0;
-    let featuredImported = 0;
+    // Use bulk HTTP API import endpoint for efficient importing
+    openSnackbar(`Importing ${importData.releases.length} releases via bulk API...`, 'info');
 
-    // Import releases
-    for (const release of importData.releases) {
-      try {
-        // Use categorySlug if available, otherwise try to map the categoryId
-        const categoryToMap = release.categorySlug || release.categoryId;
-        const mappedCategoryId = getCategoryIdFromSlug(categoryToMap);
-        
-        // Extract the data without the __context
-        const releaseData: ReleaseItem = {
-          id: release.id,
-          name: release.name,
-          categoryId: mappedCategoryId,
-          contentCID: release.contentCID,
-          thumbnailCID: release.thumbnailCID,
-          metadata: release.metadata,
-          siteAddress: release.siteAddress,
-          postedBy: release.postedBy,
-        };
+    const { API_URL } = await import('/@/plugins/router');
+    const response = await fetch(`${API_URL}/import`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        publicKey: publicKey.value,
+        data: importData,
+      }),
+    });
 
-        if (importMode.value === 'upsert') {
-          // Check if release exists
-          const existing = releases.value?.find(r => r.id === release.id);
-          if (existing) {
-            // Update existing
-            await editReleaseMutation.mutateAsync({
-              ...releaseData,
-              siteAddress: existing.siteAddress,
-            });
-            releasesImported++;
-          } else {
-            // Add new
-            await addReleaseMutation.mutateAsync(releaseData);
-            releasesImported++;
-          }
-        } else {
-          // Replace mode - just add
-          await addReleaseMutation.mutateAsync(releaseData);
-          releasesImported++;
-        }
-      } catch (error) {
-        console.error('Failed to import release:', release.id, error);
-      }
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || `Import failed: ${response.statusText}`);
     }
 
-    // Import featured releases
-    for (const featured of importData.featuredReleases) {
-      try {
-        const featuredData = {
-          id: featured.id,
-          siteAddress: featured.siteAddress,
-          postedBy: featured.postedBy,
-          releaseId: featured.releaseId,
-          startTime: featured.startTime,
-          endTime: featured.endTime,
-          promoted: featured.promoted,
-        };
+    const result = await response.json();
 
-        if (importMode.value === 'upsert') {
-          // Check if featured release exists
-          const existing = featuredReleases.value?.find(f => f.id === featured.id);
-          if (existing) {
-            // Update existing
-            await editFeaturedReleaseMutation.mutateAsync({
-              ...featuredData,
-            });
-            featuredImported++;
-          } else {
-            // Add new
-            await addFeaturedReleaseMutation.mutateAsync(featuredData);
-            featuredImported++;
-          }
-        } else {
-          // Replace mode - just add
-          await addFeaturedReleaseMutation.mutateAsync(featuredData);
-          featuredImported++;
-        }
-      } catch (error) {
-        console.error('Failed to import featured release:', featured.id, error);
-      }
+    // Result format: { success: boolean, imported: number, skipped: number, errors: string[] }
+    if (result.errors && result.errors.length > 0) {
+      console.error('Import errors:', result.errors);
+      openSnackbar(
+        `Import completed with warnings: ${result.imported} imported, ${result.skipped} skipped. Check console for errors.`,
+        'warning'
+      );
+    } else {
+      openSnackbar(
+        `Import successful: ${result.imported} releases imported, ${result.skipped} already existed`,
+        'success'
+      );
     }
 
-    openSnackbar(`Import complete: ${releasesImported} releases and ${featuredImported} featured releases imported`, 'success');
+    // Wait for backend to sync, then force refetch to refresh UI
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Force immediate refetch of queries (using queryClient from setup)
+    await queryClient.refetchQueries({ queryKey: ['releases'] });
+    await queryClient.refetchQueries({ queryKey: ['featuredReleases'] });
+
     importFile.value = null;
   } catch (error) {
     openSnackbar('Import failed: ' + (error instanceof Error ? error.message : String(error)), 'error');
+    console.error('Import error:', error);
   } finally {
     isImporting.value = false;
   }

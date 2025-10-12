@@ -2,6 +2,22 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 CRITICAL BUILD CONFIGURATION 🚨
+
+**ALWAYS BUILD FLAGSHIP WITH THIS API URL:**
+```
+VITE_API_URL=https://api.palace.riff.cc/api/v1
+```
+
+**BUILD COMMAND:**
+```bash
+VITE_API_URL="https://api.palace.riff.cc/api/v1" pnpm build
+```
+
+**THIS HAS BEEN FORGOTTEN 10 TIMES. DO NOT FORGET IT AGAIN.**
+
+The frontend MUST be built with `https://api.palace.riff.cc/api/v1` as the API URL. This is not negotiable. This is not optional. This is ALWAYS required.
+
 ## Project Overview
 
 Flagship is Riff.CC's decentralized media platform for watching, sharing, and curating legally free content. It uses peer-to-peer technology with PeerBit for metadata and IPFS for content/data distribution, and can run as both an Electron desktop app and a web application.

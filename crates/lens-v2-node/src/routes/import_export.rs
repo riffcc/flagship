@@ -85,11 +85,34 @@ fn convert_legacy_public_key(legacy_key: &LegacyPublicKey) -> String {
     }
 }
 
+/// Import request with public key for authentication
+#[derive(Debug, Deserialize)]
+pub struct ImportRequest {
+    #[serde(rename = "publicKey")]
+    pub public_key: String,
+    pub data: serde_json::Value,
+}
+
 /// POST /api/v1/import - Import releases from legacy format
 pub async fn import_releases(
     State(state): State<ReleasesState>,
-    Json(import_data): Json<serde_json::Value>,
+    Json(req): Json<ImportRequest>,
 ) -> impl IntoResponse {
+    // Check if requester is admin
+    if !state.account_state.is_admin(&req.public_key).await {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ImportResponse {
+                success: false,
+                imported: 0,
+                skipped: 0,
+                errors: vec!["Admin permission required for import".to_string()],
+            }),
+        )
+            .into_response();
+    }
+
+    let import_data = req.data;
     let mut imported = 0;
     let mut skipped = 0;
     let mut errors = Vec::new();
@@ -103,11 +126,17 @@ pub async fn import_releases(
             for legacy_release in legacy_export.releases {
                 let key = make_key(prefixes::RELEASE, &legacy_release.id);
 
-                // Check if release already exists
-                if let Ok(true) = state.db.exists(&key) {
-                    tracing::debug!("Skipping existing release: {}", legacy_release.id);
-                    skipped += 1;
-                    continue;
+                // Check if release already exists (including tombstones)
+                if let Ok(Some(existing)) = state.db.get::<_, Release>(&key) {
+                    // If it's a tombstone, we'll overwrite it (clearing the tombstone)
+                    if existing.is_tombstone {
+                        tracing::info!("Clearing tombstone and re-importing release: {}", legacy_release.id);
+                    } else {
+                        // If it's a real release (not tombstone), skip it
+                        tracing::debug!("Skipping existing non-tombstone release: {}", legacy_release.id);
+                        skipped += 1;
+                        continue;
+                    }
                 }
 
                 // Convert to new format
@@ -128,7 +157,7 @@ pub async fn import_releases(
                     posted_by,
                     created_at: chrono::Utc::now().to_rfc3339(),
                     vector_clock: std::collections::HashMap::new(),  // Imported releases start with empty vector clock
-                    is_tombstone: false,
+                    is_tombstone: false,  // Explicitly clear tombstone status
                     tombstone_type: None,
                     deleted_at: None,
                     deleted_by: None,
@@ -159,6 +188,7 @@ pub async fn import_releases(
             errors,
         }),
     )
+        .into_response()
 }
 
 /// GET /api/v1/export - Export all releases in new format
@@ -189,14 +219,31 @@ pub async fn export_releases(
     }
 }
 
-/// DELETE /api/v1/releases - Delete ALL releases (use with caution!)
+/// Delete request with public key for authentication
+#[derive(Debug, Deserialize)]
+pub struct DeleteAllRequest {
+    #[serde(rename = "publicKey")]
+    pub public_key: String,
+}
+
+/// DELETE /api/v1/admin/releases - Delete ALL releases (use with caution!)
 /// Requires admin permission
 pub async fn delete_all_releases(
     State(state): State<ReleasesState>,
+    Json(req): Json<DeleteAllRequest>,
 ) -> impl IntoResponse {
     use crate::ubts::{UBTSBlock, UBTSTransaction};
 
-    // TODO: Add admin check here
+    // Check if requester is admin
+    if !state.account_state.is_admin(&req.public_key).await {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "error": "Admin permission required"
+            })),
+        )
+            .into_response();
+    }
     match state.db.iter_prefix::<Release>(prefixes::RELEASE.as_bytes()) {
         Ok(items) => {
             let count = items.len();

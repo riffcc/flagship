@@ -1,0 +1,22 @@
+FROM debian:trixie-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy the pre-built binary from the host
+COPY target/release/lens-node /app/lens-node
+
+# Make it executable
+RUN chmod +x /app/lens-node
+
+# Expose the default port
+EXPOSE 5002
+
+# Run the binary
+CMD ["/app/lens-node"]

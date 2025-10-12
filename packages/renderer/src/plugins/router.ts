@@ -158,6 +158,9 @@ const routes: Array<RouteRecordRaw> = [
     beforeEnter: async (to, from, next) => {
       // Check admin status using new identity system
       try {
+        // Import ed25519 library
+        const ed25519 = await import('@noble/ed25519');
+
         // Try to get identity from localStorage
         const identitySeed = localStorage.getItem('lens_identity_seed');
         if (!identitySeed) {
@@ -166,43 +169,37 @@ const routes: Array<RouteRecordRaw> = [
           return;
         }
 
-        // Derive public key (simplified - matches useIdentity.ts logic)
+        // Derive public key using @noble/ed25519 (matches useIdentity.ts)
         const seedBytes = new Uint8Array(identitySeed.length / 2);
         for (let i = 0; i < identitySeed.length; i += 2) {
           seedBytes[i / 2] = parseInt(identitySeed.substring(i, i + 2), 16);
         }
 
-        // Import and derive key
-        const keyMaterial = await crypto.subtle.importKey('raw', seedBytes, { name: 'HKDF' }, false, ['deriveBits']);
-        const derivedBits = await crypto.subtle.deriveBits(
-          { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: new TextEncoder().encode('lens-ed25519-v2') },
-          keyMaterial,
-          256
-        );
-        const privateKeyBytes = new Uint8Array(derivedBits);
-        const publicKeyHash = await crypto.subtle.digest('SHA-256', privateKeyBytes);
-        const publicKeyBytes = new Uint8Array(publicKeyHash);
+        // Seed is the private key for ed25519
+        const privateKey = seedBytes;
+        const publicKeyBytes = await ed25519.getPublicKeyAsync(privateKey);
         const publicKeyHex = Array.from(publicKeyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
         const publicKey = `ed25119p/${publicKeyHex}`;
 
+        console.log('[Router] Checking admin status for:', publicKey);
+
         // Check authorization status
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002/api/v1';
         const encodedKey = encodeURIComponent(publicKey);
-        const response = await fetch(`${apiUrl}/account/${encodedKey}`);
+        const response = await fetch(`${API_URL}/account/${encodedKey}`);
 
         if (response.ok) {
           const accountStatus = await response.json();
           const isAdmin = accountStatus?.isAdmin || accountStatus?.roles?.includes('moderator') || false;
 
           if (isAdmin) {
-            console.log('[Router] Admin access granted');
+            console.log('[Router] Admin access granted for', publicKey);
             next();
           } else {
-            console.warn('[Router] Not an admin, redirecting to home');
+            console.warn('[Router] Not an admin, redirecting to home. Status:', accountStatus);
             next({ path: '/' });
           }
         } else {
-          console.warn('[Router] Failed to check admin status, redirecting to home');
+          console.warn('[Router] Failed to check admin status:', response.status, response.statusText);
           next({ path: '/' });
         }
       } catch (error) {

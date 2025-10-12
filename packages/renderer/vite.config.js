@@ -106,9 +106,9 @@ const config = {
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: process.env.MODE === 'production',
+        drop_console: false,
         drop_debugger: true,
-        pure_funcs: process.env.MODE === 'production' ? ['console.log', 'console.debug'] : [],
+        pure_funcs: [],
       },
     },
   },
