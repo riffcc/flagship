@@ -35,6 +35,7 @@ struct PeerConnection {
 }
 
 /// P2P Client for browser - uses WebRTC DataChannels for direct P2P communication
+/// Also provides direct DHT operations via HTTP (no WebSocket!)
 #[wasm_bindgen]
 pub struct P2pClient {
     relay_url: String,
@@ -44,6 +45,7 @@ pub struct P2pClient {
     on_block: Arc<Mutex<Option<js_sys::Function>>>,
     on_peer_discovered: Arc<Mutex<Option<js_sys::Function>>>,
     peer_connections: Arc<Mutex<HashMap<String, PeerConnection>>>,
+    dht_client: DHTClient,  // Direct DHT operations (no WebSocket!)
 }
 
 #[wasm_bindgen]

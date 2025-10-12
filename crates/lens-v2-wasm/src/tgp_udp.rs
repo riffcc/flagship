@@ -63,11 +63,19 @@ impl TgpPacketHeader {
 /// TGP packet types
 #[allow(dead_code)]
 pub mod packet_types {
+    // UBTS/Blockchain packets
     pub const UBTS_BLOCK: u8 = 0x01;
     pub const WANTLIST: u8 = 0x02;
     pub const DELETE_WANTLIST: u8 = 0x03;
+
+    // Peer discovery packets
     pub const PEER_ANNOUNCE: u8 = 0x04;
     pub const PEER_REQUEST: u8 = 0x05;
+
+    // DHT packets (Citadel DHT integration)
+    pub const DHT_GET: u8 = 0x06;
+    pub const DHT_PUT: u8 = 0x07;
+    pub const DHT_RESPONSE: u8 = 0x08;
 }
 
 /// Calculate hex coordinate for a peer ID (consistent hashing)

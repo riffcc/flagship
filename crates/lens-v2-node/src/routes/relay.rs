@@ -14,6 +14,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tracing::{info, warn};
+use crate::tgp::{self as tgp_mod, PacketType, DhtGetRequest, DhtPutRequest, DhtResponse};
+use citadel_dht::local_storage::LocalStorage;
 
 /// WebRTC signaling message types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,6 +66,8 @@ pub struct RelayState {
     pub webrtc_manager: Option<Arc<crate::webrtc_manager::WebRTCManager>>,
     /// Browser-discovered peers - browsers share their WebRTC connections to help nodes find each other
     pub browser_discovered_peers: Arc<RwLock<HashMap<String, Vec<BrowserDiscoveredPeer>>>>,
+    /// DHT storage for P2P distributed key-value store
+    pub dht_storage: Arc<tokio::sync::Mutex<LocalStorage>>,
 }
 
 impl RelayState {
@@ -73,11 +77,17 @@ impl RelayState {
             peer_senders: Arc::new(RwLock::new(HashMap::new())),
             webrtc_manager: None,
             browser_discovered_peers: Arc::new(RwLock::new(HashMap::new())),
+            dht_storage: Arc::new(tokio::sync::Mutex::new(LocalStorage::new())),
         }
     }
 
     pub fn with_webrtc(mut self, manager: Arc<crate::webrtc_manager::WebRTCManager>) -> Self {
         self.webrtc_manager = Some(manager);
+        self
+    }
+
+    pub fn with_dht_storage(mut self, storage: Arc<tokio::sync::Mutex<LocalStorage>>) -> Self {
+        self.dht_storage = storage;
         self
     }
 }
@@ -344,6 +354,110 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
             }
             Ok(Message::Binary(data)) => {
                 info!("Relay: Received binary from {}: {} bytes", peer_id, data.len());
+
+                // Try to parse as TGP packet
+                if let Some((header, payload)) = tgp_mod::parse_packet(&data) {
+                    info!(
+                        "Relay: TGP packet type={:02x} src={:016x} dst={:016x} len={}",
+                        header.packet_type, header.source_hex, header.dest_hex, header.payload_length
+                    );
+
+                    // Handle DHT packets
+                    if let Some(packet_type) = PacketType::from_u8(header.packet_type) {
+                        match packet_type {
+                            PacketType::DhtGet => {
+                                // DHT GET request
+                                if let Ok(request) = serde_json::from_slice::<DhtGetRequest>(payload) {
+                                    info!("Relay: DHT GET request for key={}", hex::encode(&request.key));
+
+                                    // Query local DHT storage
+                                    let value = {
+                                        let storage = state.dht_storage.lock().await;
+                                        storage.get(&request.key).cloned()
+                                    };
+
+                                    // Send DHT_RESPONSE back to requester
+                                    let response = DhtResponse {
+                                        key: request.key,
+                                        value,
+                                    };
+
+                                    let response_payload = serde_json::to_vec(&response).unwrap();
+                                    let response_packet = tgp_mod::create_packet(
+                                        PacketType::DhtResponse.as_u8(),
+                                        header.dest_hex, // We are the destination, respond to source
+                                        header.source_hex, // Send to original source
+                                        &response_payload
+                                    );
+
+                                    // Send response back to requester
+                                    let senders = state.peer_senders.read().await;
+                                    if let Some(tx) = senders.get(&peer_id) {
+                                        if let Err(e) = tx.send(Message::Binary(response_packet)) {
+                                            warn!("Relay: Failed to send DHT_RESPONSE to {}: {}", peer_id, e);
+                                        } else {
+                                            info!("Relay: Sent DHT_RESPONSE to {} (found={}", peer_id, response.value.is_some());
+                                        }
+                                    }
+                                }
+                            }
+                            PacketType::DhtPut => {
+                                // DHT PUT request
+                                if let Ok(request) = serde_json::from_slice::<DhtPutRequest>(payload) {
+                                    info!("Relay: DHT PUT request for key={} value_len={}", hex::encode(&request.key), request.value.len());
+
+                                    // Store in local DHT
+                                    {
+                                        let mut storage = state.dht_storage.lock().await;
+                                        storage.put(request.key, request.value.clone());
+                                    }
+
+                                    // Send DHT_RESPONSE with success
+                                    let response = DhtResponse {
+                                        key: request.key,
+                                        value: Some(request.value),
+                                    };
+
+                                    let response_payload = serde_json::to_vec(&response).unwrap();
+                                    let response_packet = tgp_mod::create_packet(
+                                        PacketType::DhtResponse.as_u8(),
+                                        header.dest_hex,
+                                        header.source_hex,
+                                        &response_payload
+                                    );
+
+                                    // Send response back to requester
+                                    let senders = state.peer_senders.read().await;
+                                    if let Some(tx) = senders.get(&peer_id) {
+                                        if let Err(e) = tx.send(Message::Binary(response_packet)) {
+                                            warn!("Relay: Failed to send DHT_RESPONSE to {}: {}", peer_id, e);
+                                        } else {
+                                            info!("Relay: Sent DHT_RESPONSE to {} (stored successfully)", peer_id);
+                                        }
+                                    }
+                                }
+                            }
+                            PacketType::DhtResponse => {
+                                // DHT RESPONSE - route to destination peer
+                                info!("Relay: Routing DHT_RESPONSE to peer");
+
+                                // Find the destination peer and forward the packet
+                                let target_hex = header.dest_hex;
+                                let senders = state.peer_senders.read().await;
+
+                                // TODO: Implement hex-based routing to find closest peer
+                                // For now, just log that we received it
+                                info!("Relay: DHT_RESPONSE for target={:016x} (routing not yet implemented)", target_hex);
+                            }
+                            _ => {
+                                // Other TGP packet types (UBTS, WantList, etc.)
+                                info!("Relay: TGP packet type {:?} (not DHT, no special handling)", packet_type);
+                            }
+                        }
+                    }
+                } else {
+                    info!("Relay: Binary data is not a valid TGP packet");
+                }
             }
             Ok(Message::Ping(_)) => {
                 // Axum automatically handles pings
