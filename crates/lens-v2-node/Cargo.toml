@@ -1,6 +1,6 @@
 [package]
 name = "lens-v2-node"
-version = "0.5.4"
+version = "0.5.5"
 edition = "2021"
 authors = ["Riff.CC Team"]
 description = "Lens Node v2 - High-performance Rust backend with P2P capabilities"

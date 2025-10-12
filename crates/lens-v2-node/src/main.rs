@@ -26,11 +26,11 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     // Force a flush to ensure logs appear immediately
-    eprintln!("=== Lens Node v2 - Version 0.5.2 - Starting ===");
+    eprintln!("=== Lens Node v2 - Version 0.5.5 - Starting ===");
 
     // Print startup banner
     tracing::info!("╔══════════════════════════════════════════════╗");
-    tracing::info!("║       Lens Node v2 - Version 0.5.2          ║");
+    tracing::info!("║       Lens Node v2 - Version 0.5.5          ║");
     tracing::info!("║   P2P Content Distribution & Sync Node       ║");
     tracing::info!("╚══════════════════════════════════════════════╝");
 
