@@ -13,6 +13,9 @@ mod tgp_udp;
 use tgp_udp::{peer_id_to_hex, create_tgp_packet, parse_tgp_packet, packet_types};
 use js_sys::Uint8Array;
 
+pub mod dht_minimal;
+pub use dht_minimal::{DHTClient, hash_key};
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]

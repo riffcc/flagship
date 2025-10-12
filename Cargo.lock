@@ -1604,7 +1604,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
 name = "lens-v2-node"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1675,6 +1675,7 @@ dependencies = [
 name = "lens-v2-wasm"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "console_error_panic_hook",
  "getrandom 0.2.16",
  "hex",
@@ -1682,7 +1683,6 @@ dependencies = [
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
- "sha2",
  "uuid",
  "wasm-bindgen",
  "wasm-bindgen-futures",

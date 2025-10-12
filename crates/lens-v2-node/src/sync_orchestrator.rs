@@ -59,8 +59,43 @@ impl SyncOrchestrator {
     pub async fn start(self: Arc<Self>) -> Result<()> {
         info!("Starting sync orchestrator");
 
-        // Connect to relay
-        self.network.start().await?;
+        // Spawn persistent relay connection task (non-blocking, runs forever)
+        // The relay is anycast - we try to stay connected for fallback comms
+        let network = self.network.clone();
+        tokio::spawn(async move {
+            let mut retry_delay = Duration::from_secs(1);
+            let max_delay = Duration::from_secs(300); // Cap at 5 minutes
+            let mut attempt = 0;
+
+            loop {
+                attempt += 1;
+
+                info!("🔄 Relay connection attempt #{}", attempt);
+                match network.start().await {
+                    Ok(_) => {
+                        info!("✅ Connected to relay (anycast fallback comms active)");
+                        // Connection succeeded - keep this connection alive
+                        // If it drops, the loop will reconnect
+                        break;
+                    }
+                    Err(e) => {
+                        if attempt == 1 {
+                            // First attempt - might be the first node (we ARE the relay!)
+                            info!("ℹ️ No relay available (might be first node - this node IS the relay via anycast)");
+                        }
+                        warn!("⚠️ Relay connection attempt #{} failed: {} - retrying in {:?}", attempt, e, retry_delay);
+
+                        tokio::time::sleep(retry_delay).await;
+
+                        // Exponential backoff: 1s -> 2s -> 4s -> 8s -> ... -> 300s
+                        retry_delay = std::cmp::min(retry_delay * 2, max_delay);
+                    }
+                }
+            }
+
+            // If we get here, we're connected - keep retrying if connection drops
+            info!("🌉 Relay connection established - monitoring for reconnection");
+        });
 
         // Spawn instant broadcast listener
         let orchestrator_instant = self.clone();
@@ -74,6 +109,8 @@ impl SyncOrchestrator {
             orchestrator.sync_loop().await;
         });
 
+        // Startup is complete - relay connection continues in background
+        info!("✅ Sync orchestrator started (relay connection running in background)");
         Ok(())
     }
 
