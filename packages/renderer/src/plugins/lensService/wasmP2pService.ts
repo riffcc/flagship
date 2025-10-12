@@ -6,6 +6,7 @@ import init, { P2pClient, init_panic_hook } from '/@/wasm/lens_v2_wasm.js';
 export class WasmP2pService {
   private client: P2pClient | null = null;
   private initialized = false;
+  private peerAnnouncementInterval: number | null = null;
 
   constructor(private relayUrl: string = 'ws://localhost:5002/api/v1/relay/ws') {}
 
@@ -41,6 +42,9 @@ export class WasmP2pService {
 
       // Connect to relay
       this.client.connect();
+
+      // Start periodic peer announcements (browsers help nodes find each other!)
+      this.startPeerAnnouncements();
 
       this.initialized = true;
       console.log('✅ WASM P2P client initialized and connected to relay');
@@ -157,9 +161,51 @@ export class WasmP2pService {
   }
 
   /**
+   * Start periodic peer announcements (browsers help nodes find each other!)
+   */
+  private startPeerAnnouncements(): void {
+    // Clear any existing interval
+    if (this.peerAnnouncementInterval !== null) {
+      clearInterval(this.peerAnnouncementInterval);
+    }
+
+    // Send initial announcement after 5 seconds (give time for connections to establish)
+    setTimeout(() => {
+      this.announcePeers();
+    }, 5000);
+
+    // Then announce every 30 seconds
+    this.peerAnnouncementInterval = setInterval(() => {
+      this.announcePeers();
+    }, 30000) as unknown as number;
+  }
+
+  /**
+   * Announce discovered peers to relay
+   */
+  private announcePeers(): void {
+    if (!this.client) {
+      console.warn('❌ Cannot announce peers: client not initialized');
+      return;
+    }
+
+    try {
+      this.client.announce_discovered_peers();
+    } catch (error) {
+      console.error('❌ Failed to announce discovered peers:', error);
+    }
+  }
+
+  /**
    * Disconnect from relay
    */
   disconnect(): void {
+    // Stop peer announcements
+    if (this.peerAnnouncementInterval !== null) {
+      clearInterval(this.peerAnnouncementInterval);
+      this.peerAnnouncementInterval = null;
+    }
+
     if (this.client) {
       this.client.disconnect();
       this.client = null;

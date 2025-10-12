@@ -471,6 +471,78 @@ impl P2pClient {
 
         Ok(())
     }
+
+    /// Get list of connected peer IDs
+    /// Returns a JSON array of peer IDs that have active WebRTC connections
+    pub fn get_connected_peers(&self) -> Result<JsValue, JsValue> {
+        let peer_conns = self.peer_connections.lock().unwrap();
+        let mut connected_peers = Vec::new();
+
+        for (peer_id, conn) in peer_conns.iter() {
+            if let Some(ref dc) = conn.data_channel {
+                if dc.ready_state() == web_sys::RtcDataChannelState::Open {
+                    connected_peers.push(serde_json::json!({
+                        "peer_id": peer_id,
+                        "connected": true,
+                        "connection_quality": "good"
+                    }));
+                }
+            }
+        }
+
+        let result = serde_json::to_value(&connected_peers)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        serde_wasm_bindgen::to_value(&result)
+            .map_err(|e| JsValue::from_str(&format!("Failed to convert to JsValue: {}", e)))
+    }
+
+    /// Announce discovered peers to relay (browsers help nodes find each other!)
+    /// This sends a browser_peer_announcement message with all connected peers
+    pub fn announce_discovered_peers(&self) -> Result<(), JsValue> {
+        let peer_conns = self.peer_connections.lock().unwrap();
+        let mut connected_peers = Vec::new();
+
+        for (peer_id, conn) in peer_conns.iter() {
+            if let Some(ref dc) = conn.data_channel {
+                let connection_quality = match dc.ready_state() {
+                    web_sys::RtcDataChannelState::Open => "good",
+                    web_sys::RtcDataChannelState::Connecting => "connecting",
+                    _ => "poor"
+                };
+
+                connected_peers.push(serde_json::json!({
+                    "peer_id": peer_id,
+                    "connected": dc.ready_state() == web_sys::RtcDataChannelState::Open,
+                    "connection_quality": connection_quality
+                }));
+            }
+        }
+
+        if connected_peers.is_empty() {
+            console_log!("🌉 No connected peers to announce");
+            return Ok(());
+        }
+
+        // Send browser peer announcement to relay
+        let announcement = serde_json::json!({
+            "type": "browser_peer_announcement",
+            "peers": connected_peers
+        });
+
+        let ws = self.websocket.lock().unwrap();
+        if let Some(ref ws) = *ws {
+            let announcement_str = serde_json::to_string(&announcement)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            ws.send_with_str(&announcement_str)?;
+            console_log!("🌉 Announced {} discovered peers to relay (helping nodes find each other!)", connected_peers.len());
+        } else {
+            return Err(JsValue::from_str("WebSocket not connected"));
+        }
+
+        Ok(())
+    }
 }
 
 #[wasm_bindgen]

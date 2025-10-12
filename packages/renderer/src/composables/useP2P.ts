@@ -584,9 +584,82 @@ export function useP2P() {
     return localBlocks.value.has(blockId)
   }
 
+  // Collect and send browser-discovered peers to relay
+  const sendPeerAnnouncement = () => {
+    if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
+      console.warn('[P2P] Cannot send peer announcement: not connected')
+      return
+    }
+
+    // Collect connected peers
+    const connectedPeers = Array.from(peerConnections.value.values())
+      .filter(p => p.connected && p.peer_id !== myPeerId.value)
+      .map(p => ({
+        peer_id: p.peer_id,
+        connected: p.connected,
+        connection_quality: p.dataChannel?.readyState === 'open' ? 'good' : 'poor',
+      }))
+
+    if (connectedPeers.length === 0) {
+      console.log('[P2P] No connected peers to announce')
+      return
+    }
+
+    // Send browser peer announcement to relay
+    const announcement = {
+      type: 'browser_peer_announcement',
+      peers: connectedPeers,
+    }
+
+    console.log(`[P2P] 🌉 Announcing ${connectedPeers.length} discovered peers to relay (helping nodes find each other!)`)
+    ws.value.send(JSON.stringify(announcement))
+  }
+
+  // Periodically announce discovered peers (every 30 seconds)
+  let peerAnnouncementInterval: number | undefined
+  const startPeerAnnouncements = () => {
+    // Clear existing interval if any
+    if (peerAnnouncementInterval) {
+      clearInterval(peerAnnouncementInterval)
+    }
+
+    // Send initial announcement after 5 seconds (give time for connections to establish)
+    setTimeout(() => {
+      sendPeerAnnouncement()
+    }, 5000)
+
+    // Then announce every 30 seconds
+    peerAnnouncementInterval = setInterval(() => {
+      sendPeerAnnouncement()
+    }, 30000) as unknown as number
+  }
+
+  // Start peer announcements when connected
+  const originalConnect = connect
+  const enhancedConnect = () => {
+    originalConnect()
+    // Wait for connection to establish, then start announcements
+    const checkConnection = setInterval(() => {
+      if (connected.value) {
+        clearInterval(checkConnection)
+        startPeerAnnouncements()
+      }
+    }, 100)
+  }
+
+  // Stop peer announcements on disconnect
+  const originalDisconnect = disconnect
+  const enhancedDisconnect = () => {
+    if (peerAnnouncementInterval) {
+      clearInterval(peerAnnouncementInterval)
+      peerAnnouncementInterval = undefined
+    }
+    originalDisconnect()
+  }
+
   // Cleanup on unmount
   onUnmounted(() => {
-    disconnect()
+    enhancedDisconnect()
   })
 
   return {
@@ -602,9 +675,9 @@ export function useP2P() {
     directPeersConnected,
     peerConnections: computed(() => Array.from(peerConnections.value.values())),
 
-    // Methods
-    connect,
-    disconnect,
+    // Methods (using enhanced versions with peer announcements)
+    connect: enhancedConnect,
+    disconnect: enhancedDisconnect,
     requestBlock,
     addLocalBlock,
     sendWantList,
@@ -613,5 +686,8 @@ export function useP2P() {
     requestBlocksFromPeer,
     getBlock,
     hasBlock,
+
+    // Peer Discovery Bridge (browsers help nodes find each other)
+    sendPeerAnnouncement,
   }
 }

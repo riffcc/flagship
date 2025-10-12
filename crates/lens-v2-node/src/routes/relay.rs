@@ -41,12 +41,29 @@ pub enum SignalingMessage {
     },
 }
 
+/// Browser peer announcement - browsers share their discovered peers with relay
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BrowserPeerAnnouncement {
+    /// List of peers this browser is connected to
+    pub peers: Vec<BrowserDiscoveredPeer>,
+}
+
+/// A peer discovered by a browser via WebRTC
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BrowserDiscoveredPeer {
+    pub peer_id: String,
+    pub connected: bool,
+    pub connection_quality: Option<String>, // "good", "poor", etc.
+}
+
 /// Relay state shared across WebSocket connections
 #[derive(Clone)]
 pub struct RelayState {
     pub relay: Arc<RwLock<RelayServer>>,
     pub peer_senders: Arc<RwLock<HashMap<String, mpsc::UnboundedSender<Message>>>>,
     pub webrtc_manager: Option<Arc<crate::webrtc_manager::WebRTCManager>>,
+    /// Browser-discovered peers - browsers share their WebRTC connections to help nodes find each other
+    pub browser_discovered_peers: Arc<RwLock<HashMap<String, Vec<BrowserDiscoveredPeer>>>>,
 }
 
 impl RelayState {
@@ -55,6 +72,7 @@ impl RelayState {
             relay: Arc::new(RwLock::new(RelayServer::new())),
             peer_senders: Arc::new(RwLock::new(HashMap::new())),
             webrtc_manager: None,
+            browser_discovered_peers: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -137,6 +155,25 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                                     warn!("Relay: Failed to create WebRTC connection to {}: {}", browser_peer_id, e);
                                 }
                             });
+                        }
+                        continue;
+                    }
+
+                    // Check for browser peer announcement (browser sharing its discovered peers)
+                    if let Some("browser_peer_announcement") = msg_json.get("type").and_then(|v| v.as_str()) {
+                        if let Ok(announcement) = serde_json::from_str::<BrowserPeerAnnouncement>(&text) {
+                            info!("Relay: Browser {} announced {} discovered peers", peer_id, announcement.peers.len());
+
+                            // Store browser-discovered peers
+                            {
+                                let mut browser_peers = state.browser_discovered_peers.write().await;
+                                browser_peers.insert(peer_id.clone(), announcement.peers.clone());
+                            }
+
+                            // Log discovered peers
+                            for peer in &announcement.peers {
+                                info!("  - Browser discovered peer: {} (connected: {})", peer.peer_id, peer.connected);
+                            }
                         }
                         continue;
                     }
@@ -223,6 +260,34 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                     for provider in providers {
                         if !peers_to_send.iter().any(|p| p.peer_id == provider.peer_id) {
                             peers_to_send.push(provider);
+                        }
+                    }
+
+                    // Add browser-discovered peers (browsers help nodes find each other!)
+                    {
+                        let browser_peers = state.browser_discovered_peers.read().await;
+                        let mut added_browser_peers = 0;
+
+                        for (_browser_id, discovered_peers) in browser_peers.iter() {
+                            for discovered_peer in discovered_peers {
+                                // Only include connected peers
+                                if discovered_peer.connected {
+                                    // Convert browser-discovered peer to PeerInfo format
+                                    // Use score=100 for browser-discovered peers (they're direct connections)
+                                    if !peers_to_send.iter().any(|p| p.peer_id == discovered_peer.peer_id)
+                                       && discovered_peer.peer_id != peer_id {
+                                        let mut peer_info = PeerInfo::new(discovered_peer.peer_id.clone());
+                                        peer_info.score = 100; // High score for direct browser connections
+                                        peer_info.state = PeerState::Discovered; // Discovered via browser
+                                        peers_to_send.push(peer_info);
+                                        added_browser_peers += 1;
+                                    }
+                                }
+                            }
+                        }
+
+                        if added_browser_peers > 0 {
+                            info!("Relay: Added {} browser-discovered peers to referral for {}", added_browser_peers, peer_id);
                         }
                     }
 
