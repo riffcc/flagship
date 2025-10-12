@@ -238,7 +238,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useAccountStatusQuery, usePublicKeyQuery } from '/@/plugins/lensService/hooks';
-import { API_URL } from '/@/plugins/router';
+import { useIdentity } from '/@/composables/useIdentity';
 
 interface UploadResult {
   success: boolean;
@@ -263,6 +263,7 @@ const emit = defineEmits<Emits>();
 
 const { data: accountStatus } = useAccountStatusQuery();
 const { data: publicKey } = usePublicKeyQuery();
+const { sign } = useIdentity();
 
 const formRef = ref();
 const fileInputRef = ref<HTMLInputElement>();
@@ -357,10 +358,15 @@ function closeDialog() {
 
 async function uploadSingleFile(file: File, index: number): Promise<UploadResult> {
   try {
+    if (!publicKey.value) {
+      throw new Error('Public key not available');
+    }
+
+    // Create FormData with file and metadata
     const formData = new FormData();
     formData.append('file', file);
 
-    // Add metadata
+    // Build metadata object
     const metadata: Record<string, any> = {};
     if (title.value) metadata.title = title.value;
     if (description.value) metadata.description = description.value;
@@ -381,10 +387,20 @@ async function uploadSingleFile(file: File, index: number): Promise<UploadResult
       formData.append('metadata', JSON.stringify(metadata));
     }
 
-    const response = await fetch(`${API_URL}/upload`, {
+    // Create signature payload: timestamp + publicKey + fileName + fileSize
+    const timestamp = Date.now();
+    const signaturePayload = `${timestamp}:${publicKey.value}:${file.name}:${file.size}`;
+
+    // Sign the payload with user's ed25519 key
+    const signature = await sign(signaturePayload);
+
+    // POST to external upload service
+    const response = await fetch('https://uploads.global.riff.cc/upload', {
       method: 'POST',
       headers: {
-        'X-Public-Key': publicKey.value!,
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp.toString(),
       },
       body: formData,
     });
