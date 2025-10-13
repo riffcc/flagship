@@ -33,6 +33,7 @@ import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useUserSession } from '/@/composables/userSession';
 import { useIdentity } from '/@/composables/useIdentity';
+import { getApiUrl } from '/@/utils/runtimeConfig';
 import accountMenu from '/@/components/account/accountMenu.vue';
 import SearchBar from '/@/components/search/SearchBar.vue';
 
@@ -47,7 +48,7 @@ async function checkAdminStatus() {
   if (!publicKey.value) return;
 
   try {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002/api/v1';
+    const apiUrl = getApiUrl();
     const encodedKey = encodeURIComponent(publicKey.value);
     const response = await fetch(`${apiUrl}/account/${encodedKey}`);
 

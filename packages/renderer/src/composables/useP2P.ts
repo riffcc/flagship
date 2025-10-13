@@ -7,6 +7,7 @@
  */
 
 import { ref, computed, onUnmounted } from 'vue'
+import { getApiUrl } from '../utils/runtimeConfig'
 
 interface WantList {
   generation: number
@@ -90,7 +91,7 @@ export function useP2P() {
   )
 
   const relayUrl = computed(() => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002'
+    const apiUrl = getApiUrl()
     const wsUrl = apiUrl.replace('http://', 'ws://').replace('https://', 'wss://')
     // Remove trailing /api/v1 if present, then add the relay path
     const baseUrl = wsUrl.replace(/\/api\/v1\/?$/, '')

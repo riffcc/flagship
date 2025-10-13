@@ -14,7 +14,7 @@ async fn main() -> anyhow::Result<()> {
     let verifying_key = signing_key.verifying_key();
 
     let public_key_hex = hex::encode(verifying_key.to_bytes());
-    let public_key_full = format!("ed25119p/{}", public_key_hex);
+    let public_key_full = format!("ed25519p/{}", public_key_hex);
 
     println!("Generated Ed25519 Keypair:");
     println!("  Public Key: {}", public_key_full);

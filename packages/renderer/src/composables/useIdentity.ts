@@ -56,8 +56,8 @@ class Identity {
     // Derive public key from private key using @noble/ed25519
     this.publicKey = await ed25519.getPublicKeyAsync(this.privateKey)
 
-    // Format public key as ed25119p/{hex}
-    this._publicKeyString.value = `ed25119p/${bytesToHex(this.publicKey)}`
+    // Format public key as ed25519p/{hex}
+    this._publicKeyString.value = `ed25519p/${bytesToHex(this.publicKey)}`
     this._isInitialized.value = true
 
     console.log('[Identity] Initialized with public key:', this._publicKeyString.value)
@@ -87,8 +87,8 @@ class Identity {
     // Use provided public key or our own
     let pubKeyBytes: Uint8Array
     if (publicKey) {
-      // Strip ed25119p/ prefix if present
-      const pubKeyHex = publicKey.startsWith('ed25119p/')
+      // Strip ed25519p/ prefix if present
+      const pubKeyHex = publicKey.startsWith('ed25519p/')
         ? publicKey.slice(9)
         : publicKey
       pubKeyBytes = hexToBytes(pubKeyHex)
@@ -135,7 +135,7 @@ class Identity {
       // Seed is the private key for ed25519
       this.privateKey = this.seed
       this.publicKey = await ed25519.getPublicKeyAsync(this.privateKey)
-      this._publicKeyString.value = `ed25119p/${bytesToHex(this.publicKey)}`
+      this._publicKeyString.value = `ed25519p/${bytesToHex(this.publicKey)}`
       this._isInitialized.value = true
 
       console.log('[Identity] Imported identity with public key:', this._publicKeyString.value)

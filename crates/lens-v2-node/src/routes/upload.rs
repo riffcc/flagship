@@ -14,6 +14,8 @@ use chrono::{DateTime, Utc};
 use std::process::Command;
 
 use super::account::AccountState;
+use super::releases::{Release, ReleasesState};
+use crate::audio_metadata::{extract_audio_metadata, extract_cover_art, is_audio_file, is_image_file};
 
 /// Upload metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -628,6 +630,414 @@ pub async fn reject_upload(
             "upload_id": upload_id,
             "message": "Upload rejected and removed"
         })),
+    )
+        .into_response()
+}
+
+/// Release upload response with extracted metadata
+#[derive(Debug, Serialize)]
+pub struct ReleaseUploadResponse {
+    pub success: bool,
+    pub upload_id: String,
+    pub release_id: Option<String>,
+    pub extracted_metadata: Option<serde_json::Value>,
+    pub tracks: Vec<TrackMetadata>,
+    pub message: String,
+}
+
+/// Track metadata extracted from uploaded audio
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrackMetadata {
+    pub filename: String,
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub duration_secs: f64,
+    pub track_number: Option<u32>,
+    pub ipfs_cid: Option<String>,
+    pub artwork_cid: Option<String>,
+    pub blake3_hash: String,
+}
+
+/// POST /api/v1/upload/release - Upload audio files and create a release
+/// Accepts multipart form data with:
+/// - Multiple "audio" files (mp3, flac, etc.)
+/// - Optional "artwork" file (jpg, png, etc.) - album artwork
+/// - Optional "metadata" JSON with release info
+pub async fn upload_release(
+    State(releases_state): State<ReleasesState>,
+    headers: HeaderMap,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    // Extract public key from headers
+    let public_key = match extract_public_key(&headers) {
+        Some(key) => key,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "success": false,
+                    "error": "Missing X-Public-Key header"
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    // Check if user has upload permission
+    let has_upload_permission = releases_state.can_upload(&public_key).await;
+
+    if !has_upload_permission {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "success": false,
+                "error": "You don't have permission to upload releases. Contact an administrator."
+            })),
+        )
+            .into_response();
+    }
+
+    // Generate upload ID
+    let upload_id = Uuid::new_v4().to_string();
+    let staging_dir = get_staging_dir();
+
+    // Create upload directory
+    if let Err(e) = fs::create_dir_all(&staging_dir).await {
+        tracing::error!("Failed to create staging directory: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false, "error": "Failed to create staging directory"}))).into_response();
+    }
+
+    let upload_dir = staging_dir.join(&upload_id);
+    if let Err(e) = fs::create_dir_all(&upload_dir).await {
+        tracing::error!("Failed to create upload directory: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false, "error": "Failed to create upload directory"}))).into_response();
+    }
+
+    let mut audio_files = Vec::new();
+    let mut artwork_file: Option<PathBuf> = None;
+    let mut release_metadata: Option<serde_json::Value> = None;
+
+    // Process multipart fields
+    while let Ok(Some(field)) = multipart.next_field().await {
+        let field_name = field.name().unwrap_or("").to_string();
+        let filename = field.file_name().unwrap_or("unnamed").to_string();
+
+        match field_name.as_str() {
+            "audio" => {
+                if !is_audio_file(&filename) {
+                    tracing::warn!("Skipping non-audio file: {}", filename);
+                    continue;
+                }
+
+                let file_path = upload_dir.join(&filename);
+                let data = match field.bytes().await {
+                    Ok(bytes) => bytes,
+                    Err(e) => {
+                        tracing::error!("Failed to read audio file {}: {}", filename, e);
+                        continue;
+                    }
+                };
+
+                if let Err(e) = fs::write(&file_path, &data).await {
+                    tracing::error!("Failed to write audio file {}: {}", filename, e);
+                    continue;
+                }
+
+                audio_files.push(file_path);
+            }
+            "artwork" => {
+                if !is_image_file(&filename) {
+                    tracing::warn!("Skipping non-image artwork: {}", filename);
+                    continue;
+                }
+
+                let file_path = upload_dir.join(&filename);
+                let data = match field.bytes().await {
+                    Ok(bytes) => bytes,
+                    Err(e) => {
+                        tracing::error!("Failed to read artwork file: {}", e);
+                        continue;
+                    }
+                };
+
+                if let Err(e) = fs::write(&file_path, &data).await {
+                    tracing::error!("Failed to write artwork file: {}", e);
+                    continue;
+                }
+
+                artwork_file = Some(file_path);
+            }
+            "metadata" => {
+                match field.text().await {
+                    Ok(data) => {
+                        release_metadata = serde_json::from_str(&data).ok();
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to read metadata field: {}", e);
+                    }
+                }
+            }
+            _ => {
+                tracing::debug!("Ignoring unknown field: {}", field_name);
+            }
+        }
+    }
+
+    if audio_files.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "success": false,
+                "error": "No audio files provided"
+            })),
+        )
+            .into_response();
+    }
+
+    // Extract metadata from audio files
+    let mut tracks = Vec::new();
+    let mut album_artwork_cid: Option<String> = None;
+
+    // Pin album artwork to IPFS if provided
+    if let Some(ref artwork_path) = artwork_file {
+        // Create a dummy metadata for artwork pinning
+        let artwork_metadata = UploadMetadata {
+            upload_id: format!("{}_artwork", upload_id),
+            uploader_public_key: public_key.clone(),
+            timestamp: Utc::now(),
+            filename: artwork_path.file_name().unwrap().to_string_lossy().to_string(),
+            size_bytes: fs::metadata(artwork_path).await.map(|m| m.len()).unwrap_or(0),
+            mime_type: Some("image/jpeg".to_string()),
+            status: UploadStatus::Approved,
+            auto_approved: true,
+            approved_by: Some(public_key.clone()),
+            approved_at: Some(Utc::now()),
+            ipfs_cid: None,
+            additional_metadata: None,
+        };
+
+        match pin_to_ipfs(artwork_path, &artwork_metadata).await {
+            Ok(cid) => {
+                album_artwork_cid = Some(cid.clone());
+                tracing::info!("Album artwork pinned to IPFS: {}", cid);
+            }
+            Err(e) => {
+                tracing::error!("Failed to pin album artwork: {}", e);
+            }
+        }
+    }
+
+    // Process each audio file
+    for audio_path in &audio_files {
+        match extract_audio_metadata(&audio_path).await {
+            Ok(metadata) => {
+                let filename = audio_path.file_name().unwrap().to_string_lossy().to_string();
+
+                // Extract embedded artwork if no album artwork provided
+                let track_artwork_cid = if album_artwork_cid.is_none() {
+                    match extract_cover_art(&audio_path).await {
+                        Ok(Some(artwork_data)) => {
+                            // Save embedded artwork to temp file
+                            let artwork_path = upload_dir.join(format!("{}_artwork.jpg", metadata.blake3_hash));
+                            if fs::write(&artwork_path, &artwork_data).await.is_ok() {
+                                let artwork_metadata = UploadMetadata {
+                                    upload_id: format!("{}_{}_artwork", upload_id, metadata.blake3_hash),
+                                    uploader_public_key: public_key.clone(),
+                                    timestamp: Utc::now(),
+                                    filename: artwork_path.file_name().unwrap().to_string_lossy().to_string(),
+                                    size_bytes: artwork_data.len() as u64,
+                                    mime_type: Some("image/jpeg".to_string()),
+                                    status: UploadStatus::Approved,
+                                    auto_approved: true,
+                                    approved_by: Some(public_key.clone()),
+                                    approved_at: Some(Utc::now()),
+                                    ipfs_cid: None,
+                                    additional_metadata: None,
+                                };
+
+                                match pin_to_ipfs(&artwork_path, &artwork_metadata).await {
+                                    Ok(cid) => {
+                                        tracing::info!("Track artwork pinned to IPFS: {}", cid);
+                                        Some(cid)
+                                    }
+                                    Err(e) => {
+                                        tracing::error!("Failed to pin track artwork: {}", e);
+                                        None
+                                    }
+                                }
+                            } else {
+                                None
+                            }
+                        }
+                        Ok(None) => None,
+                        Err(e) => {
+                            tracing::warn!("Failed to extract embedded artwork: {}", e);
+                            None
+                        }
+                    }
+                } else {
+                    album_artwork_cid.clone()
+                };
+
+                // Pin audio file to IPFS
+                let audio_metadata_for_pin = UploadMetadata {
+                    upload_id: format!("{}_{}", upload_id, metadata.blake3_hash),
+                    uploader_public_key: public_key.clone(),
+                    timestamp: Utc::now(),
+                    filename: filename.clone(),
+                    size_bytes: fs::metadata(&audio_path).await.map(|m| m.len()).unwrap_or(0),
+                    mime_type: Some("audio/mpeg".to_string()),
+                    status: UploadStatus::Approved,
+                    auto_approved: true,
+                    approved_by: Some(public_key.clone()),
+                    approved_at: Some(Utc::now()),
+                    ipfs_cid: None,
+                    additional_metadata: Some(serde_json::json!({
+                        "title": metadata.tags.title,
+                        "artist": metadata.tags.artist,
+                        "album": metadata.tags.album,
+                        "duration": metadata.duration_secs,
+                    })),
+                };
+
+                let audio_cid = match pin_to_ipfs(&audio_path, &audio_metadata_for_pin).await {
+                    Ok(cid) => {
+                        tracing::info!("Audio file {} pinned to IPFS: {}", filename, cid);
+                        Some(cid)
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to pin audio file {}: {}", filename, e);
+                        None
+                    }
+                };
+
+                tracks.push(TrackMetadata {
+                    filename: filename.clone(),
+                    title: metadata.tags.title,
+                    artist: metadata.tags.artist,
+                    duration_secs: metadata.duration_secs,
+                    track_number: metadata.tags.track_number,
+                    ipfs_cid: audio_cid,
+                    artwork_cid: track_artwork_cid,
+                    blake3_hash: metadata.blake3_hash,
+                });
+            }
+            Err(e) => {
+                tracing::error!("Failed to extract metadata from {:?}: {}", audio_path, e);
+            }
+        }
+    }
+
+    // Sort tracks by track number if available
+    tracks.sort_by_key(|t| t.track_number.unwrap_or(9999));
+
+    // Build release metadata from first track's tags
+    let first_track = tracks.first();
+    let album_title = release_metadata
+        .as_ref()
+        .and_then(|m| m.get("title"))
+        .and_then(|t| t.as_str())
+        .or_else(|| first_track.and_then(|t| t.title.as_deref()))
+        .unwrap_or("Untitled Release")
+        .to_string();
+
+    let album_artist = release_metadata
+        .as_ref()
+        .and_then(|m| m.get("artist"))
+        .and_then(|a| a.as_str())
+        .or_else(|| first_track.and_then(|t| t.artist.as_deref()))
+        .unwrap_or("Unknown Artist")
+        .to_string();
+
+    // Create release in database
+    let release_id = Uuid::new_v4().to_string();
+
+    // Build metadata JSON with tracks info
+    let mut full_metadata = serde_json::json!({
+        "album_title": &album_title,
+        "album_artist": &album_artist,
+        "track_count": tracks.len(),
+        "tracks": tracks.iter().map(|t| serde_json::json!({
+            "filename": t.filename,
+            "title": t.title,
+            "artist": t.artist,
+            "duration_secs": t.duration_secs,
+            "track_number": t.track_number,
+            "ipfs_cid": t.ipfs_cid,
+            "artwork_cid": t.artwork_cid,
+            "blake3_hash": t.blake3_hash,
+        })).collect::<Vec<_>>(),
+    });
+
+    // Merge with user-provided metadata
+    if let Some(user_meta) = release_metadata.take() {
+        if let serde_json::Value::Object(ref mut map) = full_metadata {
+            if let serde_json::Value::Object(user_map) = user_meta {
+                for (k, v) in user_map {
+                    map.insert(k, v);
+                }
+            }
+        }
+    }
+
+    // Use first track's CID as content CID (or create a directory CID later)
+    let content_cid = tracks
+        .first()
+        .and_then(|t| t.ipfs_cid.clone())
+        .unwrap_or_else(|| "unknown".to_string());
+
+    // Get node ID from environment
+    let node_id = std::env::var("NODE_ID")
+        .unwrap_or_else(|_| format!("node-{}", public_key));
+
+    let mut release = Release {
+        id: release_id.clone(),
+        name: album_title,
+        category_id: "5".to_string(), // Music category
+        category_slug: "music".to_string(),
+        content_cid: content_cid.clone(),
+        thumbnail_cid: album_artwork_cid.clone(),
+        metadata: Some(full_metadata.clone()),
+        site_address: "local".to_string(),
+        posted_by: public_key.clone(),
+        created_at: Utc::now().to_rfc3339(),
+        vector_clock: std::collections::HashMap::new(),
+        is_tombstone: false,
+        tombstone_type: None,
+        deleted_at: None,
+        deleted_by: None,
+    };
+
+    // Increment vector clock for creation
+    release.increment_clock(node_id);
+
+    // Save release to database
+    use crate::db::{make_key, prefixes};
+    let key = make_key(prefixes::RELEASE, &release_id);
+    if let Err(e) = releases_state.db.put(&key, &release) {
+        tracing::error!("Failed to save release {}: {}", release_id, e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": "Failed to save release"
+            })),
+        )
+            .into_response();
+    }
+
+    tracing::info!("Release created from upload: {} ({} tracks)", release_id, tracks.len());
+
+    (
+        StatusCode::CREATED,
+        Json(ReleaseUploadResponse {
+            success: true,
+            upload_id,
+            release_id: Some(release_id),
+            extracted_metadata: Some(full_metadata),
+            tracks,
+            message: format!("Release created successfully with {} tracks", audio_files.len()),
+        }),
     )
         .into_response()
 }

@@ -12,9 +12,19 @@ use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::{connect_async, tungstenite::Message, WebSocketStream, MaybeTlsStream};
 use tokio::net::TcpStream;
 use tracing::{debug, info, warn, error};
+use citadel_core::topology::SlotCoordinate;
 
 /// Peer ID (string identifier assigned by relay)
 pub type PeerId = String;
+
+/// Peer type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum PeerType {
+    /// Server node (always ready for P2P)
+    Server,
+    /// Browser peer (WebRTC connection)
+    Browser,
+}
 
 /// Peer connection for exchanging blocks
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,6 +32,11 @@ pub struct PeerConnection {
     pub peer_id: PeerId,
     pub latest_height: u64,
     pub score: f64,
+    /// Peer type (server or browser)
+    pub peer_type: PeerType,
+    /// Slot coordinate in Citadel mesh (CRITICAL for DHT neighbor discovery)
+    /// This is the ACTUAL slot the peer announced, not a recalculated one
+    pub slot: Option<SlotCoordinate>,
 }
 
 /// Block request message
@@ -94,11 +109,12 @@ pub struct P2pNetwork {
 
 impl P2pNetwork {
     /// Create a new P2P network instance
-    pub fn new(relay_url: String) -> Self {
+    /// peer_id: Our peer ID to announce to the relay (ensures consistency across mesh)
+    pub fn new(relay_url: String, peer_id: String) -> Self {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
         Self {
-            peer_id: Arc::new(RwLock::new(None)),
+            peer_id: Arc::new(RwLock::new(Some(peer_id))),
             peers: Arc::new(RwLock::new(HashMap::new())),
             event_rx: Arc::new(RwLock::new(event_rx)),
             event_tx,
@@ -131,7 +147,23 @@ impl P2pNetwork {
 
         // Create channel for outgoing messages
         let (ws_tx, mut ws_rx) = mpsc::unbounded_channel::<Message>();
-        *self.ws_tx.write().await = Some(ws_tx);
+        *self.ws_tx.write().await = Some(ws_tx.clone());
+
+        // Send hello message with our peer_id to relay
+        // This ensures peer_id consistency across the mesh
+        if let Some(ref our_peer_id) = *self.peer_id.read().await {
+            let hello_msg = serde_json::json!({
+                "type": "hello",
+                "peer_id": our_peer_id,
+            });
+            if let Ok(hello_json) = serde_json::to_string(&hello_msg) {
+                if let Err(e) = ws_tx.send(Message::Text(hello_json)) {
+                    error!("Failed to send hello message: {}", e);
+                }  else {
+                    info!("Sent hello message to relay with peer_id: {}", our_peer_id);
+                }
+            }
+        }
 
         // Spawn task to handle outgoing messages
         tokio::spawn(async move {
@@ -174,10 +206,23 @@ impl P2pNetwork {
                                             peer["latest_height"].as_u64(),
                                             peer["score"].as_f64(),
                                         ) {
+                                            // Determine peer type (default to Server if not specified)
+                                            let peer_type = if peer_id.starts_with("browser-") || peer_id.contains("webrtc") {
+                                                PeerType::Browser
+                                            } else {
+                                                PeerType::Server
+                                            };
+
+                                            // Extract slot if present (CRITICAL for DHT neighbor discovery)
+                                            let slot = peer.get("slot")
+                                                .and_then(|s| serde_json::from_value::<SlotCoordinate>(s.clone()).ok());
+
                                             let conn = PeerConnection {
                                                 peer_id: peer_id.to_string(),
                                                 latest_height: height,
                                                 score,
+                                                peer_type,
+                                                slot,
                                             };
 
                                             // Store peer
@@ -358,19 +403,19 @@ mod tests {
 
     #[test]
     fn test_network_creation() {
-        let network = P2pNetwork::new("ws://localhost:5002/api/v1/relay/ws".to_string());
+        let network = P2pNetwork::new("ws://localhost:5002/api/v1/relay/ws".to_string(), "peer-test-123".to_string());
         assert_eq!(network.relay_url, "ws://localhost:5002/api/v1/relay/ws");
     }
 
     #[tokio::test]
-    async fn test_peer_id_initially_none() {
-        let network = P2pNetwork::new("ws://localhost:5002/api/v1/relay/ws".to_string());
-        assert!(network.peer_id().await.is_none());
+    async fn test_peer_id_set_from_constructor() {
+        let network = P2pNetwork::new("ws://localhost:5002/api/v1/relay/ws".to_string(), "peer-test-456".to_string());
+        assert_eq!(network.peer_id().await, Some("peer-test-456".to_string()));
     }
 
     #[tokio::test]
     async fn test_peers_initially_empty() {
-        let network = P2pNetwork::new("ws://localhost:5002/api/v1/relay/ws".to_string());
+        let network = P2pNetwork::new("ws://localhost:5002/api/v1/relay/ws".to_string(), "peer-test-789".to_string());
         assert_eq!(network.peers().await.len(), 0);
     }
 }

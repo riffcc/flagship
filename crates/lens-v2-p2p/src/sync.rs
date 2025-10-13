@@ -3,6 +3,13 @@
 use crate::{BlockId, BlockMeta, PeerId, Result, SyncStatus};
 use std::collections::{HashMap, HashSet};
 
+/// Peer type for tracking server vs browser peers
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TrackedPeerType {
+    Server,
+    Browser,
+}
+
 /// Tracks synchronization state
 pub struct SyncTracker {
     /// Blocks we have locally
@@ -14,8 +21,11 @@ pub struct SyncTracker {
     /// Blocks we're currently downloading
     downloading: HashSet<BlockId>,
 
-    /// Connected peers
+    /// Connected peers (all types)
     peers: HashSet<PeerId>,
+
+    /// Peer types (server vs browser)
+    peer_types: HashMap<PeerId, TrackedPeerType>,
 
     /// Latest known network height
     network_height: u64,
@@ -28,6 +38,7 @@ impl SyncTracker {
             consensus_blocks: HashMap::new(),
             downloading: HashSet::new(),
             peers: HashSet::new(),
+            peer_types: HashMap::new(),
             network_height: 0,
         }
     }
@@ -57,14 +68,21 @@ impl SyncTracker {
         self.downloading.remove(block_id);
     }
 
-    /// Add a peer
-    pub fn add_peer(&mut self, peer_id: PeerId) {
+    /// Add a peer with optional type (defaults to Server if not specified)
+    pub fn add_peer(&mut self, peer_id: PeerId, peer_type: Option<TrackedPeerType>) {
         self.peers.insert(peer_id);
+        if let Some(ptype) = peer_type {
+            self.peer_types.insert(peer_id, ptype);
+        } else {
+            // Default to Server if not specified
+            self.peer_types.insert(peer_id, TrackedPeerType::Server);
+        }
     }
 
     /// Remove a peer
     pub fn remove_peer(&mut self, peer_id: &PeerId) {
         self.peers.remove(peer_id);
+        self.peer_types.remove(peer_id);
     }
 
     /// Get current sync status
@@ -105,8 +123,17 @@ impl SyncTracker {
     }
 
     /// Check if we're synced
+    ///
+    /// Only counts non-browser (server) peers for sync status.
+    /// Browser peers don't count toward readiness.
     pub fn is_synced(&self) -> bool {
-        self.blocks_behind() == 0 && !self.peers.is_empty()
+        // Count only server peers (non-browser)
+        let server_peer_count = self.peer_types
+            .values()
+            .filter(|&&peer_type| peer_type == TrackedPeerType::Server)
+            .count();
+
+        self.blocks_behind() == 0 && server_peer_count > 0
     }
 }
 
@@ -199,8 +226,8 @@ mod tests {
         // Not synced: no peers
         assert!(!tracker.is_synced());
 
-        // Add peer
-        tracker.add_peer(1);
+        // Add peer (defaults to Server type)
+        tracker.add_peer(1, None);
 
         // Still not synced: no blocks
         assert!(tracker.is_synced()); // Actually synced at height 0

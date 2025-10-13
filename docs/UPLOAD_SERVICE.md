@@ -22,7 +22,7 @@ The Upload Service is an external microservice that handles file uploads for Rif
 
 | Header | Required | Description |
 |--------|----------|-------------|
-| `X-Public-Key` | Yes | User's ed25519 public key in format `ed25119p/{hex}` |
+| `X-Public-Key` | Yes | User's ed25519 public key in format `ed25519p/{hex}` |
 | `X-Signature` | Yes | ed25519 signature of the payload (hex encoded) |
 | `X-Timestamp` | Yes | Unix timestamp in milliseconds when signature was created |
 
@@ -35,7 +35,7 @@ The client signs the following string:
 
 Example:
 ```
-1728756000000:ed25119p/661f20293170ac54c64abcca6c24c4c773245e469904f200b8b633d1c4a5888b:song.mp3:4567890
+1728756000000:ed25519p/661f20293170ac54c64abcca6c24c4c773245e469904f200b8b633d1c4a5888b:song.mp3:4567890
 ```
 
 ### Body
@@ -154,8 +154,8 @@ fn verify_upload_signature(
     // 2. Reconstruct signature payload
     let payload = format!("{}:{}:{}:{}", timestamp, public_key, file_name, file_size);
 
-    // 3. Strip ed25119p/ prefix and convert hex to bytes
-    let pub_key_hex = public_key.strip_prefix("ed25119p/")
+    // 3. Strip ed25519p/ prefix and convert hex to bytes
+    let pub_key_hex = public_key.strip_prefix("ed25519p/")
         .ok_or("Invalid public key format")?;
     let pub_key_bytes = hex::decode(pub_key_hex)?;
     let sig_bytes = hex::decode(signature)?;
@@ -182,7 +182,7 @@ GET https://api.global.riff.cc/api/v1/account/{public_key}
 Response:
 ```json
 {
-  "publicKey": "ed25119p/661f20293170ac54c64abcca6c24c4c773245e469904f200b8b633d1c4a5888b",
+  "publicKey": "ed25519p/661f20293170ac54c64abcca6c24c4c773245e469904f200b8b633d1c4a5888b",
   "permissions": ["upload", "create_release"],
   "roles": ["uploader"],
   "isAdmin": false
@@ -222,7 +222,7 @@ POST /upload → Upload Service → IPFS Cluster (direct pin)
 ```json
 {
   "upload_id": "550e8400-e29b-41d4-a716-446655440000",
-  "uploader_public_key": "ed25119p/661f20293170ac54c64abcca6c24c4c773245e469904f200b8b633d1c4a5888b",
+  "uploader_public_key": "ed25519p/661f20293170ac54c64abcca6c24c4c773245e469904f200b8b633d1c4a5888b",
   "timestamp": "2025-10-12T15:30:00Z",
   "filename": "song.mp3",
   "size_bytes": 4567890,
@@ -242,7 +242,7 @@ For auto-approved uploads, pin directly to IPFS Cluster:
 
 ```bash
 ipfs-cluster-ctl add \
-  --name "My Cool Song | song.mp3 | ed25119p/661f2029 | 2025-10-12 15:30 UTC" \
+  --name "My Cool Song | song.mp3 | ed25519p/661f2029 | 2025-10-12 15:30 UTC" \
   /path/to/file.mp3
 ```
 
@@ -283,7 +283,7 @@ Access-Control-Max-Age: 86400
 ```
 
 #### Input Validation
-- Validate `X-Public-Key` matches format `ed25119p/[a-f0-9]{64}`
+- Validate `X-Public-Key` matches format `ed25519p/[a-f0-9]{64}`
 - Validate `X-Signature` is 128 hex characters (64 bytes)
 - Validate `X-Timestamp` is within ±5 minutes of server time
 - Sanitize file names (remove path traversal attempts)
@@ -388,7 +388,7 @@ upstream landing_pad {
 {
   "timestamp": "2025-10-12T15:30:00Z",
   "upload_id": "550e8400-e29b-41d4-a716-446655440000",
-  "public_key": "ed25119p/661f2029...",
+  "public_key": "ed25519p/661f2029...",
   "filename": "song.mp3",
   "size_bytes": 4567890,
   "status": "approved",
@@ -435,12 +435,12 @@ LOG_LEVEL=info
 ```bash
 # Generate signature (using Node.js or similar)
 TIMESTAMP=$(date +%s000)
-PAYLOAD="$TIMESTAMP:ed25119p/661f20293170ac54c64abcca6c24c4c773245e469904f200b8b633d1c4a5888b:test.mp3:12345"
+PAYLOAD="$TIMESTAMP:ed25519p/661f20293170ac54c64abcca6c24c4c773245e469904f200b8b633d1c4a5888b:test.mp3:12345"
 SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha512 -sign private.pem -hex)
 
 # Upload file
 curl -X POST https://uploads.global.riff.cc/upload \
-  -H "X-Public-Key: ed25119p/661f20293170ac54c64abcca6c24c4c773245e469904f200b8b633d1c4a5888b" \
+  -H "X-Public-Key: ed25519p/661f20293170ac54c64abcca6c24c4c773245e469904f200b8b633d1c4a5888b" \
   -H "X-Signature: $SIGNATURE" \
   -H "X-Timestamp: $TIMESTAMP" \
   -F "file=@test.mp3" \

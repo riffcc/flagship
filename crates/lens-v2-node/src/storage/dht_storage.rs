@@ -9,16 +9,32 @@ use citadel_core::topology::MeshConfig;
 use citadel_dht::local_storage::LocalStorage;
 use citadel_dht::node::MinimalNode;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use super::{
     CategoryMetadata, FeaturedMetadata, LensStorage, ReleaseMetadata,
 };
+use crate::dht_encryption::DHTEncryption;
+
+/// Metrics for DHT operations
+#[derive(Debug, Clone, Default)]
+pub struct DHTMetrics {
+    pub get_count: u64,
+    pub put_count: u64,
+    pub delete_count: u64,
+    pub total_get_latency_ms: u64,
+    pub total_put_latency_ms: u64,
+    pub total_delete_latency_ms: u64,
+    pub errors: u64,
+}
 
 /// DHT Storage implementation
 pub struct DHTStorage {
     node: MinimalNode,
     local_storage: Arc<Mutex<LocalStorage>>,
     mesh_config: MeshConfig,
+    metrics: Arc<Mutex<DHTMetrics>>,
+    encryption: Option<Arc<DHTEncryption>>,
 }
 
 impl DHTStorage {
@@ -28,7 +44,56 @@ impl DHTStorage {
             node,
             local_storage: Arc::new(Mutex::new(LocalStorage::new())),
             mesh_config,
+            metrics: Arc::new(Mutex::new(DHTMetrics::default())),
+            encryption: None,
         }
+    }
+
+    /// Create a new DHT storage instance with encryption
+    pub fn new_with_encryption(node: MinimalNode, mesh_config: MeshConfig, encryption: Arc<DHTEncryption>) -> Self {
+        Self {
+            node,
+            local_storage: Arc::new(Mutex::new(LocalStorage::new())),
+            mesh_config,
+            metrics: Arc::new(Mutex::new(DHTMetrics::default())),
+            encryption: Some(encryption),
+        }
+    }
+
+    /// Get current DHT metrics
+    pub fn get_metrics(&self) -> DHTMetrics {
+        self.metrics.lock().unwrap().clone()
+    }
+
+    /// Record a GET operation
+    fn record_get(&self, latency_ms: u64) {
+        let mut metrics = self.metrics.lock().unwrap();
+        metrics.get_count += 1;
+        metrics.total_get_latency_ms += latency_ms;
+        tracing::debug!("DHT GET operation completed in {}ms (total: {})", latency_ms, metrics.get_count);
+    }
+
+    /// Record a PUT operation
+    fn record_put(&self, latency_ms: u64) {
+        let mut metrics = self.metrics.lock().unwrap();
+        metrics.put_count += 1;
+        metrics.total_put_latency_ms += latency_ms;
+        tracing::debug!("DHT PUT operation completed in {}ms (total: {})", latency_ms, metrics.put_count);
+    }
+
+    /// Record a DELETE operation
+    fn record_delete(&self, latency_ms: u64) {
+        let mut metrics = self.metrics.lock().unwrap();
+        metrics.delete_count += 1;
+        metrics.total_delete_latency_ms += latency_ms;
+        tracing::debug!("DHT DELETE operation completed in {}ms (total: {})", latency_ms, metrics.delete_count);
+    }
+
+    /// Record an error
+    fn record_error(&self, operation: &str, error: &anyhow::Error) {
+        let mut metrics = self.metrics.lock().unwrap();
+        metrics.errors += 1;
+        tracing::error!("DHT {} operation failed: {} (total errors: {})", operation, error, metrics.errors);
     }
 
     /// Generate a DHT key for a release
@@ -76,69 +141,164 @@ impl DHTStorage {
         *hasher.finalize().as_bytes()
     }
 
-    /// Serialize data to bytes
+    /// Serialize data to bytes (with optional encryption)
     fn serialize<T: serde::Serialize>(&self, value: &T) -> Result<Vec<u8>> {
-        serde_json::to_vec(value).context("Failed to serialize value")
+        let json_bytes = serde_json::to_vec(value).context("Failed to serialize value")?;
+
+        // Encrypt if encryption is enabled
+        if let Some(enc) = &self.encryption {
+            let encrypted = enc.encrypt(&json_bytes)
+                .context("Failed to encrypt DHT value")?;
+            Ok(encrypted)
+        } else {
+            Ok(json_bytes)
+        }
     }
 
-    /// Deserialize data from bytes
+    /// Deserialize data from bytes (with optional decryption)
     fn deserialize<T: serde::de::DeserializeOwned>(&self, bytes: &[u8]) -> Result<T> {
-        serde_json::from_slice(bytes).context("Failed to deserialize value")
+        // Try to decrypt if encryption is enabled
+        let json_bytes = if let Some(enc) = &self.encryption {
+            // Try decryption first
+            match enc.decrypt(bytes) {
+                Ok(decrypted) => decrypted,
+                Err(_) => {
+                    // If decryption fails, try to parse as unencrypted JSON
+                    // This provides backward compatibility with unencrypted data
+                    tracing::debug!("Decryption failed, attempting to parse as unencrypted JSON");
+                    bytes.to_vec()
+                }
+            }
+        } else {
+            bytes.to_vec()
+        };
+
+        serde_json::from_slice(&json_bytes).context("Failed to deserialize value")
     }
 }
 
 #[async_trait]
 impl LensStorage for DHTStorage {
     async fn put_release(&mut self, release: &ReleaseMetadata) -> Result<()> {
-        let key = self.release_key(&release.id);
-        let value = self.serialize(release)?;
+        let start = Instant::now();
 
-        // Store in local DHT storage
-        let mut storage = self.local_storage.lock().unwrap();
-        storage.put(key, value);
+        let result = (|| -> Result<()> {
+            let key = self.release_key(&release.id);
+            let value = self.serialize(release)
+                .context("Failed to serialize release metadata")?;
 
-        // Update releases list
-        let list_key = self.releases_list_key();
-        let mut release_ids: Vec<String> = if let Some(bytes) = storage.get(&list_key) {
-            self.deserialize(bytes)?
-        } else {
-            Vec::new()
-        };
+            // Store in local DHT storage
+            let mut storage = self.local_storage.lock()
+                .map_err(|e| anyhow::anyhow!("Failed to acquire storage lock: {}", e))?;
+            storage.put(key, value);
 
-        if !release_ids.contains(&release.id) {
-            release_ids.push(release.id.clone());
-            let list_bytes = self.serialize(&release_ids)?;
-            storage.put(list_key, list_bytes);
+            // Update releases list
+            let list_key = self.releases_list_key();
+            let mut release_ids: Vec<String> = if let Some(bytes) = storage.get(&list_key) {
+                self.deserialize(bytes)
+                    .context("Failed to deserialize releases list")?
+            } else {
+                Vec::new()
+            };
+
+            if !release_ids.contains(&release.id) {
+                release_ids.push(release.id.clone());
+                let list_bytes = self.serialize(&release_ids)
+                    .context("Failed to serialize updated releases list")?;
+                storage.put(list_key, list_bytes);
+            }
+
+            Ok(())
+        })();
+
+        let latency = start.elapsed().as_millis() as u64;
+
+        match &result {
+            Ok(_) => {
+                self.record_put(latency);
+                tracing::info!("Successfully stored release '{}' in DHT", release.id);
+            }
+            Err(e) => {
+                self.record_error("PUT", e);
+            }
         }
 
-        Ok(())
+        result
     }
 
     async fn get_release(&self, id: &str) -> Result<Option<ReleaseMetadata>> {
-        let key = self.release_key(id);
-        let storage = self.local_storage.lock().unwrap();
+        let start = Instant::now();
 
-        match storage.get(&key) {
-            Some(bytes) => Ok(Some(self.deserialize(bytes)?)),
-            None => Ok(None),
+        let result = (|| -> Result<Option<ReleaseMetadata>> {
+            let key = self.release_key(id);
+            let storage = self.local_storage.lock()
+                .map_err(|e| anyhow::anyhow!("Failed to acquire storage lock: {}", e))?;
+
+            match storage.get(&key) {
+                Some(bytes) => {
+                    let release = self.deserialize(bytes)
+                        .context(format!("Failed to deserialize release '{}'", id))?;
+                    Ok(Some(release))
+                }
+                None => Ok(None),
+            }
+        })();
+
+        let latency = start.elapsed().as_millis() as u64;
+
+        match &result {
+            Ok(Some(_)) => {
+                self.record_get(latency);
+                tracing::debug!("Successfully retrieved release '{}' from DHT", id);
+            }
+            Ok(None) => {
+                self.record_get(latency);
+                tracing::debug!("Release '{}' not found in DHT", id);
+            }
+            Err(e) => {
+                self.record_error("GET", e);
+            }
         }
+
+        result
     }
 
     async fn delete_release(&mut self, id: &str) -> Result<()> {
-        let key = self.release_key(id);
-        let mut storage = self.local_storage.lock().unwrap();
-        storage.delete(&key);
+        let start = Instant::now();
 
-        // Update releases list
-        let list_key = self.releases_list_key();
-        if let Some(bytes) = storage.get(&list_key) {
-            let mut release_ids: Vec<String> = self.deserialize(bytes)?;
-            release_ids.retain(|rid| rid != id);
-            let list_bytes = self.serialize(&release_ids)?;
-            storage.put(list_key, list_bytes);
+        let result = (|| -> Result<()> {
+            let key = self.release_key(id);
+            let mut storage = self.local_storage.lock()
+                .map_err(|e| anyhow::anyhow!("Failed to acquire storage lock: {}", e))?;
+            storage.delete(&key);
+
+            // Update releases list
+            let list_key = self.releases_list_key();
+            if let Some(bytes) = storage.get(&list_key) {
+                let mut release_ids: Vec<String> = self.deserialize(bytes)
+                    .context("Failed to deserialize releases list")?;
+                release_ids.retain(|rid| rid != id);
+                let list_bytes = self.serialize(&release_ids)
+                    .context("Failed to serialize updated releases list")?;
+                storage.put(list_key, list_bytes);
+            }
+
+            Ok(())
+        })();
+
+        let latency = start.elapsed().as_millis() as u64;
+
+        match &result {
+            Ok(_) => {
+                self.record_delete(latency);
+                tracing::info!("Successfully deleted release '{}' from DHT", id);
+            }
+            Err(e) => {
+                self.record_error("DELETE", e);
+            }
         }
 
-        Ok(())
+        result
     }
 
     async fn has_release(&self, id: &str) -> Result<bool> {
@@ -148,25 +308,55 @@ impl LensStorage for DHTStorage {
     }
 
     async fn list_releases(&self, offset: usize, limit: usize) -> Result<Vec<ReleaseMetadata>> {
-        let list_key = self.releases_list_key();
-        let storage = self.local_storage.lock().unwrap();
+        let start = Instant::now();
 
-        let release_ids: Vec<String> = if let Some(bytes) = storage.get(&list_key) {
-            self.deserialize(bytes)?
-        } else {
-            Vec::new()
-        };
+        let result = (|| -> Result<Vec<ReleaseMetadata>> {
+            let list_key = self.releases_list_key();
+            let storage = self.local_storage.lock()
+                .map_err(|e| anyhow::anyhow!("Failed to acquire storage lock: {}", e))?;
 
-        let mut releases = Vec::new();
-        for id in release_ids.iter().skip(offset).take(limit) {
-            if let Some(bytes) = storage.get(&self.release_key(id)) {
-                if let Ok(release) = self.deserialize(bytes) {
-                    releases.push(release);
+            let release_ids: Vec<String> = if let Some(bytes) = storage.get(&list_key) {
+                self.deserialize(bytes)
+                    .context("Failed to deserialize releases list")?
+            } else {
+                Vec::new()
+            };
+
+            let mut releases = Vec::new();
+            let mut skipped_count = 0;
+
+            for id in release_ids.iter().skip(offset).take(limit) {
+                if let Some(bytes) = storage.get(&self.release_key(id)) {
+                    match self.deserialize(bytes) {
+                        Ok(release) => releases.push(release),
+                        Err(e) => {
+                            tracing::warn!("Failed to deserialize release '{}': {}", id, e);
+                            skipped_count += 1;
+                        }
+                    }
                 }
+            }
+
+            if skipped_count > 0 {
+                tracing::warn!("Skipped {} corrupted releases during list operation", skipped_count);
+            }
+
+            Ok(releases)
+        })();
+
+        let latency = start.elapsed().as_millis() as u64;
+
+        match &result {
+            Ok(releases) => {
+                self.record_get(latency);
+                tracing::debug!("Successfully listed {} releases (offset: {}, limit: {})", releases.len(), offset, limit);
+            }
+            Err(e) => {
+                self.record_error("LIST", e);
             }
         }
 
-        Ok(releases)
+        result
     }
 
     async fn add_featured(&mut self, featured: &FeaturedMetadata) -> Result<()> {

@@ -107,6 +107,7 @@ import { computed, ref, onMounted, watch } from 'vue';
 import { useUserSession } from '/@/composables/userSession';
 import { useCopyToClipboard } from '../composables/copyToClipboard';
 import { useIdentity } from '/@/composables/useIdentity';
+import { getApiUrl } from '/@/utils/runtimeConfig';
 
 const { userData } = useUserSession();
 const { copy, isCopied } = useCopyToClipboard();
@@ -127,7 +128,7 @@ async function fetchAccountStatus() {
   }
 
   try {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002/api/v1';
+    const apiUrl = getApiUrl();
     const encodedKey = encodeURIComponent(identityPublicKey.value);
     console.log('[Account] Fetching status for:', identityPublicKey.value);
     const response = await fetch(`${apiUrl}/account/${encodedKey}`);

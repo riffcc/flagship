@@ -58,8 +58,8 @@ mod tests {
     async fn test_ready_synced() {
         let manager = Arc::new(P2pManager::new(P2pConfig::default()));
 
-        // Add peer
-        manager.add_peer(1).unwrap();
+        // Add peer (defaults to Server type)
+        manager.add_peer(1, None).unwrap();
 
         // Add blocks (synced at height 0 with 1 peer)
         let state = SyncState {
@@ -74,8 +74,8 @@ mod tests {
     async fn test_ready_behind() {
         let manager = Arc::new(P2pManager::new(P2pConfig::default()));
 
-        // Add peer
-        manager.add_peer(1).unwrap();
+        // Add peer (defaults to Server type)
+        manager.add_peer(1, None).unwrap();
 
         // Add consensus blocks we don't have locally
         manager

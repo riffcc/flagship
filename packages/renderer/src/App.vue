@@ -31,6 +31,97 @@
       <v-icon start>{{ directPeersConnected > 0 ? 'mdi-lan-connect' : (connected ? 'mdi-cloud-check' : 'mdi-cloud-off') }}</v-icon>
       P2P: {{ peers.length }} relay{{ directPeersConnected > 0 ? ` | ${directPeersConnected} direct` : '' }}
     </v-chip>
+
+    <!-- DHT Debug Overlay (activated by typing "magicmagicmagic") -->
+    <v-overlay
+      v-model="showDHTDebug"
+      class="align-center justify-center"
+      scrim="rgba(0, 0, 0, 0.8)"
+    >
+      <v-card
+        max-width="800"
+        max-height="80vh"
+        class="overflow-auto"
+      >
+        <v-card-title class="d-flex justify-space-between align-center">
+          <span>DHT & Sync Debug Console</span>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            @click="showDHTDebug = false"
+          ></v-btn>
+        </v-card-title>
+        <v-card-text>
+          <v-row dense>
+            <v-col cols="12">
+              <v-card variant="outlined">
+                <v-card-subtitle>Site Information</v-card-subtitle>
+                <v-card-text>
+                  <div><strong>Site ID:</strong> {{ myPeerId || 'Not connected' }}</div>
+                  <div><strong>Connected Peers (Relay):</strong> {{ peers.length }}</div>
+                  <div><strong>Connected Peers (Direct):</strong> {{ directPeersConnected }}</div>
+                  <div><strong>Relay Status:</strong> {{ connected ? 'Connected' : 'Disconnected' }}</div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12" v-if="peers.length > 0">
+              <v-card variant="outlined">
+                <v-card-subtitle>Discovered Peers</v-card-subtitle>
+                <v-card-text>
+                  <v-list density="compact">
+                    <v-list-item
+                      v-for="peer in peers"
+                      :key="peer.peer_id"
+                      :title="peer.peer_id"
+                      :subtitle="`Score: ${peer.score} | Height: ${peer.latest_height}`"
+                    >
+                      <template #prepend>
+                        <v-icon color="success">mdi-lan</v-icon>
+                      </template>
+                    </v-list-item>
+                  </v-list>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12">
+              <v-card variant="outlined">
+                <v-card-subtitle>Sync Status</v-card-subtitle>
+                <v-card-text>
+                  <div><strong>Local Blocks:</strong> {{ localBlocks.length }}</div>
+                  <div><strong>Needed Blocks:</strong> {{ neededBlocks.length }}</div>
+                  <div><strong>Total Releases:</strong> {{ releases?.length || 0 }}</div>
+                  <div><strong>Featured Releases:</strong> {{ featuredReleases?.length || 0 }}</div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12">
+              <v-alert
+                type="info"
+                variant="tonal"
+                density="compact"
+              >
+                <div class="text-caption">
+                  <strong>Encryption:</strong> DHT values are encrypted in enterprise mode. Normal mode shares data across all nodes.
+                </div>
+              </v-alert>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
+    </v-overlay>
+
+    <!-- Network Map Overlay (activated by typing "batmanbatmanbatman") -->
+    <v-overlay
+      v-model="showNetworkMap"
+      class="align-center justify-center"
+      scrim="rgba(0, 0, 0, 0.9)"
+    >
+      <network-map-graph @close="showNetworkMap = false" />
+    </v-overlay>
+
     <start-menu v-model="showStartMenu" />
   </v-app>
 </template>
@@ -45,6 +136,7 @@ import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
 import GamepadHints from '/@/components/gamepad/gamepadHints.vue';
 import StartMenu from '/@/components/misc/startMenu.vue';
+import NetworkMapGraph from '/@/components/misc/networkMapGraph.vue';
 
 import { useAudioAlbum } from '/@/composables/audioAlbum';
 import { useFloatingVideo } from '/@/composables/floatingVideo';
@@ -59,8 +151,9 @@ import { useLocalSearch } from '/@/composables/useLocalSearch';
 import { useP2P } from '/@/composables/useP2P';
 import { useIdentity } from '/@/composables/useIdentity';
 
-const { showDefederation } = useShowDefederation();
-const { connected, peers, directPeersConnected, connect } = useP2P();
+const { showDefederation, showDHTDebug } = useShowDefederation();
+const showNetworkMap = ref(false);
+const { connected, peers, directPeersConnected, connect, myPeerId, localBlocks, neededBlocks } = useP2P();
 const { activeTrack } = useAudioAlbum();
 const { floatingVideoSource, floatingVideoRelease } = useFloatingVideo();
 
@@ -73,6 +166,8 @@ const { initialize: initializeIdentity } = useIdentity();
 const showStartMenu = ref(false);
 
 const MAGIC_KEY = 'magicmagic';
+const DHT_DEBUG_KEY = 'magicmagicmagic';  // Extended key for DHT debug view
+const NETWORK_MAP_KEY = 'batmanbatmanbatman';  // Network map visualization
 
 const yetToType = ref(MAGIC_KEY);
 
@@ -91,8 +186,63 @@ onKeyStroke(e => {
 
 watchEffect(() => {
   if (!yetToType.value.length) {
-    // Toggle defederation view when magic key is fully typed
-    showDefederation.value = !showDefederation.value;
+    // Check which magic key was completed
+    // If they typed the full DHT debug key, show DHT debug
+    // Otherwise toggle defederation view
+    if (MAGIC_KEY === 'magicmagic' && !DHT_DEBUG_KEY.startsWith('magicmagic')) {
+      // Original behavior - toggle defederation
+      showDefederation.value = !showDefederation.value;
+    } else {
+      // For now, typing magicmagic toggles defederation
+      // Later we can implement magicmagicmagic separately
+      showDefederation.value = !showDefederation.value;
+    }
+  }
+});
+
+// Separate watcher for DHT debug key (magicmagicmagic)
+const dhtDebugYetToType = ref(DHT_DEBUG_KEY);
+
+onKeyStroke(e => {
+  if (!dhtDebugYetToType.value.length) {
+    // Reset for next time
+    dhtDebugYetToType.value = DHT_DEBUG_KEY;
+    return;
+  }
+  if (e.key === dhtDebugYetToType.value[0]) {
+    dhtDebugYetToType.value = dhtDebugYetToType.value.slice(1);
+  } else {
+    dhtDebugYetToType.value = DHT_DEBUG_KEY;
+  }
+});
+
+watchEffect(() => {
+  if (!dhtDebugYetToType.value.length) {
+    // Toggle DHT debug view when extended magic key is fully typed
+    showDHTDebug.value = !showDHTDebug.value;
+  }
+});
+
+// Separate watcher for Network Map key (batmanbatmanbatman)
+const networkMapYetToType = ref(NETWORK_MAP_KEY);
+
+onKeyStroke(e => {
+  if (!networkMapYetToType.value.length) {
+    // Reset for next time
+    networkMapYetToType.value = NETWORK_MAP_KEY;
+    return;
+  }
+  if (e.key === networkMapYetToType.value[0]) {
+    networkMapYetToType.value = networkMapYetToType.value.slice(1);
+  } else {
+    networkMapYetToType.value = NETWORK_MAP_KEY;
+  }
+});
+
+watchEffect(() => {
+  if (!networkMapYetToType.value.length) {
+    // Toggle Network Map view when batman key is fully typed
+    showNetworkMap.value = !showNetworkMap.value;
   }
 });
 

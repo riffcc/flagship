@@ -11,7 +11,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-pub use dht_storage::DHTStorage;
+pub use dht_storage::{DHTStorage, DHTMetrics};
 
 /// Release metadata stored in DHT
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

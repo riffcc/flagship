@@ -6,9 +6,11 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
+use tokio::sync::mpsc;
 
-use super::account::AccountState;
+use super::account::{AccountState, BlockNotification};
 use crate::db::{Database, prefixes, make_key};
+use crate::ubts::{UBTSTransaction, UBTSBlock, ReleasePatch};
 
 /// Tombstone type for deleted releases
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -147,7 +149,7 @@ fn default_category_slug() -> String {
     "unknown".to_string()
 }
 
-/// Request to update a release
+/// Request to update a release (full replacement - used by PUT)
 #[derive(Debug, Deserialize)]
 pub struct UpdateReleaseRequest {
     #[serde(rename = "publicKey")]
@@ -166,6 +168,28 @@ pub struct UpdateReleaseRequest {
     pub posted_by: String,
 }
 
+/// Request to edit a release (partial update - used by PATCH)
+#[derive(Debug, Deserialize)]
+pub struct EditReleaseRequest {
+    #[serde(rename = "publicKey")]
+    pub public_key: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+
+    #[serde(rename = "categoryId", skip_serializing_if = "Option::is_none")]
+    pub category_id: Option<String>,
+
+    #[serde(rename = "contentCID", skip_serializing_if = "Option::is_none")]
+    pub content_cid: Option<String>,
+
+    #[serde(rename = "thumbnailCID", skip_serializing_if = "Option::is_none")]
+    pub thumbnail_cid: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+}
+
 /// Response for successful operations
 #[derive(Debug, Serialize)]
 pub struct SuccessResponse {
@@ -180,6 +204,8 @@ pub struct ReleasesState {
     pub db: Database,
     /// Account state for authorization
     pub account_state: AccountState,
+    /// Channel to notify sync orchestrator of new blocks (for immediate broadcast)
+    pub block_notify: Option<mpsc::UnboundedSender<BlockNotification>>,
 }
 
 impl ReleasesState {
@@ -191,6 +217,7 @@ impl ReleasesState {
         Self {
             db,
             account_state,
+            block_notify: None,
         }
     }
 
@@ -199,6 +226,7 @@ impl ReleasesState {
         let state = Self {
             db,
             account_state,
+            block_notify: None,
         };
 
         // Load existing releases count
@@ -211,6 +239,12 @@ impl ReleasesState {
         }
 
         Ok(state)
+    }
+
+    /// Add notification channel for broadcasting UBTS transactions
+    pub fn with_notify(mut self, notify: mpsc::UnboundedSender<BlockNotification>) -> Self {
+        self.block_notify = Some(notify);
+        self
     }
 
     /// Check if a public key has upload permission
@@ -595,6 +629,198 @@ pub async fn delete_release(
         })),
     )
         .into_response()
+}
+
+/// PATCH /api/v1/releases/:id - Edit a release (partial update)
+/// Requires admin permission or ownership
+/// Creates UBTS UpdateRelease transaction for DHT sync
+pub async fn edit_release(
+    State(state): State<ReleasesState>,
+    Path(id): Path<String>,
+    Json(req): Json<EditReleaseRequest>,
+) -> impl IntoResponse {
+    let public_key = &req.public_key;
+
+    // Check if release exists
+    let key = make_key(prefixes::RELEASE, &id);
+    let mut existing_release = match state.db.get::<_, Release>(&key) {
+        Ok(Some(r)) => r,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Release not found"
+                })),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            tracing::error!("Failed to get release {}: {}", id, e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to get release"
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    // Check permissions - must be admin or original poster
+    let is_admin = state.account_state.is_admin(public_key).await;
+    let is_owner = existing_release.posted_by == *public_key;
+
+    if !is_admin && !is_owner {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "error": "You do not have permission to edit this release"
+            })),
+        )
+            .into_response();
+    }
+
+    // Validate and apply edits
+    let mut changed = false;
+
+    if let Some(ref name) = req.name {
+        if name.trim().is_empty() {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Name cannot be empty"
+                })),
+            )
+                .into_response();
+        }
+        existing_release.name = name.clone();
+        changed = true;
+    }
+
+    if let Some(ref category_id) = req.category_id {
+        existing_release.category_id = category_id.clone();
+        // Update category_slug based on category_id mapping
+        existing_release.category_slug = map_category_id_to_slug(category_id);
+        changed = true;
+    }
+
+    if let Some(ref content_cid) = req.content_cid {
+        if content_cid.trim().is_empty() {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Content CID cannot be empty"
+                })),
+            )
+                .into_response();
+        }
+        existing_release.content_cid = content_cid.clone();
+        changed = true;
+    }
+
+    if let Some(ref thumbnail_cid) = req.thumbnail_cid {
+        existing_release.thumbnail_cid = Some(thumbnail_cid.clone());
+        changed = true;
+    }
+
+    if let Some(ref metadata) = req.metadata {
+        existing_release.metadata = Some(metadata.clone());
+        changed = true;
+    }
+
+    if !changed {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "No fields to update"
+            })),
+        )
+            .into_response();
+    }
+
+    // Get node ID for vector clock
+    let node_id = std::env::var("NODE_ID")
+        .unwrap_or_else(|_| format!("node-{}", public_key));
+
+    // Increment vector clock for this modification
+    existing_release.increment_clock(node_id);
+
+    // Save updated release to RocksDB
+    if let Err(e) = state.db.put(&key, &existing_release) {
+        tracing::error!("Failed to edit release {}: {}", id, e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to save edited release"
+            })),
+        )
+            .into_response();
+    }
+
+    tracing::info!("Release edited and saved: {} by {}", id, public_key);
+
+    // Create and broadcast UBTS UpdateRelease transaction for DHT sync
+    let patch = ReleasePatch {
+        name: req.name,
+        category_id: req.category_id,
+        content_cid: req.content_cid,
+        thumbnail_cid: req.thumbnail_cid,
+        metadata: req.metadata,
+    };
+
+    let tx = UBTSTransaction::UpdateRelease {
+        id: id.clone(),
+        patch,
+        signature: None, // TODO: Add signature support
+    };
+
+    // Create UBTS block with the update transaction
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    let block = UBTSBlock::new(0, None, vec![tx]); // Height will be set by sync orchestrator
+    let block_id = block.id.clone();
+
+    // Store UBTS block in database for sync
+    let ubts_key = make_key(prefixes::UPDATE_TRANSACTION, &block_id);
+    if let Err(e) = state.db.put(&ubts_key, &block) {
+        tracing::error!("Failed to store UBTS update transaction {}: {}", block_id, e);
+        // Don't fail the request - the local update succeeded
+    } else {
+        tracing::info!("Stored UBTS UpdateRelease transaction: {}", block_id);
+
+        // Notify sync orchestrator to broadcast immediately
+        if let Some(ref notify) = state.block_notify {
+            if let Err(e) = notify.send(BlockNotification::NewBlock(block_id.clone())) {
+                tracing::error!("Failed to notify sync orchestrator: {}", e);
+            } else {
+                tracing::info!("Notified sync orchestrator of new UpdateRelease block: {}", block_id);
+            }
+        }
+    }
+
+    (
+        StatusCode::OK,
+        Json(SuccessResponse {
+            success: true,
+            id,
+        }),
+    )
+        .into_response()
+}
+
+/// Map category ID to slug for backward compatibility
+fn map_category_id_to_slug(category_id: &str) -> String {
+    match category_id {
+        "1" => "videos".to_string(),
+        "2" => "movies".to_string(),
+        "3" => "tv-shows".to_string(),
+        "4" => "audio".to_string(),
+        "5" => "music".to_string(),
+        _ => "unknown".to_string(),
+    }
 }
 
 /// Tombstone request with public key

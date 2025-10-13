@@ -149,6 +149,9 @@ pub mod prefixes {
 
     /// Delete transaction data: "delete_tx:{ubts_block_id}"
     pub const DELETE_TRANSACTION: &str = "delete_tx:";
+
+    /// Update transaction data: "update_tx:{ubts_block_id}"
+    pub const UPDATE_TRANSACTION: &str = "update_tx:";
 }
 
 /// Helper to create a key with prefix

@@ -90,7 +90,7 @@
   <v-sheet
     color="primary-darken-1"
     height="64px"
-    class="d-flex align-center items-center justify-center"
+    class="d-flex align-center items-center justify-space-between px-4"
   >
     <v-chip variant="text">
       <template #prepend>
@@ -105,6 +105,19 @@
       </template>
       e cinere surgemus.
     </v-chip>
+
+    <!-- SiteID Display -->
+    <v-chip
+      v-if="siteId"
+      variant="text"
+      size="small"
+      class="text-caption"
+    >
+      <template #prepend>
+        <v-icon size="small">mdi-identifier</v-icon>
+      </template>
+      Site: {{ siteId }}
+    </v-chip>
   </v-sheet>
 </template>
 
@@ -113,8 +126,16 @@ import {useRouter} from 'vue-router';
 import {navigationMap} from '/@/constants/navigation';
 import { computed } from 'vue';
 import { useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
+import { useP2P } from '/@/composables/useP2P';
 
 const router = useRouter();
+const { myPeerId } = useP2P();
+
+// Display first 8 characters of peer ID as SiteID
+const siteId = computed(() => {
+  if (!myPeerId.value) return '';
+  return myPeerId.value.substring(0, 12);
+});
 
 const { data: contentCategories } = useContentCategoriesQuery();
 

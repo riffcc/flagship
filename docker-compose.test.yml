@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # Lens Node 1 - Port 5001
+  lens-node-1:
+    image: zorlin/lens-v2:v0.6.0
+    container_name: lens-node-1
+    ports:
+      - "5001:5000"
+    environment:
+      - PORT=5000
+      - DB_PATH=/data/.lens-node-data
+      - LENS_RELAY_URL=ws://lens-node-1:5000/api/v1/relay/ws
+      - SITE_MODE=normal
+      - SITE_NAME=Test Node 1
+      - ADMIN_PUBLIC_KEY=ed25519p/48853522c1cabcae3f588e4e42cbe5b7fcbf8497390913ef9c30c4b6d033a03b
+      - RUST_LOG=info
+    volumes:
+      - lens-data-1:/data
+    networks:
+      - lens-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Lens Node 2 - Port 5002
+  lens-node-2:
+    image: zorlin/lens-v2:v0.6.0
+    container_name: lens-node-2
+    ports:
+      - "5002:5000"
+    environment:
+      - PORT=5000
+      - DB_PATH=/data/.lens-node-data
+      - LENS_RELAY_URL=ws://lens-node-1:5000/api/v1/relay/ws
+      - SITE_MODE=normal
+      - SITE_NAME=Test Node 2
+      - ADMIN_PUBLIC_KEY=ed25519p/48853522c1cabcae3f588e4e42cbe5b7fcbf8497390913ef9c30c4b6d033a03b
+      - RUST_LOG=info
+    volumes:
+      - lens-data-2:/data
+    networks:
+      - lens-network
+    depends_on:
+      lens-node-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Lens Node 3 - Port 5003
+  lens-node-3:
+    image: zorlin/lens-v2:v0.6.0
+    container_name: lens-node-3
+    ports:
+      - "5003:5000"
+    environment:
+      - PORT=5000
+      - DB_PATH=/data/.lens-node-data
+      - LENS_RELAY_URL=ws://lens-node-1:5000/api/v1/relay/ws
+      - SITE_MODE=normal
+      - SITE_NAME=Test Node 3
+      - ADMIN_PUBLIC_KEY=ed25519p/48853522c1cabcae3f588e4e42cbe5b7fcbf8497390913ef9c30c4b6d033a03b
+      - RUST_LOG=info
+    volumes:
+      - lens-data-3:/data
+    networks:
+      - lens-network
+    depends_on:
+      lens-node-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  lens-data-1:
+  lens-data-2:
+  lens-data-3:
+
+networks:
+  lens-network:
+    driver: bridge

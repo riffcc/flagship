@@ -5,6 +5,7 @@ import { multiaddr } from '@multiformats/multiaddr';
 import HomePage from '/@/views/homePage.vue';
 import { queryClient } from './tanstackQuery';
 import type { AccountStatusResponse } from '@riffcc/lens-sdk';
+import { getApiUrl as getRuntimeApiUrl } from '/@/utils/runtimeConfig';
 
 // Lazy load all other routes
 const AdminPage = () => import('../views/adminPage.vue');
@@ -25,63 +26,8 @@ const BookPage = () => import('../views/bookPage.vue');
 const ReaderPage = () => import('../views/readerPage.vue');
 const BooksPage = () => import('../views/booksPage.vue');
 
-/**
- * Parses the VITE_LENS_NODE environment variable to build the base API URL.
- * This provides a single, reliable source of truth for the API endpoint.
- *
- * @returns {string} The constructed base API URL.
- */
-function getApiUrl(): string {
-  // Check for explicit API URL override (for CDN/global endpoints)
-  const apiUrlOverride = import.meta.env.VITE_API_URL;
-  if (apiUrlOverride) {
-    console.log('🚀 Using CDN API endpoint:', apiUrlOverride);
-    return apiUrlOverride;
-  }
-
-  // Fall back to extracting from LENS_NODE multiaddr
-  const lensNodeMaStr = import.meta.env.VITE_LENS_NODE;
-
-  if (!lensNodeMaStr) {
-    console.error('VITE_LENS_NODE environment variable is not set. API calls will fail.');
-    // Fallback to a default or return an empty string, depending on desired behavior.
-    return 'http://localhost:5002/api/v1';
-  }
-
-  try {
-    const ma = multiaddr(lensNodeMaStr);
-    const nodeOptions = ma.nodeAddress(); // Gets { family, address, port }
-
-    // Determine the protocol based on the presence of 'wss' or 'ws'
-    // 'wss' implies 'https' and 'ws' implies 'http'
-    const protocol = ma.getComponents().map(c => c.name).includes('wss') ? 'https' : 'http';
-
-    // Determine the API port. Conventionally, it might be different from the P2P port.
-    // Let's assume a convention: P2P port 8002 -> API port 5002, P2P 4003 -> API 9002
-    let apiPort;
-    switch (nodeOptions.port) {
-      case 8002: // Local P2P port
-        apiPort = 5002;
-        break;
-      case 4003: // Production P2P port
-        apiPort = 9002;
-        break;
-      default:
-        // Default fallback if the P2P port is something unexpected
-        console.warn(`Unexpected P2P port ${nodeOptions.port}, defaulting API port to 9002.`);
-        apiPort = 9002;
-    }
-
-    return `${protocol}://${nodeOptions.address}:${apiPort}/api/v1`;
-
-  } catch (error) {
-    console.error('Failed to parse VITE_LENS_NODE multiaddr:', error);
-    // Fallback if parsing fails
-    return 'http://localhost:5002/api/v1';
-  }
-}
-
-export const API_URL = getApiUrl();
+// Use runtime configuration for API URL (supports both build-time and runtime injection)
+export const API_URL = getRuntimeApiUrl();
 const PREFETCH_CONFIG = {
   initialReleases: {
     url: `${API_URL}/releases`,
@@ -179,7 +125,7 @@ const routes: Array<RouteRecordRaw> = [
         const privateKey = seedBytes;
         const publicKeyBytes = await ed25519.getPublicKeyAsync(privateKey);
         const publicKeyHex = Array.from(publicKeyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-        const publicKey = `ed25119p/${publicKeyHex}`;
+        const publicKey = `ed25519p/${publicKeyHex}`;
 
         console.log('[Router] Checking admin status for:', publicKey);
 

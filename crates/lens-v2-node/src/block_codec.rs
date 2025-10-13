@@ -156,7 +156,7 @@ mod tests {
             metadata: None,
             site_address: "local".to_string(),
             posted_by: "test_user".to_string(),
-            created_at: chrono::Utc::now().to_rfc3339(),
+            created_at: "2025-01-01T00:00:00Z".to_string(), // Fixed timestamp for deterministic tests
             vector_clock: std::collections::HashMap::new(),
             is_tombstone: false,
             tombstone_type: None,

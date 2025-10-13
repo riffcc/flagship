@@ -61,3 +61,6 @@ target/
 
 # Research papers
 synthesis/
+
+# Roadmap planning docs
+ROADMAP_v0.6.0.md

@@ -11,7 +11,7 @@ const MAX_TIMESTAMP_SKEW_MS: i64 = 300000; // 5 minutes
 ///
 /// The signature should be computed as: sign(timestamp + ":" + body)
 /// Headers required:
-/// - X-Public-Key: ed25119p/{hex_public_key}
+/// - X-Public-Key: ed25519p/{hex_public_key}
 /// - X-Signature: {hex_signature}
 /// - X-Timestamp: {unix_timestamp_ms}
 pub fn verify_request_signature(
@@ -111,15 +111,15 @@ pub fn verify_request_signature(
             .into_response());
     }
 
-    // Parse public key (format: ed25119p/{hex})
-    let public_key_hex = if let Some(hex) = public_key_header.strip_prefix("ed25119p/") {
+    // Parse public key (format: ed25519p/{hex})
+    let public_key_hex = if let Some(hex) = public_key_header.strip_prefix("ed25519p/") {
         hex
     } else {
-        tracing::error!("Public key header '{}' missing ed25119p/ prefix", public_key_header);
+        tracing::error!("Public key header '{}' missing ed25519p/ prefix", public_key_header);
         return Err((
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({
-                "error": "Public key must be in format ed25119p/{hex}"
+                "error": "Public key must be in format ed25519p/{hex}"
             })),
         )
             .into_response());

@@ -6,6 +6,9 @@
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
+#[cfg(feature = "dht")]
+use citadel_core::topology::{MeshConfig, SlotCoordinate};
+
 /// Cluster configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClusterConfig {
@@ -26,6 +29,23 @@ pub struct ClusterConfig {
 
     /// Bootstrap peers (initial nodes to connect to)
     pub bootstrap_peers: Vec<PeerAddress>,
+
+    /// DHT mesh configuration (optional, enables DHT routing)
+    ///
+    /// When set, enables Citadel DHT routing with hexagonal mesh topology.
+    /// Nodes are assigned slots in the mesh and use greedy routing for
+    /// efficient block discovery.
+    #[cfg(feature = "dht")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mesh_config: Option<MeshConfig>,
+
+    /// This node's slot coordinate in the DHT mesh (optional)
+    ///
+    /// Assigned automatically based on node_id when mesh_config is set.
+    /// Used for greedy routing to locate blocks efficiently.
+    #[cfg(feature = "dht")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub slot_coordinate: Option<SlotCoordinate>,
 }
 
 /// Peer address information
@@ -39,6 +59,14 @@ pub struct PeerAddress {
 impl ClusterConfig {
     /// Create default cluster config for a 41-node cluster
     pub fn default_41_node_cluster(node_id: u32) -> Self {
+        #[cfg(feature = "dht")]
+        let (mesh_config, slot_coordinate) = {
+            // Default to 10x10x5 mesh (500 slots) for development
+            let mesh = MeshConfig::new(10, 10, 5);
+            let slot = Self::node_id_to_slot(node_id, &mesh);
+            (Some(mesh), Some(slot))
+        };
+
         Self {
             cluster_id: "lens-cluster-default".to_string(),
             node_id,
@@ -46,7 +74,29 @@ impl ClusterConfig {
             relay_url: "ws://localhost:5002/api/v1/relay/ws".to_string(),
             udp_listen: format!("0.0.0.0:{}", 6000 + node_id).parse().unwrap(),
             bootstrap_peers: Vec::new(),
+            #[cfg(feature = "dht")]
+            mesh_config,
+            #[cfg(feature = "dht")]
+            slot_coordinate,
         }
+    }
+
+    /// Convert node ID to slot coordinate using deterministic mapping
+    ///
+    /// Maps node IDs to mesh slots in a predictable way that distributes
+    /// nodes evenly across the mesh topology.
+    #[cfg(feature = "dht")]
+    pub fn node_id_to_slot(node_id: u32, mesh_config: &MeshConfig) -> SlotCoordinate {
+        let total_slots = mesh_config.total_slots() as u32;
+        let slot_index = node_id % total_slots;
+
+        // Convert flat index to 3D coordinates
+        let z = slot_index / (mesh_config.width as u32 * mesh_config.height as u32);
+        let remainder = slot_index % (mesh_config.width as u32 * mesh_config.height as u32);
+        let y = remainder / mesh_config.width as u32;
+        let x = remainder % mesh_config.width as u32;
+
+        SlotCoordinate::new(x as i32, y as i32, z as i32)
     }
 
     /// Load from environment variables
@@ -88,6 +138,35 @@ impl ClusterConfig {
             })
             .collect();
 
+        // DHT mesh configuration from environment
+        #[cfg(feature = "dht")]
+        let (mesh_config, slot_coordinate) = {
+            // Check if DHT is enabled via env var
+            let dht_enabled = std::env::var("LENS_DHT_ENABLED")
+                .unwrap_or_else(|_| "true".to_string())
+                .parse::<bool>()
+                .unwrap_or(true);
+
+            if dht_enabled {
+                // Parse mesh dimensions (default: 10x10x5 = 500 slots)
+                let width: usize = std::env::var("LENS_DHT_WIDTH")
+                    .unwrap_or_else(|_| "10".to_string())
+                    .parse()?;
+                let height: usize = std::env::var("LENS_DHT_HEIGHT")
+                    .unwrap_or_else(|_| "10".to_string())
+                    .parse()?;
+                let depth: usize = std::env::var("LENS_DHT_DEPTH")
+                    .unwrap_or_else(|_| "5".to_string())
+                    .parse()?;
+
+                let mesh = MeshConfig::new(width, height, depth);
+                let slot = Self::node_id_to_slot(node_id, &mesh);
+                (Some(mesh), Some(slot))
+            } else {
+                (None, None)
+            }
+        };
+
         Ok(Self {
             cluster_id,
             node_id,
@@ -95,6 +174,10 @@ impl ClusterConfig {
             relay_url,
             udp_listen,
             bootstrap_peers,
+            #[cfg(feature = "dht")]
+            mesh_config,
+            #[cfg(feature = "dht")]
+            slot_coordinate,
         })
     }
 

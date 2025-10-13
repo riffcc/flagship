@@ -9,8 +9,12 @@ pub mod categories;
 pub mod featured;
 pub mod structures;
 pub mod persistence;
+pub mod dht;
+pub mod site;
+pub mod upload;
+pub mod map;
 
-use axum::{routing::{get, post, put, delete}, Router};
+use axum::{routing::{get, post, put, delete, patch}, Router};
 use tower_http::cors::{CorsLayer, Any};
 
 pub use schemas::{initialize_registry, AppState};
@@ -18,9 +22,19 @@ pub use relay::RelayState;
 pub use account::AccountState;
 pub use releases::ReleasesState;
 pub use sync::SyncState;
+pub use dht::DHTState;
+pub use site::SiteState;
 
 /// Create the main API router with all endpoints
-pub fn create_router(state: AppState, relay_state: RelayState, account_state: AccountState, releases_state: ReleasesState, sync_state: sync::SyncState) -> Router {
+pub fn create_router(
+    state: AppState,
+    relay_state: RelayState,
+    account_state: AccountState,
+    releases_state: ReleasesState,
+    sync_state: sync::SyncState,
+    dht_state: Option<DHTState>,
+    site_state: SiteState,
+) -> Router {
     // Configure CORS to allow all origins for development
     // In production, you should restrict this to specific origins
     let cors = CorsLayer::new()
@@ -28,10 +42,13 @@ pub fn create_router(state: AppState, relay_state: RelayState, account_state: Ac
         .allow_methods(Any)
         .allow_headers(Any);
 
-    Router::new()
+    // Create separate routers for different states
+    let sync_router = Router::new()
         .route("/api/v1/health", get(health::health_check))
         .route("/api/v1/ready", get(sync::ready_handler))
-        .with_state(sync_state)
+        .with_state(sync_state);
+
+    let schema_router = Router::new()
         .route("/api/v1/schemas", get(schemas::list_schemas))
         .route(
             "/api/v1/schemas/:schema_name",
@@ -45,19 +62,26 @@ pub fn create_router(state: AppState, relay_state: RelayState, account_state: Ac
             "/api/v1/schemas/:schema_name/versions/:version",
             get(schemas::get_schema),
         )
-        .with_state(state)
+        .with_state(state);
+
+    let relay_router = Router::new()
         .route("/api/v1/relay/ws", get(relay::relay_handler))
-        .with_state(relay_state.clone())
+        .with_state(relay_state.clone());
+
+    let account_router = Router::new()
         .route("/api/v1/content-categories", get(categories::list_categories))
         .route("/api/v1/structures", get(structures::list_structures))
         .route("/api/v1/structures/:id", get(structures::get_structure))
         .route("/api/v1/account", get(account::get_account))
         .route("/api/v1/account/:public_key", get(account::get_account_status))
-        .with_state(account_state)
+        .with_state(account_state);
+
+    let releases_router = Router::new()
         .route("/api/v1/releases", get(releases::list_releases))
         .route("/api/v1/releases", post(releases::create_release))
         .route("/api/v1/releases/:id", get(releases::get_release))
         .route("/api/v1/releases/:id", put(releases::update_release))
+        .route("/api/v1/releases/:id", patch(releases::edit_release))
         .route("/api/v1/releases/:id", delete(releases::delete_release))
         .route("/api/v1/featured-releases", get(featured::list_featured_releases))
         .route("/api/v1/admin/featured-releases", post(featured::create_featured_release))
@@ -66,8 +90,36 @@ pub fn create_router(state: AppState, relay_state: RelayState, account_state: Ac
         .route("/api/v1/import", post(import_export::import_releases))
         .route("/api/v1/export", get(import_export::export_releases))
         .route("/api/v1/admin/releases", delete(import_export::delete_all_releases))
-        .with_state(releases_state)
-        .layer(cors)
+        .route("/api/v1/upload/release", post(upload::upload_release))
+        .with_state(releases_state);
+
+    let site_router = Router::new()
+        .route("/api/v1/site/info", get(site::get_site_info))
+        .with_state(site_state);
+
+    let map_router = Router::new()
+        .route("/api/v1/map", get(map::get_network_map))
+        .with_state(relay_state);
+
+    // Merge all routers
+    let mut router = Router::new()
+        .merge(sync_router)
+        .merge(schema_router)
+        .merge(relay_router)
+        .merge(account_router)
+        .merge(releases_router)
+        .merge(site_router)
+        .merge(map_router);
+
+    // Add DHT health check endpoint if DHT state is available
+    if let Some(dht_state) = dht_state {
+        let dht_router = Router::new()
+            .route("/api/v1/dht/health", get(dht::dht_health_check))
+            .with_state(dht_state);
+        router = router.merge(dht_router);
+    }
+
+    router.layer(cors)
 }
 
 #[cfg(test)]
@@ -75,6 +127,7 @@ pub fn create_test_app() -> Router {
     use std::sync::Arc;
     use lens_v2_p2p::{P2pManager, P2pConfig};
     use crate::db::Database;
+    use crate::site_identity::SiteIdentity;
 
     let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", uuid::Uuid::new_v4()));
     let db = Database::open(&temp_dir).unwrap();
@@ -86,5 +139,13 @@ pub fn create_test_app() -> Router {
     let releases_state = ReleasesState::new(account_state.clone());
     let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
     let sync_state = SyncState { p2p: p2p_manager };
-    create_router(state, relay_state, account_state, releases_state, sync_state)
+
+    // Create site identity for tests
+    let identity = tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(SiteIdentity::initialize(&db, Some("Test Node".to_string())))
+        .unwrap();
+    let site_state = SiteState::new(Arc::new(identity));
+
+    create_router(state, relay_state, account_state, releases_state, sync_state, None, site_state)
 }

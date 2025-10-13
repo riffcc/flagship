@@ -24,7 +24,7 @@ pub mod network;
 
 // Re-exports
 pub use manager::{P2pConfig, P2pManager};
-pub use sync::SyncTracker;
+pub use sync::{SyncTracker, TrackedPeerType};
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "network"))]
 pub use network::P2pNetwork;

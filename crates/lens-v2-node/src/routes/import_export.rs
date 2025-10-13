@@ -78,10 +78,10 @@ fn convert_legacy_public_key(legacy_key: &LegacyPublicKey) -> String {
             .map(|b| format!("{:02x}", b))
             .collect::<String>();
 
-        format!("ed25119p/{}", hex)
+        format!("ed25519p/{}", hex)
     } else {
         // Fallback for unknown format
-        "ed25119p/unknown".to_string()
+        "ed25519p/unknown".to_string()
     }
 }
 
@@ -354,7 +354,7 @@ mod tests {
         };
 
         let result = convert_legacy_public_key(&legacy_key);
-        assert!(result.starts_with("ed25119p/"));
+        assert!(result.starts_with("ed25519p/"));
         assert_eq!(result.len(), 9 + 64); // prefix + 32 bytes in hex
     }
 
@@ -365,7 +365,10 @@ mod tests {
         let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
         let db = Database::open(&temp_dir).unwrap();
         let account_state = AccountState::new(db.clone());
-        let state = ReleasesState::with_db(account_state, db.clone()).unwrap();
+        let state = ReleasesState::with_db(account_state.clone(), db.clone()).unwrap();
+
+        // Authorize test admin
+        account_state.authorize_admin("test-admin".to_string()).await.unwrap();
 
         // Create multiple test releases
         for i in 0..5 {
