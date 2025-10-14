@@ -1,21 +1,25 @@
 use axum::{
-    extract::State,
+    extract::{State, Path},
     response::Json,
+    http::StatusCode,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
 use crate::storage::dht_storage::DHTMetrics;
 
-/// DHT state for health check endpoint
+/// DHT state for network operations
 #[derive(Clone)]
 pub struct DHTState {
     pub metrics: Arc<std::sync::Mutex<DHTMetrics>>,
+    pub storage: Arc<RwLock<HashMap<[u8; 32], Vec<u8>>>>,
 }
 
 impl DHTState {
-    pub fn new(metrics: Arc<std::sync::Mutex<DHTMetrics>>) -> Self {
-        Self { metrics }
+    pub fn new(metrics: Arc<std::sync::Mutex<DHTMetrics>>, storage: Arc<RwLock<HashMap<[u8; 32], Vec<u8>>>>) -> Self {
+        Self { metrics, storage }
     }
 
     pub fn get_metrics(&self) -> DHTMetrics {
@@ -185,8 +189,9 @@ mod tests {
             total_delete_latency_ms: 100,
             errors: 0,
         }));
+        let storage = Arc::new(RwLock::new(HashMap::new()));
 
-        let state = DHTState::new(metrics);
+        let state = DHTState::new(metrics, storage);
 
         // Create router with endpoint
         let app = Router::new()
@@ -231,8 +236,9 @@ mod tests {
             total_delete_latency_ms: 0,
             errors: 15, // 15% error rate
         }));
+        let storage = Arc::new(RwLock::new(HashMap::new()));
 
-        let state = DHTState::new(metrics);
+        let state = DHTState::new(metrics, storage);
 
         // Create router with endpoint
         let app = Router::new()
@@ -272,8 +278,9 @@ mod tests {
             total_delete_latency_ms: 0,
             errors: 5, // 5% error rate
         }));
+        let storage = Arc::new(RwLock::new(HashMap::new()));
 
-        let state = DHTState::new(metrics);
+        let state = DHTState::new(metrics, storage);
 
         // Create router with endpoint
         let app = Router::new()

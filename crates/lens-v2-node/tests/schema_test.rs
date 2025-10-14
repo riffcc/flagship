@@ -6,13 +6,12 @@ use serde_json::Value;
 use tower::ServiceExt; // for `oneshot`
 
 // Import the routes module to get access to create_test_app
-#[path = "../src/routes/mod.rs"]
-mod routes;
+use lens_node::routes::create_test_app;
 
 /// Test that the schemas list endpoint works
 #[tokio::test]
 async fn test_list_schemas() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     let response = app
         .oneshot(
@@ -41,7 +40,7 @@ async fn test_list_schemas() {
 /// Test getting the latest version of a schema
 #[tokio::test]
 async fn test_get_latest_schema() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     let response = app
         .oneshot(
@@ -70,7 +69,7 @@ async fn test_get_latest_schema() {
 /// Test getting all versions of a schema
 #[tokio::test]
 async fn test_get_schema_versions() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     let response = app
         .oneshot(
@@ -100,7 +99,7 @@ async fn test_get_schema_versions() {
 /// Test getting a specific schema version
 #[tokio::test]
 async fn test_get_specific_schema_version() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     let response = app
         .oneshot(
@@ -128,7 +127,7 @@ async fn test_get_specific_schema_version() {
 /// Test getting a non-existent schema
 #[tokio::test]
 async fn test_get_nonexistent_schema() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     let response = app
         .oneshot(
@@ -146,7 +145,7 @@ async fn test_get_nonexistent_schema() {
 /// Test getting a non-existent version of an existing schema
 #[tokio::test]
 async fn test_get_nonexistent_version() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     let response = app
         .oneshot(
@@ -164,7 +163,7 @@ async fn test_get_nonexistent_version() {
 /// Test invalid version format
 #[tokio::test]
 async fn test_invalid_version_format() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     let response = app
         .oneshot(

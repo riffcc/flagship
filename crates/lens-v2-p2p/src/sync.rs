@@ -2,6 +2,7 @@
 
 use crate::{BlockId, BlockMeta, PeerId, Result, SyncStatus};
 use std::collections::{HashMap, HashSet};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Peer type for tracking server vs browser peers
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -21,11 +22,20 @@ pub struct SyncTracker {
     /// Blocks we're currently downloading
     downloading: HashSet<BlockId>,
 
-    /// Connected peers (all types)
-    peers: HashSet<PeerId>,
+    /// Known peers - all peers we've heard about (for awareness, O(n))
+    known_peers: HashSet<PeerId>,
+
+    /// Connected peers - only our 8 mesh neighbors (actual P2P connections, O(1))
+    connected_peers: HashSet<PeerId>,
 
     /// Peer types (server vs browser)
     peer_types: HashMap<PeerId, TrackedPeerType>,
+
+    /// Map of u64 peer ID -> original string peer ID (for /map endpoint)
+    peer_id_strings: HashMap<PeerId, String>,
+
+    /// Peers that are currently alive (heartbeated in current cycle)
+    alive_peers: HashSet<PeerId>,
 
     /// Latest known network height
     network_height: u64,
@@ -37,8 +47,11 @@ impl SyncTracker {
             local_blocks: HashMap::new(),
             consensus_blocks: HashMap::new(),
             downloading: HashSet::new(),
-            peers: HashSet::new(),
+            known_peers: HashSet::new(),
+            connected_peers: HashSet::new(),
             peer_types: HashMap::new(),
+            peer_id_strings: HashMap::new(),
+            alive_peers: HashSet::new(),
             network_height: 0,
         }
     }
@@ -68,9 +81,23 @@ impl SyncTracker {
         self.downloading.remove(block_id);
     }
 
-    /// Add a peer with optional type (defaults to Server if not specified)
-    pub fn add_peer(&mut self, peer_id: PeerId, peer_type: Option<TrackedPeerType>) {
-        self.peers.insert(peer_id);
+    /// Add a known peer (for awareness) - O(n) scalability
+    pub fn add_known_peer(&mut self, peer_id: PeerId) {
+        self.known_peers.insert(peer_id);
+    }
+
+    /// Add a known peer with original string ID (for /map endpoint)
+    pub fn add_known_peer_with_string(&mut self, peer_id: PeerId, peer_id_string: String) {
+        self.known_peers.insert(peer_id);
+        self.peer_id_strings.insert(peer_id, peer_id_string);
+        // Don't mark as alive yet - wait for explicit heartbeat
+    }
+
+    /// Add a connected peer (actual P2P connection to mesh neighbor) - O(1) scalability
+    pub fn add_connected_peer(&mut self, peer_id: PeerId, peer_type: Option<TrackedPeerType>) {
+        self.connected_peers.insert(peer_id);
+        self.known_peers.insert(peer_id); // Connected peers are also known peers
+
         if let Some(ptype) = peer_type {
             self.peer_types.insert(peer_id, ptype);
         } else {
@@ -79,9 +106,16 @@ impl SyncTracker {
         }
     }
 
-    /// Remove a peer
+    /// Add a peer with optional type (defaults to Server if not specified)
+    /// DEPRECATED: Use add_connected_peer() for mesh neighbors or add_known_peer() for awareness
+    pub fn add_peer(&mut self, peer_id: PeerId, peer_type: Option<TrackedPeerType>) {
+        self.add_connected_peer(peer_id, peer_type);
+    }
+
+    /// Remove a peer from both known and connected sets
     pub fn remove_peer(&mut self, peer_id: &PeerId) {
-        self.peers.remove(peer_id);
+        self.known_peers.remove(peer_id);
+        self.connected_peers.remove(peer_id);
         self.peer_types.remove(peer_id);
     }
 
@@ -95,10 +129,42 @@ impl SyncTracker {
             .unwrap_or(0);
 
         let mut status = SyncStatus::new();
-        status.peer_count = self.peers.len();
+        status.known_peers = self.known_peers.len();
+        status.connected_peers = self.connected_peers.len();
+        status.peer_count = self.connected_peers.len(); // Backward compatibility
         status.update_heights(local_height, self.network_height);
         status.downloading = self.downloading.clone();
         status
+    }
+
+    /// Mark peer as alive (received heartbeat this cycle)
+    pub fn mark_peer_alive(&mut self, peer_id: PeerId) {
+        self.alive_peers.insert(peer_id);
+    }
+
+    /// Clear all alive peers (start new heartbeat cycle)
+    pub fn clear_alive_peers(&mut self) {
+        self.alive_peers.clear();
+    }
+
+    /// Get all known peer IDs as strings (for /map endpoint)
+    pub fn get_known_peer_strings(&self) -> Vec<String> {
+        self.known_peers.iter()
+            .filter_map(|peer_id| self.peer_id_strings.get(peer_id).cloned())
+            .collect()
+    }
+
+    /// Get all ALIVE known peer IDs as strings (for /map endpoint)
+    /// Only returns peers that heartbeated in the current cycle
+    pub fn get_alive_peer_strings(&self) -> Vec<String> {
+        self.alive_peers.iter()
+            .filter_map(|peer_id| self.peer_id_strings.get(peer_id).cloned())
+            .collect()
+    }
+
+    /// Get all known peer IDs as u64 (for internal use)
+    pub fn get_known_peers(&self) -> Vec<PeerId> {
+        self.known_peers.iter().cloned().collect()
     }
 
     /// Get blocks we need to download (in consensus but not local)
@@ -124,16 +190,10 @@ impl SyncTracker {
 
     /// Check if we're synced
     ///
-    /// Only counts non-browser (server) peers for sync status.
-    /// Browser peers don't count toward readiness.
+    /// Returns true if we're caught up with the network (0 blocks behind).
+    /// This works for both bootstrap (0 peers, 0 behind) and normal operation (N peers, 0 behind).
     pub fn is_synced(&self) -> bool {
-        // Count only server peers (non-browser)
-        let server_peer_count = self.peer_types
-            .values()
-            .filter(|&&peer_type| peer_type == TrackedPeerType::Server)
-            .count();
-
-        self.blocks_behind() == 0 && server_peer_count > 0
+        self.blocks_behind() == 0
     }
 }
 
@@ -160,7 +220,8 @@ mod tests {
     fn test_sync_tracker_new() {
         let tracker = SyncTracker::new();
         assert_eq!(tracker.blocks_behind(), 0);
-        assert!(!tracker.is_synced()); // No peers
+        // Bootstrap case: 0 peers, 0 blocks behind → synced
+        assert!(tracker.is_synced());
     }
 
     #[test]
@@ -223,26 +284,26 @@ mod tests {
     fn test_is_synced() {
         let mut tracker = SyncTracker::new();
 
-        // Not synced: no peers
-        assert!(!tracker.is_synced());
+        // Bootstrap case: 0 peers, 0 blocks behind → synced (we ARE the network)
+        assert!(tracker.is_synced());
 
         // Add peer (defaults to Server type)
         tracker.add_peer(1, None);
 
-        // Still not synced: no blocks
-        assert!(tracker.is_synced()); // Actually synced at height 0
+        // Synced at height 0 with peer
+        assert!(tracker.is_synced());
 
         // Add blocks
         tracker.add_local_block(make_block("block1", 1));
         tracker.update_consensus(vec![make_block("block1", 1)]);
 
-        // Now synced
+        // Still synced
         assert!(tracker.is_synced());
 
         // Add consensus block we don't have
         tracker.update_consensus(vec![make_block("block2", 2)]);
 
-        // No longer synced
+        // No longer synced (behind by 1 block)
         assert!(!tracker.is_synced());
     }
 

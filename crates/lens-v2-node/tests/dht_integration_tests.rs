@@ -12,11 +12,11 @@ use anyhow::Result;
 use citadel_core::key_mapping::key_to_slot;
 use citadel_core::routing::{route_path, verify_optimal_path};
 use citadel_core::topology::{MeshConfig, SlotCoordinate};
-use citadel_dht::local_storage::LocalStorage;
 use citadel_dht::node::MinimalNode;
 use lens_node::lazy_node::LazyNode;
+use lens_node::dht_state::DhtState;
 use lens_node::peer_registry::{slot_ownership_key, SlotOwnership};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
@@ -37,7 +37,7 @@ impl TestDHTNode {
         peer_id: String,
         slot: SlotCoordinate,
         config: MeshConfig,
-        dht_storage: Arc<Mutex<LocalStorage>>,
+        dht_storage: Arc<Mutex<DhtState>>,
     ) -> Self {
         let peer_id_bytes = Self::peer_id_to_bytes(&peer_id);
         let minimal_node = MinimalNode::new(slot, peer_id_bytes, config, 0);
@@ -111,8 +111,8 @@ fn calculate_mesh_config(node_count: usize) -> MeshConfig {
 async fn create_test_mesh(
     node_count: usize,
     mesh_config: MeshConfig,
-) -> (Vec<TestDHTNode>, Arc<Mutex<LocalStorage>>) {
-    let dht_storage = Arc::new(Mutex::new(LocalStorage::new()));
+) -> (Vec<TestDHTNode>, Arc<Mutex<DhtState>>) {
+    let dht_storage = Arc::new(Mutex::new(DhtState::new()));
     let mut nodes = Vec::new();
 
     // Calculate slot coordinates for nodes
@@ -229,7 +229,7 @@ async fn test_dht_routed_messaging() -> Result<()> {
     // Store message in DHT at the target slot
     {
         let mut storage = dht_storage.lock().await;
-        storage.put(message_key, b"Hello from DHT routing through 50 nodes!".to_vec());
+        storage.insert_raw(message_key, b"Hello from DHT routing through 50 nodes!".to_vec());
     }
 
     // Route from node 0 to node 25 (cross the mesh)
@@ -268,8 +268,9 @@ async fn test_dht_routed_messaging() -> Result<()> {
         let storage = dht_storage.lock().await;
         let message = storage
             .get(&message_key)
+            .cloned()
             .expect("Message should be stored in DHT");
-        assert_eq!(message, b"Hello from DHT routing through 50 nodes!");
+        assert_eq!(message.value, b"Hello from DHT routing through 50 nodes!".to_vec());
     }
 
     // Test multiple routing paths to verify mesh connectivity
@@ -309,7 +310,7 @@ async fn test_dht_native_join_single_message() -> Result<()> {
     println!("\n=== Test 3: DHT-Native Join (1 message) ===");
 
     let config = MeshConfig::new(10, 10, 5);
-    let dht_storage = Arc::new(Mutex::new(LocalStorage::new()));
+    let dht_storage = Arc::new(Mutex::new(DhtState::new()));
 
     // Count DHT operations
     let initial_size = {
@@ -348,7 +349,7 @@ async fn test_dht_native_join_single_message() -> Result<()> {
         let ownership_key = slot_ownership_key(new_slot);
         let ownership_bytes = storage.get(&ownership_key).expect("Should find ownership");
         let ownership: SlotOwnership =
-            serde_json::from_slice(ownership_bytes).expect("Should deserialize");
+            serde_json::from_slice(&ownership_bytes.value).expect("Should deserialize");
 
         assert_eq!(ownership.peer_id, "new-peer".to_string());
         assert_eq!(ownership.slot, new_slot);
@@ -365,7 +366,7 @@ async fn test_dht_native_leave_single_message() -> Result<()> {
     println!("\n=== Test 4: DHT-Native Leave (1 message) ===");
 
     let config = MeshConfig::new(10, 10, 5);
-    let dht_storage = Arc::new(Mutex::new(LocalStorage::new()));
+    let dht_storage = Arc::new(Mutex::new(DhtState::new()));
 
     let node_slot = SlotCoordinate::new(5, 5, 2);
     let node = TestDHTNode::new("leaving-peer".to_string(), node_slot, config, dht_storage.clone());
@@ -384,7 +385,7 @@ async fn test_dht_native_leave_single_message() -> Result<()> {
     {
         let mut storage = dht_storage.lock().await;
         let ownership_key = slot_ownership_key(node_slot);
-        storage.delete(&ownership_key);
+        storage.remove(&ownership_key);
     }
 
     let after_leave_size = {
@@ -434,7 +435,7 @@ async fn test_50_node_full_connectivity() -> Result<()> {
 
     let mut total_neighbors = 0;
     let mut nodes_with_full_neighbors = 0;
-    let mut connectivity_map = HashMap::new();
+    let mut connectivity_map = HashMap::<usize, usize>::new();
 
     // Query each node for neighbors
     for (i, node) in nodes.iter().enumerate() {
@@ -571,7 +572,7 @@ async fn test_minimal_state_64_bytes() -> Result<()> {
     println!("\n=== Test 7: Minimal State Verification ===");
 
     let config = MeshConfig::new(10, 10, 5);
-    let dht_storage = Arc::new(Mutex::new(LocalStorage::new()));
+    let dht_storage = Arc::new(Mutex::new(DhtState::new()));
     let slot = SlotCoordinate::new(5, 5, 2);
 
     let node = TestDHTNode::new("test-peer".to_string(), slot, config, dht_storage.clone());

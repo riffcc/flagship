@@ -6,13 +6,12 @@ use serde_json::Value;
 use tower::ServiceExt; // for `oneshot`
 
 // Import the routes module to get access to create_test_app
-#[path = "../src/routes/mod.rs"]
-mod routes;
+use lens_node::routes::create_test_app;
 
 /// Test that the health endpoint returns 200 OK
 #[tokio::test]
 async fn test_health_endpoint_returns_ok() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     let response = app
         .oneshot(
@@ -30,7 +29,7 @@ async fn test_health_endpoint_returns_ok() {
 /// Test that the health endpoint returns valid JSON
 #[tokio::test]
 async fn test_health_endpoint_returns_json() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     let response = app
         .oneshot(
@@ -54,7 +53,7 @@ async fn test_health_endpoint_returns_json() {
 /// Test that the health endpoint includes version information
 #[tokio::test]
 async fn test_health_endpoint_includes_version() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     let response = app
         .oneshot(

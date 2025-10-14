@@ -19,7 +19,7 @@
 
 use anyhow::{Context, Result};
 use citadel_core::topology::{MeshConfig, SlotCoordinate};
-use citadel_dht::local_storage::LocalStorage;
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -192,7 +192,7 @@ pub fn leave_announcement_key(slot: SlotCoordinate) -> [u8; 32] {
 
 /// Announce join via single DHT PUT operation (1 message vs 80!)
 pub async fn announce_join(
-    dht_storage: Arc<Mutex<LocalStorage>>,
+    dht_storage: Arc<Mutex<HashMap<[u8; 32], Vec<u8>>>>,
     peer_id: String,
     slot: SlotCoordinate,
     epoch: u64,
@@ -214,7 +214,7 @@ pub async fn announce_join(
 
     // Single DHT PUT operation
     let mut storage = dht_storage.lock().await;
-    storage.put(key, value);
+    storage.insert(key, value);
 
     info!("📢 Announced join via DHT (1 message): peer={}, slot={:?}, epoch={}",
         peer_id, slot, epoch);
@@ -224,7 +224,7 @@ pub async fn announce_join(
 
 /// Announce leave via single DHT PUT operation (tombstone)
 pub async fn announce_leave(
-    dht_storage: Arc<Mutex<LocalStorage>>,
+    dht_storage: Arc<Mutex<HashMap<[u8; 32], Vec<u8>>>>,
     peer_id: String,
     slot: SlotCoordinate,
     epoch: u64,
@@ -245,7 +245,7 @@ pub async fn announce_leave(
 
     // Single DHT PUT operation (tombstone)
     let mut storage = dht_storage.lock().await;
-    storage.put(key, value);
+    storage.insert(key, value);
 
     info!("💀 Announced leave via DHT (1 message): peer={}, slot={:?}, epoch={}",
         peer_id, slot, epoch);
@@ -258,7 +258,7 @@ pub async fn announce_leave(
 /// Checks all 8 neighbor slots (6 hexagonal + 2 vertical) for recent join announcements.
 /// Returns list of peer IDs that have recently joined neighbor slots.
 pub async fn discover_new_neighbors(
-    dht_storage: Arc<Mutex<LocalStorage>>,
+    dht_storage: Arc<Mutex<HashMap<[u8; 32], Vec<u8>>>>,
     my_slot: SlotCoordinate,
     mesh_config: MeshConfig,
     pow_difficulty: u8,
@@ -436,7 +436,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_announce_join_single_message() {
-        let storage = Arc::new(Mutex::new(LocalStorage::new()));
+        let storage = Arc::new(Mutex::new(HashMap::new()));
         let slot = SlotCoordinate::new(5, 10, 2);
 
         announce_join(
@@ -463,7 +463,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_announce_leave_tombstone() {
-        let storage = Arc::new(Mutex::new(LocalStorage::new()));
+        let storage = Arc::new(Mutex::new(HashMap::new()));
         let slot = SlotCoordinate::new(5, 10, 2);
 
         announce_leave(
@@ -489,7 +489,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_new_neighbors() {
-        let storage = Arc::new(Mutex::new(LocalStorage::new()));
+        let storage = Arc::new(Mutex::new(HashMap::new()));
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
 
@@ -514,7 +514,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_ignores_left_peers() {
-        let storage = Arc::new(Mutex::new(LocalStorage::new()));
+        let storage = Arc::new(Mutex::new(HashMap::new()));
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
 
@@ -546,7 +546,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_handles_rejoin_with_higher_epoch() {
-        let storage = Arc::new(Mutex::new(LocalStorage::new()));
+        let storage = Arc::new(Mutex::new(HashMap::new()));
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
 

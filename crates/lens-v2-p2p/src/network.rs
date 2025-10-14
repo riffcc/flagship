@@ -61,6 +61,33 @@ pub struct BlockData {
     pub timestamp: u64,
 }
 
+/// DHT replication message from relay (gossip replication of global DHT)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DhtReplication {
+    #[serde(with = "serde_bytes")]
+    pub key: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    pub value: Vec<u8>,
+    pub timestamp: u64,
+    pub source_peer_id: String,
+}
+
+/// DHT bootstrap response from relay (complete DHT snapshot for new peers)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DhtBootstrapResponse {
+    pub dht_entries: Vec<DhtEntry>,
+    pub entry_count: usize,
+    pub timestamp: u64,
+}
+
+/// DHT entry (need to define here for deserialization)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DhtEntry {
+    pub key: [u8; 32],
+    pub value: Vec<u8>,
+    pub timestamp: u64,
+}
+
 /// Network events from peers
 #[derive(Debug, Clone)]
 pub enum NetworkEvent {
@@ -84,12 +111,21 @@ pub enum NetworkEvent {
 
     /// Received block request from peer
     BlockRequestReceived(PeerId, Vec<BlockId>),
+
+    /// DHT replication from relay (gossip replication of GLOBAL DHT)
+    DhtReplication(DhtReplication),
+
+    /// DHT bootstrap response from relay (complete DHT snapshot)
+    DhtBootstrapResponse(DhtBootstrapResponse),
 }
 
 /// P2P Network manager
 pub struct P2pNetwork {
     /// Our peer ID (assigned by relay)
     peer_id: Arc<RwLock<Option<PeerId>>>,
+
+    /// Our slot coordinate in the mesh (for DHT bootstrap)
+    my_slot: SlotCoordinate,
 
     /// Connected peers
     peers: Arc<RwLock<HashMap<PeerId, PeerConnection>>>,
@@ -110,11 +146,13 @@ pub struct P2pNetwork {
 impl P2pNetwork {
     /// Create a new P2P network instance
     /// peer_id: Our peer ID to announce to the relay (ensures consistency across mesh)
-    pub fn new(relay_url: String, peer_id: String) -> Self {
+    /// my_slot: Our slot coordinate for DHT bootstrap requests
+    pub fn new(relay_url: String, peer_id: String, my_slot: SlotCoordinate) -> Self {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
         Self {
             peer_id: Arc::new(RwLock::new(Some(peer_id))),
+            my_slot,
             peers: Arc::new(RwLock::new(HashMap::new())),
             event_rx: Arc::new(RwLock::new(event_rx)),
             event_tx,
@@ -161,6 +199,21 @@ impl P2pNetwork {
                     error!("Failed to send hello message: {}", e);
                 }  else {
                     info!("Sent hello message to relay with peer_id: {}", our_peer_id);
+                }
+            }
+
+            // Send DHT bootstrap request to get complete DHT snapshot
+            // This populates our local DHT cache from the GLOBAL DHT stored at the relay
+            let bootstrap_request = serde_json::json!({
+                "type": "dht_bootstrap_request",
+                "peer_id": our_peer_id,
+                "slot": self.my_slot,
+            });
+            if let Ok(bootstrap_json) = serde_json::to_string(&bootstrap_request) {
+                if let Err(e) = ws_tx.send(Message::Text(bootstrap_json)) {
+                    error!("Failed to send DHT bootstrap request: {}", e);
+                } else {
+                    info!("🔄 Sent DHT bootstrap request to relay for slot {:?}", self.my_slot);
                 }
             }
         }
@@ -275,6 +328,24 @@ impl P2pNetwork {
                                     }
                                 }
                             }
+                            // Try to parse as dht_replication (GLOBAL DHT gossip)
+                            else if referral["type"] == "dht_replication" {
+                                if let Ok(replication) = serde_json::from_value::<DhtReplication>(referral.clone()) {
+                                    debug!("Received DHT replication: key={} bytes from {}",
+                                        replication.key.len(), replication.source_peer_id);
+                                    let _ = event_tx.send(NetworkEvent::DhtReplication(replication));
+                                }
+                            }
+                            // Try to parse as dht_bootstrap_response (complete DHT snapshot)
+                            else if referral["type"] == "dht_bootstrap_response" {
+                                if let Some(response_json) = referral.get("response") {
+                                    if let Ok(response) = serde_json::from_value::<DhtBootstrapResponse>(response_json.clone()) {
+                                        info!("Received DHT bootstrap response: {} entries",
+                                            response.entry_count);
+                                        let _ = event_tx.send(NetworkEvent::DhtBootstrapResponse(response));
+                                    }
+                                }
+                            }
                         }
 
                         // Try to parse as block response
@@ -300,6 +371,27 @@ impl P2pNetwork {
                 }
             }
         });
+
+        Ok(())
+    }
+
+    /// Send heartbeat to relay (will be broadcast to all peers)
+    pub async fn send_heartbeat(&self, peer_id: &str, slot: citadel_core::topology::SlotCoordinate) -> Result<()> {
+        let heartbeat = serde_json::json!({
+            "type": "heartbeat",
+            "peer_id": peer_id,
+            "slot": slot,
+        });
+
+        let json = serde_json::to_string(&heartbeat)
+            .map_err(|e| P2pError::Network(format!("Failed to serialize heartbeat: {}", e)))?;
+
+        // Send via WebSocket
+        if let Some(tx) = self.ws_tx.read().await.as_ref() {
+            tx.send(Message::Text(json))
+                .map_err(|e| P2pError::Network(format!("Failed to send heartbeat: {}", e)))?;
+            debug!("💓 Sent heartbeat for {}", peer_id);
+        }
 
         Ok(())
     }

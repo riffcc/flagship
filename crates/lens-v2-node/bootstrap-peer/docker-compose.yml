@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - lens-bootstrap
+    depends_on:
+      - lens-node
+
+  lens-node:
+    image: zorlin/lens-v2:v0.8.20
+    restart: unless-stopped
+    environment:
+      # Minimal bootstrap peer configuration
+      PORT: "5000"
+      DB_PATH: "/data/rocksdb"
+      SITE_MODE: "normal"
+      SITE_NAME: "lens01.eu.riff.cc Bootstrap Peer"
+
+      # Relay configuration for bootstrap peer
+      RELAY_URL: "ws://localhost:5000/api/v1/relay/ws"
+
+      # Auto-authorize admin key for management
+      ADMIN_PUBLIC_KEY: "${ADMIN_PUBLIC_KEY}"
+
+      # Rust logging (info level for production)
+      RUST_LOG: "lens_node=info,tower_http=info"
+    volumes:
+      - lens_data:/data
+    networks:
+      - lens-bootstrap
+    deploy:
+      resources:
+        limits:
+          memory: 128M  # Ultra-lightweight bootstrap peer!
+          cpus: '0.5'
+        reservations:
+          memory: 64M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
+  lens_data:
+    driver: local
+
+networks:
+  lens-bootstrap:
+    driver: bridge

@@ -6,13 +6,12 @@ use serde_json::{json, Value};
 use tower::ServiceExt; // for `oneshot`
 
 // Import the routes module to get access to create_test_app
-#[path = "../src/routes/mod.rs"]
-mod routes;
+use lens_node::routes::create_test_app;
 
 /// Test that we can update a featured release's promoted status
 #[tokio::test]
 async fn test_update_featured_release_promoted() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     // First, get the list of featured releases
     let response = app
@@ -72,7 +71,7 @@ async fn test_update_featured_release_promoted() {
 /// Test that updating featured release with invalid ID returns 404
 #[tokio::test]
 async fn test_update_featured_release_not_found() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     let update_data = json!({
         "id": "00000000-0000-0000-0000-000000000000",
@@ -99,7 +98,7 @@ async fn test_update_featured_release_not_found() {
 /// Test that we can update tags on a featured release
 #[tokio::test]
 async fn test_update_featured_release_tags() {
-    let app = routes::create_test_app();
+    let app = create_test_app();
 
     // First, get the list of featured releases
     let response = app

@@ -30,7 +30,7 @@ use crate::block_codec::{BlockCodec, BlockEnvelope};
 use crate::lazy_node::LazyNode;
 
 use citadel_core::topology::{MeshConfig, SlotCoordinate, Direction};
-use citadel_dht::local_storage::LocalStorage;
+use std::collections::HashMap;
 
 /// Sync orchestrator coordinates all P2P sync operations
 pub struct SyncOrchestrator {
@@ -43,6 +43,12 @@ pub struct SyncOrchestrator {
     /// Database for persistence
     db: Database,
 
+    /// My peer ID
+    my_peer_id: String,
+
+    /// My slot in the mesh
+    my_slot: SlotCoordinate,
+
     /// Sync interval
     sync_interval: Duration,
 
@@ -54,6 +60,79 @@ pub struct SyncOrchestrator {
 }
 
 impl SyncOrchestrator {
+    /// Check if a peer at given slot is one of my 8 mesh neighbors
+    /// Uses "turn left" algorithm to find exactly 8 unique neighbors, skipping empty slots
+    async fn is_mesh_neighbor_of_me(&self, _peer_id: &str, peer_slot: &SlotCoordinate, num_nodes: usize) -> bool {
+        let my_slot = self.lazy_node.my_slot();
+
+        // CRITICAL: Calculate mesh dimensions dynamically based on current network size!
+        // The tests require this - mesh grows/shrinks as nodes join/leave
+        let mesh_config = crate::peer_registry::calculate_mesh_dimensions(num_nodes);
+
+        // Convert my slot to index
+        let my_x = my_slot.x as usize;
+        let my_y = my_slot.y as usize;
+        let my_z = my_slot.z as usize;
+
+        // Try the 8 primary directions + extended "turn left" directions
+        let all_offsets = [
+            // Primary 8 directions (most likely to be neighbors)
+            (1, 0, 0),   // PlusA
+            (-1, 0, 0),  // MinusA
+            (0, 1, 0),   // PlusB
+            (0, -1, 0),  // MinusB
+            (1, -1, 0),  // PlusC (hexagonal)
+            (-1, 1, 0),  // MinusC (hexagonal)
+            (0, 0, 1),   // Up (vertical, toroidal wrap)
+            (0, 0, -1),  // Down (vertical, toroidal wrap)
+            // Turn left - try diagonals
+            (1, 1, 0),
+            (-1, -1, 0),
+            (1, -1, 1),
+            (-1, 1, -1),
+            // Turn left again - try double steps
+            (2, 0, 0),
+            (-2, 0, 0),
+            (0, 2, 0),
+            (0, -2, 0),
+            (0, 0, 2),
+            (0, 0, -2),
+        ];
+
+        let mut found_neighbors = std::collections::HashSet::new();
+
+        // Find my 8 neighbors
+        for (dx, dy, dz) in all_offsets {
+            if found_neighbors.len() >= 8 {
+                break; // Got 8 neighbors
+            }
+
+            // Step through the toroid in this direction until finding a filled slot
+            let mut steps = 1;
+            let max_steps = mesh_config.width * mesh_config.height * mesh_config.depth;
+
+            while steps <= max_steps {
+                let nx = ((my_x as i32 + dx * steps as i32).rem_euclid(mesh_config.width as i32)) as usize;
+                let ny = ((my_y as i32 + dy * steps as i32).rem_euclid(mesh_config.height as i32)) as usize;
+                let nz = ((my_z as i32 + dz * steps as i32).rem_euclid(mesh_config.depth as i32)) as usize;
+
+                let neighbor_index = nz * mesh_config.width * mesh_config.height + ny * mesh_config.width + nx;
+
+                // Found a filled slot (not empty)
+                if neighbor_index < num_nodes {
+                    let neighbor_slot = SlotCoordinate::new(nx as i32, ny as i32, nz as i32);
+                    found_neighbors.insert(neighbor_slot);
+                    break; // Found neighbor in this direction
+                }
+
+                steps += 1;
+            }
+        }
+
+        // Check if peer's slot is one of my 8 neighbors
+        found_neighbors.contains(peer_slot)
+    }
+
     /// Create a new sync orchestrator with LazyNode for neighbor discovery
     pub fn new(
         relay_url: String,
@@ -63,15 +142,15 @@ impl SyncOrchestrator {
         p2p_manager: Arc<P2pManager>,
         db: Database,
         block_notify_rx: mpsc::UnboundedReceiver<BlockNotification>,
-        dht_storage: Arc<tokio::sync::Mutex<LocalStorage>>,
+        dht_storage: Arc<tokio::sync::Mutex<crate::dht_state::DhtState>>,
     ) -> Self {
-        // Pass our peer_id to network layer so it can announce to relay
-        let network = Arc::new(P2pNetwork::new(relay_url, my_peer_id.clone()));
+        // Pass our peer_id and slot to network layer for relay announcements and DHT bootstrap
+        let network = Arc::new(P2pNetwork::new(relay_url, my_peer_id.clone(), my_slot));
 
         // Create LazyNode for DHT-based neighbor discovery
         let lazy_node = Arc::new(LazyNode::new(
             my_slot,
-            my_peer_id,
+            my_peer_id.clone(),
             mesh_config,
             dht_storage,
         ));
@@ -80,6 +159,8 @@ impl SyncOrchestrator {
             network,
             p2p_manager,
             db,
+            my_peer_id,
+            my_slot,
             sync_interval: Duration::from_secs(30),
             block_notify_rx: Arc::new(RwLock::new(block_notify_rx)),
             lazy_node,
@@ -142,6 +223,12 @@ impl SyncOrchestrator {
             orchestrator.sync_loop().await;
         });
 
+        // Spawn heartbeat loop
+        let orchestrator_heartbeat = self.clone();
+        tokio::spawn(async move {
+            orchestrator_heartbeat.heartbeat_loop().await;
+        });
+
         // Startup is complete - relay connection continues in background
         info!("✅ Sync orchestrator started (relay connection running in background)");
         Ok(())
@@ -197,6 +284,33 @@ impl SyncOrchestrator {
             if let Err(e) = self.sync_iteration().await {
                 error!("Sync iteration failed: {}", e);
             }
+        }
+    }
+
+    /// Heartbeat loop - continuously broadcasts peer heartbeat
+    async fn heartbeat_loop(&self) {
+        info!("💓 Starting continuous heartbeat broadcast");
+
+        // Mark ourselves as alive immediately
+        let my_peer_id_hash = {
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            let mut hasher = DefaultHasher::new();
+            self.my_peer_id.hash(&mut hasher);
+            hasher.finish()
+        };
+
+        loop {
+            // Mark self as alive
+            let _ = self.p2p_manager.mark_peer_alive(my_peer_id_hash);
+
+            // Send heartbeat through network (relay will broadcast to all peers)
+            if let Err(e) = self.network.send_heartbeat(&self.my_peer_id, self.my_slot).await {
+                warn!("Failed to send heartbeat: {}", e);
+            }
+
+            // Small sleep to avoid hammering - 1 second is fine for real-time mesh visibility
+            tokio::time::sleep(Duration::from_millis(1000)).await;
         }
     }
 
@@ -352,47 +466,100 @@ impl SyncOrchestrator {
                 self.save_block(block_data).await?;
             }
 
-            // PeerReferral: Populate local DHT from relay gossip for bootstrap!
-            // The relay acts as the DHT synchronization layer - when we receive peer referrals,
-            // we extract slot ownership and store in local DHT so LazyNode queries can find neighbors.
+            // PeerReferral: Update P2P manager with known/connected peers for block exchange
+            // DHT population happens via DhtReplication gossip messages, NOT here!
+            // This is just for initial bootstrap awareness and P2P manager state.
             NetworkEvent::PeerReferral(peers) => {
-                info!("📡 Received {} peer referrals from relay - populating local DHT", peers.len());
+                info!("📡 Received {} peer referrals from relay - updating P2P manager", peers.len());
 
                 for peer in &peers {
-                    // CRITICAL FIX: Use the peer's ACTUAL announced slot, not a recalculated one!
-                    // Recalculating from peer_id can produce a DIFFERENT slot than what the peer announced,
-                    // causing DHT key mismatches and neighbor discovery failures.
+                    // CRITICAL: Use the peer's ACTUAL announced slot, not a recalculated one!
                     let slot = match peer.slot {
                         Some(announced_slot) => {
-                            debug!("  Using peer {}'s announced slot: {:?}", peer.peer_id, announced_slot);
+                            debug!("  Peer {} at slot {:?}", peer.peer_id, announced_slot);
                             announced_slot
                         }
                         None => {
                             // Fallback: If relay doesn't provide slot, calculate from peer_id
-                            // This is for backward compatibility with old relay versions
                             warn!("  ⚠️ Peer {} has no slot - falling back to peer_id_to_slot (may cause mismatches)", peer.peer_id);
                             crate::peer_registry::peer_id_to_slot(&peer.peer_id, self.lazy_node.mesh_config())
                         }
                     };
 
-                    // Create slot ownership announcement
-                    let ownership = crate::peer_registry::SlotOwnership::new(
-                        peer.peer_id.clone(),
-                        slot,
-                        None, // No relay URL needed - we're all on same relay
-                    );
+                    // Hash peer_id string to u64 for P2P manager compatibility
+                    use std::collections::hash_map::DefaultHasher;
+                    use std::hash::{Hash, Hasher};
+                    let mut hasher = DefaultHasher::new();
+                    peer.peer_id.hash(&mut hasher);
+                    let peer_id_u64 = hasher.finish();
 
-                    // Store in local DHT so LazyNode can discover this neighbor
-                    let ownership_key = crate::peer_registry::slot_ownership_key(slot);
-                    let ownership_bytes = serde_json::to_vec(&ownership)?;
+                    // Add ALL peers as known peers (for awareness) - O(n) scalability
+                    // Store both u64 ID and String ID for /map endpoint
+                    if let Err(e) = self.p2p_manager.add_known_peer_with_string(peer_id_u64, peer.peer_id.clone()) {
+                        warn!("  ⚠️ Failed to add known peer {} to P2P manager: {}", peer.peer_id, e);
+                    } else {
+                        debug!("  ✅ Added known peer {} (slot {:?}) to P2P manager", peer.peer_id, slot);
+                    }
 
-                    // Note: dht_storage is pub(crate) so we can access it from LazyNode
-                    self.lazy_node.dht_storage.lock().await.put(ownership_key, ownership_bytes.into());
+                    // Determine if this peer is a mesh neighbor using "turn left" algorithm
+                    // This finds exactly 8 unique neighbors, skipping empty slots in the toroid
+                    // Total nodes = peers.len() + 1 (including ourselves for mesh calculations)
+                    let is_neighbor = self.is_mesh_neighbor_of_me(&peer.peer_id, &slot, peers.len() + 1).await;
 
-                    debug!("  ✅ Stored peer {} at slot {:?} in local DHT", peer.peer_id, slot);
+                    // Only add mesh neighbors as connected peers (actual P2P connections) - O(1) scalability
+                    if is_neighbor {
+                        if let Err(e) = self.p2p_manager.add_connected_peer(peer_id_u64, None) {
+                            warn!("  ⚠️ Failed to add connected peer {} to P2P manager: {}", peer.peer_id, e);
+                        } else {
+                            info!("  ✅ Added mesh neighbor {} (slot {:?}) as connected peer (1 of 8)", peer.peer_id, slot);
+                        }
+                    } else {
+                        debug!("  ℹ️ Peer {} (slot {:?}) is not a mesh neighbor (known but not connected)", peer.peer_id, slot);
+                    }
                 }
 
-                info!("✅ Local DHT populated with {} peer slot ownerships", peers.len());
+                info!("✅ Updated P2P manager with {} peer referrals (DHT populated via gossip separately)", peers.len());
+            }
+
+            // DhtReplication: Store in local DHT cache (replica of GLOBAL DHT via gossip)
+            NetworkEvent::DhtReplication(replication) => {
+                // Convert key bytes to [u8; 32]
+                if replication.key.len() == 32 {
+                    let mut key_array = [0u8; 32];
+                    key_array.copy_from_slice(&replication.key);
+
+                    // Store in local DHT cache (this is a CACHE/REPLICA of the GLOBAL DHT, not a separate "local DHT")
+                    self.lazy_node.dht_storage.lock().await.insert_raw(key_array, replication.value.clone());
+
+                    debug!("✅ Stored DHT key {} in local cache via gossip from {}",
+                        hex::encode(&replication.key), replication.source_peer_id);
+                } else {
+                    warn!("⚠️ Received DHT replication with invalid key length: {} (expected 32)",
+                        replication.key.len());
+                }
+            }
+
+            // DhtBootstrapResponse: Bootstrap local DHT cache from relay's complete snapshot
+            NetworkEvent::DhtBootstrapResponse(response) => {
+                info!("🔄 Received DHT bootstrap with {} entries from relay", response.entry_count);
+
+                // Convert P2P DhtEntry to our DhtEntry type and bootstrap
+                let mut peer_dht = crate::dht_state::DhtState::new();
+                for entry in response.dht_entries {
+                    peer_dht.insert(crate::dht_state::DhtEntry {
+                        key: entry.key,
+                        value: entry.value,
+                        timestamp: entry.timestamp,
+                    });
+                }
+
+                // Bootstrap our local DHT cache from relay's snapshot
+                {
+                    let mut dht = self.lazy_node.dht_storage.lock().await;
+                    dht.bootstrap_from_peer(&peer_dht);
+                }
+
+                info!("✅ Bootstrapped local DHT cache from relay ({} entries)", response.entry_count);
             }
 
             // REMOVED: PeerIdAssigned handling - peer_id passed to constructor now!
@@ -731,7 +898,7 @@ mod tests {
         let db = Database::open(&temp_dir).unwrap();
         let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
         let (_tx, rx) = mpsc::unbounded_channel();
-        let dht_storage = Arc::new(tokio::sync::Mutex::new(citadel_dht::local_storage::LocalStorage::new()));
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
         let mesh_config = default_mesh_config();
         let my_slot = SlotCoordinate::new(5, 5, 2);
@@ -760,7 +927,7 @@ mod tests {
         let db = Database::open(&temp_dir).unwrap();
         let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
         let (_tx, rx) = mpsc::unbounded_channel();
-        let dht_storage = Arc::new(tokio::sync::Mutex::new(citadel_dht::local_storage::LocalStorage::new()));
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
         let mesh_config = default_mesh_config();
         let my_slot = SlotCoordinate::new(5, 5, 2);
@@ -813,7 +980,7 @@ mod tests {
         let db = Database::open(&temp_dir).unwrap();
         let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
         let (_tx, rx) = mpsc::unbounded_channel();
-        let dht_storage = Arc::new(tokio::sync::Mutex::new(citadel_dht::local_storage::LocalStorage::new()));
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
         let mesh_config = default_mesh_config();
         let my_slot = SlotCoordinate::new(5, 5, 2);
@@ -895,6 +1062,65 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_is_mesh_neighbor_detection() {
+        use crate::peer_registry::default_mesh_config;
+        use citadel_core::topology::SlotCoordinate;
+
+        let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
+        let db = Database::open(&temp_dir).unwrap();
+        let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
+        let (_tx, rx) = mpsc::unbounded_channel();
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
+
+        // 8×7×1 mesh for 50 nodes
+        let mesh_config = MeshConfig::new(8, 7, 1);
+        let my_slot = SlotCoordinate::new(0, 0, 0); // I'm at (0,0,0)
+
+        let orchestrator = Arc::new(SyncOrchestrator::new(
+            "ws://localhost:5002/api/v1/relay/ws".to_string(),
+            "test-peer-0".to_string(),
+            my_slot,
+            mesh_config,
+            p2p_manager,
+            db,
+            rx,
+            dht_storage,
+        ));
+
+        // My 8 neighbors at slot (0,0,0) should be:
+        // +A: (1,0,0), -A: (7,0,0) [wraps]
+        // +B: (0,1,0), -B: (0,6,0) [wraps]
+        // +C: (1,-1,0) = (1,6,0) [wraps], -C: (-1,1,0) = (7,1,0) [wraps]
+        // Up: (0,0,1) [no wrap in 1-deep mesh, but wraps to (0,0,0) - that's me!]
+        // Down: (0,0,-1) = (0,0,0) [wraps to self]
+
+        // So neighbors are at: (1,0,0), (7,0,0), (0,1,0), (0,6,0), (1,6,0), (7,1,0), and 2 more...
+
+        let test_cases = vec![
+            ((1, 0, 0), true),  // +A neighbor
+            ((7, 0, 0), true),  // -A neighbor (wrapped)
+            ((0, 1, 0), true),  // +B neighbor
+            ((0, 6, 0), true),  // -B neighbor (wrapped)
+            ((5, 5, 0), false), // Far away, not a neighbor
+        ];
+
+        for ((x, y, z), expected_neighbor) in test_cases {
+            let test_slot = SlotCoordinate::new(x, y, z);
+            let is_neighbor = orchestrator.is_mesh_neighbor_of_me(
+                &format!("peer-{}-{}-{}", x, y, z),
+                &test_slot,
+                50 // Total nodes in network
+            ).await;
+
+            if expected_neighbor {
+                assert!(is_neighbor, "Slot ({},{},{}) should be a neighbor", x, y, z);
+            } else {
+                assert!(!is_neighbor, "Slot ({},{},{}) should NOT be a neighbor", x, y, z);
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn test_delete_transactions_are_sent_to_peers() {
         use crate::ubts::{UBTSBlock, UBTSTransaction};
         use crate::peer_registry::default_mesh_config;
@@ -904,7 +1130,7 @@ mod tests {
         let db = Database::open(&temp_dir).unwrap();
         let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
         let (_tx, rx) = mpsc::unbounded_channel();
-        let dht_storage = Arc::new(tokio::sync::Mutex::new(citadel_dht::local_storage::LocalStorage::new()));
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
         let mesh_config = default_mesh_config();
         let my_slot = SlotCoordinate::new(5, 5, 2);

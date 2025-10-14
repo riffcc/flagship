@@ -4,19 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🚨 CRITICAL BUILD CONFIGURATION 🚨
 
-**ALWAYS BUILD FLAGSHIP WITH THIS API URL:**
-```
-VITE_API_URL=https://api.palace.riff.cc/api/v1
-```
+### API URL Rules (READ CAREFULLY)
 
-**BUILD COMMAND:**
+**PRODUCTION BUILDS:**
+```bash
+VITE_API_URL="https://api.global.riff.cc/api/v1" pnpm build
+```
+- Use `api.global.riff.cc` for ALL production deployments
+- Use when building Docker images for production
+- Use when deploying to live infrastructure
+
+**DEV/TEST BUILDS:**
 ```bash
 VITE_API_URL="https://api.palace.riff.cc/api/v1" pnpm build
 ```
+- Use `api.palace.riff.cc` for ALL dev/test environments
+- Use in Docker Compose test clusters (even with 50+ nodes)
+- Use for local development and testing
 
 **THIS HAS BEEN FORGOTTEN 10 TIMES. DO NOT FORGET IT AGAIN.**
 
-The frontend MUST be built with `https://api.palace.riff.cc/api/v1` as the API URL. This is not negotiable. This is not optional. This is ALWAYS required.
+The frontend MUST be built with the correct API URL:
+- **Production:** `https://api.global.riff.cc/api/v1`
+- **Dev/Test:** `https://api.palace.riff.cc/api/v1`
+
+This is not negotiable. This is not optional. This is ALWAYS required.
 
 ## Project Overview
 
@@ -151,6 +163,128 @@ Structures are completely generic organizational containers documented in `docs/
 - Check this file before making assumptions about data structures
 - When something works on one page but not another, the issue is usually simple
 - Focus on fixing exactly what's requested without adding complexity
+
+## 🚨 CRITICAL: SPORE Protocol Understanding 🚨
+
+### SPORE = Succinct Proof of RANGE Exclusion
+
+**SPORE IS NOT JUST FOR BLOCKS. IT APPLIES TO ANY RANGE OF VALUES.**
+
+SPORE is a XOR-based bitmap comparison technique for efficiently identifying missing elements in ANY coordinate space or ID space:
+
+- **Block ID ranges** (UUIDs) - Find missing blocks
+- **Peer slot coordinate ranges** - Find missing peers in mesh topology
+- **ANY range of coordinates or IDs** - General-purpose range comparison
+
+### How SPORE Works
+
+1. **Bitmap Representation**: Represent a range of values as a compact bitmap
+2. **XOR Comparison**: XOR two bitmaps to identify differences
+3. **Range Exclusion**: The XOR result shows which values are in one set but not the other
+4. **Succinct**: Extremely compact representation compared to sending full lists
+
+### SPORE for Blocks
+
+```rust
+// WantList contains have_blocks (blocks I have)
+// Compare with peer's WantList to find missing blocks
+let my_blocks = wantlist.have_blocks;
+let peer_blocks = peer_wantlist.have_blocks;
+
+// XOR comparison identifies missing blocks
+let missing = spore_compare(&my_blocks, &peer_blocks);
+```
+
+### SPORE for Peers
+
+```rust
+// WantList contains known_peers (peers I know about)
+// Relay uses SPORE to send ONLY peers you DON'T know about
+let known_peer_ids: HashSet<String> = wantlist.known_peers
+    .iter()
+    .map(|kp| kp.peer_id.clone())
+    .collect();
+
+// Filter peer referrals to exclude known peers (SPORE exclusion)
+let peers_to_send: Vec<_> = all_peers
+    .into_iter()
+    .filter(|p| !known_peer_ids.contains(&p.peer_id))
+    .collect();
+```
+
+### Key Implementation Files
+
+- `/crates/lens-v2-p2p/src/spore.rs` - Core SPORE implementation with XOR bitmap comparison
+- `/crates/palace/crates/consensus/peerexc/src/wantlist.rs` - WantList structure with known_peers field
+- `/crates/lens-v2-node/src/routes/relay.rs` - Relay that filters peer referrals using SPORE
+
+### Critical Rules
+
+1. **SPORE applies to RANGES** - blocks, peers, coordinates, ANY range of values
+2. **XOR-based comparison** - Efficient bitmap technique, not list filtering
+3. **known_peers is FOR SPORE** - List of peer IDs for range exclusion filtering
+4. **Relay filters using SPORE** - Send only unknown peers, not all peers
+
+### DO NOT CONFUSE
+
+- ❌ "SPORE is only for blocks" - WRONG
+- ❌ "Simple list filtering" - WRONG, it's XOR-based bitmap comparison
+- ✅ "SPORE = Succinct Proof of RANGE Exclusion" - CORRECT
+- ✅ "Works on any range - blocks, peers, coordinates" - CORRECT
+
+**Cost of forgetting this: $50 API credits + $500 of user time. Read the spec before implementing.**
+
+---
+
+## 🚨 CRITICAL: Citadel DHT Architecture 🚨
+
+### Authoritative Specification
+
+**READ THIS FIRST:** `/opt/castle/workspace/citadel/2025-10-12-Citadel-DHT-SPEC.md`
+
+The Citadel DHT specification defines the complete architecture for:
+- **Recursive DHT (Section 2.4)** - DHT uses itself for topology discovery
+- **LazyNode Neighbor Discovery** - Query DHT network for slot ownership on-demand
+- **O(1) Routing** - Constant-time routing decisions using deterministic key-to-slot mapping
+- **Slot Ownership Keys** - Stored IN the DHT network, not locally
+- **Hexagonal Toroidal Mesh** - 2.5D topology with 8 neighbors per node
+
+### Critical Implementation Requirements
+
+**From Section 2.4 of the spec (lines 252-563):**
+
+1. **Slot ownership must be stored IN the DHT network** - Not in local storage!
+   ```rust
+   // Query DHT for "who owns this slot?"
+   let key = slot_ownership_key(neighbor_slot);
+   let ownership: SlotOwnership = self.dht.get(&key).await?;
+   ```
+
+2. **LazyNode queries the network DHT** - No neighbor caches needed
+   ```rust
+   pub async fn get_neighbor(&mut self, direction: Direction) -> DHTResult<PeerID> {
+       let neighbor_slot = self.my_slot.neighbor(direction, &self.mesh_config);
+       let key = slot_ownership_key(neighbor_slot);
+       let ownership: SlotOwnership = self.dht.get(&key).await?;
+       Ok(ownership.peer_id)
+   }
+   ```
+
+3. **O(1) deterministic routing** - Every routing decision computed from first principles
+
+4. **Minimal state (64 bytes!)** - No routing tables, no neighbor caches
+
+### Verifying Correct Implementation
+
+Run TDD tests to verify DHT implementation matches the spec:
+```bash
+cd /opt/castle/workspace/flagship/crates/lens-v2-node
+cargo test dht_
+```
+
+**If nodes show `peer_count: 0` or fragmented mesh**, the DHT networking layer is not implemented according to the spec. Read Section 2.4 carefully!
+
+---
 
 ## Important Instructions
 - NEVER use git checkout to revert changes - this will throw away hours of work

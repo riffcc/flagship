@@ -24,6 +24,7 @@ pub use releases::ReleasesState;
 pub use sync::SyncState;
 pub use dht::DHTState;
 pub use site::SiteState;
+pub use map::MapState;
 
 /// Create the main API router with all endpoints
 pub fn create_router(
@@ -46,7 +47,7 @@ pub fn create_router(
     let sync_router = Router::new()
         .route("/api/v1/health", get(health::health_check))
         .route("/api/v1/ready", get(sync::ready_handler))
-        .with_state(sync_state);
+        .with_state(sync_state.clone());
 
     let schema_router = Router::new()
         .route("/api/v1/schemas", get(schemas::list_schemas))
@@ -66,6 +67,7 @@ pub fn create_router(
 
     let relay_router = Router::new()
         .route("/api/v1/relay/ws", get(relay::relay_handler))
+        .route("/api/v1/dht/consistency", get(relay::dht_consistency_handler))
         .with_state(relay_state.clone());
 
     let account_router = Router::new()
@@ -99,7 +101,10 @@ pub fn create_router(
 
     let map_router = Router::new()
         .route("/api/v1/map", get(map::get_network_map))
-        .with_state(relay_state);
+        .with_state(MapState {
+            relay: relay_state.clone(),
+            sync: sync_state.clone(),
+        });
 
     // Merge all routers
     let mut router = Router::new()
@@ -122,7 +127,6 @@ pub fn create_router(
     router.layer(cors)
 }
 
-#[cfg(test)]
 pub fn create_test_app() -> Router {
     use std::sync::Arc;
     use lens_v2_p2p::{P2pManager, P2pConfig};

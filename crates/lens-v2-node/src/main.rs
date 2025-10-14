@@ -26,11 +26,11 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     // Force a flush to ensure logs appear immediately
-    eprintln!("=== Lens Node v2 - Version 0.6.4 - Starting ===");
+    eprintln!("=== Lens Node v2 - Version 0.8.36 - Starting ===");
 
     // Print startup banner
     tracing::info!("╔══════════════════════════════════════════════╗");
-    tracing::info!("║       Lens Node v2 - Version 0.6.4          ║");
+    tracing::info!("║       Lens Node v2 - Version 0.8.36          ║");
     tracing::info!("║   P2P Content Distribution & Sync Node       ║");
     tracing::info!("╚══════════════════════════════════════════════╝");
 
@@ -74,25 +74,35 @@ async fn main() -> anyhow::Result<()> {
 
     // Create shared DHT storage for Citadel mesh topology (recursive DHT)
     // This storage is SHARED between relay and orchestrator for slot ownership discovery
-    let dht_storage = Arc::new(tokio::sync::Mutex::new(citadel_dht::local_storage::LocalStorage::new()));
-    tracing::info!("Initialized shared DHT storage for Citadel hexagonal mesh");
-
-    // Create relay state for P2P peer discovery with WebRTC support and shared DHT
-    let relay_state = RelayState::new()
-        .with_webrtc(webrtc_manager.clone())
-        .with_dht_storage(dht_storage.clone());
-    tracing::info!("Initialized P2P relay with WebRTC support and shared DHT storage");
+    // Uses DhtState with bootstrap and merge capabilities for global DHT consensus
+    let dht_storage = Arc::new(tokio::sync::Mutex::new(lens_node::dht_state::DhtState::new()));
+    tracing::info!("Initialized shared DHT storage for Citadel hexagonal mesh with bootstrap/merge");
 
     // Generate peer_id for this node (in production, load from disk or generate once)
     // Using random u64 for unique peer_id across restarts
     // The hello protocol ensures relay uses our peer_id instead of generating its own
     let my_peer_id = format!("peer-{}", rand::random::<u64>());
-    let mesh_config = peer_registry::default_mesh_config();
+    // DYNAMIC MESH: Calculate mesh dimensions for first node (peer_count=1)
+    let mesh_config = peer_registry::calculate_mesh_dimensions(1);
     let my_slot = peer_registry::peer_id_to_slot(&my_peer_id, &mesh_config);
 
     tracing::info!("🎯 My peer ID: {}", my_peer_id);
     tracing::info!("🎯 My slot: {:?} in mesh {}×{}×{}",
         my_slot, mesh_config.width, mesh_config.height, mesh_config.depth);
+
+    // Create P2P manager for sync status tracking
+    let p2p_config = P2pConfig::default();
+    let p2p_manager = Arc::new(P2pManager::new(p2p_config));
+    let sync_state = SyncState { p2p: p2p_manager.clone() };
+    tracing::info!("Initialized P2P sync manager");
+
+    // Create relay state for P2P peer discovery with WebRTC support and shared DHT
+    let relay_state = RelayState::new()
+        .with_webrtc(webrtc_manager.clone())
+        .with_dht_storage(dht_storage.clone())
+        .with_node_peer_id(my_peer_id.clone())
+        .with_p2p_manager(p2p_manager.clone());
+    tracing::info!("Initialized P2P relay with WebRTC support, shared DHT storage, node peer_id, and P2P manager");
 
     // Create broadcast channel for immediate WantList updates
     let (block_notify_tx, block_notify_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -173,10 +183,10 @@ async fn main() -> anyhow::Result<()> {
     }
     let site_state = SiteState::new(Arc::new(identity));
 
-    // Create the router with state
+    // Create the router with state (clone relay_state for later use in gossip task)
     // Note: DHT state is None for now as we're using RocksDB for persistence
     // When DHT storage is actively used, we'll pass Some(dht_state) here
-    let app = routes::create_router(state, relay_state, account_state, releases_state, sync_state, None, site_state);
+    let app = routes::create_router(state, relay_state.clone(), account_state, releases_state, sync_state, None, site_state);
 
     // Start the server
     let listener = tokio::net::TcpListener::bind(&addr).await?;
@@ -186,7 +196,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("    -H 'Content-Type: application/json' \\");
     tracing::info!("    -d '{{\"publicKey\": \"YOUR_PUBLIC_KEY_HERE\"}}'");
 
-    // Announce our slot ownership to DHT (1 message - no relay needed!)
+    // Announce our slot ownership via DHT PUT routing
     tracing::info!("📢 Announcing slot ownership to DHT mesh...");
     let ownership = peer_registry::SlotOwnership::new(
         my_peer_id.clone(),
@@ -194,16 +204,18 @@ async fn main() -> anyhow::Result<()> {
         None, // No relay URL - we're pure DHT now!
     );
     let ownership_key = peer_registry::slot_ownership_key(my_slot);
+    let location_key = peer_registry::peer_location_key(&my_peer_id);
     let ownership_bytes = serde_json::to_vec(&ownership)?;
-    {
-        let mut dht = dht_storage.lock().await;
-        dht.put(ownership_key, ownership_bytes.into());
-    }
-    tracing::info!("✅ Announced slot ownership: {:?} -> {}", my_slot, my_peer_id);
+
+    // Use DHT PUT to route to the correct slot owner in the mesh
+    relay_state.dht_put(ownership_key.clone(), ownership_bytes.clone()).await;
+    relay_state.dht_put(location_key.clone(), ownership_bytes.clone()).await;
+
+    tracing::info!("✅ Announced slot ownership: {:?} -> {} (routed via distributed DHT)", my_slot, my_peer_id);
 
     // Create orchestrator with LazyNode (NO RELAY!)
     // Note: relay_url is still required for now but will be removed in parallel task
-    let relay_url = env::var("LENS_RELAY_URL")
+    let relay_url = env::var("RELAY_URL")
         .unwrap_or_else(|_| format!("ws://localhost:{}/api/v1/relay/ws", port));
 
     let orchestrator = Arc::new(SyncOrchestrator::new(

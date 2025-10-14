@@ -25,6 +25,7 @@ citadel-core = { path = "../../../citadel/crates/citadel-core", optional = true 
 # Serialization (minimal, wasm-friendly)
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_bytes = "0.11"
 
 # Error handling (minimal)
 thiserror = { workspace = true }
@@ -48,7 +49,7 @@ web-sys = { version = "0.3", features = [
 # Native async runtime (not included in WASM)
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { workspace = true, optional = true }
-tokio-tungstenite = { version = "0.21", features = ["native-tls"], optional = true }
+tokio-tungstenite = { version = "0.21", features = ["rustls-tls-native-roots"], optional = true }
 tracing = { workspace = true }
 
 [dev-dependencies]

@@ -1,0 +1,97 @@
+# Permanent Bootstrap Peer for Lens V2 Network
+# lens01.eu.riff.cc - Ultra-lightweight relay (128MB RAM)
+
+lens01.eu.riff.cc {
+    # Automatic HTTPS with Let's Encrypt
+    # Caddy handles certificate management automatically
+
+    # WebSocket relay endpoint - CRITICAL for P2P peer discovery
+    handle /api/v1/relay/ws {
+        reverse_proxy lens-node:5000 {
+            # WebSocket-specific headers
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+
+            # WebSocket timeout (keep connections alive)
+            flush_interval -1
+        }
+    }
+
+    # All other API endpoints
+    handle /api/* {
+        reverse_proxy lens-node:5000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Health check endpoint (for monitoring)
+    handle /health {
+        reverse_proxy lens-node:5000 {
+            header_up Host {host}
+        }
+    }
+
+    # Root endpoint - return bootstrap peer info
+    handle / {
+        respond <<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lens V2 Bootstrap Peer</title>
+    <style>
+        body { font-family: monospace; max-width: 800px; margin: 50px auto; padding: 20px; }
+        h1 { color: #4CAF50; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Lens V2 Permanent Bootstrap Peer</h1>
+    <p><strong>Hostname:</strong> lens01.eu.riff.cc</p>
+    <p><strong>Purpose:</strong> P2P relay and initial peer discovery for Lens V2 Network</p>
+
+    <h2>WebSocket Relay</h2>
+    <pre>wss://lens01.eu.riff.cc/api/v1/relay/ws</pre>
+
+    <h2>API Endpoints</h2>
+    <ul>
+        <li><code>GET /api/v1/ready</code> - Health check</li>
+        <li><code>GET /api/v1/map</code> - Network topology map</li>
+        <li><code>GET /api/v1/site</code> - Site identity</li>
+        <li><code>WS /api/v1/relay/ws</code> - WebSocket relay (peer discovery)</li>
+    </ul>
+
+    <h2>Network Topology</h2>
+    <p>This bootstrap peer runs in the Citadel DHT hexagonal toroidal mesh:</p>
+    <ul>
+        <li><strong>8-neighbor connectivity</strong> - Each node connects to 8 neighbors</li>
+        <li><strong>Censorship resistant</strong> - Network survives 33% node failure</li>
+        <li><strong>Self-healing</strong> - Automatic peer discovery and routing</li>
+    </ul>
+
+    <h2>Resource Usage</h2>
+    <p>RAM: 128MB | CPU: 0.5 cores | Storage: 1GB</p>
+
+    <p style="margin-top: 40px; color: #888;">
+        Powered by <a href="https://riff.cc">Riff.CC</a> •
+        <a href="https://api.palace.riff.cc/api/v1/map">View Global Network Map</a>
+    </p>
+</body>
+</html>
+HTML 200
+    }
+
+    # Enable compression for API responses
+    encode gzip
+
+    # Access logs (optional - comment out in production for privacy)
+    # log {
+    #     output file /var/log/caddy/access.log
+    #     format json
+    # }
+}

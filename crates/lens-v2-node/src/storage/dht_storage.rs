@@ -6,8 +6,8 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use citadel_core::key_mapping::key_to_slot;
 use citadel_core::topology::MeshConfig;
-use citadel_dht::local_storage::LocalStorage;
 use citadel_dht::node::MinimalNode;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -31,7 +31,7 @@ pub struct DHTMetrics {
 /// DHT Storage implementation
 pub struct DHTStorage {
     node: MinimalNode,
-    local_storage: Arc<Mutex<LocalStorage>>,
+    local_storage: Arc<Mutex<HashMap<[u8; 32], Vec<u8>>>>,
     mesh_config: MeshConfig,
     metrics: Arc<Mutex<DHTMetrics>>,
     encryption: Option<Arc<DHTEncryption>>,
@@ -42,7 +42,7 @@ impl DHTStorage {
     pub fn new(node: MinimalNode, mesh_config: MeshConfig) -> Self {
         Self {
             node,
-            local_storage: Arc::new(Mutex::new(LocalStorage::new())),
+            local_storage: Arc::new(Mutex::new(HashMap::new())),
             mesh_config,
             metrics: Arc::new(Mutex::new(DHTMetrics::default())),
             encryption: None,
@@ -53,7 +53,7 @@ impl DHTStorage {
     pub fn new_with_encryption(node: MinimalNode, mesh_config: MeshConfig, encryption: Arc<DHTEncryption>) -> Self {
         Self {
             node,
-            local_storage: Arc::new(Mutex::new(LocalStorage::new())),
+            local_storage: Arc::new(Mutex::new(HashMap::new())),
             mesh_config,
             metrics: Arc::new(Mutex::new(DHTMetrics::default())),
             encryption: Some(encryption),
@@ -190,7 +190,7 @@ impl LensStorage for DHTStorage {
             // Store in local DHT storage
             let mut storage = self.local_storage.lock()
                 .map_err(|e| anyhow::anyhow!("Failed to acquire storage lock: {}", e))?;
-            storage.put(key, value);
+            storage.insert(key, value);
 
             // Update releases list
             let list_key = self.releases_list_key();
@@ -205,7 +205,7 @@ impl LensStorage for DHTStorage {
                 release_ids.push(release.id.clone());
                 let list_bytes = self.serialize(&release_ids)
                     .context("Failed to serialize updated releases list")?;
-                storage.put(list_key, list_bytes);
+                storage.insert(list_key, list_bytes);
             }
 
             Ok(())
@@ -270,7 +270,7 @@ impl LensStorage for DHTStorage {
             let key = self.release_key(id);
             let mut storage = self.local_storage.lock()
                 .map_err(|e| anyhow::anyhow!("Failed to acquire storage lock: {}", e))?;
-            storage.delete(&key);
+            storage.remove(&key);
 
             // Update releases list
             let list_key = self.releases_list_key();
@@ -280,7 +280,7 @@ impl LensStorage for DHTStorage {
                 release_ids.retain(|rid| rid != id);
                 let list_bytes = self.serialize(&release_ids)
                     .context("Failed to serialize updated releases list")?;
-                storage.put(list_key, list_bytes);
+                storage.insert(list_key, list_bytes);
             }
 
             Ok(())
@@ -304,7 +304,7 @@ impl LensStorage for DHTStorage {
     async fn has_release(&self, id: &str) -> Result<bool> {
         let key = self.release_key(id);
         let storage = self.local_storage.lock().unwrap();
-        Ok(storage.contains(&key))
+        Ok(storage.contains_key(&key))
     }
 
     async fn list_releases(&self, offset: usize, limit: usize) -> Result<Vec<ReleaseMetadata>> {
@@ -364,7 +364,7 @@ impl LensStorage for DHTStorage {
         let value = self.serialize(featured)?;
 
         let mut storage = self.local_storage.lock().unwrap();
-        storage.put(key, value);
+        storage.insert(key, value);
 
         // Update featured list
         let list_key = self.featured_list_key();
@@ -377,7 +377,7 @@ impl LensStorage for DHTStorage {
         if !featured_ids.contains(&featured.release_id) {
             featured_ids.push(featured.release_id.clone());
             let list_bytes = self.serialize(&featured_ids)?;
-            storage.put(list_key, list_bytes);
+            storage.insert(list_key, list_bytes);
         }
 
         Ok(())
@@ -411,7 +411,7 @@ impl LensStorage for DHTStorage {
     async fn remove_featured(&mut self, release_id: &str) -> Result<()> {
         let key = self.featured_key(release_id);
         let mut storage = self.local_storage.lock().unwrap();
-        storage.delete(&key);
+        storage.remove(&key);
 
         // Update featured list
         let list_key = self.featured_list_key();
@@ -419,7 +419,7 @@ impl LensStorage for DHTStorage {
             let mut featured_ids: Vec<String> = self.deserialize(bytes)?;
             featured_ids.retain(|fid| fid != release_id);
             let list_bytes = self.serialize(&featured_ids)?;
-            storage.put(list_key, list_bytes);
+            storage.insert(list_key, list_bytes);
         }
 
         Ok(())
@@ -430,7 +430,7 @@ impl LensStorage for DHTStorage {
         let value = self.serialize(category)?;
 
         let mut storage = self.local_storage.lock().unwrap();
-        storage.put(key, value);
+        storage.insert(key, value);
 
         // Update categories list
         let list_key = self.categories_list_key();
@@ -443,7 +443,7 @@ impl LensStorage for DHTStorage {
         if !category_ids.contains(&category.id) {
             category_ids.push(category.id.clone());
             let list_bytes = self.serialize(&category_ids)?;
-            storage.put(list_key, list_bytes);
+            storage.insert(list_key, list_bytes);
         }
 
         Ok(())

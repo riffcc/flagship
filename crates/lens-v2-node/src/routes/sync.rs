@@ -19,17 +19,21 @@ pub struct SyncState {
 /// - Whether the node is fully synced
 /// - How many blocks behind the network consensus
 /// - Number of connected peers
+///
+/// HTTP Status Codes:
+/// - 200 OK: Node is synced and ready to serve requests
+/// - 503 SERVICE_UNAVAILABLE: Node is not synced (catching up)
+/// - 500 INTERNAL_SERVER_ERROR: Failed to get sync status
 pub async fn ready_handler(State(state): State<SyncState>) -> impl IntoResponse {
     match state.p2p.sync_status() {
         Ok(status) => {
-            // Return HTTP 200 if synced, 503 Service Unavailable if behind
-            let status_code = if status.is_synced {
-                StatusCode::OK
+            if status.is_synced {
+                // Node is synced and ready
+                (StatusCode::OK, Json(status)).into_response()
             } else {
-                StatusCode::SERVICE_UNAVAILABLE
-            };
-
-            (status_code, Json(status)).into_response()
+                // Node is not synced yet (no peers, or behind consensus)
+                (StatusCode::SERVICE_UNAVAILABLE, Json(status)).into_response()
+            }
         }
         Err(e) => {
             let error = serde_json::json!({
@@ -46,12 +50,14 @@ mod tests {
     use lens_v2_p2p::{BlockMeta, P2pConfig};
 
     #[tokio::test]
-    async fn test_ready_not_synced() {
+    async fn test_ready_bootstrap() {
+        // Bootstrap case: First node in network (0 peers, 0 blocks behind)
+        // Should be synced because it IS the network
         let manager = Arc::new(P2pManager::new(P2pConfig::default()));
         let state = SyncState { p2p: manager };
 
         let response = ready_handler(State(state)).await.into_response();
-        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(response.status(), StatusCode::OK);
     }
 
     #[tokio::test]

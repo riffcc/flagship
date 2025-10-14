@@ -59,6 +59,12 @@
         >
           Maintenance
         </v-tab>
+        <v-tab
+          slider-color="primary"
+          value="p2p"
+        >
+          P2P
+        </v-tab>
       </v-tabs>
       <v-window
         v-model="tab"
@@ -107,6 +113,13 @@
         >
           <maintenance-management></maintenance-management>
         </v-window-item>
+        <v-window-item
+          value="p2p"
+        >
+          <v-container class="fill-height">
+            <network-map-graph />
+          </v-container>
+        </v-window-item>
       </v-window>
     </div>
   </v-container>
@@ -123,6 +136,7 @@ import siteManagement from '/@/components/admin/siteManagement.vue';
 import categoriesManagement from '/@/components/admin/categoriesManagement.vue';
 import structuresManagement from '/@/components/admin/structuresManagement.vue';
 import maintenanceManagement from '/@/components/admin/maintenanceManagement.vue';
+import NetworkMapGraph from '/@/components/misc/networkMapGraph.vue';
 import type { PartialFeaturedReleaseItem } from '/@//types';
 
 const {lgAndUp} = useDisplay();

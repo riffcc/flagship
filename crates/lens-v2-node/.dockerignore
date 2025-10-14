@@ -24,3 +24,6 @@
 flagship/crates/**/target/
 citadel/**/target/
 palace/**/target/
+
+# EXCEPT allow the prebuilt release binary
+!target/release/lens-node

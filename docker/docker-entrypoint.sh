@@ -19,6 +19,12 @@ envsubst '${API_URL} ${RELAY_URL}' < /etc/nginx/config.template.js > /usr/share/
 
 echo "✅ Runtime configuration generated at /usr/share/nginx/html/config.js"
 
+# Inject config.js script tag into index.html
+echo "🔧 Injecting config.js script tag into index.html..."
+sed -i 's|<title>Riff.CC</title>|<title>Riff.CC</title>\n  <!-- Runtime configuration (injected by Docker at container startup) -->\n  <script src="/config.js"></script>|' /usr/share/nginx/html/index.html
+
+echo "✅ Runtime configuration script tag injected"
+
 # Start nginx in foreground
 echo "🚀 Starting nginx..."
 exec nginx -g 'daemon off;'

@@ -84,7 +84,13 @@ pub struct SyncStatus {
     /// Number of blocks behind
     pub blocks_behind: u64,
 
-    /// Number of connected peers
+    /// Number of known peers (all peers heard about via relay) - O(n)
+    pub known_peers: usize,
+
+    /// Number of connected peers (8 mesh neighbors with actual P2P connections) - O(1)
+    pub connected_peers: usize,
+
+    /// Number of connected peers (backward compatibility - same as connected_peers)
     pub peer_count: usize,
 
     /// Blocks currently being downloaded
@@ -98,6 +104,8 @@ impl SyncStatus {
             network_height: 0,
             local_height: 0,
             blocks_behind: 0,
+            known_peers: 0,
+            connected_peers: 0,
             peer_count: 0,
             downloading: HashSet::new(),
         }
@@ -107,7 +115,9 @@ impl SyncStatus {
         self.local_height = local;
         self.network_height = network;
         self.blocks_behind = network.saturating_sub(local);
-        self.is_synced = self.blocks_behind == 0 && self.peer_count > 0;
+        // Synced if we're caught up with the network (blocks_behind == 0)
+        // This handles both bootstrap (0 peers, 0 behind) and normal operation (N peers, 0 behind)
+        self.is_synced = self.blocks_behind == 0;
     }
 }
 
@@ -123,9 +133,17 @@ mod tests {
 
     #[test]
     fn test_sync_status_new() {
-        let status = SyncStatus::new();
+        let mut status = SyncStatus::new();
+        // Default state before update_heights is called
         assert!(!status.is_synced);
         assert_eq!(status.blocks_behind, 0);
+        assert_eq!(status.known_peers, 0);
+        assert_eq!(status.connected_peers, 0);
+        assert_eq!(status.peer_count, 0);
+
+        // Bootstrap case: 0 peers, 0 blocks behind → synced (we ARE the network)
+        status.update_heights(0, 0);
+        assert!(status.is_synced);
     }
 
     #[test]

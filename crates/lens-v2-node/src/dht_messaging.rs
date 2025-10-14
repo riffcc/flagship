@@ -36,7 +36,7 @@
 
 use anyhow::{anyhow, Context, Result};
 use citadel_core::key_mapping::DHTKey;
-use citadel_dht::local_storage::LocalStorage;
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -171,7 +171,7 @@ pub fn peer_response_key(peer_id: &str, nonce: u64) -> DHTKey {
 ///
 /// Response payload bytes or error if timeout/failure
 pub async fn send_to_peer(
-    dht_storage: Arc<Mutex<LocalStorage>>,
+    dht_storage: Arc<Mutex<HashMap<[u8; 32], Vec<u8>>>>,
     my_peer_id: String,
     target: String,
     msg: Vec<u8>,
@@ -204,7 +204,7 @@ pub async fn send_to_peer(
 
     {
         let mut dht = dht_storage.lock().await;
-        dht.put(message_key, message_bytes);
+        dht.insert(message_key, message_bytes);
     }
 
     info!("✅ Message PUT in DHT at peer_message_key({}, {})", target, nonce);
@@ -289,7 +289,7 @@ impl MessageHandler for EchoHandler {
 /// * `my_peer_id` - Our peer ID
 /// * `handler` - Message handler implementation
 pub async fn poll_messages_loop<H: MessageHandler>(
-    dht_storage: Arc<Mutex<LocalStorage>>,
+    dht_storage: Arc<Mutex<HashMap<[u8; 32], Vec<u8>>>>,
     my_peer_id: String,
     handler: Arc<H>,
 ) {
@@ -321,7 +321,7 @@ pub async fn poll_messages_loop<H: MessageHandler>(
                                 "🗑️ Deleting expired message from {} (nonce: {})",
                                 message.from, message.nonce
                             );
-                            dht.delete(&message_key);
+                            dht.remove(&message_key);
                             continue;
                         }
 
@@ -357,7 +357,7 @@ pub async fn poll_messages_loop<H: MessageHandler>(
                         };
 
                         let mut dht = dht_storage.lock().await;
-                        dht.put(message.response_key, response_bytes);
+                        dht.insert(message.response_key, response_bytes);
 
                         info!(
                             "✅ Sent response to {} (nonce: {}, size: {} bytes)",
@@ -367,7 +367,7 @@ pub async fn poll_messages_loop<H: MessageHandler>(
                         );
 
                         // Delete processed message
-                        dht.delete(&message_key);
+                        dht.remove(&message_key);
 
                         debug!("🗑️ Deleted processed message (nonce: {})", message.nonce);
                     }
@@ -377,7 +377,7 @@ pub async fn poll_messages_loop<H: MessageHandler>(
                             nonce, e
                         );
                         // Delete corrupted message
-                        dht.delete(&message_key);
+                        dht.remove(&message_key);
                     }
                 }
             } else {
@@ -512,7 +512,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_to_peer_and_receive_response() {
-        let dht_storage = Arc::new(Mutex::new(LocalStorage::new()));
+        let dht_storage = Arc::new(Mutex::new(HashMap::<[u8; 32], Vec<u8>>::new()));
         let my_peer_id = "peer-sender".to_string();
         let target_peer_id = "peer-receiver".to_string();
 
@@ -528,7 +528,7 @@ mod tests {
             let keys = dht.keys();
 
             for key in keys {
-                if let Some(msg_bytes) = dht.get(&key) {
+                if let Some(msg_bytes) = dht.get(key) {
                     if let Ok(msg) = PeerMessage::from_bytes(msg_bytes) {
                         if msg.to == target_clone {
                             // Found our message! Write response
@@ -543,7 +543,7 @@ mod tests {
                             );
 
                             let mut dht = dht_clone.lock().await;
-                            dht.put(msg.response_key, response.to_bytes().unwrap());
+                            dht.insert(msg.response_key, response.to_bytes().unwrap());
                             break;
                         }
                     }
@@ -566,7 +566,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_to_peer_timeout() {
-        let dht_storage = Arc::new(Mutex::new(LocalStorage::new()));
+        let dht_storage = Arc::new(Mutex::new(HashMap::<[u8; 32], Vec<u8>>::new()));
         let my_peer_id = "peer-sender".to_string();
         let target_peer_id = "peer-no-response".to_string();
 
@@ -604,7 +604,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_poll_messages_loop_processes_message() {
-        let dht_storage = Arc::new(Mutex::new(LocalStorage::new()));
+        let dht_storage = Arc::new(Mutex::new(HashMap::<[u8; 32], Vec<u8>>::new()));
         let my_peer_id = "peer-receiver".to_string();
         let handler = Arc::new(EchoHandler);
 
@@ -621,7 +621,7 @@ mod tests {
         let message_key = peer_message_key(&my_peer_id, nonce);
         {
             let mut dht = dht_storage.lock().await;
-            dht.put(message_key.clone(), msg.to_bytes().unwrap());
+            dht.insert(message_key.clone(), msg.to_bytes().unwrap());
         }
 
         // Start polling loop
@@ -659,7 +659,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_poll_messages_loop_deletes_expired() {
-        let dht_storage = Arc::new(Mutex::new(LocalStorage::new()));
+        let dht_storage = Arc::new(Mutex::new(HashMap::<[u8; 32], Vec<u8>>::new()));
         let my_peer_id = "peer-receiver".to_string();
         let handler = Arc::new(EchoHandler);
 
@@ -682,7 +682,7 @@ mod tests {
         let message_key = peer_message_key(&my_peer_id, nonce);
         {
             let mut dht = dht_storage.lock().await;
-            dht.put(message_key, msg.to_bytes().unwrap());
+            dht.insert(message_key, msg.to_bytes().unwrap());
         }
 
         // Start polling loop

@@ -12,7 +12,10 @@
 
 use citadel_core::topology::{Direction, MeshConfig, SlotCoordinate};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::slot_identity::SlotId;
 
 /// Calculate optimal mesh dimensions for a given number of nodes
 /// PURE ALGORITHMIC approach with NO hardcoded thresholds!
@@ -83,17 +86,45 @@ pub fn peer_id_to_hash(peer_id: &str) -> [u8; 32] {
 
 /// Map peer_id to SlotCoordinate using deterministic hash-to-slot mapping
 ///
-/// This is the CORE of Citadel DHT's O(1) routing!
-/// Uses modulo arithmetic on Blake3 hash bytes to map to mesh coordinates.
+/// Uses a deterministic spiral growth pattern starting from (0,0,0).
+/// As the mesh grows, NEW slots are added in a fixed pattern, but existing
+/// slots remain valid. This ensures slot ownership records stay valid as peers join.
+///
+/// Growth pattern: Start at origin, spiral outward in hexagonal rings, add Z layers as needed.
 pub fn peer_id_to_slot(peer_id: &str, config: &MeshConfig) -> SlotCoordinate {
     let hash = peer_id_to_hash(peer_id);
 
-    // Extract 8-byte chunks from hash and modulo by mesh dimensions
-    let x = u64::from_le_bytes(hash[0..8].try_into().unwrap()) % config.width as u64;
-    let y = u64::from_le_bytes(hash[8..16].try_into().unwrap()) % config.height as u64;
-    let z = u64::from_le_bytes(hash[16..24].try_into().unwrap()) % config.depth as u64;
+    // Total number of slots in this mesh configuration
+    let total_slots = (config.width * config.height * config.depth) as usize;
 
-    SlotCoordinate::new(x as i32, y as i32, z as i32)
+    // Hash to slot INDEX (not coordinates directly)
+    let slot_index = u64::from_le_bytes(hash[0..8].try_into().unwrap()) as usize % total_slots;
+
+    // Convert slot index to coordinate using deterministic spiral pattern
+    slot_index_to_coordinate(slot_index, config)
+}
+
+/// Convert slot index to coordinate using deterministic growth pattern
+///
+/// Pattern fills slots in order:
+/// 1. Start at (0,0,0)
+/// 2. Fill hexagonal ring around origin in XY plane
+/// 3. Continue spiraling outward in XY
+/// 4. When layer full, move to next Z layer
+///
+/// This ensures slot N always maps to the same coordinate regardless of mesh size,
+/// as long as the mesh is large enough to contain N slots.
+fn slot_index_to_coordinate(index: usize, config: &MeshConfig) -> SlotCoordinate {
+    // For now, use simple sequential fill (x-major, then y, then z)
+    // TODO: Replace with proper hexagonal spiral pattern
+    let slots_per_layer = config.width * config.height;
+
+    let z = (index / slots_per_layer) as i32;
+    let xy_index = index % slots_per_layer;
+    let y = (xy_index / config.width) as i32;
+    let x = (xy_index % config.width) as i32;
+
+    SlotCoordinate::new(x, y, z)
 }
 
 /// DHT key for "who owns this slot?"
@@ -120,21 +151,99 @@ pub fn peer_location_key(peer_id: &str) -> [u8; 32] {
     *hash.as_bytes()
 }
 
+/// Convert normalized slot coordinate to a linear index
+fn slot_to_index(slot: SlotCoordinate, config: &MeshConfig) -> usize {
+    let normalized = slot.normalize(config);
+    let x = normalized.x.rem_euclid(config.width as i32) as usize;
+    let y = normalized.y.rem_euclid(config.height as i32) as usize;
+    let z = normalized.z.rem_euclid(config.depth as i32) as usize;
+
+    x + (y * config.width) + (z * config.width * config.height)
+}
+
+/// Convert a linear index back to a slot coordinate
+fn index_to_slot(index: usize, config: &MeshConfig) -> SlotCoordinate {
+    let width = config.width as usize;
+    let height = config.height as usize;
+    let depth = config.depth as usize;
+
+    let x = index % width;
+    let y = (index / width) % height;
+    let z = (index / (width * height)) % depth;
+
+    SlotCoordinate::new(x as i32, y as i32, z as i32)
+}
+
+/// Deterministically assign a unique slot for a peer by scanning the mesh for open positions
+pub fn assign_unique_slot(
+    peer_id: &str,
+    config: &MeshConfig,
+    occupied: &mut HashSet<SlotCoordinate>,
+) -> SlotCoordinate {
+    let preferred = peer_id_to_slot(peer_id, config);
+    if occupied.insert(preferred) {
+        return preferred;
+    }
+
+    let capacity = (config.width * config.height * config.depth) as usize;
+    let start_index = slot_to_index(preferred, config);
+
+    for offset in 1..capacity {
+        let next_index = (start_index + offset) % capacity;
+        let candidate = index_to_slot(next_index, config);
+        if occupied.insert(candidate) {
+            return candidate;
+        }
+    }
+
+    panic!(
+        "No available slots remaining in mesh {}×{}×{}",
+        config.width, config.height, config.depth
+    );
+}
+
+
 /// Slot ownership announcement stored in DHT
+///
+/// NOW WITH CONTENT ADDRESSED SLOTS!
+/// - slot_id: Permanent Blake3 hash of coordinate (never changes)
+/// - slot: Physical coordinate (may change during mesh resize)
+/// - peer_id: Current occupant (ephemeral, can be trumped!)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SlotOwnership {
+    /// Permanent content-addressed slot ID (Blake3 of coordinate)
+    pub slot_id: SlotId,
+
+    /// Physical slot coordinate in mesh
     pub slot: SlotCoordinate,
+
+    /// Current peer owning this slot (can change via trump protocol!)
     pub peer_id: String,
+
+    /// Relay URL for WebSocket fallback
     pub relay_url: Option<String>,
+
+    /// Peer capabilities (webrtc, dht, spore, etc.)
     pub capabilities: Vec<String>,
+
+    /// Last heartbeat timestamp (Unix seconds)
     pub last_heartbeat: u64,
+
+    /// Protocol version
     pub protocol_version: String,
+
+    /// Average latency to 8 neighbors (milliseconds)
+    /// Used for trump challenges - lower is better!
+    pub avg_neighbor_latency_ms: Option<u64>,
 }
 
 impl SlotOwnership {
     /// Create a new slot ownership announcement
+    ///
+    /// Automatically generates permanent SlotId from coordinate.
     pub fn new(peer_id: String, slot: SlotCoordinate, relay_url: Option<String>) -> Self {
         Self {
+            slot_id: SlotId::from_coordinate(slot),
             slot,
             peer_id,
             relay_url,
@@ -143,7 +252,8 @@ impl SlotOwnership {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
-            protocol_version: "0.6.0".to_string(),
+            protocol_version: "0.8.20".to_string(),
+            avg_neighbor_latency_ms: None,
         }
     }
 

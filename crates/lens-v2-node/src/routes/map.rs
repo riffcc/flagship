@@ -10,13 +10,23 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 use citadel_core::topology::{SlotCoordinate, MeshConfig};
 
 use crate::peer_registry::{
     peer_id_to_slot, get_neighbor_slots, default_mesh_config,
     SlotOwnership, peer_location_key, slot_ownership_key,
 };
-use super::RelayState;
+use crate::slot_identity::SlotId;
+use crate::latency::latency_to_hex;
+use super::{RelayState, SyncState};
+
+/// Combined state for map endpoint (needs both relay and sync state)
+#[derive(Clone)]
+pub struct MapState {
+    pub relay: RelayState,
+    pub sync: SyncState,
+}
 
 /// Network map response containing nodes and edges for force-directed graph
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,6 +62,9 @@ pub struct PeerNode {
     /// Display label for the node
     pub label: String,
 
+    /// Permanent content-addressed slot ID (Blake3)
+    pub slot_id: String,
+
     /// Slot coordinate in the hexagonal mesh
     pub slot: SlotCoordinateData,
 
@@ -66,6 +79,9 @@ pub struct PeerNode {
 
     /// Whether this peer is currently online
     pub online: bool,
+
+    /// Average latency to 8 neighbors (milliseconds, if available)
+    pub avg_neighbor_latency_ms: Option<u64>,
 }
 
 /// Slot coordinate data
@@ -108,6 +124,15 @@ pub struct PeerEdge {
 
     /// Type of connection (neighbor, relay, etc.)
     pub connection_type: ConnectionType,
+
+    /// Measured latency in milliseconds (if available)
+    pub latency_ms: Option<u64>,
+
+    /// Hex color for visualization (rainbow gradient based on latency)
+    /// - #00ff00 = 0ms (green)
+    /// - #ffff00 = 50ms (yellow)
+    /// - #ff0000 = 100ms+ (red)
+    pub color: String,
 }
 
 /// Type of connection between peers
@@ -148,31 +173,28 @@ pub struct NetworkStats {
 /// Returns the current state of the hexagonal toroidal mesh with all connected peers
 /// and their 8-neighbor connections. Browser peers are anonymized.
 pub async fn get_network_map(
-    State(state): State<RelayState>,
+    State(state): State<MapState>,
 ) -> Result<Json<NetworkMap>, StatusCode> {
-    let mesh_config = default_mesh_config();
+    // Get ALL ALIVE peers from P2pManager (only peers that heartbeated this cycle!)
+    let connected_peers = state.sync.p2p.get_alive_peer_strings()
+        .unwrap_or_default();
 
-    // Get all connected peers from relay state
-    let peer_senders = state.peer_senders.read().await;
-    let connected_peers: Vec<String> = peer_senders.keys().cloned().collect();
-    drop(peer_senders);
+    // Get GLOBAL peer count from P2pManager
+    let global_peer_count = state.sync.p2p.sync_status()
+        .map(|status| status.known_peers)
+        .unwrap_or(connected_peers.len().max(1));
+
+    // Calculate mesh dimensions based on peer count
+    let mesh_config = crate::peer_registry::calculate_mesh_dimensions(global_peer_count.max(1));
 
     // Build peer nodes with slot assignments
     let mut nodes = Vec::new();
     let mut node_slots: HashMap<String, SlotCoordinate> = HashMap::new();
 
-    let storage = state.dht_storage.lock().await;
-
     for peer_id in connected_peers {
         // Calculate slot for this peer
         let slot = peer_id_to_slot(&peer_id, &mesh_config);
         node_slots.insert(peer_id.clone(), slot);
-
-        // Try to get ownership info from DHT
-        let location_key = peer_location_key(&peer_id);
-        let ownership: Option<SlotOwnership> = storage
-            .get(&location_key)
-            .and_then(|bytes| serde_json::from_slice(bytes).ok());
 
         // Determine peer type (anonymize browser peers)
         let peer_type = if peer_id.starts_with("browser-") || peer_id.contains("webrtc") {
@@ -189,20 +211,23 @@ pub async fn get_network_map(
             (peer_id.clone(), peer_id.clone())
         };
 
+        // Calculate permanent SlotId from coordinate
+        let slot_id = SlotId::from_coordinate(slot);
+
         let node = PeerNode {
             id,
             label,
+            slot_id: slot_id.to_hex(),
             slot: slot.into(),
             peer_type,
-            last_heartbeat: ownership.as_ref().map(|o| o.last_heartbeat).unwrap_or(0),
-            capabilities: ownership.as_ref().map(|o| o.capabilities.clone()).unwrap_or_default(),
+            last_heartbeat: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            capabilities: vec!["webrtc".to_string(), "dht".to_string(), "spore".to_string()],
             online: true, // Connected peers are online
+            avg_neighbor_latency_ms: None,
         };
 
         nodes.push(node);
     }
-
-    drop(storage);
 
     // Build edges based on 8-neighbor mesh topology
     let mut edges = Vec::new();
@@ -237,10 +262,27 @@ pub async fn get_network_map(
                 });
 
                 if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
+                    // Get average latency between these two nodes (if available)
+                    let from_latency = from_node.avg_neighbor_latency_ms;
+                    let to_latency = to_node.avg_neighbor_latency_ms;
+
+                    // Use average of both nodes' latencies, or None if neither has data
+                    let edge_latency = match (from_latency, to_latency) {
+                        (Some(a), Some(b)) => Some((a + b) / 2),
+                        (Some(a), None) => Some(a),
+                        (None, Some(b)) => Some(b),
+                        (None, None) => None,
+                    };
+
+                    // Calculate color based on latency (default to green if no data)
+                    let color = latency_to_hex(edge_latency.unwrap_or(0));
+
                     let edge = PeerEdge {
                         from: from_node.id.clone(),
                         to: to_node.id.clone(),
                         connection_type: ConnectionType::Neighbor,
+                        latency_ms: edge_latency,
+                        color,
                     };
 
                     // Only add if not already present

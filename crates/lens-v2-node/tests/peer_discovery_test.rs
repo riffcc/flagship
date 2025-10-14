@@ -5,8 +5,8 @@
 
 use anyhow::Result;
 use citadel_core::topology::{MeshConfig, SlotCoordinate};
-use citadel_dht::local_storage::LocalStorage;
-use lens_node::peer_registry::{peer_id_to_slot, slot_ownership_key, SlotOwnership};
+use std::collections::{HashMap, HashSet};
+use lens_node::peer_registry::{assign_unique_slot, calculate_mesh_dimensions, peer_id_to_slot, slot_ownership_key, SlotOwnership};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -57,21 +57,22 @@ async fn test_slot_ownership_key_deterministic() -> Result<()> {
 async fn test_peer_discovery_via_dht() -> Result<()> {
     println!("\n=== Test: Peer Discovery via DHT (Reproduces 4.5% Bug) ===");
 
-    let mesh_config = MeshConfig::new(10, 10, 5);
+    let num_peers = 50;
+    let mesh_config = calculate_mesh_dimensions(num_peers);
 
     // Create 50 peers (like docker-compose cluster)
-    let num_peers = 50;
     let mut peers: Vec<(String, SlotCoordinate)> = Vec::new();
+    let mut occupied_slots: HashSet<SlotCoordinate> = HashSet::new();
 
     for i in 0..num_peers {
         let peer_id = format!("peer-{}", i);
-        let my_slot = peer_id_to_slot(&peer_id, &mesh_config);
-        peers.push((peer_id, my_slot));
+        let my_slot = assign_unique_slot(&peer_id, &mesh_config, &mut occupied_slots);
+        peers.push((peer_id.clone(), my_slot));
         println!("  Peer {} at slot {:?}", i, my_slot);
     }
 
     // Create a shared DHT (simulating relay's DHT storage)
-    let dht_storage = Arc::new(Mutex::new(LocalStorage::new()));
+    let dht_storage = Arc::new(Mutex::new(HashMap::<[u8; 32], Vec<u8>>::new()));
 
     // Step 1: All peers announce their slot ownership to DHT
     println!("\n📢 Step 1: Announcing slot ownership...");
@@ -82,7 +83,7 @@ async fn test_peer_discovery_via_dht() -> Result<()> {
             let ownership_key = slot_ownership_key(*my_slot);
             let ownership_bytes = serde_json::to_vec(&ownership)?;
 
-            dht.put(ownership_key, ownership_bytes.into());
+            dht.insert(ownership_key, ownership_bytes);
             println!("  {} announced at {:?}", peer_id, my_slot);
         }
     }
@@ -141,7 +142,7 @@ async fn test_sync_orchestrator_peer_discovery() -> Result<()> {
     println!("\n=== Test: Sync Orchestrator Peer Discovery ===");
 
     let mesh_config = MeshConfig::new(10, 10, 5);
-    let dht_storage = Arc::new(Mutex::new(LocalStorage::new()));
+    let dht_storage = Arc::new(Mutex::new(HashMap::<[u8; 32], Vec<u8>>::new()));
 
     // Simulate 10 peers received via PeerReferral
     let peer_referrals = vec![
@@ -165,7 +166,7 @@ async fn test_sync_orchestrator_peer_discovery() -> Result<()> {
             let ownership = SlotOwnership::new(peer_id.to_string(), *slot, None);
             let ownership_key = slot_ownership_key(*slot);
             let ownership_bytes = serde_json::to_vec(&ownership)?;
-            dht.put(ownership_key, ownership_bytes.into());
+            dht.insert(ownership_key, ownership_bytes);
             println!("  Stored {} at {:?} with key {}", peer_id, slot, hex::encode(&ownership_key[..8]));
         }
     }

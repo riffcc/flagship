@@ -4,9 +4,9 @@
 //! and identify flapping issues in the SPORE sync protocol.
 
 use anyhow::Result;
-use lens_v2_node::db::{Database, prefixes, make_key};
-use lens_v2_node::routes::releases::{Release, TombstoneType};
-use lens_v2_node::ubts::{UBTSBlock, UBTSTransaction};
+use lens_node::db::{Database, prefixes, make_key};
+use lens_node::routes::releases::{Release, TombstoneType};
+use lens_node::ubts::{UBTSBlock, UBTSTransaction};
 use lens_v2_p2p::{P2pManager, P2pConfig, BlockMeta};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -127,10 +127,10 @@ struct TestNode {
     p2p_manager: Arc<P2pManager>,
 
     /// Block notification channel sender
-    block_notify_tx: mpsc::UnboundedSender<lens_v2_node::routes::account::BlockNotification>,
+    block_notify_tx: mpsc::UnboundedSender<lens_node::routes::account::BlockNotification>,
 
     /// Block notification channel receiver
-    block_notify_rx: mpsc::UnboundedReceiver<lens_v2_node::routes::account::BlockNotification>,
+    block_notify_rx: mpsc::UnboundedReceiver<lens_node::routes::account::BlockNotification>,
 }
 
 impl TestNode {
@@ -173,7 +173,7 @@ impl TestNode {
 
         // Notify of new block
         self.block_notify_tx.send(
-            lens_v2_node::routes::account::BlockNotification::NewBlock(release.id.clone())
+            lens_node::routes::account::BlockNotification::NewBlock(release.id.clone())
         ).ok();
 
         Ok(())
@@ -191,7 +191,7 @@ impl TestNode {
 
         // Notify of updated block
         self.block_notify_tx.send(
-            lens_v2_node::routes::account::BlockNotification::NewBlock(release.id.clone())
+            lens_node::routes::account::BlockNotification::NewBlock(release.id.clone())
         ).ok();
 
         Ok(())
@@ -231,7 +231,7 @@ impl TestNode {
 
         // Notify of new block
         self.block_notify_tx.send(
-            lens_v2_node::routes::account::BlockNotification::NewBlock(ubts_block.id.clone())
+            lens_node::routes::account::BlockNotification::NewBlock(ubts_block.id.clone())
         ).ok();
 
         Ok(ubts_block.id)

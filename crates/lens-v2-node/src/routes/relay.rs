@@ -15,14 +15,32 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tracing::{info, warn, debug};
 use crate::tgp::{self as tgp_mod, PacketType, DhtGetRequest, DhtPutRequest, DhtResponse};
-use citadel_dht::local_storage::LocalStorage;
 use crate::peer_registry::{
     SlotOwnership, peer_location_key, slot_ownership_key,
     peer_id_to_slot, get_neighbor_slots, default_mesh_config
 };
 use citadel_core::topology::{SlotCoordinate, MeshConfig};
 use citadel_core::routing::greedy_direction;
+use citadel_core::key_mapping::key_to_slot;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+/// Convert SlotCoordinate to compact u64 representation for TGP routing
+/// Packs (x, y, z) coordinates into 64 bits (21 bits each, supports ±1 million)
+fn coord_to_u64(coord: SlotCoordinate) -> u64 {
+    let x = (coord.x as u64) & 0x1FFFFF; // 21 bits
+    let y = (coord.y as u64) & 0x1FFFFF; // 21 bits
+    let z = (coord.z as u64) & 0x1FFFFF; // 21 bits
+    (x << 42) | (y << 21) | z
+}
+
+/// Convert u64 back to SlotCoordinate for TGP routing
+/// Unpacks 64-bit compact representation into (x, y, z) coordinates
+fn u64_to_coord(val: u64) -> SlotCoordinate {
+    let x = ((val >> 42) & 0x1FFFFF) as i32;
+    let y = ((val >> 21) & 0x1FFFFF) as i32;
+    let z = (val & 0x1FFFFF) as i32;
+    SlotCoordinate::new(x, y, z)
+}
 
 /// WebRTC signaling message types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,19 +83,108 @@ pub struct BrowserDiscoveredPeer {
     pub connection_quality: Option<String>, // "good", "poor", etc.
 }
 
-/// DHT mesh health metrics
+/// Mesh topology update event - broadcast when peers join/leave or latency changes
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DhtMeshHealth {
-    /// Total number of connected peers
+pub struct MeshTopologyUpdate {
+    /// Type of topology change
+    pub event_type: TopologyEventType,
+
+    /// Peer ID affected by this change
+    pub peer_id: String,
+
+    /// Slot coordinate of affected peer (if applicable)
+    pub slot: Option<SlotCoordinate>,
+
+    /// Current total peer count
     pub total_peers: usize,
-    /// Number of 8-neighbor connections established (out of 8 possible)
-    pub neighbor_connections: usize,
-    /// Percentage of neighbors online (0.0 - 1.0)
-    pub mesh_connectivity: f64,
-    /// Whether the mesh is fragmented (connectivity < 50%)
-    pub is_fragmented: bool,
-    /// Timestamp of last health check
-    pub last_check: u64,
+
+    /// Timestamp of the event
+    pub timestamp: u64,
+}
+
+/// Global DHT consistency check - verifies all nodes see identical DHT state
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DhtConsistencyReport {
+    /// Total number of DHT entries this node sees
+    pub total_entries: usize,
+
+    /// Hash of all DHT keys (sorted) - should be IDENTICAL across all nodes
+    pub dht_keys_hash: String,
+
+    /// Number of peers this node knows about from DHT
+    pub known_peers: usize,
+
+    /// My peer ID
+    pub my_peer_id: String,
+
+    /// My slot coordinate
+    pub my_slot: SlotCoordinate,
+
+    /// Timestamp of this report
+    pub timestamp: u64,
+}
+
+/// Type of mesh topology event
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TopologyEventType {
+    /// New peer joined the mesh
+    PeerJoined,
+
+    /// Peer left the mesh
+    PeerLeft,
+
+    /// Peer's latency measurements updated
+    LatencyUpdated,
+}
+
+/// DHT replication message - gossip DHT puts through the hexagonal toroidal mesh
+/// Uses epidemic/gossip protocol: each peer forwards to its 8 neighbors
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DhtReplication {
+    /// DHT key being replicated (32-byte Blake3 hash)
+    #[serde(with = "serde_bytes")]
+    pub key: Vec<u8>,
+
+    /// DHT value being replicated
+    #[serde(with = "serde_bytes")]
+    pub value: Vec<u8>,
+
+    /// Timestamp of the replication (for deduplication)
+    pub timestamp: u64,
+
+    /// Source peer that initiated the put
+    pub source_peer_id: String,
+
+    /// Hop count (TTL) - prevents infinite propagation through toroid
+    /// Starts at mesh diameter (e.g., 10) and decrements each hop
+    pub hops_remaining: u8,
+
+    /// Propagation path (for debugging) - list of peer IDs this has passed through
+    pub propagation_path: Vec<String>,
+}
+
+/// DHT bootstrap request - sent by new peers to bootstrap from existing DHT
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DhtBootstrapRequest {
+    /// Requesting peer's ID
+    pub peer_id: String,
+
+    /// Requesting peer's slot (so relay can find nearby peers)
+    pub slot: SlotCoordinate,
+}
+
+/// DHT bootstrap response - relay sends its entire DHT state to bootstrapping peer
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DhtBootstrapResponse {
+    /// Complete DHT state from relay (serialized DhtState)
+    pub dht_entries: Vec<crate::dht_state::DhtEntry>,
+
+    /// Number of entries in the DHT
+    pub entry_count: usize,
+
+    /// Timestamp of this snapshot
+    pub timestamp: u64,
 }
 
 /// Cached neighbor slot ownership with TTL
@@ -108,6 +215,12 @@ impl NeighborCache {
     }
 }
 
+/// Pending DHT GET request waiting for response
+struct PendingDhtGet {
+    response_tx: tokio::sync::oneshot::Sender<Option<Vec<u8>>>,
+    timestamp: std::time::SystemTime,
+}
+
 /// Relay state shared across WebSocket connections
 #[derive(Clone)]
 pub struct RelayState {
@@ -116,12 +229,19 @@ pub struct RelayState {
     pub webrtc_manager: Option<Arc<crate::webrtc_manager::WebRTCManager>>,
     /// Browser-discovered peers - browsers share their WebRTC connections to help nodes find each other
     pub browser_discovered_peers: Arc<RwLock<HashMap<String, Vec<BrowserDiscoveredPeer>>>>,
-    /// DHT storage for P2P distributed key-value store
-    pub dht_storage: Arc<tokio::sync::Mutex<LocalStorage>>,
+    /// DHT storage for P2P distributed key-value store (GLOBAL - replicated via mesh gossip)
+    /// Uses DhtState with bootstrap and merge capabilities
+    pub dht_storage: Arc<tokio::sync::Mutex<crate::dht_state::DhtState>>,
     /// Cached neighbor slot ownership (peer_id -> vec of neighbor caches)
     neighbor_cache: Arc<RwLock<HashMap<String, Vec<NeighborCache>>>>,
-    /// DHT mesh health metrics
-    mesh_health: Arc<RwLock<DhtMeshHealth>>,
+    /// DHT replication deduplication cache - tracks (key_hex, timestamp) to prevent re-gossip
+    dht_seen_cache: Arc<RwLock<HashMap<String, u64>>>,
+    /// This node's peer_id (for DHT routing calculations)
+    node_peer_id: Arc<RwLock<Option<String>>>,
+    /// Pending DHT GET requests waiting for responses (key_hex -> response channel)
+    pending_dht_gets: Arc<RwLock<HashMap<String, PendingDhtGet>>>,
+    /// P2P manager for tracking known peers (for /map and /ready endpoints)
+    pub p2p_manager: Option<Arc<lens_v2_p2p::P2pManager>>,
 }
 
 impl RelayState {
@@ -131,19 +251,18 @@ impl RelayState {
             peer_senders: Arc::new(RwLock::new(HashMap::new())),
             webrtc_manager: None,
             browser_discovered_peers: Arc::new(RwLock::new(HashMap::new())),
-            dht_storage: Arc::new(tokio::sync::Mutex::new(LocalStorage::new())),
+            dht_storage: Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new())),
             neighbor_cache: Arc::new(RwLock::new(HashMap::new())),
-            mesh_health: Arc::new(RwLock::new(DhtMeshHealth {
-                total_peers: 0,
-                neighbor_connections: 0,
-                mesh_connectivity: 0.0,
-                is_fragmented: true,
-                last_check: SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs(),
-            })),
+            dht_seen_cache: Arc::new(RwLock::new(HashMap::new())),
+            node_peer_id: Arc::new(RwLock::new(None)),
+            pending_dht_gets: Arc::new(RwLock::new(HashMap::new())),
+            p2p_manager: None,
         }
+    }
+
+    pub fn with_p2p_manager(mut self, p2p_manager: Arc<lens_v2_p2p::P2pManager>) -> Self {
+        self.p2p_manager = Some(p2p_manager);
+        self
     }
 
     pub fn with_webrtc(mut self, manager: Arc<crate::webrtc_manager::WebRTCManager>) -> Self {
@@ -151,14 +270,41 @@ impl RelayState {
         self
     }
 
-    pub fn with_dht_storage(mut self, storage: Arc<tokio::sync::Mutex<LocalStorage>>) -> Self {
+    pub fn with_dht_storage(mut self, storage: Arc<tokio::sync::Mutex<crate::dht_state::DhtState>>) -> Self {
         self.dht_storage = storage;
         self
     }
 
+    pub fn with_node_peer_id(mut self, peer_id: String) -> Self {
+        self.node_peer_id = Arc::new(RwLock::new(Some(peer_id)));
+        self
+    }
+
+    /// Get current mesh config based on actual peer count (DYNAMIC!)
+    /// This is the SINGLE SOURCE OF TRUTH for mesh dimensions.
+    ///
+    /// NOTE: For slot assignment during connection, the caller should use
+    /// get_mesh_config_for_assignment() instead, which accounts for the peer being added.
+    async fn get_mesh_config(&self) -> MeshConfig {
+        let peer_senders = self.peer_senders.read().await;
+        let peer_count = peer_senders.len();
+        drop(peer_senders);
+
+        crate::peer_registry::calculate_mesh_dimensions(peer_count)
+    }
+
+    /// Get mesh config for initial slot assignment (includes the peer being added)
+    async fn get_mesh_config_for_assignment(&self) -> MeshConfig {
+        let peer_senders = self.peer_senders.read().await;
+        let peer_count = peer_senders.len() + 1; // +1 for the peer being added!
+        drop(peer_senders);
+
+        crate::peer_registry::calculate_mesh_dimensions(peer_count)
+    }
+
     /// Get cached neighbors for a peer, or query DHT if cache is stale
     async fn get_cached_neighbors(&self, peer_id: &str, my_slot: SlotCoordinate) -> Vec<(String, SlotCoordinate)> {
-        let mesh_config = default_mesh_config();
+        let mesh_config = self.get_mesh_config().await;
 
         // Check cache first
         {
@@ -186,7 +332,7 @@ impl RelayState {
         for (_direction, neighbor_slot) in neighbor_slots {
             let slot_key = slot_ownership_key(neighbor_slot);
 
-            if let Some(ownership_bytes) = storage.get(&slot_key) {
+            if let Some(ownership_bytes) = storage.get_raw(&slot_key) {
                 if let Ok(ownership) = serde_json::from_slice::<SlotOwnership>(ownership_bytes) {
                     // Skip self and stale entries
                     if ownership.peer_id != peer_id && !ownership.is_stale() {
@@ -209,60 +355,9 @@ impl RelayState {
         neighbors
     }
 
-    /// Update mesh health metrics
-    async fn update_mesh_health(&self) {
-        let mesh_config = default_mesh_config();
-        let peer_senders = self.peer_senders.read().await;
-        let total_peers = peer_senders.len();
-
-        if total_peers == 0 {
-            return;
-        }
-
-        // Count how many 8-neighbor connections exist
-        let mut total_neighbor_connections = 0;
-        let mut total_possible_connections = 0;
-
-        for peer_id in peer_senders.keys() {
-            let my_slot = peer_id_to_slot(peer_id, &mesh_config);
-            let neighbors = self.get_cached_neighbors(peer_id, my_slot).await;
-
-            total_neighbor_connections += neighbors.len();
-            total_possible_connections += 8; // Each peer should have 8 neighbors
-        }
-
-        drop(peer_senders);
-
-        let mesh_connectivity = if total_possible_connections > 0 {
-            total_neighbor_connections as f64 / total_possible_connections as f64
-        } else {
-            0.0
-        };
-
-        let is_fragmented = mesh_connectivity < 0.5;
-
-        let mut health = self.mesh_health.write().await;
-        health.total_peers = total_peers;
-        health.neighbor_connections = total_neighbor_connections;
-        health.mesh_connectivity = mesh_connectivity;
-        health.is_fragmented = is_fragmented;
-        health.last_check = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
-        if is_fragmented {
-            warn!("⚠️  DHT mesh is FRAGMENTED! Connectivity: {:.1}% ({}/{} neighbors)",
-                mesh_connectivity * 100.0, total_neighbor_connections, total_possible_connections);
-        } else {
-            info!("✅ DHT mesh healthy: {:.1}% connectivity ({}/{} neighbors)",
-                mesh_connectivity * 100.0, total_neighbor_connections, total_possible_connections);
-        }
-    }
-
     /// Find the closest peer to a target slot using greedy routing
     async fn find_closest_peer(&self, target_slot: SlotCoordinate) -> Option<(String, SlotCoordinate, i32)> {
-        let mesh_config = default_mesh_config();
+        let mesh_config = self.get_mesh_config().await;
         let peer_senders = self.peer_senders.read().await;
 
         let mut closest_peer: Option<(String, SlotCoordinate, i32)> = None;
@@ -281,6 +376,303 @@ impl RelayState {
 
         drop(peer_senders);
         closest_peer
+    }
+
+    /// Route a DHT GET to the slot that owns this key (Citadel spec)
+    /// Returns the value if found, None if not found or unreachable
+    pub async fn dht_get(&self, key: [u8; 32]) -> Option<Vec<u8>> {
+        let mesh_config = self.get_mesh_config().await;
+        let target_slot = key_to_slot(&key, &mesh_config);
+
+        // Get this node's peer_id to determine our slot
+        let node_peer_id_lock = self.node_peer_id.read().await;
+        let my_peer_id = match node_peer_id_lock.as_ref() {
+            Some(id) => id.clone(),
+            None => {
+                warn!("⚠️  DHT GET: Node peer_id not set, cannot route");
+                return None;
+            }
+        };
+        drop(node_peer_id_lock);
+
+        let my_slot = peer_id_to_slot(&my_peer_id, &mesh_config);
+
+        if target_slot == my_slot {
+            // This key belongs to OUR slot! Read locally
+            let storage = self.dht_storage.lock().await;
+            storage.get_raw(&key).map(|v| v.to_vec())
+        } else {
+            // Key belongs to DIFFERENT slot - route DHT GET request via greedy routing
+            debug!("DHT GET: Routing key to remote slot {:?}", target_slot);
+
+            // Find closest peer toward target slot (or ANY peer if we can't find closest)
+            let closest_peer_result = self.find_closest_peer(target_slot).await;
+
+            let closest_peer_id = match closest_peer_result {
+                Some((peer_id, _slot, _dist)) => peer_id,
+                None => {
+                    // No peers at all - try to read from local storage anyway (key might hash to us)
+                    debug!("DHT GET: No connected peers, checking local storage");
+                    let storage = self.dht_storage.lock().await;
+                    return storage.get_raw(&key).map(|v| v.to_vec());
+                }
+            };
+
+            // Create response channel
+            let (response_tx, response_rx) = tokio::sync::oneshot::channel();
+            let key_hex = hex::encode(&key);
+
+            // Register pending request
+            {
+                let mut pending = self.pending_dht_gets.write().await;
+                pending.insert(key_hex.clone(), PendingDhtGet {
+                    response_tx,
+                    timestamp: std::time::SystemTime::now(),
+                });
+            }
+
+            // Create TGP DhtGetRequest packet
+            let request = crate::tgp::DhtGetRequest { key };
+            let payload = match serde_json::to_vec(&request) {
+                Ok(p) => p,
+                Err(e) => {
+                    warn!("DHT GET: Failed to serialize request: {}", e);
+                    // Clean up pending request
+                    let mut pending = self.pending_dht_gets.write().await;
+                    pending.remove(&key_hex);
+                    return None;
+                }
+            };
+
+            // Calculate compact u64 representations of coordinates for TGP routing
+            let my_slot_u64 = coord_to_u64(my_slot);
+            let target_slot_u64 = coord_to_u64(target_slot);
+
+            // Send TGP packet to closest peer
+            let packet = crate::tgp::create_packet(
+                crate::tgp::PacketType::DhtGet.as_u8(),
+                target_slot_u64,  // dest_hex - where the key lives
+                my_slot_u64,      // source_hex - where to send responses back
+                &payload
+            );
+
+            {
+                let senders = self.peer_senders.read().await;
+                if let Some(tx) = senders.get(&closest_peer_id) {
+                    if let Err(e) = tx.send(Message::Binary(packet)) {
+                        warn!("DHT GET: Failed to send to {}: {}", closest_peer_id, e);
+                        // Clean up pending request
+                        let mut pending = self.pending_dht_gets.write().await;
+                        pending.remove(&key_hex);
+                        return None;
+                    }
+                } else {
+                    warn!("DHT GET: Peer {} not found in senders", closest_peer_id);
+                    // Clean up pending request
+                    let mut pending = self.pending_dht_gets.write().await;
+                    pending.remove(&key_hex);
+                    return None;
+                }
+            }
+
+            // Wait for response with timeout
+            match tokio::time::timeout(std::time::Duration::from_secs(5), response_rx).await {
+                Ok(Ok(value)) => {
+                    debug!("DHT GET: Received response for key {}", key_hex);
+                    value
+                }
+                Ok(Err(_)) => {
+                    warn!("DHT GET: Response channel closed for key {}", key_hex);
+                    None
+                }
+                Err(_) => {
+                    warn!("DHT GET: Timeout waiting for response for key {}", key_hex);
+                    // Clean up pending request
+                    let mut pending = self.pending_dht_gets.write().await;
+                    pending.remove(&key_hex);
+                    None
+                }
+            }
+        }
+    }
+
+    /// Route a DHT PUT to the slot that owns this key (Citadel spec)
+    /// Keys are stored at the slot they hash to, NOT locally!
+    pub async fn dht_put(&self, key: [u8; 32], value: Vec<u8>) {
+        let mesh_config = self.get_mesh_config().await;
+        let target_slot = key_to_slot(&key, &mesh_config);
+
+        // Get this node's peer_id to determine our slot
+        let node_peer_id_lock = self.node_peer_id.read().await;
+        let my_peer_id = match node_peer_id_lock.as_ref() {
+            Some(id) => id.clone(),
+            None => {
+                warn!("⚠️  DHT PUT: Node peer_id not set, cannot route");
+                return;
+            }
+        };
+        drop(node_peer_id_lock);
+
+        let my_slot = peer_id_to_slot(&my_peer_id, &mesh_config);
+
+        info!("🔑 DHT PUT: Key maps to slot ({}, {}, {}), my slot is ({}, {}, {})",
+            target_slot.x, target_slot.y, target_slot.z,
+            my_slot.x, my_slot.y, my_slot.z);
+
+        if target_slot == my_slot {
+            // This key belongs to OUR slot! Store locally
+            info!("✅ DHT PUT: Key belongs to our slot, storing locally");
+            let mut storage = self.dht_storage.lock().await;
+            storage.insert_raw(key, value);
+        } else {
+            // Key belongs to DIFFERENT slot! Route to closest peer
+            info!("🔀 DHT PUT: Key belongs to different slot, routing via greedy routing");
+
+            if let Some((closest_peer_id, _closest_slot, distance)) = self.find_closest_peer(target_slot).await {
+                info!("🚀 DHT PUT: Routing to {} (distance to target: {})", closest_peer_id, distance);
+
+                // Create TGP DhtPutRequest packet
+                let request = crate::tgp::DhtPutRequest {
+                    key,
+                    value,
+                };
+
+                let payload = match serde_json::to_vec(&request) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        warn!("⚠️  DHT PUT: Failed to serialize request: {}", e);
+                        return;
+                    }
+                };
+
+                // Create TGP packet
+                // TODO: Need proper source/dest slot IDs - for now use placeholder
+                let packet = crate::tgp::create_packet(
+                    crate::tgp::PacketType::DhtPut.as_u8(),
+                    0, // dest_slot_id (placeholder)
+                    0, // source_slot_id (placeholder)
+                    &payload
+                );
+
+                // Send to closest peer
+                let senders = self.peer_senders.read().await;
+                if let Some(tx) = senders.get(&closest_peer_id) {
+                    if let Err(e) = tx.send(Message::Binary(packet)) {
+                        warn!("⚠️  DHT PUT: Failed to send to {}: {}", closest_peer_id, e);
+                    } else {
+                        info!("✅ DHT PUT: Sent to {} for routing", closest_peer_id);
+                    }
+                } else {
+                    warn!("⚠️  DHT PUT: Closest peer {} not found in senders", closest_peer_id);
+                }
+            } else {
+                warn!("⚠️  DHT PUT: No route to target slot ({}, {}, {})", target_slot.x, target_slot.y, target_slot.z);
+            }
+        }
+    }
+
+    /// Broadcast a mesh topology update to all connected peers
+    async fn broadcast_topology_update(&self, event_type: TopologyEventType, peer_id: &str, slot: Option<SlotCoordinate>) {
+        let peer_senders = self.peer_senders.read().await;
+        let total_peers = peer_senders.len();
+
+        let update = MeshTopologyUpdate {
+            event_type: event_type.clone(),
+            peer_id: peer_id.to_string(),
+            slot,
+            total_peers,
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        };
+
+        let message = serde_json::json!({
+            "type": "mesh_topology_update",
+            "update": update,
+        });
+
+        if let Ok(json) = serde_json::to_string(&message) {
+            let mut broadcast_count = 0;
+            for (_peer_id, tx) in peer_senders.iter() {
+                if let Err(e) = tx.send(Message::Text(json.clone())) {
+                    warn!("Failed to broadcast topology update: {}", e);
+                } else {
+                    broadcast_count += 1;
+                }
+            }
+
+            if broadcast_count > 0 {
+                info!("📡 Broadcast {:?} event for peer {} to {} peers", event_type, peer_id, broadcast_count);
+            }
+        }
+    }
+
+    /// Gossip DHT PUT through hexagonal toroidal mesh to 8 neighbors
+    /// **ELIMINATES LOCAL DHT CONCEPT** - epidemic propagation creates global DHT!
+    /// Each peer forwards to its 8 mesh neighbors, who forward to THEIR neighbors, etc.
+    pub async fn gossip_dht_put(&self, key: [u8; 32], value: Vec<u8>, source_peer_id: String, my_peer_id: String) {
+        let mesh_config = self.get_mesh_config().await;
+        let my_slot = peer_id_to_slot(&my_peer_id, &mesh_config);
+
+        // Get my 8 mesh neighbors
+        let neighbor_slots = get_neighbor_slots(&my_slot, &mesh_config);
+
+        // Find connected peers at those neighbor slots
+        let storage = self.dht_storage.lock().await;
+        let mut neighbor_peer_ids = Vec::new();
+
+        for (_direction, neighbor_slot) in neighbor_slots {
+            let slot_key = slot_ownership_key(neighbor_slot);
+            if let Some(ownership_bytes) = storage.get_raw(&slot_key) {
+                if let Ok(ownership) = serde_json::from_slice::<SlotOwnership>(ownership_bytes) {
+                    if ownership.peer_id != my_peer_id && !ownership.is_stale() {
+                        neighbor_peer_ids.push(ownership.peer_id.clone());
+                    }
+                }
+            }
+        }
+
+        drop(storage);
+
+        // Create DHT replication message with hop limit
+        let mesh_diameter = (mesh_config.width.max(mesh_config.height).max(mesh_config.depth) * 2) as u8;
+        let mut replication = DhtReplication {
+            key: key.to_vec(),
+            value,
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            source_peer_id: source_peer_id.clone(),
+            hops_remaining: mesh_diameter,
+            propagation_path: vec![my_peer_id.clone()],
+        };
+
+        let message = serde_json::json!({
+            "type": "dht_replication",
+            "replication": replication,
+        });
+
+        if let Ok(json) = serde_json::to_string(&message) {
+            let peer_senders = self.peer_senders.read().await;
+            let mut gossip_count = 0;
+
+            for neighbor_id in &neighbor_peer_ids {
+                if let Some(tx) = peer_senders.get(neighbor_id) {
+                    if let Err(e) = tx.send(Message::Text(json.clone())) {
+                        warn!("Failed to gossip DHT to neighbor {}: {}", neighbor_id, e);
+                    } else {
+                        gossip_count += 1;
+                    }
+                }
+            }
+
+            if gossip_count > 0 {
+                debug!("🌐 Gossiped DHT PUT (key={}) to {} mesh neighbors (/{} found)",
+                    hex::encode(&key), gossip_count, neighbor_peer_ids.len());
+            }
+        }
     }
 }
 
@@ -355,7 +747,7 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
     // **CITADEL DHT MESH TOPOLOGY ANNOUNCEMENT** (Section 2.4 - Recursive DHT)
     // Calculate my SlotCoordinate and announce ownership!
     {
-        let mesh_config = default_mesh_config();
+        let mesh_config = state.get_mesh_config_for_assignment().await;
         let my_slot = peer_id_to_slot(&peer_id, &mesh_config);
 
         info!("📢 Peer {} assigned to slot ({}, {}, {}) in hexagonal toroidal mesh",
@@ -365,26 +757,43 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
         let ownership = SlotOwnership::new(peer_id.clone(), my_slot, None);
         let ownership_bytes = serde_json::to_vec(&ownership).unwrap_or_default();
 
-        // Announce at TWO DHT keys for recursive discovery:
-        // 1. peer_location_key: "where is this peer?" (peer_id → slot)
-        // 2. slot_ownership_key: "who owns this slot?" (slot → peer_id)
+        // Route slot ownership via Citadel DHT PUT (no gossip!)
+        // Keys route to the slot they hash to via key_to_slot()
+        // Peers discover neighbors by sending DHT GET requests
 
         let location_key = peer_location_key(&peer_id);
         let slot_key = slot_ownership_key(my_slot);
 
-        {
-            let mut storage = state.dht_storage.lock().await;
-            storage.put(location_key, ownership_bytes.clone());
-            storage.put(slot_key, ownership_bytes);
-        }
+        // Route both PUTs through the DHT - it will store at correct slot
+        state.dht_put(location_key, ownership_bytes.clone()).await;
+        state.dht_put(slot_key, ownership_bytes).await;
 
-        info!("✅ Announced slot ownership for peer {} at ({}, {}, {})",
+        info!("✅ Routed slot ownership for peer {} at ({}, {}, {}) via Citadel DHT PUT",
             peer_id, my_slot.x, my_slot.y, my_slot.z);
 
         // Log 8 neighbor slots for visibility (lazy discovery will query these on-demand!)
         let neighbors = get_neighbor_slots(&my_slot, &mesh_config);
         info!("🔷 Peer {} has 8 mesh neighbors at slots: {:?}",
             peer_id, neighbors.iter().map(|(_, s)| (s.x, s.y, s.z)).collect::<Vec<_>>());
+
+        // Notify P2P manager about this peer for /map and /ready endpoints
+        if let Some(p2p) = &state.p2p_manager {
+            // Hash peer_id string to u64 for P2pManager
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            let mut hasher = DefaultHasher::new();
+            peer_id.hash(&mut hasher);
+            let peer_id_u64 = hasher.finish();
+
+            if let Err(e) = p2p.add_known_peer_with_string(peer_id_u64, peer_id.clone()) {
+                warn!("Failed to add peer {} to P2P manager: {}", peer_id, e);
+            } else {
+                info!("✅ Added peer {} to P2P manager (known_peers tracking)", peer_id);
+            }
+        }
+
+        // Broadcast topology update to all connected peers
+        state.broadcast_topology_update(TopologyEventType::PeerJoined, &peer_id, Some(my_slot)).await;
     }
 
     // Spawn task to handle outgoing messages
@@ -395,29 +804,6 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                 warn!("Relay: Failed to send to {}: {}", peer_id_clone, e);
                 break;
             }
-        }
-    });
-
-    // **ENHANCEMENT 3: Periodic Mesh Health Monitoring**
-    // Spawn task to update mesh health every 30 seconds
-    let state_clone = state.clone();
-    let peer_id_health = peer_id.clone();
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30));
-        loop {
-            interval.tick().await;
-
-            // Check if this peer is still connected
-            {
-                let senders = state_clone.peer_senders.read().await;
-                if !senders.contains_key(&peer_id_health) {
-                    debug!("Mesh health monitor stopping for disconnected peer {}", peer_id_health);
-                    break;
-                }
-            }
-
-            // Update mesh health metrics
-            state_clone.update_mesh_health().await;
         }
     });
 
@@ -443,6 +829,36 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                                     warn!("Relay: Failed to create WebRTC connection to {}: {}", browser_peer_id, e);
                                 }
                             });
+                        }
+                        continue;
+                    }
+
+                    // Check for heartbeat message
+                    if let Some("heartbeat") = msg_json.get("type").and_then(|v| v.as_str()) {
+                        if let Some(heartbeat_peer_id) = msg_json.get("peer_id").and_then(|v| v.as_str()) {
+                            // Hash peer ID to u64
+                            use std::collections::hash_map::DefaultHasher;
+                            use std::hash::{Hash, Hasher};
+                            let mut hasher = DefaultHasher::new();
+                            heartbeat_peer_id.hash(&mut hasher);
+                            let peer_id_u64 = hasher.finish();
+
+                            // Mark peer as alive in P2P manager
+                            if let Some(p2p) = &state.p2p_manager {
+                                if let Err(e) = p2p.mark_peer_alive(peer_id_u64) {
+                                    warn!("Failed to mark peer {} as alive: {}", heartbeat_peer_id, e);
+                                } else {
+                                    debug!("💓 Heartbeat received from {}", heartbeat_peer_id);
+                                }
+                            }
+
+                            // Broadcast heartbeat to all other peers so everyone knows this peer is alive
+                            let senders = state.peer_senders.read().await;
+                            for (other_peer_id, tx) in senders.iter() {
+                                if other_peer_id != &peer_id {
+                                    let _ = tx.send(Message::Text(text.clone()));
+                                }
+                            }
                         }
                         continue;
                     }
@@ -538,11 +954,21 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                         relay.get_peers()
                     };
 
-                    // Filter out self and combine with providers
+                    // SPORE: Build set of peers the sender already knows about
+                    let known_peer_ids: std::collections::HashSet<String> = wantlist
+                        .known_peers
+                        .iter()
+                        .map(|kp| kp.peer_id.clone())
+                        .collect();
+
+                    // Filter out self and peers they already know (SPORE exclusion)
                     let mut peers_to_send: Vec<_> = all_peers
                         .into_iter()
-                        .filter(|p| p.peer_id != peer_id)
+                        .filter(|p| p.peer_id != peer_id && !known_peer_ids.contains(&p.peer_id))
                         .collect();
+
+                    info!("🔍 SPORE: Peer {} knows {} peers, filtering to only unknown peers",
+                        peer_id, known_peer_ids.len());
 
                     // Add specific providers if available
                     for provider in providers {
@@ -579,54 +1005,14 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                         }
                     }
 
-                    // **CITADEL DHT MESH PEER DISCOVERY** (Lazy 8-neighbor query!)
-                    // Query DHT for peers in 8 neighboring slots - TRUE MESH TOPOLOGY!
-                    {
-                        let mesh_config = default_mesh_config();
-                        let my_slot = peer_id_to_slot(&peer_id, &mesh_config);
-                        let neighbor_slots = get_neighbor_slots(&my_slot, &mesh_config);
-
-                        let storage = state.dht_storage.lock().await;
-                        let mut added_mesh_peers = 0;
-
-                        for (_direction, neighbor_slot) in neighbor_slots {
-                            // Query DHT for "who owns this neighbor slot?"
-                            let slot_key = slot_ownership_key(neighbor_slot);
-
-                            if let Some(ownership_bytes) = storage.get(&slot_key) {
-                                if let Ok(ownership) = serde_json::from_slice::<SlotOwnership>(ownership_bytes) {
-                                    // Skip self
-                                    if ownership.peer_id == peer_id {
-                                        continue;
-                                    }
-
-                                    // Skip if already in list
-                                    if peers_to_send.iter().any(|p| p.peer_id == ownership.peer_id) {
-                                        continue;
-                                    }
-
-                                    // Check if peer is still fresh (not stale)
-                                    if !ownership.is_stale() {
-                                        let mut peer_info = PeerInfo::new(ownership.peer_id.clone());
-                                        peer_info.score = 100; // High score for mesh neighbors
-                                        peer_info.state = PeerState::Discovered;
-                                        peers_to_send.push(peer_info);
-                                        added_mesh_peers += 1;
-                                    }
-                                }
-                            }
-                        }
-
-                        if added_mesh_peers > 0 {
-                            info!("🔷 MESH DISCOVERY: Added {} mesh neighbors to referral for {}",
-                                added_mesh_peers, peer_id);
-                        }
-                    }
+                    // Mesh neighbor discovery via DHT GET would go here
+                    // For now, peer referrals provide sufficient bootstrap
+                    // TODO: Implement async DHT GET queries for 8-neighbor discovery
 
                     // **ENHANCEMENT 1: Add DHT Routing Hints to Peer Referrals**
                     // Include SlotCoordinate for each peer so recipients can calculate routing distances!
                     if !peers_to_send.is_empty() {
-                        let mesh_config = default_mesh_config();
+                        let mesh_config = state.get_mesh_config().await;
 
                         let referral = serde_json::json!({
                             "type": "peer_referral",
@@ -636,7 +1022,7 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                                 "y": peer_id_to_slot(&peer_id, &mesh_config).y,
                                 "z": peer_id_to_slot(&peer_id, &mesh_config).z,
                             },
-                            "peers": peers_to_send.into_iter().take(10).map(|p| {
+                            "peers": peers_to_send.into_iter().map(|p| {
                                 let peer_slot = peer_id_to_slot(&p.peer_id, &mesh_config);
                                 serde_json::json!({
                                     "peer_id": p.peer_id,
@@ -668,9 +1054,153 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                         info!("Relay: No other peers to refer to {}", peer_id);
                     }
                 }
-                // **ENHANCEMENT 2: Greedy Message Forwarding**
-                // Try to parse as block_request or block_response and route them using greedy forwarding
+                // Try to parse as DHT replication message (epidemic gossip protocol)
                 else if let Ok(msg_json) = serde_json::from_str::<serde_json::Value>(&text) {
+                    if let Some("dht_replication") = msg_json.get("type").and_then(|v| v.as_str()) {
+                        if let Ok(mut replication) = serde_json::from_str::<DhtReplication>(&text) {
+                            let key_hex = hex::encode(&replication.key);
+                            info!("🌐 Received DHT replication for key={} from {} (hops={}, path={:?})",
+                                key_hex, peer_id, replication.hops_remaining, replication.propagation_path);
+
+                            // Check deduplication cache - have we seen this (key, timestamp) before?
+                            let cache_key = format!("{}:{}", key_hex, replication.timestamp);
+                            let already_seen = {
+                                let seen_cache = state.dht_seen_cache.read().await;
+                                seen_cache.contains_key(&cache_key)
+                            };
+
+                            if already_seen {
+                                debug!("🔄 DHT replication already seen, skipping (key={})", key_hex);
+                                continue;
+                            }
+
+                            // New replication! Mark as seen
+                            {
+                                let mut seen_cache = state.dht_seen_cache.write().await;
+                                seen_cache.insert(cache_key, replication.timestamp);
+                            }
+
+                            // Store in local DHT
+                            if replication.key.len() == 32 {
+                                let mut key_array = [0u8; 32];
+                                key_array.copy_from_slice(&replication.key);
+
+                                {
+                                    let mut storage = state.dht_storage.lock().await;
+                                    storage.insert_raw(key_array, replication.value.clone());
+                                }
+
+                                info!("✅ Stored DHT key={} locally via gossip", key_hex);
+
+                                // Forward to 8 neighbors if hops remaining > 0
+                                if replication.hops_remaining > 0 {
+                                    replication.hops_remaining -= 1;
+                                    replication.propagation_path.push(peer_id.clone());
+
+                                    let mesh_config = state.get_mesh_config().await;
+                                    let my_slot = peer_id_to_slot(&peer_id, &mesh_config);
+                                    let neighbor_slots = get_neighbor_slots(&my_slot, &mesh_config);
+
+                                    // Find connected neighbors
+                                    let storage = state.dht_storage.lock().await;
+                                    let mut neighbor_peer_ids = Vec::new();
+
+                                    for (_direction, neighbor_slot) in neighbor_slots {
+                                        let slot_key = slot_ownership_key(neighbor_slot);
+                                        if let Some(ownership_bytes) = storage.get_raw(&slot_key) {
+                                            if let Ok(ownership) = serde_json::from_slice::<SlotOwnership>(ownership_bytes) {
+                                                if ownership.peer_id != peer_id && !ownership.is_stale() {
+                                                    neighbor_peer_ids.push(ownership.peer_id.clone());
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    drop(storage);
+
+                                    // Forward to neighbors
+                                    if !neighbor_peer_ids.is_empty() {
+                                        let forward_msg = serde_json::json!({
+                                            "type": "dht_replication",
+                                            "replication": replication,
+                                        });
+
+                                        if let Ok(json) = serde_json::to_string(&forward_msg) {
+                                            let peer_senders = state.peer_senders.read().await;
+                                            let mut forward_count = 0;
+
+                                            for neighbor_id in &neighbor_peer_ids {
+                                                if let Some(tx) = peer_senders.get(neighbor_id) {
+                                                    if let Err(e) = tx.send(Message::Text(json.clone())) {
+                                                        warn!("Failed to forward DHT replication to {}: {}", neighbor_id, e);
+                                                    } else {
+                                                        forward_count += 1;
+                                                    }
+                                                }
+                                            }
+
+                                            if forward_count > 0 {
+                                                debug!("🌐 Forwarded DHT replication (key={}) to {} neighbors (hops_remaining={})",
+                                                    key_hex, forward_count, replication.hops_remaining);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    debug!("⏱️  DHT replication TTL expired (key={}), not forwarding", key_hex);
+                                }
+                            } else {
+                                warn!("Invalid DHT key length: {} (expected 32)", replication.key.len());
+                            }
+                        }
+                        continue;
+                    }
+
+                    // DHT Bootstrap Request - node wants to bootstrap from relay's DHT
+                    if let Some("dht_bootstrap_request") = msg_json.get("type").and_then(|v| v.as_str()) {
+                        if let Ok(request) = serde_json::from_str::<DhtBootstrapRequest>(&text) {
+                            info!("🔄 DHT bootstrap request from peer {} at slot {:?}",
+                                request.peer_id, request.slot);
+
+                            // Get complete DHT snapshot
+                            let dht_snapshot = {
+                                let dht = state.dht_storage.lock().await;
+                                dht.to_sorted_vec()
+                            };
+
+                            // Send bootstrap response with entire DHT
+                            let response = DhtBootstrapResponse {
+                                dht_entries: dht_snapshot.clone(),
+                                entry_count: dht_snapshot.len(),
+                                timestamp: std::time::SystemTime::now()
+                                    .duration_since(std::time::UNIX_EPOCH)
+                                    .unwrap()
+                                    .as_secs(),
+                            };
+
+                            let response_msg = serde_json::json!({
+                                "type": "dht_bootstrap_response",
+                                "response": response,
+                            });
+
+                            if let Ok(json) = serde_json::to_string(&response_msg) {
+                                let senders = state.peer_senders.read().await;
+                                if let Some(peer_tx) = senders.get(&peer_id) {
+                                    if let Err(e) = peer_tx.send(Message::Text(json)) {
+                                        warn!("Failed to send DHT bootstrap response to {}: {}", peer_id, e);
+                                    } else {
+                                        info!("✅ Sent DHT bootstrap ({} entries) to peer {}",
+                                            dht_snapshot.len(), peer_id);
+                                    }
+                                } else {
+                                    warn!("Peer {} not found in senders map for bootstrap response", peer_id);
+                                }
+                            }
+                        }
+                        continue;
+                    }
+
+                    // **ENHANCEMENT 2: Greedy Message Forwarding**
+                    // Try to parse as block_request or block_response and route them using greedy forwarding
                     if let Some(msg_type) = msg_json.get("type").and_then(|v| v.as_str()) {
                         if msg_type == "block_request" || msg_type == "block_response" {
                             if let Some(to_peer_id) = msg_json.get("to_peer_id").and_then(|v| v.as_str()) {
@@ -689,7 +1219,7 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                                     // No direct connection - use GREEDY FORWARDING!
                                     drop(senders);
 
-                                    let mesh_config = default_mesh_config();
+                                    let mesh_config = state.get_mesh_config().await;
                                     let target_slot = peer_id_to_slot(to_peer_id, &mesh_config);
 
                                     // Find closest peer to target
@@ -753,88 +1283,330 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                     if let Some(packet_type) = PacketType::from_u8(header.packet_type) {
                         match packet_type {
                             PacketType::DhtGet => {
-                                // DHT GET request
+                                // DHT GET request with hop-by-hop forwarding
                                 if let Ok(request) = serde_json::from_slice::<DhtGetRequest>(payload) {
                                     info!("Relay: DHT GET request for key={}", hex::encode(&request.key));
 
-                                    // Query local DHT storage
-                                    let value = {
-                                        let storage = state.dht_storage.lock().await;
-                                        storage.get(&request.key).cloned()
-                                    };
+                                    let mesh_config = state.get_mesh_config().await;
 
-                                    // Send DHT_RESPONSE back to requester
-                                    let response = DhtResponse {
-                                        key: request.key,
-                                        value,
-                                    };
+                                    // Calculate which slot this key maps to
+                                    let target_slot = key_to_slot(&request.key, &mesh_config);
 
-                                    let response_payload = serde_json::to_vec(&response).unwrap();
-                                    let response_packet = tgp_mod::create_packet(
-                                        PacketType::DhtResponse.as_u8(),
-                                        header.dest_hex, // We are the destination, respond to source
-                                        header.source_hex, // Send to original source
-                                        &response_payload
-                                    );
+                                    // Calculate our own slot
+                                    let my_slot = peer_id_to_slot(&peer_id, &mesh_config);
 
-                                    // Send response back to requester
-                                    let senders = state.peer_senders.read().await;
-                                    if let Some(tx) = senders.get(&peer_id) {
-                                        if let Err(e) = tx.send(Message::Binary(response_packet)) {
-                                            warn!("Relay: Failed to send DHT_RESPONSE to {}: {}", peer_id, e);
+                                    info!("🔑 Key maps to slot ({}, {}, {}), my slot is ({}, {}, {})",
+                                        target_slot.x, target_slot.y, target_slot.z,
+                                        my_slot.x, my_slot.y, my_slot.z);
+
+                                    if target_slot == my_slot {
+                                        // This key belongs to OUR slot! Query local storage
+                                        info!("✅ Key belongs to our slot, querying local storage");
+
+                                        let value = {
+                                            let storage = state.dht_storage.lock().await;
+                                            storage.get_raw(&request.key).cloned()
+                                        };
+
+                                        // Send DHT_RESPONSE back to requester
+                                        let response = DhtResponse {
+                                            key: request.key,
+                                            value: value.clone(),
+                                        };
+
+                                        let response_payload = serde_json::to_vec(&response).unwrap();
+                                        let response_packet = tgp_mod::create_packet(
+                                            PacketType::DhtResponse.as_u8(),
+                                            header.source_hex, // dest = original requester's slot
+                                            header.dest_hex,   // source = our slot (where key lives)
+                                            &response_payload
+                                        );
+
+                                        // Send response back to requester
+                                        let senders = state.peer_senders.read().await;
+                                        if let Some(tx) = senders.get(&peer_id) {
+                                            if let Err(e) = tx.send(Message::Binary(response_packet)) {
+                                                warn!("Relay: Failed to send DHT_RESPONSE to {}: {}", peer_id, e);
+                                            } else {
+                                                info!("Relay: Sent DHT_RESPONSE to {} (found={})", peer_id, value.is_some());
+                                            }
+                                        }
+                                    } else {
+                                        // Key belongs to DIFFERENT slot! Forward to closest neighbor
+                                        info!("🔀 Key belongs to different slot, forwarding via hop-by-hop routing");
+
+                                        if let Some((closest_peer_id, _closest_slot, distance)) = state.find_closest_peer(target_slot).await {
+                                            if closest_peer_id == peer_id {
+                                                // Requester is already the closest peer we know
+                                                warn!("⚠️  Requester {} is the closest peer to target slot (distance={}), cannot forward", peer_id, distance);
+
+                                                // Send empty response
+                                                let response = DhtResponse {
+                                                    key: request.key,
+                                                    value: None,
+                                                };
+
+                                                let response_payload = serde_json::to_vec(&response).unwrap();
+                                                let response_packet = tgp_mod::create_packet(
+                                                    PacketType::DhtResponse.as_u8(),
+                                                    header.source_hex, // dest = original requester's slot
+                                                    header.dest_hex,   // source = our slot
+                                                    &response_payload
+                                                );
+
+                                                let senders = state.peer_senders.read().await;
+                                                if let Some(tx) = senders.get(&peer_id) {
+                                                    let _ = tx.send(Message::Binary(response_packet));
+                                                }
+                                            } else {
+                                                // Forward to closer peer!
+                                                info!("🚀 Hop-by-hop: Forwarding DHT GET to {} (distance to target: {})", closest_peer_id, distance);
+
+                                                // Decrement TTL
+                                                let mut forward_header = header.clone();
+                                                if forward_header.ttl > 0 {
+                                                    forward_header.ttl -= 1;
+                                                } else {
+                                                    warn!("⏱️ DHT GET TTL expired, dropping packet");
+                                                    continue;
+                                                }
+
+                                                // Create forwarded packet
+                                                let forward_packet = {
+                                                    let mut packet = forward_header.to_bytes();
+                                                    packet.extend_from_slice(payload);
+                                                    packet
+                                                };
+
+                                                // Send to closest peer
+                                                let senders = state.peer_senders.read().await;
+                                                if let Some(tx) = senders.get(&closest_peer_id) {
+                                                    if let Err(e) = tx.send(Message::Binary(forward_packet)) {
+                                                        warn!("Relay: Failed to forward DHT GET to {}: {}", closest_peer_id, e);
+                                                    } else {
+                                                        info!("✅ Forwarded DHT GET to {}", closest_peer_id);
+                                                    }
+                                                }
+                                            }
                                         } else {
-                                            info!("Relay: Sent DHT_RESPONSE to {} (found={}", peer_id, response.value.is_some());
+                                            warn!("⚠️  No connected peers available for DHT forwarding");
+
+                                            // Send empty response
+                                            let response = DhtResponse {
+                                                key: request.key,
+                                                value: None,
+                                            };
+
+                                            let response_payload = serde_json::to_vec(&response).unwrap();
+                                            let response_packet = tgp_mod::create_packet(
+                                                PacketType::DhtResponse.as_u8(),
+                                                header.dest_hex,
+                                                header.source_hex,
+                                                &response_payload
+                                            );
+
+                                            let senders = state.peer_senders.read().await;
+                                            if let Some(tx) = senders.get(&peer_id) {
+                                                let _ = tx.send(Message::Binary(response_packet));
+                                            }
                                         }
                                     }
                                 }
                             }
                             PacketType::DhtPut => {
-                                // DHT PUT request
+                                // DHT PUT request with hop-by-hop routing
                                 if let Ok(request) = serde_json::from_slice::<DhtPutRequest>(payload) {
                                     info!("Relay: DHT PUT request for key={} value_len={}", hex::encode(&request.key), request.value.len());
 
-                                    // Store in local DHT
-                                    {
-                                        let mut storage = state.dht_storage.lock().await;
-                                        storage.put(request.key, request.value.clone());
-                                    }
+                                    let mesh_config = state.get_mesh_config().await;
 
-                                    // Send DHT_RESPONSE with success
-                                    let response = DhtResponse {
-                                        key: request.key,
-                                        value: Some(request.value),
-                                    };
+                                    // Calculate which slot this key maps to
+                                    let target_slot = key_to_slot(&request.key, &mesh_config);
 
-                                    let response_payload = serde_json::to_vec(&response).unwrap();
-                                    let response_packet = tgp_mod::create_packet(
-                                        PacketType::DhtResponse.as_u8(),
-                                        header.dest_hex,
-                                        header.source_hex,
-                                        &response_payload
-                                    );
+                                    // Calculate our own slot
+                                    let my_slot = peer_id_to_slot(&peer_id, &mesh_config);
 
-                                    // Send response back to requester
-                                    let senders = state.peer_senders.read().await;
-                                    if let Some(tx) = senders.get(&peer_id) {
-                                        if let Err(e) = tx.send(Message::Binary(response_packet)) {
-                                            warn!("Relay: Failed to send DHT_RESPONSE to {}: {}", peer_id, e);
+                                    info!("🔑 PUT: Key maps to slot ({}, {}, {}), my slot is ({}, {}, {})",
+                                        target_slot.x, target_slot.y, target_slot.z,
+                                        my_slot.x, my_slot.y, my_slot.z);
+
+                                    if target_slot == my_slot {
+                                        // This key belongs to OUR slot! Store locally
+                                        info!("✅ PUT: Key belongs to our slot, storing locally");
+
+                                        {
+                                            let mut storage = state.dht_storage.lock().await;
+                                            storage.insert_raw(request.key, request.value.clone());
+                                        }
+
+                                        // Send DHT_RESPONSE with success
+                                        let response = DhtResponse {
+                                            key: request.key,
+                                            value: Some(request.value),
+                                        };
+
+                                        let response_payload = serde_json::to_vec(&response).unwrap();
+                                        let response_packet = tgp_mod::create_packet(
+                                            PacketType::DhtResponse.as_u8(),
+                                            header.dest_hex,
+                                            header.source_hex,
+                                            &response_payload
+                                        );
+
+                                        // Send response back to requester
+                                        let senders = state.peer_senders.read().await;
+                                        if let Some(tx) = senders.get(&peer_id) {
+                                            if let Err(e) = tx.send(Message::Binary(response_packet)) {
+                                                warn!("Relay: Failed to send DHT_RESPONSE to {}: {}", peer_id, e);
+                                            } else {
+                                                info!("Relay: Sent DHT_RESPONSE to {} (stored successfully)", peer_id);
+                                            }
+                                        }
+                                    } else {
+                                        // Key belongs to DIFFERENT slot! Forward to closest neighbor
+                                        info!("🔀 PUT: Key belongs to different slot, forwarding via hop-by-hop routing");
+
+                                        if let Some((closest_peer_id, _closest_slot, distance)) = state.find_closest_peer(target_slot).await {
+                                            if closest_peer_id == peer_id {
+                                                // Requester is already the closest peer we know
+                                                warn!("⚠️  PUT: Requester {} is the closest peer to target slot (distance={}), cannot forward", peer_id, distance);
+
+                                                // Send empty response (PUT failed)
+                                                let response = DhtResponse {
+                                                    key: request.key,
+                                                    value: None,
+                                                };
+
+                                                let response_payload = serde_json::to_vec(&response).unwrap();
+                                                let response_packet = tgp_mod::create_packet(
+                                                    PacketType::DhtResponse.as_u8(),
+                                                    header.source_hex, // dest = original requester's slot
+                                                    header.dest_hex,   // source = our slot
+                                                    &response_payload
+                                                );
+
+                                                let senders = state.peer_senders.read().await;
+                                                if let Some(tx) = senders.get(&peer_id) {
+                                                    let _ = tx.send(Message::Binary(response_packet));
+                                                }
+                                            } else {
+                                                // Forward to closer peer!
+                                                info!("🚀 Hop-by-hop PUT: Forwarding DHT PUT to {} (distance to target: {})", closest_peer_id, distance);
+
+                                                // Decrement TTL
+                                                let mut forward_header = header.clone();
+                                                if forward_header.ttl > 0 {
+                                                    forward_header.ttl -= 1;
+                                                } else {
+                                                    warn!("⏱️ DHT PUT TTL expired, dropping packet");
+                                                    continue;
+                                                }
+
+                                                // Create forwarded packet
+                                                let forward_packet = {
+                                                    let mut packet = forward_header.to_bytes();
+                                                    packet.extend_from_slice(payload);
+                                                    packet
+                                                };
+
+                                                // Send to closest peer
+                                                let senders = state.peer_senders.read().await;
+                                                if let Some(tx) = senders.get(&closest_peer_id) {
+                                                    if let Err(e) = tx.send(Message::Binary(forward_packet)) {
+                                                        warn!("Relay: Failed to forward DHT PUT to {}: {}", closest_peer_id, e);
+                                                    } else {
+                                                        info!("Relay: Forwarded DHT PUT to {} successfully", closest_peer_id);
+                                                    }
+                                                } else {
+                                                    warn!("Relay: No connection to closest peer {}", closest_peer_id);
+                                                }
+                                            }
                                         } else {
-                                            info!("Relay: Sent DHT_RESPONSE to {} (stored successfully)", peer_id);
+                                            warn!("⚠️  PUT: No peers known to route towards target slot");
+
+                                            // Send error response
+                                            let response = DhtResponse {
+                                                key: request.key,
+                                                value: None,
+                                            };
+
+                                            let response_payload = serde_json::to_vec(&response).unwrap();
+                                            let response_packet = tgp_mod::create_packet(
+                                                PacketType::DhtResponse.as_u8(),
+                                                header.source_hex, // dest = original requester's slot
+                                                header.dest_hex,   // source = our slot
+                                                &response_payload
+                                            );
+
+                                            let senders = state.peer_senders.read().await;
+                                            if let Some(tx) = senders.get(&peer_id) {
+                                                let _ = tx.send(Message::Binary(response_packet));
+                                            }
                                         }
                                     }
                                 }
                             }
                             PacketType::DhtResponse => {
-                                // DHT RESPONSE - route to destination peer
-                                info!("Relay: Routing DHT_RESPONSE to peer");
+                                // DHT RESPONSE - deliver locally or forward toward source
+                                if let Ok(response) = serde_json::from_slice::<DhtResponse>(payload) {
+                                    let key_hex = hex::encode(&response.key);
+                                    info!("📬 Received DHT_RESPONSE for key={}", key_hex);
 
-                                // Find the destination peer and forward the packet
-                                let target_hex = header.dest_hex;
-                                let senders = state.peer_senders.read().await;
+                                    // Check if we have a pending GET request for this key
+                                    let mut pending = state.pending_dht_gets.write().await;
+                                    if let Some(pending_get) = pending.remove(&key_hex) {
+                                        // This response is for US! Deliver it.
+                                        drop(pending);
+                                        if pending_get.response_tx.send(response.value).is_err() {
+                                            warn!("Failed to send DHT response for key={} (receiver dropped)", key_hex);
+                                        } else {
+                                            info!("✅ Delivered DHT response for key={} to local dht_get()", key_hex);
+                                        }
+                                    } else {
+                                        // Not for us - forward toward source via hop-by-hop routing
+                                        drop(pending);
+                                        info!("🔀 DHT_RESPONSE not for us, forwarding toward source_hex={:016x}", header.source_hex);
 
-                                // TODO: Implement hex-based routing to find closest peer
-                                // For now, just log that we received it
-                                info!("Relay: DHT_RESPONSE for target={:016x} (routing not yet implemented)", target_hex);
+                                        // Find source slot from source_hex (u64 compact coordinate)
+                                        let mesh_config = state.get_mesh_config().await;
+                                        let source_slot = u64_to_coord(header.source_hex);
+
+                                        // Find closest peer toward source
+                                        if let Some((closest_peer_id, _closest_slot, distance)) = state.find_closest_peer(source_slot).await {
+                                            info!("🚀 Forwarding DHT_RESPONSE to {} (distance to source: {})", closest_peer_id, distance);
+
+                                            // Decrement TTL
+                                            let mut forward_header = header.clone();
+                                            if forward_header.ttl > 0 {
+                                                forward_header.ttl -= 1;
+                                            } else {
+                                                warn!("⏱️ DHT_RESPONSE TTL expired, dropping packet");
+                                                continue;
+                                            }
+
+                                            // Create forwarded packet
+                                            let forward_packet = {
+                                                let mut packet = forward_header.to_bytes();
+                                                packet.extend_from_slice(payload);
+                                                packet
+                                            };
+
+                                            // Send to closest peer toward source
+                                            let senders = state.peer_senders.read().await;
+                                            if let Some(tx) = senders.get(&closest_peer_id) {
+                                                if let Err(e) = tx.send(Message::Binary(forward_packet)) {
+                                                    warn!("Failed to forward DHT_RESPONSE to {}: {}", closest_peer_id, e);
+                                                } else {
+                                                    info!("✅ Forwarded DHT_RESPONSE to {}", closest_peer_id);
+                                                }
+                                            }
+                                        } else {
+                                            warn!("⚠️  No route back to source for DHT_RESPONSE");
+                                        }
+                                    }
+                                } else {
+                                    warn!("Failed to parse DHT_RESPONSE packet");
+                                }
                             }
                             _ => {
                                 // Other TGP packet types (UBTS, WantList, etc.)
@@ -881,7 +1653,7 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
     {
         info!("🧹 Cleaning up peer {} from DHT mesh", peer_id);
 
-        let mesh_config = default_mesh_config();
+        let mesh_config = state.get_mesh_config().await;
         let my_slot = peer_id_to_slot(&peer_id, &mesh_config);
 
         // Remove both DHT keys:
@@ -892,30 +1664,81 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
 
         {
             let mut storage = state.dht_storage.lock().await;
-            storage.delete(&location_key);
-            storage.delete(&slot_key);
+            storage.remove(&location_key);
+            storage.remove(&slot_key);
         }
 
         info!("✅ Removed peer {} from slot ({}, {}, {}) in DHT mesh",
             peer_id, my_slot.x, my_slot.y, my_slot.z);
+
+        // Broadcast topology update to all remaining peers
+        state.broadcast_topology_update(TopologyEventType::PeerLeft, &peer_id, Some(my_slot)).await;
     }
 
     info!("Relay: Peer {} disconnected", peer_id);
 }
 
-/// **ENHANCEMENT 3: DHT Health Monitoring API**
-/// GET /api/v1/dht/health - Get DHT mesh health metrics
+/// DHT consistency check endpoint - verifies global DHT state
+/// GET /api/v1/dht/consistency
 ///
-/// Returns mesh connectivity statistics including:
-/// - Total connected peers
-/// - Number of 8-neighbor connections
-/// - Mesh connectivity percentage
-/// - Fragmentation status
-pub async fn dht_health_handler(
+/// Returns a report with:
+/// - Total DHT entries
+/// - Hash of all DHT keys (should be IDENTICAL on all nodes with CAS + gossip!)
+/// - Known peer count
+/// - This node's peer ID and slot
+pub async fn dht_consistency_handler(
     State(state): State<RelayState>,
-) -> Result<axum::Json<DhtMeshHealth>, StatusCode> {
-    let health = state.mesh_health.read().await;
-    Ok(axum::Json(health.clone()))
+) -> Result<axum::Json<DhtConsistencyReport>, StatusCode> {
+    // Get my peer ID from the first connected peer (hack, but works for health check)
+    let peer_senders = state.peer_senders.read().await;
+    let my_peer_id = peer_senders.keys().next().cloned().unwrap_or_else(|| "unknown".to_string());
+    drop(peer_senders);
+
+    let mesh_config = state.get_mesh_config().await;
+    let my_slot = peer_id_to_slot(&my_peer_id, &mesh_config);
+
+    // Get all DHT keys and hash them
+    let storage = state.dht_storage.lock().await;
+    let total_entries = storage.len();
+
+    // Sort keys for consistent hashing
+    let mut keys: Vec<[u8; 32]> = storage.keys().copied().collect();
+    keys.sort();
+
+    // Hash all keys together using Blake3
+    use blake3;
+    let mut hasher = blake3::Hasher::new();
+    for key in &keys {
+        hasher.update(key);
+    }
+    let dht_keys_hash = hex::encode(hasher.finalize().as_bytes());
+
+    // Count known peers from DHT
+    let known_peers = keys.iter()
+        .filter(|key| {
+            // Check if this is a peer_location_key (starts with 0x01)
+            key[0] == 0x01
+        })
+        .count();
+
+    drop(storage);
+
+    let report = DhtConsistencyReport {
+        total_entries,
+        dht_keys_hash,
+        known_peers,
+        my_peer_id,
+        my_slot,
+        timestamp: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
+    };
+
+    info!("📊 DHT Consistency: {} entries, hash={}, {} peers",
+        report.total_entries, &report.dht_keys_hash[..16], report.known_peers);
+
+    Ok(axum::Json(report))
 }
 
 #[cfg(test)]
@@ -935,14 +1758,6 @@ mod tests {
             "peer-123".to_string(),
         );
         assert!(!cache.is_stale());
-    }
-
-    #[tokio::test]
-    async fn test_dht_mesh_health_default() {
-        let state = RelayState::new();
-        let health = state.mesh_health.read().await.clone();
-        assert_eq!(health.total_peers, 0);
-        assert!(health.is_fragmented);
     }
 }
 

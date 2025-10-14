@@ -112,7 +112,7 @@ impl ClusterConfig {
             .unwrap_or_else(|_| "41".to_string())
             .parse()?;
 
-        let relay_url = std::env::var("LENS_RELAY_URL")
+        let relay_url = std::env::var("RELAY_URL")
             .unwrap_or_else(|_| "ws://localhost:5002/api/v1/relay/ws".to_string());
 
         let udp_port = 6000 + node_id;

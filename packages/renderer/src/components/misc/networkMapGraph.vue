@@ -114,7 +114,7 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-const { networkMap, loading, error, fetchNetworkMap } = useNetworkMap();
+const { networkMap, loading, error, fetchNetworkMap, connectWebSocket, disconnectWebSocket } = useNetworkMap();
 const graphContainer = ref<HTMLDivElement | null>(null);
 
 let graphInstance: any = null;
@@ -142,6 +142,8 @@ const initializeGraph = () => {
       source: edge.from,
       target: edge.to,
       type: edge.connection_type,
+      latency_ms: edge.latency_ms,
+      color: edge.color,
     })),
   };
 
@@ -178,14 +180,26 @@ const initializeGraph = () => {
     // Link styling
     .linkColor(link => {
       const l = link as any;
-      // Neighbor connections: purple, Relay connections: orange
+      // Use rainbow gradient color from backend (green=low latency, red=high latency)
+      // If no color specified, fall back to connection type colors
+      if (l.color) {
+        return l.color;
+      }
+      // Fallback: Neighbor connections: purple, Relay connections: orange
       return l.type === 'neighbor' ? 'rgba(138, 43, 226, 0.4)' : 'rgba(255, 152, 0, 0.6)';
     })
     .linkWidth(link => {
       const l = link as any;
-      return l.type === 'neighbor' ? 1 : 2;
+      return l.type === 'neighbor' ? 2 : 2;  // Slightly thicker for visibility
     })
-    .linkOpacity(0.5)
+    .linkOpacity(0.8)  // More opaque to show colors better
+    .linkLabel(link => {
+      const l = link as any;
+      if (l.latency_ms !== null && l.latency_ms !== undefined) {
+        return `${l.type} connection<br/>Latency: ${l.latency_ms}ms`;
+      }
+      return `${l.type} connection`;
+    })
     .linkDirectionalParticles(link => {
       const l = link as any;
       // Show particles on relay connections
@@ -235,6 +249,10 @@ const refresh = async () => {
 
 // Initialize on mount
 onMounted(async () => {
+  // Connect to WebSocket for real-time updates
+  connectWebSocket();
+
+  // Fetch initial network map
   await fetchNetworkMap();
   await nextTick();
   initializeGraph();
@@ -248,6 +266,10 @@ watch(() => networkMap.value, async () => {
 
 // Cleanup on unmount
 onBeforeUnmount(() => {
+  // Disconnect WebSocket
+  disconnectWebSocket();
+
+  // Clean up graph instance
   if (graphInstance) {
     graphInstance._destructor();
     graphInstance = null;

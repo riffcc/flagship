@@ -17,7 +17,7 @@
 
 use anyhow::{anyhow, Result};
 use citadel_core::topology::{Direction, MeshConfig, SlotCoordinate};
-use citadel_dht::local_storage::LocalStorage;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, RwLock};
@@ -53,7 +53,7 @@ pub struct LazyNode {
 
     /// DHT storage (shared with relay and sync orchestrator)
     /// Made pub(crate) so sync_orchestrator can populate DHT from PeerReferral events
-    pub(crate) dht_storage: Arc<Mutex<LocalStorage>>,
+    pub(crate) dht_storage: Arc<Mutex<crate::dht_state::DhtState>>,
 
     /// Ephemeral neighbor cache (10s TTL)
     /// Vec of (direction, peer_id, cached_at) tuples
@@ -75,7 +75,7 @@ impl LazyNode {
         my_slot: SlotCoordinate,
         my_peer_id: String,
         mesh_config: MeshConfig,
-        dht_storage: Arc<Mutex<LocalStorage>>,
+        dht_storage: Arc<Mutex<crate::dht_state::DhtState>>,
     ) -> Self {
         info!(
             "🔷 LazyNode created: peer={}, slot={:?}, mesh={}×{}×{}",
@@ -97,7 +97,7 @@ impl LazyNode {
         my_slot: SlotCoordinate,
         my_peer_id: String,
         mesh_config: MeshConfig,
-        dht_storage: Arc<Mutex<LocalStorage>>,
+        dht_storage: Arc<Mutex<crate::dht_state::DhtState>>,
         cache_ttl: Duration,
     ) -> Self {
         info!(
@@ -166,10 +166,10 @@ impl LazyNode {
         let dht = self.dht_storage.lock().await;
 
         let ownership_bytes = dht
-            .get(&ownership_key)
+            .get_raw(&ownership_key)
             .ok_or_else(|| anyhow!("Neighbor slot {:?} not found in DHT", neighbor_slot))?;
 
-        // 4. Parse SlotOwnership and extract peer_id
+        // 4. Parse SlotOwnership and extract peer_id (ownership_bytes is &Vec<u8> from get_raw)
         let ownership: SlotOwnership = serde_json::from_slice(ownership_bytes)
             .map_err(|e| anyhow!("Failed to parse SlotOwnership: {}", e))?;
 
@@ -338,7 +338,7 @@ impl LazyNode {
         let ownership_bytes = serde_json::to_vec(&ownership)?;
 
         let mut dht_storage = self.dht_storage.lock().await;
-        dht_storage.put(ownership_key, ownership_bytes);
+        dht_storage.insert_raw(ownership_key, ownership_bytes);
 
         info!("📍 Announced presence in DHT at slot {:?}", self.my_slot);
         Ok(())
@@ -351,11 +351,11 @@ impl LazyNode {
         let ownership_key = slot_ownership_key(self.my_slot);
         let mut dht_storage = self.dht_storage.lock().await;
 
-        if let Some(ownership_bytes) = dht_storage.get(&ownership_key) {
+        if let Some(ownership_bytes) = dht_storage.get_raw(&ownership_key) {
             if let Ok(mut ownership) = serde_json::from_slice::<SlotOwnership>(ownership_bytes) {
                 ownership.update_heartbeat();
                 let updated_bytes = serde_json::to_vec(&ownership)?;
-                dht_storage.put(ownership_key, updated_bytes);
+                dht_storage.insert_raw(ownership_key, updated_bytes);
                 debug!("💓 Updated heartbeat for slot {:?}", self.my_slot);
             }
         }
@@ -372,7 +372,7 @@ mod tests {
     async fn test_lazy_node_creation() {
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
-        let dht_storage = Arc::new(tokio::sync::Mutex::new(LocalStorage::new()));
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
         let lazy_node = LazyNode::new(
             my_slot,
@@ -390,7 +390,7 @@ mod tests {
     async fn test_get_all_neighbors_empty_dht() {
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
-        let dht_storage = Arc::new(tokio::sync::Mutex::new(LocalStorage::new()));
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
         let lazy_node = LazyNode::new(
             my_slot,
@@ -408,7 +408,7 @@ mod tests {
     async fn test_get_all_neighbors_with_populated_dht() {
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
-        let dht_storage = Arc::new(tokio::sync::Mutex::new(LocalStorage::new()));
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
         // Populate DHT with some neighbors
         {
@@ -425,7 +425,7 @@ mod tests {
                 );
                 let key = slot_ownership_key(*neighbor_slot);
                 let value = serde_json::to_vec(&ownership).unwrap();
-                storage.put(key, value);
+                storage.insert_raw(key, value);
             }
         }
 
@@ -448,7 +448,7 @@ mod tests {
     async fn test_announce_presence() {
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
-        let dht_storage = Arc::new(tokio::sync::Mutex::new(LocalStorage::new()));
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
         let lazy_node = LazyNode::new(
             my_slot,
@@ -463,7 +463,7 @@ mod tests {
         // Verify stored in DHT
         let storage = dht_storage.lock().await;
         let ownership_key = slot_ownership_key(my_slot);
-        let ownership_bytes = storage.get(&ownership_key).unwrap();
+        let ownership_bytes = storage.get_raw(&ownership_key).unwrap();
         let ownership: SlotOwnership = serde_json::from_slice(ownership_bytes).unwrap();
 
         assert_eq!(ownership.peer_id, "peer-123");
@@ -475,7 +475,7 @@ mod tests {
     async fn test_update_heartbeat() {
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
-        let dht_storage = Arc::new(tokio::sync::Mutex::new(LocalStorage::new()));
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
         let lazy_node = LazyNode::new(
             my_slot,
@@ -491,7 +491,7 @@ mod tests {
         let initial_heartbeat = {
             let storage = dht_storage.lock().await;
             let ownership_key = slot_ownership_key(my_slot);
-            let ownership_bytes = storage.get(&ownership_key).unwrap();
+            let ownership_bytes = storage.get_raw(&ownership_key).unwrap();
             let ownership: SlotOwnership = serde_json::from_slice(ownership_bytes).unwrap();
             ownership.last_heartbeat
         };
@@ -506,7 +506,7 @@ mod tests {
         let updated_heartbeat = {
             let storage = dht_storage.lock().await;
             let ownership_key = slot_ownership_key(my_slot);
-            let ownership_bytes = storage.get(&ownership_key).unwrap();
+            let ownership_bytes = storage.get_raw(&ownership_key).unwrap();
             let ownership: SlotOwnership = serde_json::from_slice(ownership_bytes).unwrap();
             ownership.last_heartbeat
         };
@@ -518,7 +518,7 @@ mod tests {
     async fn test_get_all_neighbors_skips_stale_peers() {
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
-        let dht_storage = Arc::new(tokio::sync::Mutex::new(LocalStorage::new()));
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
         // Populate DHT with a stale neighbor
         {
@@ -540,7 +540,7 @@ mod tests {
 
             let key = slot_ownership_key(*neighbor_slot);
             let value = serde_json::to_vec(&ownership).unwrap();
-            storage.put(key, value);
+            storage.insert_raw(key, value);
         }
 
         let lazy_node = LazyNode::new(
@@ -559,7 +559,7 @@ mod tests {
     async fn test_get_all_neighbors_skips_self() {
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
-        let dht_storage = Arc::new(tokio::sync::Mutex::new(LocalStorage::new()));
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
         // Populate DHT with ourselves as a neighbor (shouldn't happen, but test it)
         {
@@ -575,7 +575,7 @@ mod tests {
 
             let key = slot_ownership_key(*neighbor_slot);
             let value = serde_json::to_vec(&ownership).unwrap();
-            storage.put(key, value);
+            storage.insert_raw(key, value);
         }
 
         let lazy_node = LazyNode::new(

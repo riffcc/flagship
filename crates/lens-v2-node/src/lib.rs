@@ -17,6 +17,10 @@ pub mod peer_registry;
 pub mod lazy_node;
 pub mod dht_announcements;
 pub mod dht_messaging;
+pub mod dht_state;
+pub mod slot_identity;
+pub mod latency;
+pub mod distributed_dht;
 
 // TGP packet protocol - exported publicly for binary compatibility
 pub mod tgp;

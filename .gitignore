@@ -64,3 +64,6 @@ synthesis/
 
 # Roadmap planning docs
 ROADMAP_v0.6.0.md
+
+# Data
+.lens-node-data/

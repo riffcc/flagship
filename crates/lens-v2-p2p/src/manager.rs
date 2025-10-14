@@ -94,19 +94,130 @@ impl P2pManager {
         Ok(status)
     }
 
-    /// Add a peer to the network with optional type (defaults to Server if not specified)
-    pub fn add_peer(&self, peer_id: PeerId, peer_type: Option<crate::sync::TrackedPeerType>) -> Result<()> {
+    /// Get all known peer IDs as strings (for /map endpoint)
+    pub fn get_known_peer_strings(&self) -> Result<Vec<String>> {
+        #[cfg(not(target_arch = "wasm32"))]
+        let peers = self.sync.read()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .get_known_peer_strings();
+
+        #[cfg(target_arch = "wasm32")]
+        let peers = self.sync.lock()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .get_known_peer_strings();
+
+        Ok(peers)
+    }
+
+    /// Get all ALIVE peer IDs as strings (for /map endpoint)
+    pub fn get_alive_peer_strings(&self) -> Result<Vec<String>> {
+        #[cfg(not(target_arch = "wasm32"))]
+        let peers = self.sync.read()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .get_alive_peer_strings();
+
+        #[cfg(target_arch = "wasm32")]
+        let peers = self.sync.lock()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .get_alive_peer_strings();
+
+        Ok(peers)
+    }
+
+    /// Mark peer as alive (received heartbeat)
+    pub fn mark_peer_alive(&self, peer_id: PeerId) -> Result<()> {
         #[cfg(not(target_arch = "wasm32"))]
         self.sync.write()
             .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
-            .add_peer(peer_id, peer_type);
+            .mark_peer_alive(peer_id);
 
         #[cfg(target_arch = "wasm32")]
         self.sync.lock()
             .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
-            .add_peer(peer_id, peer_type);
+            .mark_peer_alive(peer_id);
 
         Ok(())
+    }
+
+    /// Clear all alive peers (start new heartbeat cycle)
+    pub fn clear_alive_peers(&self) -> Result<()> {
+        #[cfg(not(target_arch = "wasm32"))]
+        self.sync.write()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .clear_alive_peers();
+
+        #[cfg(target_arch = "wasm32")]
+        self.sync.lock()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .clear_alive_peers();
+
+        Ok(())
+    }
+
+    /// Get all known peer IDs as u64 (for internal use)
+    pub fn get_known_peers(&self) -> Result<Vec<PeerId>> {
+        #[cfg(not(target_arch = "wasm32"))]
+        let peers = self.sync.read()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .get_known_peers();
+
+        #[cfg(target_arch = "wasm32")]
+        let peers = self.sync.lock()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .get_known_peers();
+
+        Ok(peers)
+    }
+
+    /// Add a known peer (for awareness) - O(n) scalability
+    pub fn add_known_peer(&self, peer_id: PeerId) -> Result<()> {
+        #[cfg(not(target_arch = "wasm32"))]
+        self.sync.write()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .add_known_peer(peer_id);
+
+        #[cfg(target_arch = "wasm32")]
+        self.sync.lock()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .add_known_peer(peer_id);
+
+        Ok(())
+    }
+
+    /// Add a known peer with original string ID (for /map endpoint)
+    pub fn add_known_peer_with_string(&self, peer_id: PeerId, peer_id_string: String) -> Result<()> {
+        #[cfg(not(target_arch = "wasm32"))]
+        self.sync.write()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .add_known_peer_with_string(peer_id, peer_id_string);
+
+        #[cfg(target_arch = "wasm32")]
+        self.sync.lock()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .add_known_peer_with_string(peer_id, peer_id_string);
+
+        Ok(())
+    }
+
+    /// Add a connected peer (actual P2P connection to mesh neighbor) - O(1) scalability
+    pub fn add_connected_peer(&self, peer_id: PeerId, peer_type: Option<crate::sync::TrackedPeerType>) -> Result<()> {
+        #[cfg(not(target_arch = "wasm32"))]
+        self.sync.write()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .add_connected_peer(peer_id, peer_type);
+
+        #[cfg(target_arch = "wasm32")]
+        self.sync.lock()
+            .map_err(|e| P2pError::Sync(format!("Lock error: {}", e)))?
+            .add_connected_peer(peer_id, peer_type);
+
+        Ok(())
+    }
+
+    /// Add a peer to the network with optional type (defaults to Server if not specified)
+    /// DEPRECATED: Use add_connected_peer() for mesh neighbors or add_known_peer() for awareness
+    pub fn add_peer(&self, peer_id: PeerId, peer_type: Option<crate::sync::TrackedPeerType>) -> Result<()> {
+        self.add_connected_peer(peer_id, peer_type)
     }
 
     /// Remove a peer from the network
@@ -303,8 +414,12 @@ mod tests {
         let manager = P2pManager::new(config);
         let status = manager.sync_status().unwrap();
 
-        assert!(!status.is_synced);
+        // Bootstrap case: 0 peers, 0 blocks behind → synced (we ARE the network)
+        assert!(status.is_synced);
         assert_eq!(status.blocks_behind, 0);
+        assert_eq!(status.known_peers, 0);
+        assert_eq!(status.connected_peers, 0);
+        assert_eq!(status.peer_count, 0);
     }
 
     #[test]
@@ -364,9 +479,9 @@ mod tests {
     fn test_sync_workflow() {
         let manager = P2pManager::new(P2pConfig::default());
 
-        // Start with no peers
+        // Bootstrap case: Start with no peers, synced
         let status = manager.sync_status().unwrap();
-        assert!(!status.is_synced);
+        assert!(status.is_synced);
 
         // Add peer
         manager.add_peer(1, None).unwrap();
@@ -390,6 +505,108 @@ mod tests {
         let status = manager.sync_status().unwrap();
         assert!(status.is_synced);
         assert_eq!(status.blocks_behind, 0);
+    }
+
+    #[test]
+    fn test_known_peers_vs_connected_peers() {
+        let manager = P2pManager::new(P2pConfig::default());
+
+        // Add 49 known peers (O(n) awareness)
+        for i in 1..=49 {
+            manager.add_known_peer(i).unwrap();
+        }
+
+        // Add only 8 connected peers (O(1) mesh neighbors)
+        for i in 1..=8 {
+            manager.add_connected_peer(100 + i, None).unwrap();
+        }
+
+        let status = manager.sync_status().unwrap();
+
+        // Should have 49 known peers
+        assert_eq!(status.known_peers, 49 + 8, "Should know about all 57 peers (49 known + 8 connected)");
+
+        // Should have only 8 connected peers (mesh neighbors)
+        assert_eq!(status.connected_peers, 8, "Should only connect to 8 mesh neighbors");
+
+        // peer_count should match connected_peers (backward compat)
+        assert_eq!(status.peer_count, 8, "peer_count should match connected_peers for backward compat");
+    }
+
+    #[test]
+    fn test_scalability_50_nodes() {
+        let manager = P2pManager::new(P2pConfig::default());
+
+        // Simulate 50-node cluster: know about all 49 other peers
+        for i in 1..=49 {
+            manager.add_known_peer(i).unwrap();
+        }
+
+        // But only connect to 8 mesh neighbors
+        for i in 1..=8 {
+            manager.add_connected_peer(100 + i, None).unwrap();
+        }
+
+        let status = manager.sync_status().unwrap();
+
+        // O(n) awareness: know about all 49 peers + 8 connected = 57 total
+        assert_eq!(status.known_peers, 57);
+
+        // O(1) scalability: only 8 connections regardless of network size
+        assert_eq!(status.connected_peers, 8);
+    }
+
+    #[test]
+    fn test_scalability_1000_nodes() {
+        let manager = P2pManager::new(P2pConfig::default());
+
+        // Simulate 1000-node cluster: know about all 999 other peers
+        for i in 1..=999 {
+            manager.add_known_peer(i).unwrap();
+        }
+
+        // But only connect to 8 mesh neighbors
+        for i in 1..=8 {
+            manager.add_connected_peer(10000 + i, None).unwrap();
+        }
+
+        let status = manager.sync_status().unwrap();
+
+        // O(n) awareness: know about all 999 peers + 8 connected = 1007 total
+        assert_eq!(status.known_peers, 1007);
+
+        // O(1) scalability: STILL only 8 connections (proves O(1) scaling!)
+        assert_eq!(status.connected_peers, 8, "Should have exactly 8 connections even with 1000 nodes!");
+    }
+
+    #[test]
+    fn test_connected_peer_also_added_to_known_peers() {
+        let manager = P2pManager::new(P2pConfig::default());
+
+        // Add a connected peer
+        manager.add_connected_peer(1, None).unwrap();
+
+        let status = manager.sync_status().unwrap();
+
+        // Should appear in both known and connected
+        assert_eq!(status.known_peers, 1);
+        assert_eq!(status.connected_peers, 1);
+    }
+
+    #[test]
+    fn test_backward_compatibility_add_peer() {
+        let manager = P2pManager::new(P2pConfig::default());
+
+        // Legacy add_peer() should work like add_connected_peer()
+        manager.add_peer(1, None).unwrap();
+        manager.add_peer(2, None).unwrap();
+
+        let status = manager.sync_status().unwrap();
+
+        // Should be treated as connected peers
+        assert_eq!(status.connected_peers, 2);
+        assert_eq!(status.known_peers, 2);
+        assert_eq!(status.peer_count, 2);
     }
 
     #[test]
