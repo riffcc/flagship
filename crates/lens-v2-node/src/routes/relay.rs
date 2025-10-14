@@ -216,9 +216,9 @@ impl NeighborCache {
 }
 
 /// Pending DHT GET request waiting for response
-struct PendingDhtGet {
-    response_tx: tokio::sync::oneshot::Sender<Option<Vec<u8>>>,
-    timestamp: std::time::SystemTime,
+pub struct PendingDhtGet {
+    pub response_tx: tokio::sync::oneshot::Sender<Option<Vec<u8>>>,
+    pub timestamp: std::time::SystemTime,
 }
 
 /// Relay state shared across WebSocket connections
@@ -238,8 +238,11 @@ pub struct RelayState {
     dht_seen_cache: Arc<RwLock<HashMap<String, u64>>>,
     /// This node's peer_id (for DHT routing calculations)
     node_peer_id: Arc<RwLock<Option<String>>>,
+    /// This node's explicit slot coordinate (overrides peer_id_to_slot calculation)
+    /// When set, routing uses this instead of hashing the peer_id
+    my_slot: Arc<RwLock<Option<SlotCoordinate>>>,
     /// Pending DHT GET requests waiting for responses (key_hex -> response channel)
-    pending_dht_gets: Arc<RwLock<HashMap<String, PendingDhtGet>>>,
+    pub pending_dht_gets: Arc<RwLock<HashMap<String, PendingDhtGet>>>,
     /// P2P manager for tracking known peers (for /map and /ready endpoints)
     pub p2p_manager: Option<Arc<lens_v2_p2p::P2pManager>>,
 }
@@ -255,6 +258,7 @@ impl RelayState {
             neighbor_cache: Arc::new(RwLock::new(HashMap::new())),
             dht_seen_cache: Arc::new(RwLock::new(HashMap::new())),
             node_peer_id: Arc::new(RwLock::new(None)),
+            my_slot: Arc::new(RwLock::new(None)),
             pending_dht_gets: Arc::new(RwLock::new(HashMap::new())),
             p2p_manager: None,
         }
@@ -277,6 +281,11 @@ impl RelayState {
 
     pub fn with_node_peer_id(mut self, peer_id: String) -> Self {
         self.node_peer_id = Arc::new(RwLock::new(Some(peer_id)));
+        self
+    }
+
+    pub fn with_my_slot(mut self, slot: SlotCoordinate) -> Self {
+        self.my_slot = Arc::new(RwLock::new(Some(slot)));
         self
     }
 
@@ -356,15 +365,39 @@ impl RelayState {
     }
 
     /// Find the closest peer to a target slot using greedy routing
+    /// Checks BOTH WebSocket peers AND WebRTC peers
+    /// Looks up ACTUAL slot ownership from DHT storage (not peer_id_to_slot hash)
     async fn find_closest_peer(&self, target_slot: SlotCoordinate) -> Option<(String, SlotCoordinate, i32)> {
+        println!("🔍 find_closest_peer: Looking for peers closest to slot ({}, {}, {})", target_slot.x, target_slot.y, target_slot.z);
         let mesh_config = self.get_mesh_config().await;
-        let peer_senders = self.peer_senders.read().await;
 
         let mut closest_peer: Option<(String, SlotCoordinate, i32)> = None;
         let mut min_distance = i32::MAX;
 
+        // Check WebSocket peers - look up their ACTUAL slots from DHT
+        let peer_senders = self.peer_senders.read().await;
+        println!("🔍 find_closest_peer: Found {} WebSocket peers", peer_senders.len());
+        let dht_storage = self.dht_storage.lock().await;
+
         for peer_id in peer_senders.keys() {
-            let peer_slot = peer_id_to_slot(peer_id, &mesh_config);
+            // Try to get actual slot from DHT first
+            let peer_slot = {
+                let location_key = peer_location_key(peer_id);
+                if let Some(ownership_bytes) = dht_storage.get_raw(&location_key) {
+                    if let Ok(ownership) = serde_json::from_slice::<SlotOwnership>(ownership_bytes) {
+                        if !ownership.is_stale() {
+                            ownership.slot
+                        } else {
+                            peer_id_to_slot(peer_id, &mesh_config)
+                        }
+                    } else {
+                        peer_id_to_slot(peer_id, &mesh_config)
+                    }
+                } else {
+                    peer_id_to_slot(peer_id, &mesh_config)
+                }
+            };
+
             let (dx, dy, dz) = peer_slot.distance_to(&target_slot, &mesh_config);
             let distance = dx.abs() + dy.abs() + dz.abs(); // Manhattan distance
 
@@ -373,8 +406,48 @@ impl RelayState {
                 closest_peer = Some((peer_id.clone(), peer_slot, distance));
             }
         }
-
         drop(peer_senders);
+
+        // ALSO check WebRTC peers!
+        if let Some(ref webrtc_mgr) = self.webrtc_manager {
+            let webrtc_peers = webrtc_mgr.peers.read().await;
+            println!("🔍 find_closest_peer: Found {} WebRTC peers", webrtc_peers.len());
+            for peer_id in webrtc_peers.keys() {
+                println!("🔍 find_closest_peer: Checking WebRTC peer: {}", peer_id);
+                // Try to get actual slot from DHT first
+                let peer_slot = {
+                    let location_key = peer_location_key(peer_id);
+                    if let Some(ownership_bytes) = dht_storage.get_raw(&location_key) {
+                        if let Ok(ownership) = serde_json::from_slice::<SlotOwnership>(ownership_bytes) {
+                            if !ownership.is_stale() {
+                                ownership.slot
+                            } else {
+                                peer_id_to_slot(peer_id, &mesh_config)
+                            }
+                        } else {
+                            peer_id_to_slot(peer_id, &mesh_config)
+                        }
+                    } else {
+                        peer_id_to_slot(peer_id, &mesh_config)
+                    }
+                };
+
+                let (dx, dy, dz) = peer_slot.distance_to(&target_slot, &mesh_config);
+                let distance = dx.abs() + dy.abs() + dz.abs(); // Manhattan distance
+
+                info!("🔍 find_closest_peer: WebRTC peer {} at slot ({}, {}, {}) has distance {}",
+                    peer_id, peer_slot.x, peer_slot.y, peer_slot.z, distance);
+
+                if distance < min_distance {
+                    min_distance = distance;
+                    closest_peer = Some((peer_id.clone(), peer_slot, distance));
+                    info!("✅ find_closest_peer: Found closer peer via WebRTC: {} at distance {}", peer_id, distance);
+                }
+            }
+            drop(webrtc_peers);
+        }
+
+        drop(dht_storage);
         closest_peer
     }
 
@@ -395,7 +468,15 @@ impl RelayState {
         };
         drop(node_peer_id_lock);
 
-        let my_slot = peer_id_to_slot(&my_peer_id, &mesh_config);
+        // Check if explicit slot is set (for tests), otherwise calculate from peer_id
+        let my_slot = {
+            let slot_lock = self.my_slot.read().await;
+            if let Some(slot) = slot_lock.as_ref() {
+                *slot
+            } else {
+                peer_id_to_slot(&my_peer_id, &mesh_config)
+            }
+        };
 
         if target_slot == my_slot {
             // This key belongs to OUR slot! Read locally
@@ -456,7 +537,22 @@ impl RelayState {
                 &payload
             );
 
-            {
+            // Try WebRTC DataChannel first, fall back to WebSocket
+            let mut sent_via_webrtc = false;
+            if let Some(ref webrtc_mgr) = self.webrtc_manager {
+                if webrtc_mgr.is_peer_connected(&closest_peer_id).await {
+                    // Send via WebRTC DataChannel!
+                    if let Ok(_) = webrtc_mgr.send_binary_to_peer(&closest_peer_id, packet.clone()).await {
+                        debug!("📡 DHT GET sent via WebRTC DataChannel to {}", closest_peer_id);
+                        sent_via_webrtc = true;
+                    } else {
+                        debug!("⚠️  WebRTC send failed for {}, falling back to WebSocket", closest_peer_id);
+                    }
+                }
+            }
+
+            // Fall back to WebSocket if WebRTC not available or failed
+            if !sent_via_webrtc {
                 let senders = self.peer_senders.read().await;
                 if let Some(tx) = senders.get(&closest_peer_id) {
                     if let Err(e) = tx.send(Message::Binary(packet)) {
@@ -513,23 +609,34 @@ impl RelayState {
         };
         drop(node_peer_id_lock);
 
-        let my_slot = peer_id_to_slot(&my_peer_id, &mesh_config);
+        // Check if explicit slot is set (for tests), otherwise calculate from peer_id
+        let my_slot = {
+            let slot_lock = self.my_slot.read().await;
+            if let Some(slot) = slot_lock.as_ref() {
+                *slot
+            } else {
+                peer_id_to_slot(&my_peer_id, &mesh_config)
+            }
+        };
 
-        info!("🔑 DHT PUT: Key maps to slot ({}, {}, {}), my slot is ({}, {}, {})",
+        println!("🔑 DHT PUT: Key maps to slot ({}, {}, {}), my slot is ({}, {}, {})",
             target_slot.x, target_slot.y, target_slot.z,
             my_slot.x, my_slot.y, my_slot.z);
 
         if target_slot == my_slot {
             // This key belongs to OUR slot! Store locally
-            info!("✅ DHT PUT: Key belongs to our slot, storing locally");
+            println!("✅ DHT PUT: Key belongs to our slot, storing locally");
             let mut storage = self.dht_storage.lock().await;
             storage.insert_raw(key, value);
+            println!("✅ DHT PUT: Value stored in local DHT storage");
         } else {
             // Key belongs to DIFFERENT slot! Route to closest peer
-            info!("🔀 DHT PUT: Key belongs to different slot, routing via greedy routing");
+            println!("🔀 DHT PUT: Key belongs to different slot, routing via greedy routing");
+            println!("🔍 DHT PUT: Calling find_closest_peer for target slot ({}, {}, {})", target_slot.x, target_slot.y, target_slot.z);
 
-            if let Some((closest_peer_id, _closest_slot, distance)) = self.find_closest_peer(target_slot).await {
-                info!("🚀 DHT PUT: Routing to {} (distance to target: {})", closest_peer_id, distance);
+            if let Some((closest_peer_id, closest_slot, distance)) = self.find_closest_peer(target_slot).await {
+                println!("🚀 DHT PUT: Found closest peer {} at slot ({}, {}, {}) (distance to target: {})",
+                    closest_peer_id, closest_slot.x, closest_slot.y, closest_slot.z, distance);
 
                 // Create TGP DhtPutRequest packet
                 let request = crate::tgp::DhtPutRequest {
@@ -554,21 +661,154 @@ impl RelayState {
                     &payload
                 );
 
-                // Send to closest peer
-                let senders = self.peer_senders.read().await;
-                if let Some(tx) = senders.get(&closest_peer_id) {
-                    if let Err(e) = tx.send(Message::Binary(packet)) {
-                        warn!("⚠️  DHT PUT: Failed to send to {}: {}", closest_peer_id, e);
+                // Try WebRTC DataChannel first, fall back to WebSocket
+                let mut sent_via_webrtc = false;
+                if let Some(ref webrtc_mgr) = self.webrtc_manager {
+                    println!("🔍 DHT PUT: Checking if peer {} is connected via WebRTC", closest_peer_id);
+                    info!("🔍 DHT PUT: Checking if peer {} is connected via WebRTC", closest_peer_id);
+                    if webrtc_mgr.is_peer_connected(&closest_peer_id).await {
+                        println!("✅ DHT PUT: Peer {} is connected via WebRTC, sending {} byte TGP packet", closest_peer_id, packet.len());
+                        info!("✅ DHT PUT: Peer {} is connected via WebRTC, sending {} byte TGP packet", closest_peer_id, packet.len());
+                        // Send via WebRTC DataChannel!
+                        match webrtc_mgr.send_binary_to_peer(&closest_peer_id, packet.clone()).await {
+                            Ok(_) => {
+                                println!("📡 DHT PUT sent via WebRTC DataChannel to {}", closest_peer_id);
+                                info!("📡 DHT PUT sent via WebRTC DataChannel to {}", closest_peer_id);
+                                sent_via_webrtc = true;
+                            }
+                            Err(e) => {
+                                println!("⚠️  WebRTC send failed for {}: {}, falling back to WebSocket", closest_peer_id, e);
+                                warn!("⚠️  WebRTC send failed for {}: {}, falling back to WebSocket", closest_peer_id, e);
+                            }
+                        }
                     } else {
-                        info!("✅ DHT PUT: Sent to {} for routing", closest_peer_id);
+                        println!("⚠️  DHT PUT: Peer {} NOT connected via WebRTC", closest_peer_id);
+                        info!("⚠️  DHT PUT: Peer {} NOT connected via WebRTC", closest_peer_id);
                     }
                 } else {
-                    warn!("⚠️  DHT PUT: Closest peer {} not found in senders", closest_peer_id);
+                    println!("⚠️  DHT PUT: No WebRTC manager available");
+                    info!("⚠️  DHT PUT: No WebRTC manager available");
+                }
+
+                // Fall back to WebSocket if WebRTC not available or failed
+                if !sent_via_webrtc {
+                    let senders = self.peer_senders.read().await;
+                    if let Some(tx) = senders.get(&closest_peer_id) {
+                        if let Err(e) = tx.send(Message::Binary(packet)) {
+                            warn!("⚠️  DHT PUT: Failed to send to {}: {}", closest_peer_id, e);
+                        } else {
+                            info!("✅ DHT PUT: Sent to {} for routing", closest_peer_id);
+                        }
+                    } else {
+                        warn!("⚠️  DHT PUT: Closest peer {} not found in senders", closest_peer_id);
+                    }
                 }
             } else {
                 warn!("⚠️  DHT PUT: No route to target slot ({}, {}, {})", target_slot.x, target_slot.y, target_slot.z);
             }
         }
+    }
+
+    /// Gossip slot ownership announcement to ALL connected peers (both WebSocket and WebRTC)
+    /// This enables distributed slot discovery without circular dependencies
+    pub async fn gossip_slot_ownership(&self, peer_id: String, slot: SlotCoordinate) {
+        use crate::peer_registry::{SlotOwnership, peer_location_key, slot_ownership_key};
+
+        println!("📢 Gossiping slot ownership: {} → ({}, {}, {})", peer_id, slot.x, slot.y, slot.z);
+
+        // Create ownership record
+        let ownership = SlotOwnership::new(peer_id.clone(), slot, None);
+        let ownership_bytes = match serde_json::to_vec(&ownership) {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                warn!("Failed to serialize slot ownership: {}", e);
+                return;
+            }
+        };
+
+        // Store locally first
+        {
+            let mut storage = self.dht_storage.lock().await;
+            let location_key = peer_location_key(&peer_id);
+            let slot_key = slot_ownership_key(slot);
+            storage.insert_raw(location_key, ownership_bytes.clone());
+            storage.insert_raw(slot_key, ownership_bytes.clone());
+            println!("✅ Stored slot ownership locally: {} → ({}, {}, {})", peer_id, slot.x, slot.y, slot.z);
+        }
+
+        // Create gossip message
+        let gossip_message = serde_json::json!({
+            "type": "slot_ownership_gossip",
+            "peer_id": peer_id,
+            "slot": {
+                "x": slot.x,
+                "y": slot.y,
+                "z": slot.z,
+            },
+            "ownership_bytes": hex::encode(&ownership_bytes),
+        });
+
+        let message_json = match serde_json::to_string(&gossip_message) {
+            Ok(json) => json,
+            Err(e) => {
+                warn!("Failed to serialize gossip message: {}", e);
+                return;
+            }
+        };
+
+        let mut gossip_count = 0;
+
+        // Broadcast to WebSocket peers
+        let peer_senders = self.peer_senders.read().await;
+        println!("🔍 Gossip: Found {} WebSocket peers", peer_senders.len());
+        for (ws_peer_id, tx) in peer_senders.iter() {
+            println!("🔍 Gossip: Checking WebSocket peer: {}", ws_peer_id);
+            if ws_peer_id != &peer_id {  // Don't send back to origin
+                if let Err(e) = tx.send(Message::Text(message_json.clone())) {
+                    debug!("Failed to gossip to WebSocket peer {}: {}", ws_peer_id, e);
+                } else {
+                    gossip_count += 1;
+                    println!("✅ Gossip: Sent to WebSocket peer {}", ws_peer_id);
+                }
+            } else {
+                println!("⏭️  Gossip: Skipping origin peer {}", ws_peer_id);
+            }
+        }
+        drop(peer_senders);
+
+        // Broadcast to WebRTC peers
+        if let Some(ref webrtc_mgr) = self.webrtc_manager {
+            let webrtc_peers = webrtc_mgr.peers.read().await;
+            println!("🔍 Gossip: Found {} WebRTC peers", webrtc_peers.len());
+            for (rtc_peer_id, peer) in webrtc_peers.iter() {
+                println!("🔍 Gossip: Checking WebRTC peer: {}, has_dc: {}", rtc_peer_id, peer.data_channel.is_some());
+                if rtc_peer_id != &peer_id {  // Don't send back to origin
+                    if let Some(ref dc) = peer.data_channel {
+                        // Check DataChannel ready state
+                        let ready_state = dc.ready_state();
+                        println!("🔍 Gossip: DataChannel state for peer {}: {:?}", rtc_peer_id, ready_state);
+
+                        match dc.send_text(message_json.clone()).await {
+                            Ok(_) => {
+                                gossip_count += 1;
+                                println!("✅ Gossip: Sent to WebRTC peer {}", rtc_peer_id);
+                            }
+                            Err(e) => {
+                                println!("❌ Gossip: Failed to send to WebRTC peer {}: {}", rtc_peer_id, e);
+                            }
+                        }
+                    } else {
+                        println!("⏭️  Gossip: WebRTC peer {} has no DataChannel yet", rtc_peer_id);
+                    }
+                } else {
+                    println!("⏭️  Gossip: Skipping origin peer {}", rtc_peer_id);
+                }
+            }
+        } else {
+            println!("⚠️  Gossip: No WebRTC manager available");
+        }
+
+        println!("✅ Gossiped slot ownership to {} peers", gossip_count);
     }
 
     /// Broadcast a mesh topology update to all connected peers
@@ -613,7 +853,16 @@ impl RelayState {
     /// Each peer forwards to its 8 mesh neighbors, who forward to THEIR neighbors, etc.
     pub async fn gossip_dht_put(&self, key: [u8; 32], value: Vec<u8>, source_peer_id: String, my_peer_id: String) {
         let mesh_config = self.get_mesh_config().await;
-        let my_slot = peer_id_to_slot(&my_peer_id, &mesh_config);
+
+        // Check if explicit slot is set (for tests), otherwise calculate from peer_id
+        let my_slot = {
+            let slot_lock = self.my_slot.read().await;
+            if let Some(slot) = slot_lock.as_ref() {
+                *slot
+            } else {
+                peer_id_to_slot(&my_peer_id, &mesh_config)
+            }
+        };
 
         // Get my 8 mesh neighbors
         let neighbor_slots = get_neighbor_slots(&my_slot, &mesh_config);
@@ -748,7 +997,16 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
     // Calculate my SlotCoordinate and announce ownership!
     {
         let mesh_config = state.get_mesh_config_for_assignment().await;
-        let my_slot = peer_id_to_slot(&peer_id, &mesh_config);
+
+        // Check if explicit slot is set (for tests), otherwise calculate from peer_id
+        let my_slot = {
+            let slot_lock = state.my_slot.read().await;
+            if let Some(slot) = slot_lock.as_ref() {
+                *slot
+            } else {
+                peer_id_to_slot(&peer_id, &mesh_config)
+            }
+        };
 
         info!("📢 Peer {} assigned to slot ({}, {}, {}) in hexagonal toroidal mesh",
             peer_id, my_slot.x, my_slot.y, my_slot.z);
@@ -790,6 +1048,13 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
             } else {
                 info!("✅ Added peer {} to P2P manager (known_peers tracking)", peer_id);
             }
+
+            // Mark peer as alive immediately on connection
+            if let Err(e) = p2p.mark_peer_alive(peer_id_u64) {
+                warn!("Failed to mark peer {} as alive: {}", peer_id, e);
+            } else {
+                info!("💓 Marked peer {} as alive on connection", peer_id);
+            }
         }
 
         // Broadcast topology update to all connected peers
@@ -825,7 +1090,7 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                             let mgr = webrtc_mgr.clone();
                             let browser_peer_id = peer_id.clone();
                             tokio::spawn(async move {
-                                if let Err(e) = mgr.create_peer_connection(browser_peer_id.clone()).await {
+                                if let Err(e) = mgr.create_peer_connection(browser_peer_id.clone(), crate::webrtc_manager::PeerType::Browser).await {
                                     warn!("Relay: Failed to create WebRTC connection to {}: {}", browser_peer_id, e);
                                 }
                             });
@@ -857,6 +1122,72 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                             for (other_peer_id, tx) in senders.iter() {
                                 if other_peer_id != &peer_id {
                                     let _ = tx.send(Message::Text(text.clone()));
+                                }
+                            }
+                        }
+                        continue;
+                    }
+
+                    // Check for slot ownership gossip
+                    if let Some("slot_ownership_gossip") = msg_json.get("type").and_then(|v| v.as_str()) {
+                        println!("📨 Received slot ownership gossip from {}", peer_id);
+
+                        if let (Some(gossiped_peer_id), Some(slot_obj), Some(ownership_hex)) = (
+                            msg_json.get("peer_id").and_then(|v| v.as_str()),
+                            msg_json.get("slot"),
+                            msg_json.get("ownership_bytes").and_then(|v| v.as_str())
+                        ) {
+                            if let (Some(x), Some(y), Some(z)) = (
+                                slot_obj.get("x").and_then(|v| v.as_u64()),
+                                slot_obj.get("y").and_then(|v| v.as_u64()),
+                                slot_obj.get("z").and_then(|v| v.as_u64())
+                            ) {
+                                let slot = SlotCoordinate::new(x as i32, y as i32, z as i32);
+                                println!("📍 Storing gossiped slot ownership: {} → ({}, {}, {})", gossiped_peer_id, x, y, z);
+
+                                // Decode ownership bytes
+                                if let Ok(ownership_bytes) = hex::decode(ownership_hex) {
+                                    use crate::peer_registry::{peer_location_key, slot_ownership_key};
+
+                                    // Store in local DHT
+                                    let mut storage = state.dht_storage.lock().await;
+                                    let location_key = peer_location_key(gossiped_peer_id);
+                                    let slot_key = slot_ownership_key(slot);
+                                    storage.insert_raw(location_key, ownership_bytes.clone());
+                                    storage.insert_raw(slot_key, ownership_bytes);
+                                    drop(storage);
+
+                                    println!("✅ Stored gossiped slot ownership locally");
+
+                                    // Re-gossip to other peers (flooding with TTL would be better)
+                                    let senders = state.peer_senders.read().await;
+                                    let mut regossip_count = 0;
+                                    for (other_peer_id, tx) in senders.iter() {
+                                        if other_peer_id != &peer_id && other_peer_id != gossiped_peer_id {
+                                            if let Ok(_) = tx.send(Message::Text(text.clone())) {
+                                                regossip_count += 1;
+                                            }
+                                        }
+                                    }
+                                    drop(senders);
+
+                                    // Also re-gossip via WebRTC
+                                    if let Some(ref webrtc_mgr) = state.webrtc_manager {
+                                        let webrtc_peers = webrtc_mgr.peers.read().await;
+                                        for (rtc_peer_id, peer) in webrtc_peers.iter() {
+                                            if rtc_peer_id != &peer_id && rtc_peer_id != gossiped_peer_id {
+                                                if let Some(ref dc) = peer.data_channel {
+                                                    if let Ok(_) = dc.send_text(text.clone()).await {
+                                                        regossip_count += 1;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if regossip_count > 0 {
+                                        println!("🌐 Re-gossiped slot ownership to {} peers", regossip_count);
+                                    }
                                 }
                             }
                         }
@@ -1689,13 +2020,24 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
 pub async fn dht_consistency_handler(
     State(state): State<RelayState>,
 ) -> Result<axum::Json<DhtConsistencyReport>, StatusCode> {
-    // Get my peer ID from the first connected peer (hack, but works for health check)
-    let peer_senders = state.peer_senders.read().await;
-    let my_peer_id = peer_senders.keys().next().cloned().unwrap_or_else(|| "unknown".to_string());
-    drop(peer_senders);
+    // Get my peer ID from RelayState (NOT from connected WebSocket peers!)
+    let node_peer_id_lock = state.node_peer_id.read().await;
+    let my_peer_id = node_peer_id_lock.as_ref()
+        .cloned()
+        .unwrap_or_else(|| "unknown".to_string());
+    drop(node_peer_id_lock);
 
     let mesh_config = state.get_mesh_config().await;
-    let my_slot = peer_id_to_slot(&my_peer_id, &mesh_config);
+
+    // Check if explicit slot is set (for tests), otherwise calculate from peer_id
+    let my_slot = {
+        let slot_lock = state.my_slot.read().await;
+        if let Some(slot) = slot_lock.as_ref() {
+            *slot
+        } else {
+            peer_id_to_slot(&my_peer_id, &mesh_config)
+        }
+    };
 
     // Get all DHT keys and hash them
     let storage = state.dht_storage.lock().await;
@@ -1763,3 +2105,277 @@ mod tests {
 
 // Re-export rand for peer IDs
 use rand;
+
+/// DHT GET response for HTTP endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DhtGetHttpResponse {
+    /// The key that was requested (hex encoded)
+    pub key: String,
+    /// The value if found (hex encoded), None if not found
+    pub value: Option<String>,
+}
+
+/// DHT PUT request for HTTP endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DhtPutHttpRequest {
+    /// The key to store (hex encoded)
+    pub key: String,
+    /// The value to store (hex encoded)
+    pub value: String,
+}
+
+/// HTTP handler for DHT GET operations
+/// GET /api/v1/dht/get/:key_hex
+///
+/// Returns the value associated with the key if found, or None if not found.
+/// The key must be a hex-encoded 32-byte Blake3 hash.
+pub async fn dht_get_handler(
+    State(state): State<RelayState>,
+    axum::extract::Path(key_hex): axum::extract::Path<String>,
+) -> Result<axum::Json<DhtGetHttpResponse>, StatusCode> {
+    // Decode hex key
+    let key_bytes = hex::decode(&key_hex).map_err(|e| {
+        warn!("DHT GET HTTP: Invalid hex key: {}", e);
+        StatusCode::BAD_REQUEST
+    })?;
+
+    // Validate key length
+    if key_bytes.len() != 32 {
+        warn!("DHT GET HTTP: Key must be 32 bytes, got {}", key_bytes.len());
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Convert to array
+    let mut key = [0u8; 32];
+    key.copy_from_slice(&key_bytes);
+
+    info!("DHT GET HTTP: key={}", key_hex);
+
+    // Perform DHT GET (routes through the mesh)
+    let value = state.dht_get(key).await;
+
+    let response = DhtGetHttpResponse {
+        key: key_hex,
+        value: value.map(hex::encode),
+    };
+
+    info!("DHT GET HTTP: found={}", response.value.is_some());
+    Ok(axum::Json(response))
+}
+
+/// HTTP handler for DHT PUT operations
+/// POST /api/v1/dht/put
+///
+/// Stores a key-value pair in the DHT. The key and value must be hex-encoded.
+/// The key must be a 32-byte Blake3 hash.
+pub async fn dht_put_handler(
+    State(state): State<RelayState>,
+    axum::Json(request): axum::Json<DhtPutHttpRequest>,
+) -> Result<StatusCode, StatusCode> {
+    // Decode hex key
+    let key_bytes = hex::decode(&request.key).map_err(|e| {
+        warn!("DHT PUT HTTP: Invalid hex key: {}", e);
+        StatusCode::BAD_REQUEST
+    })?;
+
+    // Validate key length
+    if key_bytes.len() != 32 {
+        warn!("DHT PUT HTTP: Key must be 32 bytes, got {}", key_bytes.len());
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Convert to array
+    let mut key = [0u8; 32];
+    key.copy_from_slice(&key_bytes);
+
+    // Decode hex value
+    let value = hex::decode(&request.value).map_err(|e| {
+        warn!("DHT PUT HTTP: Invalid hex value: {}", e);
+        StatusCode::BAD_REQUEST
+    })?;
+
+    info!("DHT PUT HTTP: key={} value_len={}", request.key, value.len());
+
+    // Perform DHT PUT (routes through the mesh to the correct slot)
+    state.dht_put(key, value).await;
+
+    info!("DHT PUT HTTP: Success");
+    Ok(StatusCode::OK)
+}
+
+/// Request body for gossip_slot_ownership HTTP endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GossipSlotOwnershipRequest {
+    /// Peer ID announcing slot ownership
+    pub peer_id: String,
+    /// Slot coordinate
+    pub slot: SlotCoordinate,
+}
+
+/// POST /api/v1/dht/gossip_slot_ownership
+///
+/// Gossips slot ownership announcement to all connected peers (both WebSocket and WebRTC).
+/// This enables distributed slot discovery without circular dependencies.
+pub async fn gossip_slot_ownership_handler(
+    State(state): State<RelayState>,
+    axum::Json(request): axum::Json<GossipSlotOwnershipRequest>,
+) -> Result<StatusCode, StatusCode> {
+    info!("📢 HTTP: Gossiping slot ownership: {} → ({}, {}, {})",
+        request.peer_id, request.slot.x, request.slot.y, request.slot.z);
+
+    // Call the gossip method
+    state.gossip_slot_ownership(request.peer_id, request.slot).await;
+
+    info!("✅ HTTP: Slot ownership gossip initiated");
+    Ok(StatusCode::OK)
+}
+
+/// WebRTC offer request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebRtcOfferRequest {
+    /// Target peer ID to connect to
+    pub to_peer_id: String,
+}
+
+/// WebRTC offer response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebRtcOfferResponse {
+    /// SDP offer string
+    pub sdp: String,
+}
+
+/// WebRTC answer request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebRtcAnswerRequest {
+    /// Source peer ID (who sent the offer)
+    pub from_peer_id: String,
+    /// SDP offer from the source peer
+    pub sdp: String,
+}
+
+/// WebRTC answer response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebRtcAnswerResponse {
+    /// SDP answer string
+    pub sdp: String,
+}
+
+/// WebRTC complete request (send answer back to offerer)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebRtcCompleteRequest {
+    /// Source peer ID (who sent the answer)
+    pub from_peer_id: String,
+    /// SDP answer from the answerer
+    pub sdp: String,
+}
+
+/// HTTP handler for creating WebRTC offers
+/// POST /api/v1/webrtc/offer
+///
+/// Creates a WebRTC offer to connect to another node
+pub async fn webrtc_offer_handler(
+    State(state): State<RelayState>,
+    axum::Json(request): axum::Json<WebRtcOfferRequest>,
+) -> Result<axum::Json<WebRtcOfferResponse>, StatusCode> {
+    info!("WebRTC offer request for peer: {}", request.to_peer_id);
+
+    let webrtc_mgr = state.webrtc_manager
+        .as_ref()
+        .ok_or_else(|| {
+            warn!("WebRTC manager not available");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Create offer using WebRTCManager
+    let sdp = webrtc_mgr.create_offer(request.to_peer_id.clone())
+        .await
+        .map_err(|e| {
+            warn!("Failed to create WebRTC offer: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    info!("Created WebRTC offer (SDP length: {} bytes)", sdp.len());
+
+    Ok(axum::Json(WebRtcOfferResponse { sdp }))
+}
+
+/// HTTP handler for handling WebRTC offers and creating answers
+/// POST /api/v1/webrtc/answer
+///
+/// Receives a WebRTC offer and returns an answer
+pub async fn webrtc_answer_handler(
+    State(state): State<RelayState>,
+    axum::Json(request): axum::Json<WebRtcAnswerRequest>,
+) -> Result<axum::Json<WebRtcAnswerResponse>, StatusCode> {
+    info!("WebRTC answer request from peer: {}", request.from_peer_id);
+
+    let webrtc_mgr = state.webrtc_manager
+        .as_ref()
+        .ok_or_else(|| {
+            warn!("WebRTC manager not available");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Handle offer and create answer
+    let sdp = webrtc_mgr.handle_offer(
+        request.from_peer_id.clone(),
+        request.sdp,
+        crate::webrtc_manager::PeerType::Node
+    )
+        .await
+        .map_err(|e| {
+            warn!("Failed to handle WebRTC offer: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    info!("Created WebRTC answer (SDP length: {} bytes)", sdp.len());
+
+    Ok(axum::Json(WebRtcAnswerResponse { sdp }))
+}
+
+/// HTTP handler for completing WebRTC connection with answer
+/// POST /api/v1/webrtc/complete
+///
+/// Completes the WebRTC connection by setting the remote answer
+pub async fn webrtc_complete_handler(
+    State(state): State<RelayState>,
+    axum::Json(request): axum::Json<WebRtcCompleteRequest>,
+) -> Result<StatusCode, StatusCode> {
+    info!("WebRTC complete request from peer: {}", request.from_peer_id);
+
+    let webrtc_mgr = state.webrtc_manager
+        .as_ref()
+        .ok_or_else(|| {
+            warn!("WebRTC manager not available");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get the peer connection
+    let peers = webrtc_mgr.peers.read().await;
+    let peer = peers.get(&request.from_peer_id)
+        .ok_or_else(|| {
+            warn!("Peer {} not found", request.from_peer_id);
+            StatusCode::NOT_FOUND
+        })?;
+
+    // Set remote description (answer from the other peer)
+    use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
+    let answer = RTCSessionDescription::answer(request.sdp)
+        .map_err(|e| {
+            warn!("Failed to parse SDP answer: {}", e);
+            StatusCode::BAD_REQUEST
+        })?;
+
+    peer.peer_connection.set_remote_description(answer)
+        .await
+        .map_err(|e| {
+            warn!("Failed to set remote description: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    drop(peers);
+
+    info!("WebRTC connection completed with peer: {}", request.from_peer_id);
+
+    Ok(StatusCode::OK)
+}
