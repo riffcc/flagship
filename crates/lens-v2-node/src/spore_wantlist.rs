@@ -220,6 +220,7 @@ mod tests {
 
     #[test]
     fn test_compute_want_ranges_simple() {
+        // If we have nothing, we want everything they have
         let their_ranges = vec![(0, 100), (200, 300)];
         let my_ranges = vec![];
         let total_range = (0, 1000);
@@ -227,8 +228,8 @@ mod tests {
         let wants = compute_want_ranges(&their_ranges, &my_ranges, total_range);
 
         assert_eq!(wants.len(), 2);
-        assert_eq!(wants[0], (101, 199));
-        assert_eq!(wants[1], (301, 1000));
+        assert_eq!(wants[0], (0, 100));  // We want their first range
+        assert_eq!(wants[1], (200, 300));  // We want their second range
     }
 
     #[test]
