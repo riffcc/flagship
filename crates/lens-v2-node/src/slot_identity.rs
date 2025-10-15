@@ -167,9 +167,9 @@ impl TrumpChallenge {
             return false;
         }
 
-        // Challenger must be 20% better
+        // Challenger must be 20% better or equal (at least 20%)
         let threshold = (self.occupant_avg_latency_ms as f64 * 0.8) as u64;
-        self.challenger_avg_latency_ms < threshold
+        self.challenger_avg_latency_ms <= threshold
     }
 
     /// Verify all latency proofs are valid

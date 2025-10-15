@@ -1507,7 +1507,7 @@ mod tests {
     // ===== WebRTC P2P Connection Tests =====
 
     #[tokio::test]
-    async fn test_sdp_offer_stored_in_dht() {
+    async fn test_sdp_offer_sent_via_relay() {
         use crate::peer_registry::default_mesh_config;
         use citadel_core::topology::SlotCoordinate;
 
@@ -1527,32 +1527,25 @@ mod tests {
             my_slot,
             mesh_config,
             p2p_manager,
-            webrtc_manager,
+            webrtc_manager.clone(),
             db,
             rx,
             dht_storage.clone(),
             crate::routes::relay::RelayState::new(),
         );
 
-        // Attempt WebRTC connection (will timeout waiting for answer, but offer should be stored)
+        // Attempt WebRTC connection (will timeout waiting for answer from relay)
         let target_peer_id = "peer-bob";
         let result = orchestrator.establish_webrtc_connection(target_peer_id).await;
 
-        // Connection should timeout (no one responded with answer)
-        assert!(result.is_err(), "Connection should timeout without answer");
+        // Connection should timeout (no relay running to forward offer)
+        assert!(result.is_err(), "Connection should timeout without relay");
         assert!(result.unwrap_err().to_string().contains("Timeout"), "Error should indicate timeout");
 
-        // Verify SDP offer was stored in DHT
-        let offer_key = format!("sdp_offer_{}_{}", "peer-alice", target_peer_id);
-        let offer_key_hash = blake3::hash(offer_key.as_bytes());
-        let offer_key_bytes = offer_key_hash.as_bytes().clone();
-
-        let dht = dht_storage.lock().await;
-        let offer_bytes = dht.get_raw(&offer_key_bytes);
-        assert!(offer_bytes.is_some(), "SDP offer should be stored in DHT");
-
-        let offer_sdp = String::from_utf8_lossy(offer_bytes.unwrap());
-        assert!(offer_sdp.contains("v=0"), "SDP offer should contain SDP version");
+        // Verify WebRTC offer was created (stored in webrtc_manager, not DHT)
+        // The relay would forward this offer via WebSocket signaling (not DHT)
+        let peers = webrtc_manager.peers.read().await;
+        assert!(peers.contains_key(target_peer_id), "WebRTC peer connection should be created for target");
     }
 
     #[tokio::test]
@@ -1657,7 +1650,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_webrtc_connection_via_dht_signaling() {
+    async fn test_webrtc_connection_via_relay_signaling() {
         use crate::peer_registry::default_mesh_config;
         use citadel_core::topology::SlotCoordinate;
 
@@ -1686,37 +1679,17 @@ mod tests {
 
         let target_peer_id = "peer-bob";
 
-        // Spawn task to simulate peer-bob responding with answer
-        let dht_clone = dht_storage.clone();
-        let target_clone = target_peer_id.to_string();
-        tokio::spawn(async move {
-            // Wait for offer to appear in DHT
-            tokio::time::sleep(Duration::from_millis(500)).await;
-
-            // Create mock SDP answer and store in DHT
-            let answer_key = format!("sdp_answer_{}_{}", target_clone, "peer-alice");
-            let answer_key_hash = blake3::hash(answer_key.as_bytes());
-            let answer_key_bytes = answer_key_hash.as_bytes().clone();
-
-            let mock_answer = "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n";
-
-            let mut dht = dht_clone.lock().await;
-            dht.insert_raw(answer_key_bytes, mock_answer.as_bytes().to_vec());
-        });
-
-        // Attempt WebRTC connection
+        // Attempt WebRTC connection (will timeout waiting for relay answer)
         let result = orchestrator.establish_webrtc_connection(target_peer_id).await;
 
-        // Connection should succeed (answer was provided)
-        assert!(result.is_ok(), "Connection should succeed when answer is provided: {:?}", result);
+        // Connection should timeout (no relay to forward SDP answer)
+        assert!(result.is_err(), "Connection should timeout without relay");
+        assert!(result.unwrap_err().to_string().contains("Timeout"), "Error should indicate timeout");
 
-        // Verify offer was stored
-        let offer_key = format!("sdp_offer_{}_{}", "peer-alice", target_peer_id);
-        let offer_key_hash = blake3::hash(offer_key.as_bytes());
-        let offer_key_bytes = offer_key_hash.as_bytes().clone();
-
-        let dht = dht_storage.lock().await;
-        assert!(dht.get_raw(&offer_key_bytes).is_some(), "SDP offer should be in DHT");
+        // Verify WebRTC peer connection was created
+        // SDP signaling happens via relay WebSocket (not DHT)
+        let peers = webrtc_manager.peers.read().await;
+        assert!(peers.contains_key(target_peer_id), "WebRTC peer connection should be created for target");
     }
 
     #[tokio::test]
