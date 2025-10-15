@@ -74,9 +74,8 @@ impl SyncOrchestrator {
     async fn is_mesh_neighbor_of_me(&self, _peer_id: &str, peer_slot: &SlotCoordinate, num_nodes: usize) -> bool {
         let my_slot = self.lazy_node.my_slot();
 
-        // CRITICAL: Calculate mesh dimensions dynamically based on current network size!
-        // The tests require this - mesh grows/shrinks as nodes join/leave
-        let mesh_config = crate::peer_registry::calculate_mesh_dimensions(num_nodes);
+        // Use the orchestrator's actual mesh config (toroidal wrapping based on this topology)
+        let mesh_config = *self.lazy_node.mesh_config();
 
         // Convert my slot to index
         let my_x = my_slot.x as usize;
@@ -253,37 +252,62 @@ impl SyncOrchestrator {
                     Ok(_) => {
                         info!("✅ Connected to relay (anycast fallback comms active)");
 
-                        // Now announce slot ownership (works with 0 WebRTC neighbors via relay!)
-                        info!("📢 Announcing slot ownership to DHT...");
+                        // EVENT-DRIVEN SLOT CLAIMING WITH CONSENSUS:
+                        // Now that we're connected to relay, request slot claim via lightweight consensus
+                        info!("🔍 Querying DHT for existing slot claims via relay...");
 
-                        use crate::peer_registry::{SlotOwnership, slot_ownership_key, peer_location_key};
-                        let ownership = SlotOwnership::new(
-                            my_peer_id.clone(),
-                            my_slot,
-                            None,
-                        );
+                        use crate::peer_registry::{SlotOwnership, slot_ownership_key, peer_location_key, assign_slots_batch};
 
-                        let ownership_bytes = match serde_json::to_vec(&ownership) {
-                            Ok(bytes) => bytes,
-                            Err(e) => {
-                                error!("Failed to serialize slot ownership: {}", e);
-                                break;
+                        // Scan local DHT cache (populated by bootstrap) for existing slot claims
+                        let existing_peers = {
+                            let storage = lazy_node.dht_storage.lock().await;
+                            let all_entries = storage.scan_all();
+
+                            let mut peers = Vec::new();
+                            for (_key, ownership_bytes) in all_entries {
+                                if let Ok(ownership) = serde_json::from_slice::<SlotOwnership>(&ownership_bytes) {
+                                    // Only count unique peer_ids (avoid counting both peer-location-* and slot-* keys)
+                                    if !peers.iter().any(|(pid, _)| pid == &ownership.peer_id) {
+                                        peers.push((ownership.peer_id.clone(), ownership.slot));
+                                    }
+                                }
                             }
+                            peers
                         };
 
-                        // Store in local DHT cache (available for local queries and replication)
-                        // The relay will handle gossip/replication to other nodes via DhtReplication events
-                        {
-                            let mut storage = lazy_node.dht_storage.lock().await;
-                            let ownership_key = slot_ownership_key(my_slot);
-                            let location_key = peer_location_key(&my_peer_id);
-                            storage.insert_raw(ownership_key, ownership_bytes.clone());
-                            storage.insert_raw(location_key, ownership_bytes);
-                            info!("✅ Stored slot ownership in local DHT cache");
+                        info!("📊 Found {} existing peers in DHT", existing_peers.len());
+
+                        // Build peer ID list (existing + ourselves) for slot assignment
+                        let mut all_peer_ids: Vec<String> = existing_peers.iter().map(|(pid, _)| pid.clone()).collect();
+                        all_peer_ids.push(my_peer_id.clone());
+
+                        info!("🌀 Assigning slots for {} total peers via SPIRAL algorithm", all_peer_ids.len());
+
+                        // Use assign_slots_batch to deterministically assign slots
+                        // This generates spiral slots internally and assigns via hash-modulo with linear probing
+                        let slot_assignments = assign_slots_batch(&all_peer_ids);
+
+                        // Find our proposed slot (not claimed yet - waiting for relay ACK!)
+                        let proposed_slot = slot_assignments.get(&my_peer_id)
+                            .copied()
+                            .unwrap_or_else(|| {
+                                warn!("⚠️ Failed to find slot assignment, using origin as fallback");
+                                citadel_core::topology::SlotCoordinate::new(0, 0, 0)
+                            });
+
+                        info!("🎯 Proposed slot: {:?} (from SPIRAL with {} total peers)", proposed_slot, all_peer_ids.len());
+
+                        // Send SlotClaimRequest to relay for consensus validation
+                        // The relay will check for conflicts and respond with ACK or NACK
+                        info!("📤 Sending slot claim request to relay for slot {:?}", proposed_slot);
+                        if let Err(e) = network.send_slot_claim_request(proposed_slot).await {
+                            error!("Failed to send slot claim request: {}", e);
+                            break;
                         }
 
-                        info!("🎉 Slot ownership announced: {:?} -> {}", my_slot, my_peer_id);
-                        info!("ℹ️  Even with 0 WebRTC neighbors, relay will route DHT operations");
+                        info!("⏳ Waiting for slot claim response from relay (event-driven)...");
+                        // NOTE: Slot ownership will be committed to DHT after receiving SlotClaimAck
+                        // See handle_network_event() for SlotClaimAck/SlotClaimNack handlers
 
                         // Connection succeeded - keep this connection alive
                         // If it drops, the loop will reconnect
@@ -357,6 +381,10 @@ impl SyncOrchestrator {
         tokio::spawn(async move {
             orchestrator_webrtc.webrtc_connection_loop().await;
         });
+
+        // NOTE: No timer-based DHT heartbeat loop needed!
+        // Heartbeats are updated event-driven on every DHT read (proof of activity).
+        // See lazy_node.rs::get_neighbor() - updates heartbeat after each successful DHT query.
 
         // SDP signaling is now handled via network events (SdpOfferReceived/SdpAnswerReceived)
         // No separate loop needed - offers and answers processed in handle_network_event()
@@ -985,6 +1013,94 @@ impl SyncOrchestrator {
                 // Log deprecation warning and skip processing
                 info!("⏭️ Skipping OLD relay BlockRequest handler - use WebRTC SPORE RangeResponse instead");
             }
+
+            NetworkEvent::SlotClaimAck { slot } => {
+                // Slot claim approved by relay - commit to DHT and gossip
+                info!("✅ Slot claim ACK received from relay for {:?}", slot);
+
+                use crate::peer_registry::{SlotOwnership, slot_ownership_key, peer_location_key};
+
+                // Create ownership record
+                let ownership = SlotOwnership::new(
+                    self.my_peer_id.clone(),
+                    slot,
+                    None,
+                );
+
+                // Serialize ownership
+                let ownership_bytes = match serde_json::to_vec(&ownership) {
+                    Ok(bytes) => bytes,
+                    Err(e) => {
+                        error!("Failed to serialize slot ownership after ACK: {}", e);
+                        return Ok(());
+                    }
+                };
+
+                // Commit to local DHT cache (cache of GLOBAL DHT)
+                // The relay will gossip this to other nodes via DhtReplication events
+                {
+                    let mut storage = self.lazy_node.dht_storage.lock().await;
+                    let ownership_key = slot_ownership_key(slot);
+                    let location_key = peer_location_key(&self.my_peer_id);
+                    storage.insert_raw(ownership_key, ownership_bytes.clone());
+                    storage.insert_raw(location_key, ownership_bytes);
+                    info!("✅ Committed slot ownership to DHT: {:?} -> {}", slot, self.my_peer_id);
+                }
+
+                info!("🎉 Slot claiming complete: {:?} -> {} (event-driven consensus)", slot, self.my_peer_id);
+                info!("📢 Relay will gossip ownership to other nodes via DhtReplication");
+            }
+
+            NetworkEvent::SlotClaimNack { conflicting_peer, retry_suggestion } => {
+                // Slot claim rejected by relay - re-scan DHT and retry with updated peer list
+                warn!("❌ Slot claim NACK received: conflict with peer {}", conflicting_peer);
+                if let Some(suggested_slot) = retry_suggestion {
+                    info!("💡 Relay suggests retrying with slot: {:?}", suggested_slot);
+                }
+
+                use crate::peer_registry::{SlotOwnership, assign_slots_batch};
+
+                // Re-scan DHT to get updated peer list (includes conflicting peer now)
+                let existing_peers = {
+                    let storage = self.lazy_node.dht_storage.lock().await;
+                    let all_entries = storage.scan_all();
+
+                    let mut peers = Vec::new();
+                    for (_key, ownership_bytes) in all_entries {
+                        if let Ok(ownership) = serde_json::from_slice::<SlotOwnership>(&ownership_bytes) {
+                            // Only count unique peer_ids
+                            if !peers.iter().any(|(pid, _)| pid == &ownership.peer_id) {
+                                peers.push((ownership.peer_id.clone(), ownership.slot));
+                            }
+                        }
+                    }
+                    peers
+                };
+
+                info!("🔄 Re-scanning DHT after NACK: found {} existing peers", existing_peers.len());
+
+                // Rebuild peer list with updated peers
+                let mut all_peer_ids: Vec<String> = existing_peers.iter().map(|(pid, _)| pid.clone()).collect();
+                all_peer_ids.push(self.my_peer_id.clone());
+
+                // Recalculate slot assignment with SPIRAL (deterministic, will skip conflicting slot)
+                let slot_assignments = assign_slots_batch(&all_peer_ids);
+
+                // Get our NEW proposed slot (different from the one that was NACKed)
+                let new_proposed_slot = slot_assignments.get(&self.my_peer_id)
+                    .copied()
+                    .unwrap_or_else(|| {
+                        warn!("⚠️ Failed to find slot assignment after NACK, using origin");
+                        citadel_core::topology::SlotCoordinate::new(0, 0, 0)
+                    });
+
+                info!("🔁 Retrying slot claim with updated slot: {:?} (after NACK)", new_proposed_slot);
+
+                // Send new slot claim request
+                if let Err(e) = self.network.send_slot_claim_request(new_proposed_slot).await {
+                    error!("Failed to send retry slot claim request: {}", e);
+                }
+            }
         }
 
         Ok(())
@@ -1383,7 +1499,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_mesh_neighbor_detection() {
-        use crate::peer_registry::default_mesh_config;
+        use crate::peer_registry::{default_mesh_config, calculate_mesh_dimensions};
         use citadel_core::topology::SlotCoordinate;
 
         let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
@@ -1393,8 +1509,8 @@ mod tests {
         let (_tx, rx) = mpsc::unbounded_channel();
         let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
-        // 8×7×1 mesh for 50 nodes
-        let mesh_config = MeshConfig::new(8, 7, 1);
+        // Dynamically calculate mesh for 50 nodes (no fixed topology!)
+        let mesh_config = calculate_mesh_dimensions(50);
         let my_slot = SlotCoordinate::new(0, 0, 0); // I'm at (0,0,0)
 
         let orchestrator = Arc::new(SyncOrchestrator::new(
@@ -1410,21 +1526,28 @@ mod tests {
             crate::routes::relay::RelayState::new(),
         ));
 
-        // My 8 neighbors at slot (0,0,0) should be:
-        // +A: (1,0,0), -A: (7,0,0) [wraps]
-        // +B: (0,1,0), -B: (0,6,0) [wraps]
-        // +C: (1,-1,0) = (1,6,0) [wraps], -C: (-1,1,0) = (7,1,0) [wraps]
-        // Up: (0,0,1) [no wrap in 1-deep mesh, but wraps to (0,0,0) - that's me!]
-        // Down: (0,0,-1) = (0,0,0) [wraps to self]
-
-        // So neighbors are at: (1,0,0), (7,0,0), (0,1,0), (0,6,0), (1,6,0), (7,1,0), and 2 more...
+        // In a 9×9×1 mesh with 50 nodes (only slots 0-49 filled), the "turn left" algorithm finds:
+        // 1. (1,0,0) via +A at 1 step
+        // 2. (8,0,0) via -A at 1 step (wraps)
+        // 3. (0,1,0) via +B at 1 step
+        // 4. (0,5,0) via -B at 4 steps (skips empty slots 72,63,54)
+        // 5. (4,5,0) via +C at 4 steps
+        // 6. (8,1,0) via -C at 1 step (wraps)
+        // 7. (0,0,0) via Up at 1 step - SELF! (depth wraps)
+        // 8. (1,1,0) via diagonal at 1 step
+        //
+        // NOTE: (0,8,0) is at index 72 which is EMPTY (50 nodes fill indices 0-49)
+        // So the algorithm skips it and finds (0,5,0) at index 45 instead.
 
         let test_cases = vec![
-            ((1, 0, 0), true),  // +A neighbor
-            ((7, 0, 0), true),  // -A neighbor (wrapped)
-            ((0, 1, 0), true),  // +B neighbor
-            ((0, 6, 0), true),  // -B neighbor (wrapped)
+            ((1, 0, 0), true),  // Neighbor #1: +A at 1 step
+            ((8, 0, 0), true),  // Neighbor #2: -A at 1 step (wraps)
+            ((0, 1, 0), true),  // Neighbor #3: +B at 1 step
+            ((0, 5, 0), true),  // Neighbor #4: -B at 4 steps (skips empty slots)
+            ((8, 1, 0), true),  // Neighbor #6: -C at 1 step (wraps)
+            ((1, 1, 0), true),  // Neighbor #8: diagonal at 1 step
             ((5, 5, 0), false), // Far away, not a neighbor
+            ((0, 8, 0), false), // Empty slot (index 72 > 49), not a neighbor
         ];
 
         for ((x, y, z), expected_neighbor) in test_cases {

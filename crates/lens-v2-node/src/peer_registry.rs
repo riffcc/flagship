@@ -25,23 +25,40 @@ use crate::slot_identity::SlotId;
 /// - Keep mesh as flat as possible (prefer w, h over d)
 /// - Aim for roughly square horizontal (w ≈ h) before going vertical
 /// - Natural result: gentle gradation like 1×1×1 → 2×1×1 → 2×2×1 → 3×2×1 → 3×3×1
+/// - **HEADROOM**: Always accommodate current nodes + next hexagonal ring
 ///
 /// This ensures minimal mesh churn when nodes join/leave, and maintains
 /// roughly 5:1 horizontal-to-vertical ratio at scale.
+///
+/// Hexagonal ring sizes: 1 (center) + 6 + 12 + 18 + 24 + ... (6*N for ring N)
 pub fn calculate_mesh_dimensions(num_nodes: usize) -> MeshConfig {
     if num_nodes == 0 || num_nodes == 1 {
         return MeshConfig::new(1, 1, 1);
     }
+
+    // Calculate headroom: size of next hexagonal ring
+    // Ring 0 = 1 node, Ring 1 = 6 nodes, Ring 2 = 12 nodes, Ring N = 6*N nodes
+    // Find which ring we're currently in
+    let mut cumulative_nodes = 1; // Ring 0
+    let mut ring = 0;
+    while cumulative_nodes < num_nodes {
+        ring += 1;
+        cumulative_nodes += 6 * ring; // Add ring N (6*N nodes)
+    }
+
+    // Next ring will have 6*(ring+1) nodes - add this as headroom
+    let next_ring_size = 6 * (ring + 1);
+    let target_capacity = num_nodes + next_ring_size;
 
     // Start from minimal mesh
     let mut w = 1;
     let mut h = 1;
     let mut d = 1;
 
-    // Grow mesh until it fits all nodes
+    // Grow mesh until it fits all nodes + next hexagonal ring
     // Strategy: Always grow the SMALLEST dimension
     // But STRONGLY prefer growing w or h over d (keep it flat!)
-    while w * h * d < num_nodes {
+    while w * h * d < target_capacity {
         // Compare dimensions, but with a HUGE bias against depth
         // This naturally creates flat meshes that only grow vertically when necessary
 
