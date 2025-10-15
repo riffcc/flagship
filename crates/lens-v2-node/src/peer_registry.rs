@@ -84,24 +84,53 @@ pub fn peer_id_to_hash(peer_id: &str) -> [u8; 32] {
     *hash.as_bytes()
 }
 
-/// Map peer_id to SlotCoordinate using deterministic hash-to-slot mapping
+/// Generate content-addressed peer_id from slot coordinate
 ///
-/// Uses a deterministic spiral growth pattern starting from (0,0,0).
-/// As the mesh grows, NEW slots are added in a fixed pattern, but existing
-/// slots remain valid. This ensures slot ownership records stay valid as peers join.
+/// This is the INVERSE of peer_id_to_slot(). Given a slot coordinate (x,y,z),
+/// we hash it to produce a deterministic peer_id in CIDv1 format:
+/// "bafk" + hex(blake3(x || y || z))
 ///
-/// Growth pattern: Start at origin, spiral outward in hexagonal rings, add Z layers as needed.
-pub fn peer_id_to_slot(peer_id: &str, config: &MeshConfig) -> SlotCoordinate {
+/// This allows us to:
+/// - Assign slots sequentially from (0,0,0) outward
+/// - Generate valid peer_ids for those slots
+/// - Maintain content-addressed properties
+///
+/// Example:
+/// - Slot (0,0,0) → "bafk<hash of 0||0||0>"
+/// - Slot (0,1,0) → "bafk<hash of 0||1||0>"
+pub fn slot_to_peer_id(slot: SlotCoordinate) -> String {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(b"content-addressed-slot");
+    hasher.update(&slot.x.to_le_bytes());
+    hasher.update(&slot.y.to_le_bytes());
+    hasher.update(&slot.z.to_le_bytes());
+    let hash = hasher.finalize();
+
+    // CIDv1 format: "bafk" prefix + hex encoded hash
+    format!("bafk{}", hex::encode(hash.as_bytes()))
+}
+
+/// Map peer_id to SlotCoordinate using Content Addressed Slots
+///
+/// **CRITICAL**: This mapping is INDEPENDENT of network size!
+/// The peer_id hash maps directly to absolute coordinates in a fixed 256³ space.
+/// This ensures:
+/// - Same peer_id ALWAYS maps to same slot (across all network sizes)
+/// - Slots are content-addressed (determined by peer_id hash alone)
+/// - No dependency on current mesh dimensions
+///
+/// The mesh_config parameter is IGNORED for slot calculation but kept for
+/// API compatibility with neighbor discovery functions.
+pub fn peer_id_to_slot(peer_id: &str, _config: &MeshConfig) -> SlotCoordinate {
     let hash = peer_id_to_hash(peer_id);
 
-    // Total number of slots in this mesh configuration
-    let total_slots = (config.width * config.height * config.depth) as usize;
+    // Map hash directly to coordinates in FIXED 256×256×256 space
+    // This is INDEPENDENT of network size - true Content Addressed Slots!
+    let x = hash[0] as i32;  // 0-255
+    let y = hash[1] as i32;  // 0-255
+    let z = hash[2] as i32;  // 0-255
 
-    // Hash to slot INDEX (not coordinates directly)
-    let slot_index = u64::from_le_bytes(hash[0..8].try_into().unwrap()) as usize % total_slots;
-
-    // Convert slot index to coordinate using deterministic spiral pattern
-    slot_index_to_coordinate(slot_index, config)
+    SlotCoordinate::new(x, y, z)
 }
 
 /// Convert slot index to coordinate using deterministic growth pattern
@@ -454,5 +483,52 @@ mod tests {
             - 360;
 
         assert!(ownership.is_stale(), "Old heartbeat should be stale");
+    }
+
+    #[test]
+    fn test_slot_to_peer_id_deterministic() {
+        let slot = SlotCoordinate::new(0, 0, 0);
+        let peer_id1 = slot_to_peer_id(slot);
+        let peer_id2 = slot_to_peer_id(slot);
+
+        // Same slot always produces same peer_id
+        assert_eq!(peer_id1, peer_id2);
+
+        // peer_id should have "bafk" prefix
+        assert!(peer_id1.starts_with("bafk"));
+    }
+
+    #[test]
+    fn test_slot_to_peer_id_different_slots() {
+        let slot1 = SlotCoordinate::new(0, 0, 0);
+        let slot2 = SlotCoordinate::new(0, 1, 0);
+
+        let peer_id1 = slot_to_peer_id(slot1);
+        let peer_id2 = slot_to_peer_id(slot2);
+
+        // Different slots produce different peer_ids
+        assert_ne!(peer_id1, peer_id2);
+    }
+
+    #[test]
+    fn test_sequential_slot_peer_ids() {
+        // Test generating peer_ids for sequential slots from origin
+        let slots = vec![
+            SlotCoordinate::new(0, 0, 0),
+            SlotCoordinate::new(0, 1, 0),
+            SlotCoordinate::new(1, 1, 0),
+            SlotCoordinate::new(1, 0, 0),
+            SlotCoordinate::new(0, 0, 1),
+        ];
+
+        let mut peer_ids = std::collections::HashSet::new();
+        for slot in slots {
+            let peer_id = slot_to_peer_id(slot);
+            assert!(peer_id.starts_with("bafk"), "peer_id should have bafk prefix");
+            assert_eq!(peer_id.len(), 68, "peer_id should be bafk + 64 hex chars");
+
+            // All peer_ids should be unique
+            assert!(peer_ids.insert(peer_id), "peer_ids should be unique");
+        }
     }
 }

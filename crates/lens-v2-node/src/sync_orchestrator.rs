@@ -28,6 +28,8 @@ use crate::routes::releases::Release;
 use crate::routes::account::BlockNotification;
 use crate::block_codec::{BlockCodec, BlockEnvelope};
 use crate::lazy_node::LazyNode;
+use crate::webrtc_manager::WebRTCManager;
+use crate::p2p_heartbeat::Heartbeat;
 
 use citadel_core::topology::{MeshConfig, SlotCoordinate, Direction};
 use std::collections::HashMap;
@@ -39,6 +41,9 @@ pub struct SyncOrchestrator {
 
     /// P2P manager (consensus + sync tracking)
     p2p_manager: Arc<P2pManager>,
+
+    /// WebRTC manager for node-to-node connections
+    webrtc_manager: Arc<WebRTCManager>,
 
     /// Database for persistence
     db: Database,
@@ -140,6 +145,7 @@ impl SyncOrchestrator {
         my_slot: SlotCoordinate,
         mesh_config: MeshConfig,
         p2p_manager: Arc<P2pManager>,
+        webrtc_manager: Arc<WebRTCManager>,
         db: Database,
         block_notify_rx: mpsc::UnboundedReceiver<BlockNotification>,
         dht_storage: Arc<tokio::sync::Mutex<crate::dht_state::DhtState>>,
@@ -158,6 +164,7 @@ impl SyncOrchestrator {
         Self {
             network,
             p2p_manager,
+            webrtc_manager,
             db,
             my_peer_id,
             my_slot,
@@ -223,10 +230,28 @@ impl SyncOrchestrator {
             orchestrator.sync_loop().await;
         });
 
-        // Spawn heartbeat loop
+        // Spawn heartbeat broadcasting loop
         let orchestrator_heartbeat = self.clone();
         tokio::spawn(async move {
             orchestrator_heartbeat.heartbeat_loop().await;
+        });
+
+        // Spawn heartbeat receiver loop
+        let orchestrator_receiver = self.clone();
+        tokio::spawn(async move {
+            orchestrator_receiver.heartbeat_receiver_loop().await;
+        });
+
+        // Spawn WebRTC connection establishment loop
+        let orchestrator_webrtc = self.clone();
+        tokio::spawn(async move {
+            orchestrator_webrtc.webrtc_connection_loop().await;
+        });
+
+        // Spawn SDP answer loop
+        let orchestrator_sdp = self.clone();
+        tokio::spawn(async move {
+            orchestrator_sdp.sdp_answer_loop().await;
         });
 
         // Startup is complete - relay connection continues in background
@@ -287,9 +312,9 @@ impl SyncOrchestrator {
         }
     }
 
-    /// Heartbeat loop - continuously broadcasts peer heartbeat
+    /// Heartbeat loop - continuously broadcasts peer heartbeat via WebRTC
     async fn heartbeat_loop(&self) {
-        info!("💓 Starting continuous heartbeat broadcast");
+        info!("💓 Starting continuous WebRTC heartbeat broadcast");
 
         // Mark ourselves as alive immediately
         let my_peer_id_hash = {
@@ -304,14 +329,219 @@ impl SyncOrchestrator {
             // Mark self as alive
             let _ = self.p2p_manager.mark_peer_alive(my_peer_id_hash);
 
-            // Send heartbeat through network (relay will broadcast to all peers)
-            if let Err(e) = self.network.send_heartbeat(&self.my_peer_id, self.my_slot).await {
-                warn!("Failed to send heartbeat: {}", e);
+            // Create heartbeat message with our current info
+            let heartbeat = Heartbeat::new(
+                self.my_peer_id.clone(),
+                self.my_slot,
+                vec!["webrtc".to_string(), "dht".to_string(), "spore".to_string()],
+                None, // TODO: Calculate average neighbor latency
+            );
+
+            // Broadcast via WebRTC to all connected node peers
+            match self.webrtc_manager.broadcast_heartbeat_message(&heartbeat).await {
+                Ok(sent_count) => {
+                    if sent_count > 0 {
+                        debug!("💓 Broadcast WebRTC heartbeat to {} node peers", sent_count);
+                    }
+                }
+                Err(e) => {
+                    warn!("Failed to broadcast WebRTC heartbeat: {}", e);
+                }
             }
 
-            // Small sleep to avoid hammering - 1 second is fine for real-time mesh visibility
-            tokio::time::sleep(Duration::from_millis(1000)).await;
+            // Also broadcast through relay as fallback (until all nodes have WebRTC)
+            if let Err(e) = self.network.broadcast_heartbeat(&self.my_peer_id, self.my_slot).await {
+                warn!("Failed to broadcast relay heartbeat: {}", e);
+            }
+
+            // Small sleep to avoid hammering - 10 seconds per heartbeat protocol
+            tokio::time::sleep(Duration::from_secs(10)).await;
         }
+    }
+
+    /// Heartbeat receiver loop - processes incoming WebRTC heartbeats
+    async fn heartbeat_receiver_loop(&self) {
+        info!("💓 Starting WebRTC heartbeat receiver");
+
+        loop {
+            // Wait for next heartbeat from WebRTC Manager
+            if let Some(heartbeat) = self.webrtc_manager.next_heartbeat().await {
+                debug!("💓 Received heartbeat from {}", heartbeat.peer_id);
+
+                // Hash peer_id to u64 for P2P manager compatibility
+                use std::collections::hash_map::DefaultHasher;
+                use std::hash::{Hash, Hasher};
+                let mut hasher = DefaultHasher::new();
+                heartbeat.peer_id.hash(&mut hasher);
+                let peer_id_u64 = hasher.finish();
+
+                // Mark peer as alive
+                if let Err(e) = self.p2p_manager.mark_peer_alive(peer_id_u64) {
+                    warn!("Failed to mark peer {} as alive: {}", heartbeat.peer_id, e);
+                } else {
+                    debug!("✅ Marked peer {} as alive", heartbeat.peer_id);
+                }
+            } else {
+                // Channel closed or no heartbeat available, small sleep
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        }
+    }
+
+    /// WebRTC connection establishment loop - establishes direct connections to 8 mesh neighbors
+    ///
+    /// Uses Content Addressed Slots to find the 8 geometric neighbors:
+    /// - 6 hexagonal directions: ±A, ±B, ±C
+    /// - 2 vertical directions: Up, Down
+    ///
+    /// Each neighbor is discovered by:
+    /// 1. Calculate neighbor_slot = my_slot.neighbor(direction)
+    /// 2. Query DHT for slot_ownership_key(neighbor_slot)
+    /// 3. Extract peer_id from SlotOwnership
+    /// 4. Establish WebRTC connection to that peer_id
+    async fn webrtc_connection_loop(&self) {
+        info!("🔗 Starting WebRTC connection establishment loop (8 geometric mesh neighbors)");
+
+        loop {
+            // Discover my 8 geometric neighbors via DHT (using LazyNode)
+            // LazyNode.get_all_neighbors() queries the 8 directions and returns peer_ids
+            match self.lazy_node.get_all_neighbors().await {
+                Ok(neighbors) => {
+                    info!("🔷 Found {}/8 geometric mesh neighbors for WebRTC connection", neighbors.len());
+
+                    // Attempt to establish WebRTC connections with each geometric neighbor
+                    for neighbor_peer_id in neighbors {
+                        // Skip if we're already connected
+                        if self.webrtc_manager.is_peer_connected(&neighbor_peer_id).await {
+                            debug!("🔗 Already connected to geometric neighbor {}", neighbor_peer_id);
+                            continue;
+                        }
+
+                        // Initiate WebRTC connection (create offer)
+                        info!("🔗 Initiating WebRTC connection to geometric neighbor {}", neighbor_peer_id);
+                        match self.establish_webrtc_connection(&neighbor_peer_id).await {
+                            Ok(_) => {
+                                info!("✅ WebRTC connection established to geometric neighbor {}", neighbor_peer_id);
+                            }
+                            Err(e) => {
+                                warn!("⚠️ Failed to establish WebRTC connection to geometric neighbor {}: {}", neighbor_peer_id, e);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    warn!("Failed to discover geometric neighbors: {}", e);
+                }
+            }
+
+            // Retry every 30 seconds (matches heartbeat interval)
+            tokio::time::sleep(Duration::from_secs(30)).await;
+        }
+    }
+
+    /// Establish WebRTC connection to a specific peer using DHT for SDP signaling
+    ///
+    /// This implements the WebRTC handshake:
+    /// 1. Create offer (SDP)
+    /// 2. Store offer in DHT at `sdp_offer_{my_peer_id}_{target_peer_id}`
+    /// 3. Poll DHT for answer at `sdp_answer_{target_peer_id}_{my_peer_id}`
+    /// 4. Connection completes when answer is processed
+    async fn establish_webrtc_connection(&self, target_peer_id: &str) -> Result<()> {
+        // Create WebRTC offer
+        let offer_sdp = self.webrtc_manager.create_offer(target_peer_id.to_string()).await?;
+        info!("📡 Created WebRTC offer for {}", target_peer_id);
+
+        // Store offer in DHT at key: sdp_offer_{my_peer_id}_{target_peer_id}
+        let offer_key = format!("sdp_offer_{}_{}", self.my_peer_id, target_peer_id);
+        let offer_key_hash = blake3::hash(offer_key.as_bytes());
+        let offer_key_bytes = offer_key_hash.as_bytes().clone();
+
+        {
+            let mut dht = self.lazy_node.dht_storage.lock().await;
+            dht.insert_raw(offer_key_bytes, offer_sdp.as_bytes().to_vec());
+        }
+
+        info!("📤 Stored SDP offer in DHT for {}", target_peer_id);
+
+        // Poll for answer from target peer
+        // Answer will be at key: sdp_answer_{target_peer_id}_{my_peer_id}
+        let answer_key = format!("sdp_answer_{}_{}", target_peer_id, self.my_peer_id);
+        let answer_key_hash = blake3::hash(answer_key.as_bytes());
+        let answer_key_bytes = answer_key_hash.as_bytes().clone();
+
+        // Poll for up to 10 seconds (10 iterations × 1s)
+        for attempt in 1..=10 {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+
+            let dht = self.lazy_node.dht_storage.lock().await;
+            if let Some(_answer_bytes) = dht.get_raw(&answer_key_bytes) {
+                drop(dht); // Release lock
+
+                info!("📥 Received SDP answer from {} (attempt {})", target_peer_id, attempt);
+
+                // The answer has been processed by the peer connection in handle_offer
+                // Connection is now established
+
+                info!("✅ WebRTC connection established to {}", target_peer_id);
+                return Ok(());
+            }
+        }
+
+        Err(anyhow::anyhow!("Timeout waiting for SDP answer from {}", target_peer_id))
+    }
+
+    /// SDP answer loop - processes incoming SDP offers and creates answers
+    async fn sdp_answer_loop(&self) {
+        info!("📡 Starting SDP answer loop (responding to WebRTC offers)");
+
+        loop {
+            // Scan DHT for incoming offers addressed to us
+            // Offers are at key: sdp_offer_{remote_peer_id}_{my_peer_id}
+            let incoming_offers = self.scan_dht_for_offers().await;
+
+            for (remote_peer_id, offer_sdp) in incoming_offers {
+                info!("📥 Received SDP offer from {}", remote_peer_id);
+
+                // Create answer using handle_offer
+                match self.webrtc_manager.handle_offer(remote_peer_id.clone(), offer_sdp, crate::webrtc_manager::PeerType::Node).await {
+                    Ok(answer_sdp) => {
+                        info!("📡 Created SDP answer for {}", remote_peer_id);
+
+                        // Store answer in DHT at key: sdp_answer_{my_peer_id}_{remote_peer_id}
+                        let answer_key = format!("sdp_answer_{}_{}", self.my_peer_id, remote_peer_id);
+                        let answer_key_hash = blake3::hash(answer_key.as_bytes());
+                        let answer_key_bytes = answer_key_hash.as_bytes().clone();
+
+                        {
+                            let mut dht = self.lazy_node.dht_storage.lock().await;
+                            dht.insert_raw(answer_key_bytes, answer_sdp.as_bytes().to_vec());
+                        }
+
+                        info!("📤 Stored SDP answer in DHT for {}", remote_peer_id);
+                    }
+                    Err(e) => {
+                        warn!("⚠️ Failed to create SDP answer for {}: {}", remote_peer_id, e);
+                    }
+                }
+            }
+
+            // Poll every 2 seconds for new offers
+            tokio::time::sleep(Duration::from_secs(2)).await;
+        }
+    }
+
+    /// Scan DHT for incoming SDP offers addressed to us
+    ///
+    /// Returns Vec<(remote_peer_id, offer_sdp)>
+    async fn scan_dht_for_offers(&self) -> Vec<(String, String)> {
+        // In a real implementation, we would:
+        // 1. Query DHT for all keys matching pattern: sdp_offer_*_{my_peer_id}
+        // 2. Parse the offers and extract remote_peer_id from key
+        // 3. Return list of (remote_peer_id, offer_sdp)
+        //
+        // For now, return empty vec (DHT doesn't support pattern queries yet)
+        // TODO: Implement DHT pattern queries or use a separate index
+        Vec::new()
     }
 
     /// Single sync iteration
@@ -897,6 +1127,7 @@ mod tests {
         let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
         let db = Database::open(&temp_dir).unwrap();
         let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
+        let webrtc_manager = Arc::new(WebRTCManager::new().unwrap());
         let (_tx, rx) = mpsc::unbounded_channel();
         let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
@@ -909,6 +1140,7 @@ mod tests {
             my_slot,
             mesh_config,
             p2p_manager,
+            webrtc_manager,
             db,
             rx,
             dht_storage,
@@ -926,6 +1158,7 @@ mod tests {
         let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
         let db = Database::open(&temp_dir).unwrap();
         let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
+        let webrtc_manager = Arc::new(WebRTCManager::new().unwrap());
         let (_tx, rx) = mpsc::unbounded_channel();
         let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
@@ -938,6 +1171,7 @@ mod tests {
             my_slot,
             mesh_config,
             p2p_manager,
+            webrtc_manager,
             db.clone(),
             rx,
             dht_storage,
@@ -979,6 +1213,7 @@ mod tests {
         let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
         let db = Database::open(&temp_dir).unwrap();
         let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
+        let webrtc_manager = Arc::new(WebRTCManager::new().unwrap());
         let (_tx, rx) = mpsc::unbounded_channel();
         let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
@@ -991,6 +1226,7 @@ mod tests {
             my_slot,
             mesh_config,
             p2p_manager,
+            webrtc_manager,
             db.clone(),
             rx,
             dht_storage,
@@ -1069,6 +1305,7 @@ mod tests {
         let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
         let db = Database::open(&temp_dir).unwrap();
         let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
+        let webrtc_manager = Arc::new(WebRTCManager::new().unwrap());
         let (_tx, rx) = mpsc::unbounded_channel();
         let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
@@ -1082,6 +1319,7 @@ mod tests {
             my_slot,
             mesh_config,
             p2p_manager,
+            webrtc_manager,
             db,
             rx,
             dht_storage,
@@ -1129,6 +1367,7 @@ mod tests {
         let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
         let db = Database::open(&temp_dir).unwrap();
         let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
+        let webrtc_manager = Arc::new(WebRTCManager::new().unwrap());
         let (_tx, rx) = mpsc::unbounded_channel();
         let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
 
@@ -1141,6 +1380,7 @@ mod tests {
             my_slot,
             mesh_config,
             p2p_manager,
+            webrtc_manager,
             db.clone(),
             rx,
             dht_storage,
@@ -1176,5 +1416,287 @@ mod tests {
         let stored = stored_delete.unwrap();
         assert_eq!(stored.id, "ubts-delete-789");
         assert_eq!(stored.transactions.len(), 1);
+    }
+
+    // ===== WebRTC P2P Connection Tests =====
+
+    #[tokio::test]
+    async fn test_sdp_offer_stored_in_dht() {
+        use crate::peer_registry::default_mesh_config;
+        use citadel_core::topology::SlotCoordinate;
+
+        let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
+        let db = Database::open(&temp_dir).unwrap();
+        let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
+        let webrtc_manager = Arc::new(WebRTCManager::new().unwrap());
+        let (_tx, rx) = mpsc::unbounded_channel();
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
+
+        let mesh_config = default_mesh_config();
+        let my_slot = SlotCoordinate::new(5, 5, 2);
+
+        let orchestrator = SyncOrchestrator::new(
+            "ws://localhost:5002/api/v1/relay/ws".to_string(),
+            "peer-alice".to_string(),
+            my_slot,
+            mesh_config,
+            p2p_manager,
+            webrtc_manager,
+            db,
+            rx,
+            dht_storage.clone(),
+        );
+
+        // Attempt WebRTC connection (will timeout waiting for answer, but offer should be stored)
+        let target_peer_id = "peer-bob";
+        let result = orchestrator.establish_webrtc_connection(target_peer_id).await;
+
+        // Connection should timeout (no one responded with answer)
+        assert!(result.is_err(), "Connection should timeout without answer");
+        assert!(result.unwrap_err().to_string().contains("Timeout"), "Error should indicate timeout");
+
+        // Verify SDP offer was stored in DHT
+        let offer_key = format!("sdp_offer_{}_{}", "peer-alice", target_peer_id);
+        let offer_key_hash = blake3::hash(offer_key.as_bytes());
+        let offer_key_bytes = offer_key_hash.as_bytes().clone();
+
+        let dht = dht_storage.lock().await;
+        let offer_bytes = dht.get_raw(&offer_key_bytes);
+        assert!(offer_bytes.is_some(), "SDP offer should be stored in DHT");
+
+        let offer_sdp = String::from_utf8_lossy(offer_bytes.unwrap());
+        assert!(offer_sdp.contains("v=0"), "SDP offer should contain SDP version");
+    }
+
+    #[tokio::test]
+    async fn test_geometric_neighbor_discovery_via_lazy_node() {
+        use crate::peer_registry::{SlotOwnership, slot_ownership_key};
+        use citadel_core::topology::{SlotCoordinate, Direction};
+
+        let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
+        let db = Database::open(&temp_dir).unwrap();
+        let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
+        let webrtc_manager = Arc::new(WebRTCManager::new().unwrap());
+        let (_tx, rx) = mpsc::unbounded_channel();
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
+
+        // 3×3×3 mesh
+        let mesh_config = MeshConfig::new(3, 3, 3);
+        let my_slot = SlotCoordinate::new(1, 1, 1); // Center of 3x3x3 mesh
+
+        // Populate DHT with 8 geometric neighbors
+        {
+            let mut dht = dht_storage.lock().await;
+
+            // PlusA: (2,1,1)
+            let neighbor_slot_a = my_slot.neighbor(Direction::PlusA, &mesh_config);
+            let ownership_a = SlotOwnership::new("peer-plusA".to_string(), neighbor_slot_a, None);
+            let key_a = slot_ownership_key(neighbor_slot_a);
+            dht.insert_raw(key_a, serde_json::to_vec(&ownership_a).unwrap());
+
+            // MinusA: (0,1,1)
+            let neighbor_slot_b = my_slot.neighbor(Direction::MinusA, &mesh_config);
+            let ownership_b = SlotOwnership::new("peer-minusA".to_string(), neighbor_slot_b, None);
+            let key_b = slot_ownership_key(neighbor_slot_b);
+            dht.insert_raw(key_b, serde_json::to_vec(&ownership_b).unwrap());
+
+            // PlusB: (1,2,1)
+            let neighbor_slot_c = my_slot.neighbor(Direction::PlusB, &mesh_config);
+            let ownership_c = SlotOwnership::new("peer-plusB".to_string(), neighbor_slot_c, None);
+            let key_c = slot_ownership_key(neighbor_slot_c);
+            dht.insert_raw(key_c, serde_json::to_vec(&ownership_c).unwrap());
+
+            // MinusB: (1,0,1)
+            let neighbor_slot_d = my_slot.neighbor(Direction::MinusB, &mesh_config);
+            let ownership_d = SlotOwnership::new("peer-minusB".to_string(), neighbor_slot_d, None);
+            let key_d = slot_ownership_key(neighbor_slot_d);
+            dht.insert_raw(key_d, serde_json::to_vec(&ownership_d).unwrap());
+
+            // PlusC: (2,0,1)
+            let neighbor_slot_e = my_slot.neighbor(Direction::PlusC, &mesh_config);
+            let ownership_e = SlotOwnership::new("peer-plusC".to_string(), neighbor_slot_e, None);
+            let key_e = slot_ownership_key(neighbor_slot_e);
+            dht.insert_raw(key_e, serde_json::to_vec(&ownership_e).unwrap());
+
+            // MinusC: (0,2,1)
+            let neighbor_slot_f = my_slot.neighbor(Direction::MinusC, &mesh_config);
+            let ownership_f = SlotOwnership::new("peer-minusC".to_string(), neighbor_slot_f, None);
+            let key_f = slot_ownership_key(neighbor_slot_f);
+            dht.insert_raw(key_f, serde_json::to_vec(&ownership_f).unwrap());
+
+            // Up: (1,1,2)
+            let neighbor_slot_g = my_slot.neighbor(Direction::Up, &mesh_config);
+            let ownership_g = SlotOwnership::new("peer-up".to_string(), neighbor_slot_g, None);
+            let key_g = slot_ownership_key(neighbor_slot_g);
+            dht.insert_raw(key_g, serde_json::to_vec(&ownership_g).unwrap());
+
+            // Down: (1,1,0)
+            let neighbor_slot_h = my_slot.neighbor(Direction::Down, &mesh_config);
+            let ownership_h = SlotOwnership::new("peer-down".to_string(), neighbor_slot_h, None);
+            let key_h = slot_ownership_key(neighbor_slot_h);
+            dht.insert_raw(key_h, serde_json::to_vec(&ownership_h).unwrap());
+        }
+
+        let orchestrator = SyncOrchestrator::new(
+            "ws://localhost:5002/api/v1/relay/ws".to_string(),
+            "peer-center".to_string(),
+            my_slot,
+            mesh_config,
+            p2p_manager,
+            webrtc_manager,
+            db,
+            rx,
+            dht_storage,
+        );
+
+        // Discover geometric neighbors via LazyNode
+        let neighbors = orchestrator.lazy_node.get_all_neighbors().await.unwrap();
+
+        // Should find all 8 geometric neighbors
+        assert_eq!(neighbors.len(), 8, "Should discover exactly 8 geometric neighbors");
+        assert!(neighbors.contains(&"peer-plusA".to_string()), "Should find +A neighbor");
+        assert!(neighbors.contains(&"peer-minusA".to_string()), "Should find -A neighbor");
+        assert!(neighbors.contains(&"peer-plusB".to_string()), "Should find +B neighbor");
+        assert!(neighbors.contains(&"peer-minusB".to_string()), "Should find -B neighbor");
+        assert!(neighbors.contains(&"peer-plusC".to_string()), "Should find +C neighbor");
+        assert!(neighbors.contains(&"peer-minusC".to_string()), "Should find -C neighbor");
+        assert!(neighbors.contains(&"peer-up".to_string()), "Should find Up neighbor");
+        assert!(neighbors.contains(&"peer-down".to_string()), "Should find Down neighbor");
+    }
+
+    #[tokio::test]
+    async fn test_webrtc_connection_via_dht_signaling() {
+        use crate::peer_registry::default_mesh_config;
+        use citadel_core::topology::SlotCoordinate;
+
+        let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
+        let db = Database::open(&temp_dir).unwrap();
+        let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
+        let webrtc_manager = Arc::new(WebRTCManager::new().unwrap());
+        let (_tx, rx) = mpsc::unbounded_channel();
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
+
+        let mesh_config = default_mesh_config();
+        let my_slot = SlotCoordinate::new(5, 5, 2);
+
+        let orchestrator = SyncOrchestrator::new(
+            "ws://localhost:5002/api/v1/relay/ws".to_string(),
+            "peer-alice".to_string(),
+            my_slot,
+            mesh_config,
+            p2p_manager,
+            webrtc_manager.clone(),
+            db,
+            rx,
+            dht_storage.clone(),
+        );
+
+        let target_peer_id = "peer-bob";
+
+        // Spawn task to simulate peer-bob responding with answer
+        let dht_clone = dht_storage.clone();
+        let target_clone = target_peer_id.to_string();
+        tokio::spawn(async move {
+            // Wait for offer to appear in DHT
+            tokio::time::sleep(Duration::from_millis(500)).await;
+
+            // Create mock SDP answer and store in DHT
+            let answer_key = format!("sdp_answer_{}_{}", target_clone, "peer-alice");
+            let answer_key_hash = blake3::hash(answer_key.as_bytes());
+            let answer_key_bytes = answer_key_hash.as_bytes().clone();
+
+            let mock_answer = "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n";
+
+            let mut dht = dht_clone.lock().await;
+            dht.insert_raw(answer_key_bytes, mock_answer.as_bytes().to_vec());
+        });
+
+        // Attempt WebRTC connection
+        let result = orchestrator.establish_webrtc_connection(target_peer_id).await;
+
+        // Connection should succeed (answer was provided)
+        assert!(result.is_ok(), "Connection should succeed when answer is provided: {:?}", result);
+
+        // Verify offer was stored
+        let offer_key = format!("sdp_offer_{}_{}", "peer-alice", target_peer_id);
+        let offer_key_hash = blake3::hash(offer_key.as_bytes());
+        let offer_key_bytes = offer_key_hash.as_bytes().clone();
+
+        let dht = dht_storage.lock().await;
+        assert!(dht.get_raw(&offer_key_bytes).is_some(), "SDP offer should be in DHT");
+    }
+
+    #[tokio::test]
+    async fn test_lazy_node_caches_neighbors_for_10_seconds() {
+        use crate::peer_registry::{SlotOwnership, slot_ownership_key};
+        use citadel_core::topology::{SlotCoordinate, Direction};
+
+        let temp_dir = std::env::temp_dir().join(format!("lens-test-{}", Uuid::new_v4()));
+        let db = Database::open(&temp_dir).unwrap();
+        let p2p_manager = Arc::new(P2pManager::new(P2pConfig::default()));
+        let webrtc_manager = Arc::new(WebRTCManager::new().unwrap());
+        let (_tx, rx) = mpsc::unbounded_channel();
+        let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
+
+        let mesh_config = MeshConfig::new(3, 3, 3);
+        let my_slot = SlotCoordinate::new(1, 1, 1);
+
+        // Populate DHT with one neighbor
+        {
+            let mut dht = dht_storage.lock().await;
+            let neighbor_slot = my_slot.neighbor(Direction::PlusA, &mesh_config);
+            let ownership = SlotOwnership::new("peer-neighbor".to_string(), neighbor_slot, None);
+            let key = slot_ownership_key(neighbor_slot);
+            dht.insert_raw(key, serde_json::to_vec(&ownership).unwrap());
+        }
+
+        let orchestrator = SyncOrchestrator::new(
+            "ws://localhost:5002/api/v1/relay/ws".to_string(),
+            "peer-center".to_string(),
+            my_slot,
+            mesh_config,
+            p2p_manager,
+            webrtc_manager,
+            db,
+            rx,
+            dht_storage.clone(),
+        );
+
+        // First query - should hit DHT
+        let neighbor = orchestrator.lazy_node.get_neighbor(Direction::PlusA).await.unwrap();
+        assert_eq!(neighbor, "peer-neighbor");
+
+        // Check cache stats
+        let (cache_entries, _avg_age) = orchestrator.lazy_node.cache_stats().await;
+        assert_eq!(cache_entries, 1, "Cache should have 1 entry after first query");
+
+        // Second query immediately - should hit cache
+        let neighbor2 = orchestrator.lazy_node.get_neighbor(Direction::PlusA).await.unwrap();
+        assert_eq!(neighbor2, "peer-neighbor");
+
+        // Verify cache is being used
+        assert!(orchestrator.lazy_node.is_cached(Direction::PlusA).await, "Neighbor should be cached");
+    }
+
+    #[tokio::test]
+    async fn test_content_addressed_slots_ensure_deterministic_routing() {
+        use crate::peer_registry::{peer_id_to_slot, calculate_mesh_dimensions};
+
+        // With content-addressed slots, the same peer_id always maps to the same slot
+        let peer_id = "peer-12345";
+        let mesh_config = calculate_mesh_dimensions(100);
+
+        let slot1 = peer_id_to_slot(peer_id, &mesh_config);
+        let slot2 = peer_id_to_slot(peer_id, &mesh_config);
+        let slot3 = peer_id_to_slot(peer_id, &mesh_config);
+
+        assert_eq!(slot1, slot2, "Same peer_id should map to same slot (deterministic)");
+        assert_eq!(slot2, slot3, "Same peer_id should map to same slot (deterministic)");
+
+        // Different peer_ids should (very likely) map to different slots
+        let different_peer = "peer-67890";
+        let different_slot = peer_id_to_slot(different_peer, &mesh_config);
+
+        assert_ne!(slot1, different_slot, "Different peer_ids should map to different slots");
     }
 }

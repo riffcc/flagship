@@ -281,7 +281,7 @@ mod tests {
             test_key[0] = (i & 0xFF) as u8;
             test_key[1] = ((i >> 8) & 0xFF) as u8;
 
-            if key_to_slot(test_key, &mesh_config) == my_slot {
+            if key_to_slot(&test_key, &mesh_config) == my_slot {
                 // Found one!
                 let test_value = b"test value".to_vec();
 
@@ -318,7 +318,7 @@ mod tests {
             test_key[0] = (i & 0xFF) as u8;
             test_key[1] = ((i >> 8) & 0xFF) as u8;
 
-            if key_to_slot(test_key, &mesh_config) != my_slot {
+            if key_to_slot(&test_key, &mesh_config) != my_slot {
                 // This key belongs to a different slot
                 let test_value = b"remote value".to_vec();
 
