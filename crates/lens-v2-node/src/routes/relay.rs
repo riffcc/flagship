@@ -1068,17 +1068,37 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
     if !state.is_browser(&peer_id).await {
         let mesh_config = state.get_mesh_config_for_assignment().await;
 
-        // Check if explicit slot is set (for tests), otherwise calculate from peer_id
+        // Check if explicit slot is set (for tests), otherwise calculate from peer_id with collision resolution
         let my_slot = {
             let slot_lock = state.my_slot.read().await;
             if let Some(slot) = slot_lock.as_ref() {
                 *slot
             } else {
-                peer_id_to_slot(&peer_id, &mesh_config)
+                // Query DHT for already-occupied slots to avoid collisions
+                use crate::peer_registry::assign_unique_slot;
+                use std::collections::HashSet;
+
+                let dht_storage = state.dht_storage.lock().await;
+                let mut occupied_slots = HashSet::new();
+
+                // Scan DHT for all slot ownership announcements
+                for (_key, entry) in dht_storage.iter() {
+                    // Try to parse as SlotOwnership
+                    if let Ok(ownership) = serde_json::from_slice::<crate::peer_registry::SlotOwnership>(&entry.value) {
+                        occupied_slots.insert(ownership.slot);
+                    }
+                }
+
+                drop(dht_storage); // Release lock before calling assign_unique_slot
+
+                info!("🔍 Found {} occupied slots in DHT before assigning slot for {}",
+                    occupied_slots.len(), peer_id);
+
+                assign_unique_slot(&peer_id, &mesh_config, &mut occupied_slots)
             }
         };
 
-        info!("📢 Server node {} assigned to slot ({}, {}, {}) in hexagonal toroidal mesh",
+        info!("📢 Server node {} assigned to slot ({}, {}, {}) in hexagonal toroidal mesh (COLLISION-FREE!)",
             peer_id, my_slot.x, my_slot.y, my_slot.z);
 
         // GOSSIP slot ownership to ALL nodes via broadcast-through-the-mesh
