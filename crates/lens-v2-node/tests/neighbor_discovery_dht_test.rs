@@ -28,12 +28,19 @@ async fn test_discover_neighbor_via_dht_query() -> anyhow::Result<()> {
     // Spawn two nodes: me and my neighbor
     println!("📝 Spawning node at (2,2,0)...");
     let node = TestNode::spawn_at_slot(31000, Some(my_slot)).await?;
-    node.announce_slot_ownership(my_slot).await?;
 
     println!("📝 Spawning neighbor at (3,2,0)...");
     let neighbor = TestNode::spawn_at_slot(31001, Some(neighbor_slot)).await?;
-    neighbor.announce_slot_ownership(neighbor_slot).await?;
 
+    // Establish WebRTC connection FIRST (so DHT queries can route)
+    println!("🔗 Establishing WebRTC connection between nodes...");
+    node.establish_webrtc_connection(&neighbor).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // THEN announce slot ownership
+    println!("📢 Announcing slot ownership...");
+    node.announce_slot_ownership(my_slot).await?;
+    neighbor.announce_slot_ownership(neighbor_slot).await?;
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Discover neighbor by querying DHT for neighbor slot
@@ -62,12 +69,11 @@ async fn test_discover_all_eight_neighbors() -> anyhow::Result<()> {
     println!("   Validates 6 hexagonal + 2 vertical neighbor discovery\n");
 
     let mesh_config = MeshConfig::new(10, 10, 2);
-    let center_slot = SlotCoordinate::new(5, 5, 0);
+    let center_slot = SlotCoordinate::new(0, 0, 0);
 
     // Spawn center node
-    println!("📝 Spawning center node at (5,5,0)...");
+    println!("📝 Spawning center node at (0,0,0)...");
     let center = TestNode::spawn_at_slot(31100, Some(center_slot)).await?;
-    center.announce_slot_ownership(center_slot).await?;
 
     // Get all 8 neighbor slots
     let neighbors = get_neighbor_slots(&center_slot, &mesh_config);
@@ -81,10 +87,22 @@ async fn test_discover_all_eight_neighbors() -> anyhow::Result<()> {
     let mut neighbor_nodes = Vec::new();
     for (i, (_dir, slot)) in neighbors.iter().enumerate() {
         let node = TestNode::spawn_at_slot(31101 + i as u16, Some(*slot)).await?;
-        node.announce_slot_ownership(*slot).await?;
         neighbor_nodes.push(node);
     }
 
+    // Establish WebRTC connections between center and all neighbors
+    println!("🔗 Establishing WebRTC connections...");
+    for neighbor in &neighbor_nodes {
+        center.establish_webrtc_connection(neighbor).await?;
+    }
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // THEN announce slot ownership
+    println!("📢 Announcing slot ownership...");
+    center.announce_slot_ownership(center_slot).await?;
+    for (i, (_dir, slot)) in neighbors.iter().enumerate() {
+        neighbor_nodes[i].announce_slot_ownership(*slot).await?;
+    }
     tokio::time::sleep(Duration::from_secs(1)).await;
 
     // Discover all neighbors via DHT queries
@@ -123,7 +141,6 @@ async fn test_neighbor_discovery_with_toroidal_wraparound() -> anyhow::Result<()
     // Spawn node at edge
     println!("📝 Spawning node at edge (4,4,1)...");
     let edge_node = TestNode::spawn_at_slot(31200, Some(edge_slot)).await?;
-    edge_node.announce_slot_ownership(edge_slot).await?;
 
     // Calculate neighbor in PlusA direction (should wrap to x=0)
     let neighbor_slot = edge_slot.neighbor(Direction::PlusA, &mesh_config);
@@ -134,8 +151,16 @@ async fn test_neighbor_discovery_with_toroidal_wraparound() -> anyhow::Result<()
 
     // Spawn wrapped neighbor
     let neighbor = TestNode::spawn_at_slot(31201, Some(neighbor_slot)).await?;
-    neighbor.announce_slot_ownership(neighbor_slot).await?;
 
+    // Establish WebRTC connection FIRST
+    println!("🔗 Establishing WebRTC connection...");
+    edge_node.establish_webrtc_connection(&neighbor).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // THEN announce slot ownership
+    println!("📢 Announcing slot ownership...");
+    edge_node.announce_slot_ownership(edge_slot).await?;
+    neighbor.announce_slot_ownership(neighbor_slot).await?;
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Discover wrapped neighbor via DHT
@@ -165,11 +190,17 @@ async fn test_no_neighbor_cache_needed() -> anyhow::Result<()> {
 
     // Spawn nodes
     let node = TestNode::spawn_at_slot(31300, Some(my_slot)).await?;
-    node.announce_slot_ownership(my_slot).await?;
-
     let neighbor = TestNode::spawn_at_slot(31301, Some(neighbor_slot)).await?;
-    neighbor.announce_slot_ownership(neighbor_slot).await?;
 
+    // Establish WebRTC connection FIRST
+    println!("🔗 Establishing WebRTC connection...");
+    node.establish_webrtc_connection(&neighbor).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // THEN announce slot ownership
+    println!("📢 Announcing slot ownership...");
+    node.announce_slot_ownership(my_slot).await?;
+    neighbor.announce_slot_ownership(neighbor_slot).await?;
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     let ownership_key = slot_ownership_key(neighbor_slot);
@@ -201,12 +232,19 @@ async fn test_neighbor_leaves_and_is_replaced() -> anyhow::Result<()> {
 
     // Spawn me and original neighbor
     let node = TestNode::spawn_at_slot(31400, Some(my_slot)).await?;
-    node.announce_slot_ownership(my_slot).await?;
 
     println!("📝 Original neighbor claims slot...");
     let neighbor_a = TestNode::spawn_at_slot(31401, Some(neighbor_slot)).await?;
-    neighbor_a.announce_slot_ownership(neighbor_slot).await?;
 
+    // Establish WebRTC connection FIRST
+    println!("🔗 Establishing WebRTC connection...");
+    node.establish_webrtc_connection(&neighbor_a).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // THEN announce slot ownership
+    println!("📢 Announcing slot ownership...");
+    node.announce_slot_ownership(my_slot).await?;
+    neighbor_a.announce_slot_ownership(neighbor_slot).await?;
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Query DHT for original neighbor
@@ -218,8 +256,15 @@ async fn test_neighbor_leaves_and_is_replaced() -> anyhow::Result<()> {
     // Original neighbor leaves (simulated by new neighbor claiming slot)
     println!("\n📝 New neighbor claims the same slot...");
     let neighbor_b = TestNode::spawn_at_slot(31402, Some(neighbor_slot)).await?;
-    neighbor_b.announce_slot_ownership(neighbor_slot).await?;
 
+    // Establish WebRTC connection with new neighbor
+    println!("🔗 Establishing WebRTC connection with new neighbor...");
+    node.establish_webrtc_connection(&neighbor_b).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // New neighbor announces slot ownership
+    println!("📢 New neighbor announcing slot ownership...");
+    neighbor_b.announce_slot_ownership(neighbor_slot).await?;
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Query DHT again - should find new neighbor

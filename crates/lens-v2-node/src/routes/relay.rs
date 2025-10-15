@@ -736,6 +736,18 @@ impl RelayState {
             println!("✅ Stored slot ownership locally: {} → ({}, {}, {})", peer_id, slot.x, slot.y, slot.z);
         }
 
+        // Use DHT PUT to store in the network (routes to responsible slot)
+        println!("📤 DHT PUT: Storing slot ownership in DHT network via routing...");
+        let location_key = peer_location_key(&peer_id);
+        let slot_key = slot_ownership_key(slot);
+
+        // Put both keys into the DHT network (with routing)
+        self.dht_put(location_key, ownership_bytes.clone()).await;
+        println!("✅ DHT PUT: peer_location_key routed and stored");
+
+        self.dht_put(slot_key, ownership_bytes.clone()).await;
+        println!("✅ DHT PUT: slot_ownership_key routed and stored");
+
         // Create gossip message
         let gossip_message = serde_json::json!({
             "type": "slot_ownership_gossip",
