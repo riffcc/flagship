@@ -218,10 +218,12 @@ pub async fn get_network_map(
                     crate::routes::relay::PeerType::Server => PeerType::Server,
                 };
 
-                // Anonymize browser peer IDs
+                // Anonymize browser peer IDs - only expose first 8 chars for privacy
                 let (id, label) = if peer_type == PeerType::Browser {
-                    let anon_id = format!("browser-anon-{}", &peer_id[peer_id.len().saturating_sub(8)..]);
-                    (anon_id.clone(), format!("Browser ({})", &anon_id[anon_id.len().saturating_sub(8)..]))
+                    // Take only first 8 chars (or less if peer_id is shorter)
+                    let truncated = peer_id.chars().take(8).collect::<String>();
+                    let anon_id = format!("browser-{}", truncated);
+                    (anon_id.clone(), format!("Browser ({})", truncated))
                 } else {
                     (peer_id.clone(), peer_id.clone())
                 };
@@ -266,7 +268,9 @@ pub async fn get_network_map(
                 // Find the display IDs (anonymized for browser peers)
                 let from_node = nodes.iter().find(|n| {
                     if n.peer_type == PeerType::Browser {
-                        peer_id.ends_with(&n.id[n.id.len().saturating_sub(8)..])
+                        // Browser IDs are "browser-{first 8 chars}"
+                        let from_prefix = from.chars().take(8).collect::<String>();
+                        n.id == format!("browser-{}", from_prefix)
                     } else {
                         &n.id == from
                     }
@@ -274,7 +278,9 @@ pub async fn get_network_map(
 
                 let to_node = nodes.iter().find(|n| {
                     if n.peer_type == PeerType::Browser {
-                        neighbor_id.ends_with(&n.id[n.id.len().saturating_sub(8)..])
+                        // Browser IDs are "browser-{first 8 chars}"
+                        let to_prefix = to.chars().take(8).collect::<String>();
+                        n.id == format!("browser-{}", to_prefix)
                     } else {
                         &n.id == to
                     }

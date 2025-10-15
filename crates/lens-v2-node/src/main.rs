@@ -31,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Print startup banner
     tracing::info!("╔══════════════════════════════════════════════╗");
-    tracing::info!("║       Lens Node v2 - Version 0.8.59          ║");
+    tracing::info!("║       Lens Node v2 - Version 0.8.60          ║");
     tracing::info!("║   P2P Content Distribution & Sync Node       ║");
     tracing::info!("╚══════════════════════════════════════════════╝");
 
