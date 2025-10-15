@@ -16,7 +16,7 @@ use citadel_dht::node::MinimalNode;
 use lens_node::lazy_node::LazyNode;
 use lens_node::dht_state::DhtState;
 use lens_node::peer_registry::{slot_ownership_key, SlotOwnership};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;

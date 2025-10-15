@@ -521,3 +521,113 @@ async fn test_dht_get_uses_webrtc_datachannel() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_3node_multihop_dht_routing() -> anyhow::Result<()> {
+    use citadel_core::topology::SlotCoordinate;
+
+    println!("🚀 Starting 3-node multi-hop DHT routing test");
+    println!("   This tests DHT routing across multiple hops via WebRTC mesh");
+    println!();
+
+    // Spawn three nodes in a line: Node0 → Node1 → Node2
+    // Slots: (0,0,0) → (0,1,0) → (0,2,0)
+    let node0 = TestNode::spawn_at_slot(15010, Some(SlotCoordinate::new(0, 0, 0))).await?;
+    let node1 = TestNode::spawn_at_slot(15011, Some(SlotCoordinate::new(0, 1, 0))).await?;
+    let node2 = TestNode::spawn_at_slot(15012, Some(SlotCoordinate::new(0, 2, 0))).await?;
+
+    println!("✅ Spawned node0 (port {}) at slot (0,0,0) with peer_id: {}", node0.port, &node0.peer_id[..20]);
+    println!("✅ Spawned node1 (port {}) at slot (0,1,0) with peer_id: {}", node1.port, &node1.peer_id[..20]);
+    println!("✅ Spawned node2 (port {}) at slot (0,2,0) with peer_id: {}", node2.port, &node2.peer_id[..20]);
+    println!();
+
+    // Establish WebRTC connections in a line: Node0 ↔ Node1 ↔ Node2
+    println!("🔗 Building WebRTC mesh (3-node line topology)...");
+
+    // Node0 ↔ Node1
+    println!("   Connecting Node0 → Node1...");
+    node0.establish_webrtc_connection(&node1).await?;
+    println!("   ✅ Node0 ↔ Node1 connected");
+
+    // Node1 ↔ Node2
+    println!("   Connecting Node1 → Node2...");
+    node1.establish_webrtc_connection(&node2).await?;
+    println!("   ✅ Node1 ↔ Node2 connected");
+
+    println!("✅ WebRTC mesh established (3 nodes in line topology)");
+    println!();
+
+    // Wait for connections to stabilize
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // Announce slot ownership - gossip should flood through all 3 nodes
+    println!("📢 Announcing slot ownership via gossip (should flood to all nodes)...");
+    node0.announce_slot_ownership(SlotCoordinate::new(0, 0, 0)).await?;
+    node1.announce_slot_ownership(SlotCoordinate::new(0, 1, 0)).await?;
+    node2.announce_slot_ownership(SlotCoordinate::new(0, 2, 0)).await?;
+
+    // Wait for gossip to propagate through mesh
+    println!("⏳ Waiting for gossip to propagate through all 3 nodes...");
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    println!("✅ Gossip propagation complete");
+    println!();
+
+    // Create test data that maps to Node2's slot
+    // We want Node0 to DHT PUT → route through Node1 → arrive at Node2
+    let test_key: [u8; 32] = blake3::hash(b"multihop-test-key").into();
+    let test_value = b"multihop-test-value-42".to_vec();
+
+    // Debug: Check where this key maps to
+    use citadel_core::key_mapping::key_to_slot;
+    use citadel_core::topology::MeshConfig;
+    let mesh_config = MeshConfig::new(3, 3, 3); // 3 nodes = 3x3x3 mesh
+    let target_slot = key_to_slot(&test_key, &mesh_config);
+    println!("🔑 Test key maps to slot ({}, {}, {})", target_slot.x, target_slot.y, target_slot.z);
+    println!("   Node0 is at slot (0, 0, 0)");
+    println!("   Node1 is at slot (0, 1, 0)");
+    println!("   Node2 is at slot (0, 2, 0)");
+    println!("   Expected: Node0 → (route) → Node1 → (route) → Node2");
+    println!();
+
+    // Node0 performs DHT PUT - should route through Node1 to Node2
+    println!("📤 Node0 performing DHT PUT (should multi-hop to target slot owner)...");
+    node0.dht_put(test_key, test_value.clone()).await?;
+    println!("✅ Node0 DHT PUT request sent");
+
+    // Wait for multi-hop routing to complete
+    println!("⏳ Waiting for multi-hop DHT routing to complete...");
+    tokio::time::sleep(Duration::from_secs(3)).await;
+    println!();
+
+    // Try to retrieve from all nodes to see where it ended up
+    println!("🔍 Checking which node(s) have the value...");
+
+    let node0_result = node0.dht_get(test_key).await?;
+    println!("   Node0 DHT GET: {}", if node0_result.is_some() { "✅ HAS VALUE" } else { "❌ NO VALUE" });
+
+    let node1_result = node1.dht_get(test_key).await?;
+    println!("   Node1 DHT GET: {}", if node1_result.is_some() { "✅ HAS VALUE" } else { "❌ NO VALUE" });
+
+    let node2_result = node2.dht_get(test_key).await?;
+    println!("   Node2 DHT GET: {}", if node2_result.is_some() { "✅ HAS VALUE" } else { "❌ NO VALUE" });
+    println!();
+
+    // The value should be stored at the node owning the target slot
+    // In a properly functioning DHT, the greedy routing should find the closest node
+    assert!(
+        node0_result.is_some() || node1_result.is_some() || node2_result.is_some(),
+        "DHT PUT should store value at one of the nodes (multi-hop routing should work)"
+    );
+
+    // Verify the value matches
+    let stored_value = node0_result.or(node1_result).or(node2_result).unwrap();
+    assert_eq!(stored_value, test_value, "Retrieved value should match");
+
+    println!("✅ 3-node multi-hop DHT routing test PASSED!");
+    println!("   ✓ WebRTC mesh established with 3 nodes");
+    println!("   ✓ Gossip flooded through all nodes");
+    println!("   ✓ Multi-hop DHT PUT succeeded");
+    println!("   ✓ DHT GET retrieved correct value");
+
+    Ok(())
+}

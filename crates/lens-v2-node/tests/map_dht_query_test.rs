@@ -131,6 +131,9 @@ async fn start_full_test_node(port: u16, relay_url: String) {
     // Give server time to start
     tokio::time::sleep(Duration::from_millis(100)).await;
 
+    // Create WebRTC manager
+    let webrtc_manager = Arc::new(lens_node::webrtc_manager::WebRTCManager::new().unwrap());
+
     // Create and start SyncOrchestrator (this connects to OTHER nodes!)
     let orchestrator = Arc::new(SyncOrchestrator::new(
         relay_url.clone(),
@@ -138,6 +141,7 @@ async fn start_full_test_node(port: u16, relay_url: String) {
         my_slot,
         mesh_config,
         p2p_manager.clone(),
+        webrtc_manager,
         db,
         block_notify_rx,
         dht_storage,
