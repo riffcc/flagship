@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hexagonal Mesh Visualizer</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/three"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three-spritetext"></script>
+    <script src="https://unpkg.com/3d-force-graph@1.79.0/dist/3d-force-graph.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
+        body.light-mode {
+            background: #ffffff;
+            color: #0a0a0a;
+        }
+        #app {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: #1a1a1a;
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #00ff88;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        body.light-mode .header {
+            background: #f0f0f0;
+            border-bottom: 2px solid #006644;
+        }
+        .title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #00ff88;
+            transition: color 0.3s;
+        }
+        body.light-mode .title {
+            color: #006644;
+        }
+        .stats {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+        }
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .stat-label {
+            color: #888;
+        }
+        .stat-value {
+            color: #00ff88;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+        body.light-mode .stat-value {
+            color: #006644;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+        }
+        button {
+            background: #00ff88;
+            color: #0a0a0a;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        body.light-mode button {
+            background: #006644;
+            color: #ffffff;
+        }
+        button:hover {
+            background: #00cc6a;
+            transform: translateY(-1px);
+        }
+        body.light-mode button:hover {
+            background: #004422;
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .theme-toggle {
+            background: transparent;
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            font-size: 1.2rem;
+            padding: 0.4rem 0.8rem;
+            min-width: 60px;
+        }
+        body.light-mode .theme-toggle {
+            border-color: #006644;
+            color: #006644;
+        }
+        .theme-toggle:hover {
+            background: rgba(0, 255, 136, 0.1);
+            transform: translateY(-1px);
+        }
+        body.light-mode .theme-toggle:hover {
+            background: rgba(0, 102, 68, 0.1);
+        }
+        .graph-container {
+            flex: 1;
+            position: relative;
+        }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #333;
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            color: #ff4444;
+            padding: 2rem;
+            text-align: center;
+        }
+        .node-info {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(26, 26, 26, 0.95);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #00ff88;
+            max-width: 300px;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+        body.light-mode .node-info {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #006644;
+        }
+        .node-info h3 {
+            color: #00ff88;
+            margin-bottom: 0.5rem;
+            transition: color 0.3s;
+        }
+        body.light-mode .node-info h3 {
+            color: #006644;
+        }
+        .node-info p {
+            margin: 0.25rem 0;
+            color: #ccc;
+            transition: color 0.3s;
+        }
+        body.light-mode .node-info p {
+            color: #333;
+        }
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        input {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 4px;
+            width: 200px;
+            transition: all 0.3s;
+        }
+        body.light-mode input {
+            background: #ffffff;
+            border: 1px solid #cccccc;
+            color: #0a0a0a;
+        }
+        .control-panel {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(26, 26, 26, 0.95);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #00ff88;
+            max-width: 350px;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+        body.light-mode .control-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #006644;
+        }
+        .control-panel h3 {
+            color: #00ff88;
+            margin-bottom: 0.5rem;
+            transition: color 0.3s;
+        }
+        body.light-mode .control-panel h3 {
+            color: #006644;
+        }
+        .control-section {
+            margin: 1rem 0;
+            padding: 0.5rem 0;
+            border-top: 1px solid #333;
+        }
+        .control-section:first-child {
+            border-top: none;
+        }
+        .control-section h4 {
+            color: #00cc6a;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            transition: color 0.3s;
+        }
+        body.light-mode .control-section h4 {
+            color: #004422;
+        }
+        .control-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.25rem 0;
+            padding: 0.25rem;
+        }
+        .control-key {
+            background: #00ff88;
+            color: #0a0a0a;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+        .control-desc {
+            color: #ccc;
+            flex: 1;
+            margin-left: 0.5rem;
+        }
+        .selected-nodes {
+            background: #1a1a1a;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+        .selected-nodes p {
+            margin: 0.25rem 0;
+            color: #ccc;
+        }
+        .selected-nodes .node-name {
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .action-status {
+            background: #1a1a1a;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(0, 255, 136, 0.95);
+            color: #0a0a0a;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
+            font-weight: bold;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        body.light-mode .toast {
+            background: rgba(0, 102, 68, 0.95);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 102, 68, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <div class="title">🔷 Hexagonal Mesh Visualizer</div>
+            <div class="stats" v-if="networkMap">
+                <div class="stat">
+                    <span class="stat-label">Nodes:</span>
+                    <span class="stat-value">{{ networkMap.stats.total_peers }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Edges:</span>
+                    <span class="stat-value">{{ networkMap.stats.mesh_edges }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Mesh:</span>
+                    <span class="stat-value">{{ networkMap.mesh_config.width }}×{{ networkMap.mesh_config.height }}×{{ networkMap.mesh_config.depth }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Occupancy:</span>
+                    <span class="stat-value">{{ networkMap.stats.occupancy_percent.toFixed(1) }}%</span>
+                </div>
+            </div>
+            <div class="controls">
+                <div class="input-group">
+                    <input
+                        v-model="apiUrl"
+                        placeholder="API URL"
+                        @keyup.enter="refresh"
+                    />
+                </div>
+                <button class="theme-toggle" @click="toggleTheme">
+                    {{ lightMode ? '🌙' : '☀️' }}
+                </button>
+                <button @click="refresh">🔄 Refresh</button>
+                <button @click="autoRefresh = !autoRefresh">
+                    {{ autoRefresh ? '⏸️ Pause' : '▶️ Auto' }}
+                </button>
+            </div>
+        </div>
+
+        <div class="graph-container">
+            <div v-if="loading" class="loading">
+                <div class="spinner"></div>
+                <div>Loading mesh topology...</div>
+            </div>
+
+            <div v-if="error" class="error">
+                ❌ {{ error }}
+            </div>
+
+            <div ref="graphContainer" style="width: 100%; height: 100%;"></div>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <h3>🎮 Mesh Controls</h3>
+
+                <div class="control-section">
+                    <h4>Selection</h4>
+                    <div class="control-item">
+                        <span class="control-key">LEFT-CLICK</span>
+                        <span class="control-desc">Select source node</span>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-key">RIGHT-CLICK</span>
+                        <span class="control-desc">Select target node</span>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h4>DHT Operations</h4>
+                    <div class="control-item">
+                        <span class="control-key">W</span>
+                        <span class="control-desc">Write to DHT</span>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-key">R</span>
+                        <span class="control-desc">Read from DHT</span>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h4>Traffic Generation</h4>
+                    <div class="control-item">
+                        <span class="control-key">B</span>
+                        <span class="control-desc">Broadcast to all nodes</span>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-key">P</span>
+                        <span class="control-desc">Route packet (source → target)</span>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-key">1</span>
+                        <span class="control-desc">Toggle scenario mode (auto traffic)</span>
+                    </div>
+                    <div v-if="scenarioMode" style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(0, 255, 136, 0.1); border-radius: 4px;">
+                        <span style="color: #00ff88; font-weight: bold;">🎬 SCENARIO ACTIVE</span>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h4>Latency Simulation</h4>
+                    <div style="padding: 0.5rem 0;">
+                        <label style="color: #ccc; display: block; margin-bottom: 0.3rem;">
+                            Link Latency: {{ linkLatencyMs }}ms
+                        </label>
+                        <input
+                            type="range"
+                            v-model.number="linkLatencyMs"
+                            min="10"
+                            max="200"
+                            step="10"
+                            style="width: 100%;"
+                        />
+                    </div>
+                </div>
+
+                <div class="selected-nodes">
+                    <p><strong>Source:</strong> <span class="node-name">{{ sourceNode ? sourceNode.name : 'None' }}</span></p>
+                    <p><strong>Target:</strong> <span class="node-name">{{ targetNode ? targetNode.name : 'None' }}</span></p>
+                </div>
+
+                <div v-if="actionStatus" class="action-status">
+                    {{ actionStatus }}
+                </div>
+            </div>
+
+            <div v-if="selectedNode" class="node-info">
+                <h3>{{ selectedNode.name }}</h3>
+                <p><strong>Slot:</strong> ({{ selectedNode.slot.x }}, {{ selectedNode.slot.y }}, {{ selectedNode.slot.z }})</p>
+                <p><strong>Type:</strong> {{ selectedNode.peer_type }}</p>
+                <p><strong>Capabilities:</strong> {{ selectedNode.capabilities.join(', ') }}</p>
+            </div>
+
+            <!-- Toast notification -->
+            <div v-if="toastMessage" class="toast">
+                {{ toastMessage }}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    apiUrl: 'http://localhost:8080/mesh-test-map',
+                    networkMap: null,
+                    graph: null,
+                    loading: false,
+                    error: null,
+                    autoRefresh: true,
+                    selectedNode: null,
+                    sourceNode: null,
+                    targetNode: null,
+                    actionStatus: null,
+                    lightMode: false,
+                    activeTransmissions: new Map(), // Track active data transmissions
+                    linkLatencyMs: 50, // Configurable latency per link (milliseconds)
+                    toastMessage: null, // Toast notification message
+                    scenarioMode: false, // Scenario mode - continuous traffic from all peers
+                    scenarioInterval: null, // Interval ID for scenario mode
+                };
+            },
+            async mounted() {
+                await this.loadMap();
+
+                // Connect to WebSocket for instant updates
+                const ws = new WebSocket('ws://localhost:8080/ws');
+                ws.onmessage = (event) => {
+                    try {
+                        this.networkMap = JSON.parse(event.data);
+                        this.updateGraphData();
+                    } catch (err) {
+                        console.error('Failed to parse WebSocket message:', err);
+                    }
+                };
+                ws.onerror = (err) => {
+                    console.error('WebSocket error:', err);
+                };
+                ws.onclose = () => {
+                    console.log('WebSocket closed');
+                };
+
+                // Keyboard event listeners
+                window.addEventListener('keydown', this.handleKeyPress);
+            },
+            beforeUnmount() {
+                window.removeEventListener('keydown', this.handleKeyPress);
+            },
+            methods: {
+                async loadMap() {
+                    this.loading = true;
+                    this.error = null;
+
+                    try {
+                        const response = await fetch(this.apiUrl);
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+
+                        this.networkMap = await response.json();
+                        this.renderGraph();
+                    } catch (err) {
+                        this.error = err.message;
+                        console.error('Failed to load network map:', err);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async refresh() {
+                    await this.loadMap();
+                },
+
+                updateGraphData() {
+                    if (!this.graph || !this.networkMap) return;
+
+                    // Get current graph data
+                    const currentData = this.graph.graphData();
+                    const currentNodes = currentData.nodes || [];
+                    const currentLinks = currentData.links || [];
+
+                    // Build maps of existing nodes and links by ID
+                    const existingNodeIds = new Set(currentNodes.map(n => n.id));
+                    const existingLinkIds = new Set(currentLinks.map(l => `${l.source.id || l.source}-${l.target.id || l.target}`));
+
+                    // Find new nodes (only add nodes that don't exist)
+                    const newNodes = this.networkMap.nodes.filter(node => !existingNodeIds.has(node.id));
+                    const newNodesFormatted = newNodes.map(node => ({
+                        id: node.id,
+                        name: node.label,
+                        peer_type: node.peer_type,
+                        slot: node.slot,
+                        capabilities: node.capabilities,
+                        online: node.online,
+                    }));
+
+                    // Find new links (only add links that don't exist)
+                    const newLinks = this.networkMap.edges.filter(edge => {
+                        const linkId = `${edge.from}-${edge.to}`;
+                        const reverseLinkId = `${edge.to}-${edge.from}`;
+                        return !existingLinkIds.has(linkId) && !existingLinkIds.has(reverseLinkId);
+                    });
+                    const newLinksFormatted = newLinks.map(edge => ({
+                        source: edge.from,
+                        target: edge.to,
+                        type: edge.connection_type,
+                        latency_ms: edge.latency_ms,
+                        color: edge.color,
+                    }));
+
+                    // Only update if there are new nodes or links
+                    if (newNodesFormatted.length > 0 || newLinksFormatted.length > 0) {
+                        this.graph.graphData({
+                            nodes: [...currentNodes, ...newNodesFormatted],
+                            links: [...currentLinks, ...newLinksFormatted],
+                        });
+                    }
+                },
+
+                renderGraph() {
+                    if (!this.networkMap) return;
+
+                    // Only create graph once, then update it
+                    if (this.graph) {
+                        this.updateGraphData();
+                        return;
+                    }
+
+                    const elem = this.$refs.graphContainer;
+
+                    // Transform network map data to 3d-force-graph format (EXACT from Flagship)
+                    const graphData = {
+                        nodes: this.networkMap.nodes.map(node => ({
+                            id: node.id,
+                            name: node.label,
+                            peer_type: node.peer_type,
+                            slot: node.slot,
+                            capabilities: node.capabilities,
+                            online: node.online,
+                        })),
+                        links: this.networkMap.edges.map(edge => ({
+                            source: edge.from,
+                            target: edge.to,
+                            type: edge.connection_type,
+                            latency_ms: edge.latency_ms,
+                            color: edge.color,
+                        })),
+                    };
+
+                    // Initialize 3D force graph (EXACT from Flagship)
+                    this.graph = ForceGraph3D()(elem)
+                        .graphData(graphData)
+                        .backgroundColor(this.lightMode ? '#ffffff' : '#000000')
+
+                        // Node styling
+                        .nodeLabel(node => {
+                            return `${node.name}<br/>Slot: (${node.slot.x}, ${node.slot.y}, ${node.slot.z})<br/>Type: ${node.peer_type}<br/>Capabilities: ${node.capabilities.join(', ')}`;
+                        })
+                        .nodeColor(node => {
+                            if (this.lightMode) {
+                                return '#000000'; // Black nodes in light mode
+                            }
+                            // Server nodes: purple, Browser nodes: blue (dark mode)
+                            return node.peer_type === 'server' ? '#8a2be2' : '#2196f3';
+                        })
+                        .nodeVal(node => {
+                            // Server nodes bigger than browser nodes
+                            return node.peer_type === 'server' ? 8 : 3;
+                        })
+                        // Skip nodeThreeObject for now - just use default spheres with tooltips
+                        // .nodeThreeObject(node => {
+                        //     const sprite = new SpriteText(node.name);
+                        //     sprite.color = node.peer_type === 'server' ? '#8a2be2' : '#2196f3';
+                        //     sprite.textHeight = node.peer_type === 'server' ? 8 : 6;
+                        //     sprite.position.y = node.peer_type === 'server' ? 20 : 15;
+                        //     return sprite;
+                        // })
+                        // .nodeThreeObjectExtend(true)  // Extend default sphere with text sprite
+
+                        // Link styling
+                        .linkColor(link => {
+                            if (this.lightMode) {
+                                // Dark green for formed connections, dark maroon for broken
+                                return link.online !== false ? '#006400' : '#800000';
+                            }
+                            // Use rainbow gradient color from backend (dark mode)
+                            if (link.color) {
+                                return link.color;
+                            }
+                            // Fallback: Neighbor connections: purple, Relay connections: orange
+                            return link.type === 'neighbor' ? 'rgba(138, 43, 226, 0.4)' : 'rgba(255, 152, 0, 0.6)';
+                        })
+                        .linkWidth(link => {
+                            return link.type === 'neighbor' ? 2 : 2;
+                        })
+                        .linkOpacity(0.8)
+                        .linkLabel(link => {
+                            if (link.latency_ms !== null && link.latency_ms !== undefined) {
+                                return `${link.type} connection<br/>Latency: ${link.latency_ms}ms`;
+                            }
+                            return `${link.type} connection`;
+                        })
+                        .linkDirectionalParticles(link => {
+                            // Check if this link has an active transmission
+                            const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
+                            const reverseLinkId = `${link.target.id || link.target}-${link.source.id || link.source}`;
+
+                            if (this.activeTransmissions.has(linkId) || this.activeTransmissions.has(reverseLinkId)) {
+                                return 4; // More particles for active transmissions
+                            }
+
+                            // Show particles on relay connections
+                            return link.type === 'relay' ? 2 : 0;
+                        })
+                        .linkDirectionalParticleWidth(link => {
+                            const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
+                            const reverseLinkId = `${link.target.id || link.target}-${link.source.id || link.source}`;
+
+                            if (this.activeTransmissions.has(linkId) || this.activeTransmissions.has(reverseLinkId)) {
+                                return 6; // Thicker beads for active transmissions
+                            }
+                            return 2;
+                        })
+                        .linkDirectionalParticleSpeed(link => {
+                            const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
+                            const reverseLinkId = `${link.target.id || link.target}-${link.source.id || link.source}`;
+
+                            // Calculate speed based on link latency
+                            // Speed = distance / time, where distance = 1 (link length) and time = latencyMs / 1000
+                            // For 50ms latency: speed = 1 / 0.05 = 20 units/sec
+                            // But 3d-force-graph expects fraction of link per frame (60fps)
+                            // So we need: (1 / (latencyMs / 1000)) / 60
+                            const latencySeconds = this.linkLatencyMs / 1000;
+                            const speed = 1 / (latencySeconds * 60);
+
+                            if (this.activeTransmissions.has(linkId) || this.activeTransmissions.has(reverseLinkId)) {
+                                return speed; // Speed based on latency
+                            }
+                            return speed * 0.5; // Half speed for background relay
+                        })
+                        .linkDirectionalParticleColor(link => {
+                            const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
+                            const reverseLinkId = `${link.target.id || link.target}-${link.source.id || link.source}`;
+
+                            const transmission = this.activeTransmissions.get(linkId) || this.activeTransmissions.get(reverseLinkId);
+                            if (transmission) {
+                                // Bright glowing color based on transmission type
+                                switch (transmission.type) {
+                                    case 'dht_write': return '#00ff00'; // Bright green
+                                    case 'dht_read': return '#00ffff';  // Cyan
+                                    case 'broadcast': return '#ffff00'; // Yellow
+                                    case 'route': return '#ff00ff';     // Magenta
+                                    default: return '#ffffff';
+                                }
+                            }
+                            return this.lightMode ? '#006400' : '#8a2be2';
+                        })
+                        .linkWidth(link => {
+                            const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
+                            const reverseLinkId = `${link.target.id || link.target}-${link.source.id || link.source}`;
+
+                            if (this.activeTransmissions.has(linkId) || this.activeTransmissions.has(reverseLinkId)) {
+                                return 4; // Thicker connection during transmission
+                            }
+                            return link.type === 'neighbor' ? 2 : 2;
+                        })
+
+                        // Controls
+                        .enableNodeDrag(true)
+                        .enableNavigationControls(true)
+                        .showNavInfo(false)
+
+                        // Camera
+                        .cameraPosition({ z: 400 })
+
+                        // Interaction
+                        .onNodeHover(node => {
+                            elem.style.cursor = node ? 'pointer' : 'default';
+                        })
+                        .onNodeClick(node => {
+                            this.selectedNode = node;
+                            this.sourceNode = node; // Left-click sets source
+                            this.actionStatus = `Source set: ${node.name}`;
+                            setTimeout(() => { this.actionStatus = null; }, 2000);
+
+                            // Focus camera on clicked node
+                            const distance = 150;
+                            const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+
+                            this.graph.cameraPosition(
+                                { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+                                node,
+                                1000
+                            );
+                        })
+                        .onNodeRightClick((node, event) => {
+                            event.preventDefault(); // Prevent context menu
+                            this.targetNode = node; // Right-click sets target
+                            this.actionStatus = `Target set: ${node.name}`;
+                            setTimeout(() => { this.actionStatus = null; }, 2000);
+                        });
+
+                    // Configure physics (defaults work well with incremental updates)
+                    this.graph.d3Force('charge').strength(-120);
+                    this.graph.d3Force('link').distance(50);
+                },
+
+                handleKeyPress(event) {
+                    const key = event.key.toUpperCase();
+
+                    switch (key) {
+                        case 'W':
+                            this.dhtWrite();
+                            break;
+                        case 'R':
+                            this.dhtRead();
+                            break;
+                        case 'B':
+                            this.broadcast();
+                            break;
+                        case 'P':
+                            this.routePacket();
+                            break;
+                        case '1':
+                            this.toggleScenarioMode();
+                            break;
+                    }
+                },
+
+                toggleScenarioMode() {
+                    this.scenarioMode = !this.scenarioMode;
+
+                    if (this.scenarioMode) {
+                        this.actionStatus = '🎬 Scenario Mode: ACTIVE - Traffic from all peers';
+                        this.startScenarioMode();
+                    } else {
+                        this.actionStatus = '⏸️ Scenario Mode: PAUSED';
+                        this.stopScenarioMode();
+                        setTimeout(() => { this.actionStatus = null; }, 2000);
+                    }
+                },
+
+                startScenarioMode() {
+                    if (this.scenarioInterval) {
+                        clearInterval(this.scenarioInterval);
+                    }
+
+                    // Send random broadcasts and packets from random peers every 2 seconds
+                    this.scenarioInterval = setInterval(() => {
+                        if (!this.networkMap || !this.networkMap.nodes) return;
+
+                        const nodes = this.networkMap.nodes;
+                        if (nodes.length === 0) return;
+
+                        // Pick 3 random source nodes
+                        for (let i = 0; i < 3; i++) {
+                            const randomSource = nodes[Math.floor(Math.random() * nodes.length)];
+
+                            // 50% chance of broadcast, 50% chance of point-to-point packet
+                            if (Math.random() < 0.5) {
+                                // Broadcast from this node
+                                const graphData = this.graph.graphData();
+                                const links = graphData.links || [];
+                                const graphNodes = graphData.nodes || [];
+
+                                const sourceNode = graphNodes.find(n => n.id === randomSource.id);
+                                if (sourceNode) {
+                                    this.animateBroadcast(sourceNode, links, graphNodes, 'broadcast');
+                                }
+                            } else {
+                                // Point-to-point packet
+                                const randomTarget = nodes[Math.floor(Math.random() * nodes.length)];
+                                if (randomSource.id !== randomTarget.id) {
+                                    const graphData = this.graph.graphData();
+                                    const links = graphData.links || [];
+                                    const graphNodes = graphData.nodes || [];
+
+                                    const sourceNode = graphNodes.find(n => n.id === randomSource.id);
+                                    const targetNode = graphNodes.find(n => n.id === randomTarget.id);
+
+                                    if (sourceNode && targetNode) {
+                                        this.animatePath(sourceNode, targetNode, links, graphNodes, 'route');
+                                    }
+                                }
+                            }
+                        }
+                    }, 2000);
+                },
+
+                stopScenarioMode() {
+                    if (this.scenarioInterval) {
+                        clearInterval(this.scenarioInterval);
+                        this.scenarioInterval = null;
+                    }
+                },
+
+                async dhtWrite() {
+                    if (!this.sourceNode) {
+                        this.actionStatus = '❌ Select a source node first';
+                        setTimeout(() => { this.actionStatus = null; }, 2000);
+                        return;
+                    }
+
+                    const key = 'test-key-' + Date.now();
+                    const value = 'test-value-' + Math.random().toString(36).substring(7);
+
+                    this.actionStatus = `📝 DHT Write from ${this.sourceNode.name}...`;
+                    console.log(`DHT Write: ${this.sourceNode.name} writing ${key} = ${value}`);
+
+                    // Animate DHT write on neighbors
+                    this.animateTransmission(this.sourceNode, null, 'dht_write');
+
+                    try {
+                        // Send DHT write request to backend
+                        const response = await fetch(`http://localhost:8080/dht/write`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                node_id: this.sourceNode.id,
+                                key,
+                                value
+                            })
+                        });
+
+                        if (response.ok) {
+                            this.actionStatus = `✅ DHT Write: ${key} = ${value}`;
+                        } else {
+                            this.actionStatus = `❌ DHT Write failed`;
+                        }
+                    } catch (err) {
+                        this.actionStatus = `❌ DHT Write error: ${err.message}`;
+                    }
+
+                    setTimeout(() => { this.actionStatus = null; }, 3000);
+                },
+
+                async dhtRead() {
+                    if (!this.sourceNode) {
+                        this.actionStatus = '❌ Select a source node first';
+                        setTimeout(() => { this.actionStatus = null; }, 2000);
+                        return;
+                    }
+
+                    const key = 'test-key-latest';
+
+                    this.actionStatus = `🔍 DHT Read from ${this.sourceNode.name}...`;
+                    console.log(`DHT Read: ${this.sourceNode.name} reading ${key}`);
+
+                    // Animate DHT read on neighbors
+                    this.animateTransmission(this.sourceNode, null, 'dht_read');
+
+                    try {
+                        // Send DHT read request to backend
+                        const response = await fetch(`http://localhost:8080/dht/read`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                node_id: this.sourceNode.id,
+                                key
+                            })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.actionStatus = `✅ DHT Read: ${key} = ${data.value || 'not found'}`;
+                        } else {
+                            this.actionStatus = `❌ DHT Read failed`;
+                        }
+                    } catch (err) {
+                        this.actionStatus = `❌ DHT Read error: ${err.message}`;
+                    }
+
+                    setTimeout(() => { this.actionStatus = null; }, 3000);
+                },
+
+                async broadcast() {
+                    if (!this.sourceNode) {
+                        this.actionStatus = '❌ Select a source node first';
+                        setTimeout(() => { this.actionStatus = null; }, 2000);
+                        return;
+                    }
+
+                    this.actionStatus = `📡 Broadcasting from ${this.sourceNode.name}...`;
+                    console.log(`Broadcast: ${this.sourceNode.name} broadcasting to all nodes`);
+
+                    // Animate broadcast on ALL neighbor links from source node
+                    this.animateTransmission(this.sourceNode, null, 'broadcast');
+
+                    try {
+                        // Send broadcast request to backend
+                        const response = await fetch(`http://localhost:8080/broadcast`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                node_id: this.sourceNode.id,
+                                message: `Broadcast from ${this.sourceNode.name} at ${Date.now()}`
+                            })
+                        });
+
+                        if (response.ok) {
+                            this.actionStatus = `✅ Broadcast sent to all nodes`;
+                        } else {
+                            this.actionStatus = `❌ Broadcast failed`;
+                        }
+                    } catch (err) {
+                        this.actionStatus = `❌ Broadcast error: ${err.message}`;
+                    }
+
+                    setTimeout(() => { this.actionStatus = null; }, 3000);
+                },
+
+                animateTransmission(sourceNode, targetNode, type) {
+                    // Get all links and nodes from the graph
+                    const graphData = this.graph.graphData();
+                    const links = graphData.links || [];
+                    const nodes = graphData.nodes || [];
+
+                    if (targetNode) {
+                        // Animate shortest path from source to target using BFS
+                        this.animatePath(sourceNode, targetNode, links, nodes, type);
+                    } else if (type === 'broadcast') {
+                        // Animate flooding broadcast through entire mesh using BFS
+                        this.animateBroadcast(sourceNode, links, nodes, type);
+                    } else {
+                        // Animate on immediate neighbor links only (DHT operations)
+                        const sourceLinks = links.filter(l =>
+                            l.source.id === sourceNode.id || l.target.id === sourceNode.id
+                        );
+
+                        sourceLinks.forEach(link => {
+                            const linkId = `${sourceNode.id}-${link.target.id || link.target}`;
+                            this.activeTransmissions.set(linkId, { type, timestamp: Date.now() });
+
+                            setTimeout(() => {
+                                this.activeTransmissions.delete(linkId);
+                                this.graph.refresh();
+                            }, this.linkLatencyMs * 2);
+                        });
+                    }
+
+                    // Force graph refresh to show new particles
+                    this.graph.refresh();
+                },
+
+                animatePath(sourceNode, targetNode, links, nodes, type) {
+                    // Find shortest path using BFS
+                    const path = this.findShortestPath(sourceNode.id, targetNode.id, links, nodes);
+
+                    if (path.length === 0) return;
+
+                    // Calculate total propagation time
+                    const totalTime = path.length * this.linkLatencyMs;
+
+                    // Animate each hop in sequence
+                    path.forEach((linkId, index) => {
+                        setTimeout(() => {
+                            this.activeTransmissions.set(linkId, { type, timestamp: Date.now() });
+
+                            setTimeout(() => {
+                                this.activeTransmissions.delete(linkId);
+                                this.graph.refresh();
+                            }, this.linkLatencyMs);
+
+                            this.graph.refresh();
+                        }, index * this.linkLatencyMs);
+                    });
+
+                    // Show toast when route completes
+                    setTimeout(() => {
+                        this.toastMessage = `🚀 Route complete: ${totalTime}ms (${path.length} hops)`;
+                        setTimeout(() => { this.toastMessage = null; }, 3000);
+                    }, totalTime + this.linkLatencyMs);
+                },
+
+                animateBroadcast(sourceNode, links, nodes, type) {
+                    // Build adjacency list
+                    const adjacency = new Map();
+                    nodes.forEach(n => adjacency.set(n.id, []));
+
+                    links.forEach(link => {
+                        const sourceId = link.source.id || link.source;
+                        const targetId = link.target.id || link.target;
+                        adjacency.get(sourceId).push({ nodeId: targetId, linkId: `${sourceId}-${targetId}` });
+                        adjacency.get(targetId).push({ nodeId: sourceId, linkId: `${targetId}-${sourceId}` });
+                    });
+
+                    // BFS to flood through entire mesh
+                    const visited = new Set();
+                    const queue = [{ nodeId: sourceNode.id, depth: 0 }];
+                    visited.add(sourceNode.id);
+
+                    const schedule = []; // Array of {linkId, depth}
+
+                    while (queue.length > 0) {
+                        const { nodeId, depth } = queue.shift();
+                        const neighbors = adjacency.get(nodeId) || [];
+
+                        for (const { nodeId: neighborId, linkId } of neighbors) {
+                            if (!visited.has(neighborId)) {
+                                visited.add(neighborId);
+                                queue.push({ nodeId: neighborId, depth: depth + 1 });
+                                schedule.push({ linkId, depth });
+                            }
+                        }
+                    }
+
+                    // Calculate total propagation time
+                    const maxDepth = schedule.length > 0 ? Math.max(...schedule.map(s => s.depth)) : 0;
+                    const totalTime = maxDepth * this.linkLatencyMs;
+
+                    // Animate all scheduled links with proper timing
+                    schedule.forEach(({ linkId, depth }) => {
+                        setTimeout(() => {
+                            this.activeTransmissions.set(linkId, { type, timestamp: Date.now() });
+
+                            setTimeout(() => {
+                                this.activeTransmissions.delete(linkId);
+                                this.graph.refresh();
+                            }, this.linkLatencyMs);
+
+                            this.graph.refresh();
+                        }, depth * this.linkLatencyMs);
+                    });
+
+                    // Show toast when broadcast completes
+                    setTimeout(() => {
+                        this.toastMessage = `📡 Broadcast complete: ${totalTime}ms (${schedule.length} links, ${maxDepth} hops)`;
+                        setTimeout(() => { this.toastMessage = null; }, 3000);
+                    }, totalTime + this.linkLatencyMs);
+                },
+
+                findShortestPath(startId, endId, links, nodes) {
+                    // Build adjacency list
+                    const adjacency = new Map();
+                    nodes.forEach(n => adjacency.set(n.id, []));
+
+                    links.forEach(link => {
+                        const sourceId = link.source.id || link.source;
+                        const targetId = link.target.id || link.target;
+                        adjacency.get(sourceId).push({ nodeId: targetId, linkId: `${sourceId}-${targetId}` });
+                        adjacency.get(targetId).push({ nodeId: sourceId, linkId: `${targetId}-${sourceId}` });
+                    });
+
+                    // BFS to find shortest path
+                    const visited = new Set();
+                    const queue = [{ nodeId: startId, path: [] }];
+                    visited.add(startId);
+
+                    while (queue.length > 0) {
+                        const { nodeId, path } = queue.shift();
+
+                        if (nodeId === endId) {
+                            return path; // Found shortest path
+                        }
+
+                        const neighbors = adjacency.get(nodeId) || [];
+                        for (const { nodeId: neighborId, linkId } of neighbors) {
+                            if (!visited.has(neighborId)) {
+                                visited.add(neighborId);
+                                queue.push({ nodeId: neighborId, path: [...path, linkId] });
+                            }
+                        }
+                    }
+
+                    return []; // No path found
+                },
+
+                async routePacket() {
+                    if (!this.sourceNode || !this.targetNode) {
+                        this.actionStatus = '❌ Select source (left-click) and target (right-click) nodes';
+                        setTimeout(() => { this.actionStatus = null; }, 2000);
+                        return;
+                    }
+
+                    this.actionStatus = `🚀 Routing ${this.sourceNode.name} → ${this.targetNode.name}...`;
+                    console.log(`Route: ${this.sourceNode.name} → ${this.targetNode.name}`);
+
+                    // Animate route from source to target
+                    this.animateTransmission(this.sourceNode, this.targetNode, 'route');
+
+                    try {
+                        // Send routing request to backend
+                        const response = await fetch(`http://localhost:8080/route`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                from_node: this.sourceNode.id,
+                                to_node: this.targetNode.id,
+                                message: `Routed packet at ${Date.now()}`
+                            })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.actionStatus = `✅ Packet routed: ${data.hops || '?'} hops`;
+                        } else {
+                            this.actionStatus = `❌ Routing failed`;
+                        }
+                    } catch (err) {
+                        this.actionStatus = `❌ Routing error: ${err.message}`;
+                    }
+
+                    setTimeout(() => { this.actionStatus = null; }, 3000);
+                },
+
+                toggleTheme() {
+                    this.lightMode = !this.lightMode;
+                    document.body.classList.toggle('light-mode', this.lightMode);
+
+                    // Update graph colors
+                    if (this.graph) {
+                        this.updateGraphColors();
+                    }
+                },
+
+                updateGraphColors() {
+                    if (!this.graph) return;
+
+                    // Update background color
+                    this.graph.backgroundColor(this.lightMode ? '#ffffff' : '#000000');
+
+                    // Update node colors
+                    this.graph.nodeColor(node => {
+                        // Black nodes in light mode, colored nodes in dark mode
+                        if (this.lightMode) {
+                            return '#000000';
+                        }
+                        return node.peer_type === 'server' ? '#8a2be2' : '#2196f3';
+                    });
+
+                    // Update link colors
+                    this.graph.linkColor(link => {
+                        if (this.lightMode) {
+                            // Dark green for formed connections, dark maroon for broken
+                            return link.online !== false ? '#006400' : '#800000';
+                        }
+
+                        // Original colors for dark mode
+                        if (link.color) {
+                            return link.color;
+                        }
+                        return link.type === 'neighbor' ? 'rgba(138, 43, 226, 0.4)' : 'rgba(255, 152, 0, 0.6)';
+                    });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

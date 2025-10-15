@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scalable Mesh Visualizer (100k+ Peers)</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        #app {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: #1a1a1a;
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #00ff88;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        .title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #00ff88;
+        }
+        .stats {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+        }
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .stat-label {
+            color: #888;
+        }
+        .stat-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        button {
+            background: #00ff88;
+            color: #0a0a0a;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #00cc6a;
+            transform: translateY(-1px);
+        }
+        input[type="number"] {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 4px;
+            width: 100px;
+        }
+        label {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .control-panel {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(26, 26, 26, 0.95);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #00ff88;
+            max-width: 350px;
+            font-size: 0.85rem;
+        }
+        .control-panel h3 {
+            color: #00ff88;
+            margin-bottom: 0.5rem;
+        }
+        .control-section {
+            margin: 1rem 0;
+            padding: 0.5rem 0;
+            border-top: 1px solid #333;
+        }
+        .control-section:first-child {
+            border-top: none;
+        }
+        .control-section h4 {
+            color: #00cc6a;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .slider-group {
+            padding: 0.5rem 0;
+        }
+        .slider-group label {
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .action-status {
+            background: #1a1a1a;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(0, 255, 136, 0.95);
+            color: #0a0a0a;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
+            font-weight: bold;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <div class="title">⚡ Scalable Mesh Visualizer (100k+ Peers)</div>
+            <div class="stats">
+                <div class="stat">
+                    <span class="stat-label">Peers:</span>
+                    <span class="stat-value">{{ totalPeers.toLocaleString() }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Mesh:</span>
+                    <span class="stat-value">{{ meshWidth }}×{{ meshHeight }}×{{ meshDepth }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">FPS:</span>
+                    <span class="stat-value">{{ fps }}</span>
+                </div>
+            </div>
+            <div class="controls">
+                <label>Peer Count:</label>
+                <input type="number" v-model.number="peerCountInput" min="1000" max="1000000" step="1000" />
+                <button @click="regenerateMesh">Generate</button>
+                <button @click="toggleScenario">{{ scenarioMode ? '⏸️ Pause' : '▶️ Scenario' }}</button>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas ref="canvas"></canvas>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <h3>⚡ Performance Optimizations</h3>
+
+                <div class="control-section">
+                    <h4>Rendering</h4>
+                    <div class="slider-group">
+                        <label>LOD Distance: {{ lodDistance }}</label>
+                        <input type="range" v-model.number="lodDistance" min="100" max="2000" step="100" />
+                    </div>
+                    <div class="slider-group">
+                        <label>View Distance: {{ viewDistance }}</label>
+                        <input type="range" v-model.number="viewDistance" min="500" max="5000" step="100" />
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h4>Traffic Simulation</h4>
+                    <div class="slider-group">
+                        <label>Active Transmissions: {{ activeTransmissionCount }}</label>
+                        <input type="range" v-model.number="maxActiveTransmissions" min="10" max="1000" step="10" />
+                    </div>
+                    <div class="slider-group">
+                        <label>Link Latency: {{ linkLatencyMs }}ms</label>
+                        <input type="range" v-model.number="linkLatencyMs" min="10" max="200" step="10" />
+                    </div>
+                </div>
+
+                <div v-if="actionStatus" class="action-status">
+                    {{ actionStatus }}
+                </div>
+            </div>
+
+            <!-- Toast notification -->
+            <div v-if="toastMessage" class="toast">
+                {{ toastMessage }}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    // Mesh configuration
+                    peerCountInput: 100000,
+                    totalPeers: 0,
+                    meshWidth: 0,
+                    meshHeight: 0,
+                    meshDepth: 0,
+
+                    // Rendering
+                    canvas: null,
+                    ctx: null,
+                    camera: { x: 0, y: 0, z: 1000, rotX: 0, rotY: 0 },
+                    lodDistance: 500,
+                    viewDistance: 2000,
+                    fps: 0,
+
+                    // Peer data
+                    peers: [],
+                    links: [],
+
+                    // Traffic simulation
+                    activeTransmissions: [],
+                    maxActiveTransmissions: 100,
+                    activeTransmissionCount: 0,
+                    linkLatencyMs: 50,
+                    scenarioMode: false,
+                    scenarioInterval: null,
+
+                    // UI
+                    actionStatus: null,
+                    toastMessage: null,
+
+                    // Mouse interaction
+                    isDragging: false,
+                    lastMouseX: 0,
+                    lastMouseY: 0,
+                };
+            },
+
+            mounted() {
+                this.canvas = this.$refs.canvas;
+                this.ctx = this.canvas.getContext('2d');
+                this.resizeCanvas();
+
+                window.addEventListener('resize', this.resizeCanvas);
+                this.canvas.addEventListener('mousedown', this.onMouseDown);
+                this.canvas.addEventListener('mousemove', this.onMouseMove);
+                this.canvas.addEventListener('mouseup', this.onMouseUp);
+                this.canvas.addEventListener('wheel', this.onWheel);
+
+                this.regenerateMesh();
+                this.animate();
+            },
+
+            beforeUnmount() {
+                window.removeEventListener('resize', this.resizeCanvas);
+                this.stopScenario();
+            },
+
+            methods: {
+                resizeCanvas() {
+                    this.canvas.width = this.canvas.clientWidth;
+                    this.canvas.height = this.canvas.clientHeight;
+                },
+
+                regenerateMesh() {
+                    const peerCount = this.peerCountInput;
+
+                    // Calculate mesh dimensions (closest cube root)
+                    const cubeRoot = Math.ceil(Math.pow(peerCount, 1/3));
+                    this.meshWidth = cubeRoot;
+                    this.meshHeight = cubeRoot;
+                    this.meshDepth = Math.max(8, Math.ceil(peerCount / (cubeRoot * cubeRoot)));
+
+                    this.totalPeers = this.meshWidth * this.meshHeight * this.meshDepth;
+
+                    // Generate peers
+                    this.peers = [];
+                    for (let x = 0; x < this.meshWidth; x++) {
+                        for (let y = 0; y < this.meshHeight; y++) {
+                            for (let z = 0; z < this.meshDepth; z++) {
+                                this.peers.push({
+                                    x: x * 50 - (this.meshWidth * 25),
+                                    y: y * 50 - (this.meshHeight * 25),
+                                    z: z * 50 - (this.meshDepth * 25),
+                                    slot: { x, y, z },
+                                    color: '#8a2be2',
+                                });
+                            }
+                        }
+                    }
+
+                    this.actionStatus = `✅ Generated ${this.totalPeers.toLocaleString()} peers`;
+                    setTimeout(() => { this.actionStatus = null; }, 3000);
+
+                    // Reset camera
+                    this.camera.z = Math.max(1000, this.meshWidth * 30);
+                },
+
+                project3D(x, y, z) {
+                    // Rotate around Y axis
+                    const cosY = Math.cos(this.camera.rotY);
+                    const sinY = Math.sin(this.camera.rotY);
+                    const x1 = x * cosY - z * sinY;
+                    const z1 = x * sinY + z * cosY;
+
+                    // Rotate around X axis
+                    const cosX = Math.cos(this.camera.rotX);
+                    const sinX = Math.sin(this.camera.rotX);
+                    const y1 = y * cosX - z1 * sinX;
+                    const z2 = y * sinX + z1 * cosX;
+
+                    // Perspective projection
+                    const scale = 500 / (z2 + this.camera.z);
+                    const screenX = x1 * scale + this.canvas.width / 2;
+                    const screenY = y1 * scale + this.canvas.height / 2;
+
+                    return { x: screenX, y: screenY, z: z2, scale };
+                },
+
+                render() {
+                    const ctx = this.ctx;
+                    ctx.fillStyle = '#0a0a0a';
+                    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                    // Frustum culling and LOD
+                    const visiblePeers = [];
+
+                    for (const peer of this.peers) {
+                        const projected = this.project3D(peer.x, peer.y, peer.z);
+                        const distance = Math.sqrt(peer.x * peer.x + peer.y * peer.y + (peer.z - this.camera.z) * (peer.z - this.camera.z));
+
+                        // Frustum culling
+                        if (projected.x < -100 || projected.x > this.canvas.width + 100 ||
+                            projected.y < -100 || projected.y > this.canvas.height + 100) {
+                            continue;
+                        }
+
+                        // Distance culling
+                        if (distance > this.viewDistance) {
+                            continue;
+                        }
+
+                        visiblePeers.push({ peer, projected, distance });
+                    }
+
+                    // Sort by distance (far to near for proper rendering)
+                    visiblePeers.sort((a, b) => b.distance - a.distance);
+
+                    // Render visible peers
+                    for (const { peer, projected, distance } of visiblePeers) {
+                        // LOD - skip small distant peers
+                        if (distance > this.lodDistance && Math.random() > 0.1) {
+                            continue;
+                        }
+
+                        const radius = Math.max(1, projected.scale * 3);
+                        const alpha = Math.max(0.3, 1 - (distance / this.viewDistance));
+
+                        ctx.fillStyle = `rgba(138, 43, 226, ${alpha})`;
+                        ctx.beginPath();
+                        ctx.arc(projected.x, projected.y, radius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // Render active transmissions
+                    this.renderTransmissions();
+                },
+
+                renderTransmissions() {
+                    const ctx = this.ctx;
+
+                    for (const transmission of this.activeTransmissions) {
+                        const { fromPeer, toPeer, progress, color } = transmission;
+
+                        const from = this.project3D(fromPeer.x, fromPeer.y, fromPeer.z);
+                        const to = this.project3D(toPeer.x, toPeer.y, toPeer.z);
+
+                        // Draw particle
+                        const particleX = from.x + (to.x - from.x) * progress;
+                        const particleY = from.y + (to.y - from.y) * progress;
+
+                        ctx.fillStyle = color;
+                        ctx.beginPath();
+                        ctx.arc(particleX, particleY, 4, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Draw line
+                        ctx.strokeStyle = `${color}44`;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(from.x, from.y);
+                        ctx.lineTo(to.x, to.y);
+                        ctx.stroke();
+                    }
+                },
+
+                animate() {
+                    const now = performance.now();
+                    if (!this.lastFrame) this.lastFrame = now;
+                    const deltaTime = now - this.lastFrame;
+                    this.lastFrame = now;
+                    this.fps = Math.round(1000 / deltaTime);
+
+                    // Update transmissions
+                    this.activeTransmissions = this.activeTransmissions.filter(t => {
+                        t.progress += deltaTime / this.linkLatencyMs;
+                        return t.progress < 1;
+                    });
+
+                    this.activeTransmissionCount = this.activeTransmissions.length;
+
+                    this.render();
+                    requestAnimationFrame(this.animate);
+                },
+
+                toggleScenario() {
+                    this.scenarioMode = !this.scenarioMode;
+
+                    if (this.scenarioMode) {
+                        this.startScenario();
+                        this.actionStatus = '🎬 Scenario Mode: ACTIVE';
+                    } else {
+                        this.stopScenario();
+                        this.actionStatus = '⏸️ Scenario Mode: PAUSED';
+                        setTimeout(() => { this.actionStatus = null; }, 2000);
+                    }
+                },
+
+                startScenario() {
+                    this.scenarioInterval = setInterval(() => {
+                        // Generate random transmissions
+                        const numTransmissions = Math.min(10, this.maxActiveTransmissions - this.activeTransmissions.length);
+
+                        for (let i = 0; i < numTransmissions; i++) {
+                            const fromPeer = this.peers[Math.floor(Math.random() * this.peers.length)];
+                            const toPeer = this.peers[Math.floor(Math.random() * this.peers.length)];
+
+                            if (fromPeer !== toPeer) {
+                                const colors = ['#00ff00', '#00ffff', '#ffff00', '#ff00ff'];
+                                this.activeTransmissions.push({
+                                    fromPeer,
+                                    toPeer,
+                                    progress: 0,
+                                    color: colors[Math.floor(Math.random() * colors.length)],
+                                });
+                            }
+                        }
+                    }, 100);
+                },
+
+                stopScenario() {
+                    if (this.scenarioInterval) {
+                        clearInterval(this.scenarioInterval);
+                        this.scenarioInterval = null;
+                    }
+                },
+
+                onMouseDown(event) {
+                    this.isDragging = true;
+                    this.lastMouseX = event.clientX;
+                    this.lastMouseY = event.clientY;
+                },
+
+                onMouseMove(event) {
+                    if (!this.isDragging) return;
+
+                    const deltaX = event.clientX - this.lastMouseX;
+                    const deltaY = event.clientY - this.lastMouseY;
+
+                    this.camera.rotY += deltaX * 0.005;
+                    this.camera.rotX += deltaY * 0.005;
+
+                    this.lastMouseX = event.clientX;
+                    this.lastMouseY = event.clientY;
+                },
+
+                onMouseUp() {
+                    this.isDragging = false;
+                },
+
+                onWheel(event) {
+                    event.preventDefault();
+                    this.camera.z += event.deltaY * 0.5;
+                    this.camera.z = Math.max(100, Math.min(10000, this.camera.z));
+                },
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
