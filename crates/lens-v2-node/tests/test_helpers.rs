@@ -53,19 +53,15 @@ impl TestNode {
             lens_node::dht_state::DhtState::new(),
         ));
 
-        // Generate peer_id - either content-addressed from slot or random
-        let my_peer_id = if let Some(slot) = slot {
-            // Content-addressed peer_id from slot coordinate
-            lens_node::peer_registry::slot_to_peer_id(slot)
-        } else {
-            // Random peer_id (old behavior)
-            use ed25519_dalek::SigningKey;
-            let signing_key = SigningKey::from_bytes(&rand::random());
-            let verifying_key = signing_key.verifying_key();
-            let public_key_bytes = verifying_key.to_bytes();
-            let hash = blake3::hash(&public_key_bytes);
-            format!("bafk{}", hex::encode(hash.as_bytes()))
-        };
+        // Generate peer_id from random ed25519 key (stable identity)
+        // Peer ID is ALWAYS derived from ed25519 public key, NOT from slot
+        // Slots are explicitly set separately and are decoupled from peer identity
+        use ed25519_dalek::SigningKey;
+        let signing_key = SigningKey::from_bytes(&rand::random());
+        let verifying_key = signing_key.verifying_key();
+        let public_key_bytes = verifying_key.to_bytes();
+        let hash = blake3::hash(&public_key_bytes);
+        let my_peer_id = format!("bafk{}", hex::encode(hash.as_bytes()));
 
         // Create P2P manager
         let p2p_config = lens_v2_p2p::P2pConfig::default();

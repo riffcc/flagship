@@ -35,13 +35,11 @@ async fn test_discover_neighbor_via_dht_query() -> anyhow::Result<()> {
     // Establish WebRTC connection FIRST (so DHT queries can route)
     println!("🔗 Establishing WebRTC connection between nodes...");
     node.establish_webrtc_connection(&neighbor).await?;
-    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // THEN announce slot ownership
     println!("📢 Announcing slot ownership...");
     node.announce_slot_ownership(my_slot).await?;
     neighbor.announce_slot_ownership(neighbor_slot).await?;
-    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Discover neighbor by querying DHT for neighbor slot
     println!("\n🔍 Querying DHT: Who owns slot (3,2,0)?");
@@ -95,7 +93,6 @@ async fn test_discover_all_eight_neighbors() -> anyhow::Result<()> {
     for neighbor in &neighbor_nodes {
         center.establish_webrtc_connection(neighbor).await?;
     }
-    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // THEN announce slot ownership
     println!("📢 Announcing slot ownership...");
@@ -103,7 +100,6 @@ async fn test_discover_all_eight_neighbors() -> anyhow::Result<()> {
     for (i, (_dir, slot)) in neighbors.iter().enumerate() {
         neighbor_nodes[i].announce_slot_ownership(*slot).await?;
     }
-    tokio::time::sleep(Duration::from_secs(1)).await;
 
     // Discover all neighbors via DHT queries
     println!("\n🔍 Discovering all 8 neighbors via DHT queries...");
@@ -155,13 +151,11 @@ async fn test_neighbor_discovery_with_toroidal_wraparound() -> anyhow::Result<()
     // Establish WebRTC connection FIRST
     println!("🔗 Establishing WebRTC connection...");
     edge_node.establish_webrtc_connection(&neighbor).await?;
-    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // THEN announce slot ownership
     println!("📢 Announcing slot ownership...");
     edge_node.announce_slot_ownership(edge_slot).await?;
     neighbor.announce_slot_ownership(neighbor_slot).await?;
-    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Discover wrapped neighbor via DHT
     println!("\n🔍 Discovering wrapped neighbor...");
@@ -195,13 +189,11 @@ async fn test_no_neighbor_cache_needed() -> anyhow::Result<()> {
     // Establish WebRTC connection FIRST
     println!("🔗 Establishing WebRTC connection...");
     node.establish_webrtc_connection(&neighbor).await?;
-    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // THEN announce slot ownership
     println!("📢 Announcing slot ownership...");
     node.announce_slot_ownership(my_slot).await?;
     neighbor.announce_slot_ownership(neighbor_slot).await?;
-    tokio::time::sleep(Duration::from_millis(500)).await;
 
     let ownership_key = slot_ownership_key(neighbor_slot);
 
@@ -239,13 +231,11 @@ async fn test_neighbor_leaves_and_is_replaced() -> anyhow::Result<()> {
     // Establish WebRTC connection FIRST
     println!("🔗 Establishing WebRTC connection...");
     node.establish_webrtc_connection(&neighbor_a).await?;
-    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // THEN announce slot ownership
     println!("📢 Announcing slot ownership...");
     node.announce_slot_ownership(my_slot).await?;
     neighbor_a.announce_slot_ownership(neighbor_slot).await?;
-    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Query DHT for original neighbor
     let ownership_key = slot_ownership_key(neighbor_slot);
@@ -260,12 +250,10 @@ async fn test_neighbor_leaves_and_is_replaced() -> anyhow::Result<()> {
     // Establish WebRTC connection with new neighbor
     println!("🔗 Establishing WebRTC connection with new neighbor...");
     node.establish_webrtc_connection(&neighbor_b).await?;
-    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // New neighbor announces slot ownership
     println!("📢 New neighbor announcing slot ownership...");
     neighbor_b.announce_slot_ownership(neighbor_slot).await?;
-    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Query DHT again - should find new neighbor
     let ownership_bytes_b = node.dht_get(ownership_key).await?;
