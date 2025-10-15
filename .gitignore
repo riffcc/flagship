@@ -67,3 +67,5 @@ ROADMAP_v0.6.0.md
 
 # Data
 .lens-node-data/
+# AI configuration (user-specific)
+.mcp.json

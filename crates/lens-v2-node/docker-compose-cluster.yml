@@ -70,27 +70,18 @@ services:
     - flagship-node-0
     - flagship-node-1
     - flagship-node-2
-    healthcheck:
-      test:
-      - CMD
-      - curl
-      - -f
-      - http://localhost:8404/stats
-      interval: 10s
-      timeout: 5s
-      retries: 3
   lens-v2-node-0:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-0
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=0
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-0-data:/data
     networks:
@@ -107,17 +98,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-1:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-1
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=1
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-1-data:/data
     networks:
@@ -134,17 +125,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-2:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-2
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=2
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-2-data:/data
     networks:
@@ -161,17 +152,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-3:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-3
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=3
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-3-data:/data
     networks:
@@ -188,17 +179,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-4:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-4
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=4
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-4-data:/data
     networks:
@@ -215,17 +206,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-5:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-5
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=5
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-5-data:/data
     networks:
@@ -242,17 +233,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-6:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-6
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=6
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-6-data:/data
     networks:
@@ -269,17 +260,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-7:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-7
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=7
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-7-data:/data
     networks:
@@ -296,17 +287,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-8:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-8
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=8
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-8-data:/data
     networks:
@@ -323,17 +314,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-9:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-9
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=9
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-9-data:/data
     networks:
@@ -350,17 +341,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-10:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-10
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=10
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-10-data:/data
     networks:
@@ -377,17 +368,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-11:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-11
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=11
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-11-data:/data
     networks:
@@ -404,17 +395,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-12:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-12
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=12
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-12-data:/data
     networks:
@@ -431,17 +422,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-13:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-13
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=13
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-13-data:/data
     networks:
@@ -458,17 +449,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-14:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-14
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=14
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-14-data:/data
     networks:
@@ -485,17 +476,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-15:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-15
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=15
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-15-data:/data
     networks:
@@ -512,17 +503,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-16:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-16
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=16
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-16-data:/data
     networks:
@@ -539,17 +530,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-17:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-17
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=17
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-17-data:/data
     networks:
@@ -566,17 +557,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-18:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-18
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=18
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-18-data:/data
     networks:
@@ -593,17 +584,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-19:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-19
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=19
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-19-data:/data
     networks:
@@ -620,17 +611,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-20:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-20
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=20
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-20-data:/data
     networks:
@@ -647,17 +638,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-21:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-21
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=21
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-21-data:/data
     networks:
@@ -674,17 +665,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-22:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-22
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=22
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-22-data:/data
     networks:
@@ -701,17 +692,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-23:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-23
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=23
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-23-data:/data
     networks:
@@ -728,17 +719,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-24:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-24
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=24
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-24-data:/data
     networks:
@@ -755,17 +746,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-25:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-25
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=25
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-25-data:/data
     networks:
@@ -782,17 +773,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-26:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-26
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=26
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-26-data:/data
     networks:
@@ -809,17 +800,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-27:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-27
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=27
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-27-data:/data
     networks:
@@ -836,17 +827,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-28:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-28
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=28
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-28-data:/data
     networks:
@@ -863,17 +854,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-29:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-29
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=29
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-29-data:/data
     networks:
@@ -890,17 +881,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-30:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-30
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=30
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-30-data:/data
     networks:
@@ -917,17 +908,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-31:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-31
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=31
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-31-data:/data
     networks:
@@ -944,17 +935,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-32:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-32
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=32
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-32-data:/data
     networks:
@@ -971,17 +962,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-33:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-33
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=33
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-33-data:/data
     networks:
@@ -998,17 +989,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-34:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-34
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=34
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-34-data:/data
     networks:
@@ -1025,17 +1016,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-35:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-35
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=35
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-35-data:/data
     networks:
@@ -1052,17 +1043,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-36:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-36
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=36
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-36-data:/data
     networks:
@@ -1079,17 +1070,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-37:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-37
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=37
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-37-data:/data
     networks:
@@ -1106,17 +1097,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-38:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-38
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=38
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-38-data:/data
     networks:
@@ -1133,17 +1124,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-39:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-39
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=39
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-39-data:/data
     networks:
@@ -1160,17 +1151,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-40:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-40
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=40
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-40-data:/data
     networks:
@@ -1187,17 +1178,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-41:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-41
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=41
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-41-data:/data
     networks:
@@ -1214,17 +1205,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-42:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-42
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=42
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-42-data:/data
     networks:
@@ -1241,17 +1232,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-43:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-43
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=43
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-43-data:/data
     networks:
@@ -1268,17 +1259,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-44:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-44
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=44
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-44-data:/data
     networks:
@@ -1295,17 +1286,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-45:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-45
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=45
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-45-data:/data
     networks:
@@ -1322,17 +1313,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-46:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-46
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=46
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-46-data:/data
     networks:
@@ -1349,17 +1340,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-47:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-47
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=47
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-47-data:/data
     networks:
@@ -1376,17 +1367,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-48:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-48
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=48
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-48-data:/data
     networks:
@@ -1403,17 +1394,17 @@ services:
       start_period: 20s
       retries: 3
   lens-v2-node-49:
-    image: zorlin/lens-v2:v0.8.39
+    image: zorlin/lens-v2:v0.8.45
     container_name: lens-v2-node-49
     environment:
     - RUST_LOG=info
     - PORT=5000
     - LENS_NODE_ID=49
     - LENS_CLUSTER_ID=production-cluster-50
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     - DB_PATH=/data/rocksdb
     - SYNC_MODE=ubts
-    - ADMIN_PUBLIC_KEY=ed25519p/6efebf50da89a1ba94e0bf56c0728470dd80373149553223da0ce4d8076e9d86,ed25519p/be3dcdf9d0a31a1e45703145f9991ea01b12c0d79633f7e1fc7fe10b66e56473
+    - ADMIN_PUBLIC_KEY=ed25519p/07a6366d807fcd7e1c3050aaffd61af4aa48c1ce01e45a1e76c3003610e385f8
     volumes:
     - lens-v2-node-49-data:/data
     networks:
@@ -1435,7 +1426,7 @@ services:
     environment:
     - NODE_ENV=production
     - API_URL=https://api.palace.riff.cc/api/v1
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     ports:
     - 15075:80
     networks:
@@ -1459,7 +1450,7 @@ services:
     environment:
     - NODE_ENV=production
     - API_URL=https://api.palace.riff.cc/api/v1
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     networks:
     - lens-network
     privileged: true
@@ -1481,7 +1472,7 @@ services:
     environment:
     - NODE_ENV=production
     - API_URL=https://api.palace.riff.cc/api/v1
-    - RELAY_URL=wss://relay.global.riff.cc/api/v1/relay/ws
+    - RELAY_URL=ws://lens-v2-node-0:5000/api/v1/relay/ws
     networks:
     - lens-network
     privileged: true

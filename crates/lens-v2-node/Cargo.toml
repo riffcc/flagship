@@ -1,6 +1,6 @@
 [package]
 name = "lens-v2-node"
-version = "0.8.36"
+version = "0.8.45"
 edition = "2021"
 authors = ["Riff.CC Team"]
 description = "Lens Node v2 - High-performance Rust backend with P2P capabilities"
@@ -84,3 +84,5 @@ hyper = "1.0"
 tempfile = "3.23.0"
 reqwest = { version = "0.11", features = ["json"] }
 tokio-tungstenite = "0.21"
+sha1 = "0.10"
+base64 = "0.22"

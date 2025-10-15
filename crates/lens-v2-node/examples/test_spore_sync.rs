@@ -9,8 +9,7 @@ async fn main() -> anyhow::Result<()> {
     println!("=========================================\n");
 
     // Generate Ed25519 keypair
-    let mut csprng = OsRng;
-    let signing_key = SigningKey::generate(&mut csprng);
+    let signing_key = SigningKey::from_bytes(&rand::random());
     let verifying_key = signing_key.verifying_key();
 
     let public_key_hex = hex::encode(verifying_key.to_bytes());
