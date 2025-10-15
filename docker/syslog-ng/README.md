@@ -1,11 +1,33 @@
 # Syslog-ng Server for Bunny.net CDN Logs
 
-Secure, TLS-enabled syslog server to collect logs from Bunny.net CDN for debugging production deployments.
+Simple, fast UDP syslog server to collect logs from Bunny.net CDN for debugging production deployments.
+
+## ⚡ Quick Start (UDP - Simple & Fast!)
+
+```bash
+cd ~/syslog-ng-docker  # or wherever you extracted files
+docker-compose up -d
+```
+
+**Configure Bunny.net:**
+- Protocol: **UDP**
+- Host: **relay.global.riff.cc**
+- Port: **514**
+- Format: **RFC5424** or **RFC3164**
+
+**View logs:**
+```bash
+tail -f logs/bunny/all.log
+# or visit http://relay.global.riff.cc:8888 for web UI
+```
+
+That's it! Logs start flowing immediately!
 
 ## 🎯 Features
 
-- **TLS Encryption** - Secure log transmission with TLS 1.2+
-- **Token-based Filtering** - Filter logs by hostname/identifier
+- **UDP Fast Path** - Zero-config, instant log reception
+- **TCP Support** - More reliable delivery (port 601)
+- **Optional TLS** - Can be enabled later if needed (port 6514)
 - **Multi-format Support** - RFC5424, RFC3164 (BSD), and raw syslog
 - **Real-time Viewing** - Dozzle web UI for live log monitoring
 - **File-based Logs** - Organized log files by category (access, error, all)
@@ -34,29 +56,21 @@ syslog-ng/
     └── stats.log
 ```
 
-## 🚀 Quick Start
+## 🚀 Detailed Setup
 
-### 1. Generate TLS Certificates
+### 1. Start the Services
 
 ```bash
 cd /opt/castle/workspace/flagship/docker/syslog-ng
-./generate-certs.sh
-```
-
-This creates self-signed certificates valid for 10 years. For production, consider using Let's Encrypt.
-
-### 2. Start the Services
-
-```bash
 docker-compose up -d
 ```
 
 This starts three services:
-- **syslog-ng** - Syslog server (ports 514/udp, 6514/tcp-tls)
+- **syslog-ng** - Syslog server (ports 514/udp, 601/tcp)
 - **dozzle** - Real-time log viewer (port 8888)
 - **log-viewer** - File-based log browser (port 8889)
 
-### 3. Verify Services
+### 2. Verify Services
 
 ```bash
 # Check service status
@@ -69,28 +83,35 @@ docker-compose logs -f syslog-ng
 logger -n localhost -P 514 "Test message from relay"
 ```
 
-### 4. Configure Bunny.net
+### 3. Configure Bunny.net
 
 Log into Bunny.net dashboard and configure Pull Zone logging:
 
-#### Option A: TLS Syslog (Recommended)
-
-**Settings:**
-- **Protocol:** `TLS/SSL`
-- **Host:** `relay.global.riff.cc`
-- **Port:** `6514`
-- **Format:** `RFC5424` (preferred) or `RFC3164`
-- **Hostname/Identifier:** `bunnycdn` (helps with filtering)
-
-#### Option B: UDP Syslog (Testing Only)
+#### Option A: UDP Syslog (Fast & Simple - RECOMMENDED)
 
 **Settings:**
 - **Protocol:** `UDP`
 - **Host:** `relay.global.riff.cc`
 - **Port:** `514`
-- **Format:** `RFC5424` or `RFC3164`
+- **Format:** `RFC5424` (preferred) or `RFC3164`
+- **Hostname/Identifier:** `bunnycdn` (helps with filtering)
 
-**⚠️ Warning:** UDP is unencrypted and unreliable. Use TLS in production!
+**Benefits:** Zero config, instant delivery, handles high volume
+
+#### Option B: TCP Syslog (More Reliable)
+
+**Settings:**
+- **Protocol:** `TCP`
+- **Host:** `relay.global.riff.cc`
+- **Port:** `601`
+- **Format:** `RFC5424` or `RFC3164`
+- **Hostname/Identifier:** `bunnycdn`
+
+**Benefits:** Guaranteed delivery, connection persistence
+
+#### Option C: TLS Syslog (Encrypted - Optional)
+
+See "Enabling TLS" section below if you need encrypted transmission.
 
 ## 🔍 Viewing Logs
 

@@ -10,6 +10,8 @@ services:
       - "6514:6514"
       # Standard syslog UDP (optional, for non-TLS)
       - "514:514/udp"
+      # TCP non-TLS port (for testing)
+      - "601:601"
     volumes:
       - ./syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
       - ./certs:/etc/syslog-ng/certs:ro
@@ -17,6 +19,13 @@ services:
       - syslog-data:/var/lib/syslog-ng
     environment:
       - TZ=UTC
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+      - SYS_ADMIN
     networks:
       - logging
 
