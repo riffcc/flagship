@@ -172,10 +172,11 @@ pub struct NetworkStats {
 ///
 /// Returns the current state of the hexagonal toroidal mesh with all connected peers
 /// and their 8-neighbor connections. Browser peers are anonymized.
+/// **NEW**: Only shows peers that are ALIVE (sent heartbeats recently)
 pub async fn get_network_map(
     State(state): State<MapState>,
 ) -> Result<Json<NetworkMap>, StatusCode> {
-    // Get ALL ALIVE peers from P2pManager (only peers that heartbeated this cycle!)
+    // Get ALL ALIVE peers from P2pManager (only peers that heartbeated recently)
     let connected_peers = state.sync.p2p.get_alive_peer_strings()
         .unwrap_or_default();
 
@@ -184,16 +185,36 @@ pub async fn get_network_map(
         .map(|status| status.known_peers)
         .unwrap_or(connected_peers.len().max(1));
 
-    // Calculate mesh dimensions based on peer count
-    let mesh_config = crate::peer_registry::calculate_mesh_dimensions(global_peer_count.max(1));
+    // For Content-Addressed Slots, we use the FIXED 256³ address space
+    // The mesh dimensions are just for visualization - the actual topology
+    // is determined by which slots peers choose to occupy via CAS
+    let mesh_config = MeshConfig::new(256, 256, 256);
 
     // Build peer nodes with slot assignments
     let mut nodes = Vec::new();
     let mut node_slots: HashMap<String, SlotCoordinate> = HashMap::new();
 
     for peer_id in connected_peers {
-        // Calculate slot for this peer
-        let slot = peer_id_to_slot(&peer_id, &mesh_config);
+        // Read ACTUAL slot ownership from DHT instead of calculating from hash
+        let location_key = peer_location_key(&peer_id);
+        let slot = {
+            let storage = state.relay.dht_storage.lock().await;
+            storage.get_raw(&location_key)
+                .and_then(|ownership_bytes| {
+                    serde_json::from_slice::<SlotOwnership>(ownership_bytes).ok()
+                })
+                .map(|ownership| ownership.slot)
+        };
+
+        // Skip peers without announced slot ownership
+        let slot = match slot {
+            Some(s) => s,
+            None => {
+                tracing::debug!("Peer {} has no slot ownership announced, skipping from map", peer_id);
+                continue;
+            }
+        };
+
         node_slots.insert(peer_id.clone(), slot);
 
         // Determine peer type (anonymize browser peers)
