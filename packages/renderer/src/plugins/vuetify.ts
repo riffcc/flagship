@@ -63,6 +63,8 @@ import {
   mdiCloudCheck,
   mdiPageFirst,
   mdiPageLast,
+  mdiWeatherSunny,
+  mdiWeatherNight,
 } from '@mdi/js';
 
 const iconsAliasesMapping = {
@@ -118,6 +120,8 @@ const iconsAliasesMapping = {
   'cloud-check': mdiCloudCheck,
   'page-first': mdiPageFirst,
   'page-last': mdiPageLast,
+  'weather-sunny': mdiWeatherSunny,
+  'weather-night': mdiWeatherNight,
 };
 
 const vuetify = createVuetify({
@@ -157,6 +161,23 @@ const vuetify = createVuetify({
           background: '#000000',
           surface: '#000000',
           'surface-variant': '#0a0a0a',
+          // Network visualization colors
+          'server-node': colors.purple.base,
+          'browser-node': '#546e7a',  // Light grey-blue for dark mode
+        },
+      },
+      light: {
+        colors: {
+          primary: colors.purple.base,
+          'primary-lighten-1': colors.purple.lighten1,
+          'primary-darken-1': colors.purple.darken1,
+          'primary-accent': colors.purple.accent2,
+          background: '#ffffff',
+          surface: '#ffffff',
+          'surface-variant': '#f5f5f5',
+          // Network visualization colors
+          'server-node': colors.purple.base,
+          'browser-node': '#80deea',  // Light cyan for light mode
         },
       },
     },

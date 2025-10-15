@@ -5,11 +5,18 @@
   >
     <v-card-title class="d-flex justify-space-between align-center pa-4">
       <span>Network Mesh Topology</span>
-      <v-btn
-        icon="mdi-close"
-        variant="text"
-        @click="$emit('close')"
-      ></v-btn>
+      <div class="d-flex gap-2">
+        <v-btn
+          :icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
+          variant="text"
+          @click="toggleTheme"
+        ></v-btn>
+        <v-btn
+          icon="mdi-close"
+          variant="text"
+          @click="$emit('close')"
+        ></v-btn>
+      </div>
     </v-card-title>
 
     <!-- Stats Bar -->
@@ -105,19 +112,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, onBeforeUnmount } from 'vue';
+import { ref, onMounted, watch, nextTick, onBeforeUnmount, computed } from 'vue';
 import ForceGraph3D from '3d-force-graph';
 import SpriteText from 'three-spritetext';
 import { useNetworkMap } from '/@/composables/useNetworkMap';
+import { useTheme } from '/@/composables/useTheme';
 
 const emit = defineEmits<{
   close: [];
 }>();
 
 const { networkMap, loading, error, fetchNetworkMap, connectWebSocket, disconnectWebSocket } = useNetworkMap();
+const { isDark, currentTheme, toggleTheme } = useTheme();
 const graphContainer = ref<HTMLDivElement | null>(null);
 
 let graphInstance: any = null;
+
+// Theme-aware colors
+const serverNodeColor = computed(() => currentTheme.value.colors['server-node']);
+const browserNodeColor = computed(() => currentTheme.value.colors['browser-node']);
+const backgroundColor = computed(() => currentTheme.value.colors.background);
 
 const initializeGraph = () => {
   if (!graphContainer.value || !networkMap.value) return;
@@ -138,19 +152,27 @@ const initializeGraph = () => {
       capabilities: node.capabilities,
       online: node.online,
     })),
-    links: networkMap.value.edges.map(edge => ({
-      source: edge.from,
-      target: edge.to,
-      type: edge.connection_type,
-      latency_ms: edge.latency_ms,
-      color: edge.color,
-    })),
+    links: networkMap.value.edges.map(edge => {
+      // Determine if this is a browser connection (one endpoint is browser)
+      const fromNode = networkMap.value!.nodes.find(n => n.id === edge.from);
+      const toNode = networkMap.value!.nodes.find(n => n.id === edge.to);
+      const isBrowserConnection = fromNode?.peer_type === 'browser' || toNode?.peer_type === 'browser';
+
+      return {
+        source: edge.from,
+        target: edge.to,
+        type: edge.connection_type,
+        latency_ms: edge.latency_ms,
+        color: edge.color,
+        is_browser_connection: isBrowserConnection,
+      };
+    }),
   };
 
   // Initialize 3D force graph
   graphInstance = ForceGraph3D()(graphContainer.value)
     .graphData(graphData)
-    .backgroundColor('#000000')
+    .backgroundColor(backgroundColor.value)
 
     // Node styling
     .nodeLabel(node => {
@@ -159,8 +181,8 @@ const initializeGraph = () => {
     })
     .nodeColor(node => {
       const n = node as any;
-      // Server nodes: purple, Browser nodes: blue
-      return n.peer_type === 'server' ? '#8a2be2' : '#2196f3';
+      // Theme-aware colors: Server nodes use primary color, Browser nodes use theme-specific color
+      return n.peer_type === 'server' ? serverNodeColor.value : browserNodeColor.value;
     })
     .nodeVal(node => {
       const n = node as any;
@@ -170,7 +192,7 @@ const initializeGraph = () => {
     .nodeThreeObject(node => {
       const n = node as any;
       const sprite = new SpriteText(n.name);
-      sprite.color = n.peer_type === 'server' ? '#8a2be2' : '#2196f3';
+      sprite.color = n.peer_type === 'server' ? serverNodeColor.value : browserNodeColor.value;
       sprite.textHeight = n.peer_type === 'server' ? 8 : 6;
       sprite.position.y = n.peer_type === 'server' ? 20 : 15;
       return sprite;
@@ -192,7 +214,18 @@ const initializeGraph = () => {
       const l = link as any;
       return l.type === 'neighbor' ? 2 : 2;  // Slightly thicker for visibility
     })
-    .linkOpacity(0.8)  // More opaque to show colors better
+    .linkOpacity(link => {
+      const l = link as any;
+      // Browser connections slightly more transparent
+      return l.is_browser_connection ? 0.6 : 0.8;
+    })
+    .linkLineDash(link => {
+      const l = link as any;
+      // Dashed lines for browser-to-server connections
+      return l.is_browser_connection ? [5, 5] : null;
+    })
+    .linkDashScale(1)
+    .linkDashGap(2)
     .linkLabel(link => {
       const l = link as any;
       if (l.latency_ms !== null && l.latency_ms !== undefined) {
@@ -260,6 +293,12 @@ onMounted(async () => {
 
 // Reinitialize when network map changes
 watch(() => networkMap.value, async () => {
+  await nextTick();
+  initializeGraph();
+});
+
+// Reinitialize when theme changes
+watch([isDark, serverNodeColor, browserNodeColor, backgroundColor], async () => {
   await nextTick();
   initializeGraph();
 });
