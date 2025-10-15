@@ -487,6 +487,32 @@ impl P2pNetwork {
     pub async fn try_next_event(&self) -> Option<NetworkEvent> {
         self.event_rx.write().await.try_recv().ok()
     }
+
+    /// Broadcast heartbeat to ALL peers in the mesh (not just relay)
+    pub async fn broadcast_heartbeat(&self, peer_id: &str, slot: citadel_core::topology::SlotCoordinate) -> Result<()> {
+        let heartbeat = serde_json::json!({
+            "type": "heartbeat",
+            "peer_id": peer_id,
+            "slot": slot,
+        });
+
+        let json = serde_json::to_string(&heartbeat)
+            .map_err(|e| P2pError::Network(format!("Failed to serialize heartbeat: {}", e)))?;
+
+        // Send through relay WebSocket - relay will broadcast to ALL peers
+        if let Some(tx) = self.ws_tx.read().await.as_ref() {
+            tx.send(Message::Text(json))
+                .map_err(|e| P2pError::Network(format!("Failed to broadcast heartbeat: {}", e)))?;
+            debug!("💓 Broadcast heartbeat for {} to entire mesh", peer_id);
+        }
+
+        Ok(())
+    }
+
+    /// Get list of all currently known peer IDs from peer referrals
+    pub async fn get_peer_ids(&self) -> Vec<String> {
+        self.peers.read().await.keys().cloned().collect()
+    }
 }
 
 #[cfg(test)]
