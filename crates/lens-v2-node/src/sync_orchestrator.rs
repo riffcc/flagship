@@ -62,6 +62,10 @@ pub struct SyncOrchestrator {
 
     /// LazyNode for DHT-based neighbor discovery (no caching!)
     lazy_node: Arc<LazyNode>,
+
+    /// Pending SDP answers (for WebRTC connection establishment)
+    /// Key: target_peer_id, Value: oneshot sender for answer
+    pending_sdp_answers: Arc<RwLock<HashMap<String, tokio::sync::oneshot::Sender<String>>>>,
 }
 
 impl SyncOrchestrator {
@@ -149,9 +153,20 @@ impl SyncOrchestrator {
         db: Database,
         block_notify_rx: mpsc::UnboundedReceiver<BlockNotification>,
         dht_storage: Arc<tokio::sync::Mutex<crate::dht_state::DhtState>>,
+        relay_state: crate::routes::relay::RelayState,
     ) -> Self {
         // Pass our peer_id and slot to network layer for relay announcements and DHT bootstrap
         let network = Arc::new(P2pNetwork::new(relay_url, my_peer_id.clone(), my_slot));
+
+        // Create DHT GET callback for LazyNode (routes via network - relay/WebRTC)
+        // This enables true distributed DHT queries instead of local storage only!
+        let dht_get_fn = Arc::new(move |key: [u8; 32]| {
+            let relay = relay_state.clone();
+            Box::pin(async move {
+                // Route DHT GET via relay/WebRTC (greedy routing to responsible slot)
+                Ok(relay.dht_get(key).await)
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<Vec<u8>>>> + Send>>
+        });
 
         // Create LazyNode for DHT-based neighbor discovery
         let lazy_node = Arc::new(LazyNode::new(
@@ -159,6 +174,7 @@ impl SyncOrchestrator {
             my_peer_id.clone(),
             mesh_config,
             dht_storage,
+            dht_get_fn,
         ));
 
         Self {
@@ -171,6 +187,7 @@ impl SyncOrchestrator {
             sync_interval: Duration::from_secs(30),
             block_notify_rx: Arc::new(RwLock::new(block_notify_rx)),
             lazy_node,
+            pending_sdp_answers: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -183,6 +200,10 @@ impl SyncOrchestrator {
         // Spawn persistent relay connection task (non-blocking, runs forever)
         // The relay is anycast - we try to stay connected for fallback comms
         let network = self.network.clone();
+        let my_peer_id = self.my_peer_id.clone();
+        let my_slot = self.my_slot;
+        let lazy_node = self.lazy_node.clone();
+
         tokio::spawn(async move {
             let mut retry_delay = Duration::from_secs(1);
             let max_delay = Duration::from_secs(300); // Cap at 5 minutes
@@ -195,6 +216,39 @@ impl SyncOrchestrator {
                 match network.start().await {
                     Ok(_) => {
                         info!("✅ Connected to relay (anycast fallback comms active)");
+
+                        // Now announce slot ownership (works with 0 WebRTC neighbors via relay!)
+                        info!("📢 Announcing slot ownership to DHT...");
+
+                        use crate::peer_registry::{SlotOwnership, slot_ownership_key, peer_location_key};
+                        let ownership = SlotOwnership::new(
+                            my_peer_id.clone(),
+                            my_slot,
+                            None,
+                        );
+
+                        let ownership_bytes = match serde_json::to_vec(&ownership) {
+                            Ok(bytes) => bytes,
+                            Err(e) => {
+                                error!("Failed to serialize slot ownership: {}", e);
+                                break;
+                            }
+                        };
+
+                        // Store in local DHT cache (available for local queries and replication)
+                        // The relay will handle gossip/replication to other nodes via DhtReplication events
+                        {
+                            let mut storage = lazy_node.dht_storage.lock().await;
+                            let ownership_key = slot_ownership_key(my_slot);
+                            let location_key = peer_location_key(&my_peer_id);
+                            storage.insert_raw(ownership_key, ownership_bytes.clone());
+                            storage.insert_raw(location_key, ownership_bytes);
+                            info!("✅ Stored slot ownership in local DHT cache");
+                        }
+
+                        info!("🎉 Slot ownership announced: {:?} -> {}", my_slot, my_peer_id);
+                        info!("ℹ️  Even with 0 WebRTC neighbors, relay will route DHT operations");
+
                         // Connection succeeded - keep this connection alive
                         // If it drops, the loop will reconnect
                         break;
@@ -203,6 +257,26 @@ impl SyncOrchestrator {
                         if attempt == 1 {
                             // First attempt - might be the first node (we ARE the relay!)
                             info!("ℹ️ No relay available (might be first node - this node IS the relay via anycast)");
+
+                            // Even if we're the first node, store locally
+                            info!("📢 Storing slot ownership locally (first node - no relay needed)...");
+
+                            use crate::peer_registry::{SlotOwnership, slot_ownership_key, peer_location_key};
+                            let ownership = SlotOwnership::new(
+                                my_peer_id.clone(),
+                                my_slot,
+                                None,
+                            );
+
+                            if let Ok(ownership_bytes) = serde_json::to_vec(&ownership) {
+                                let mut storage = lazy_node.dht_storage.lock().await;
+                                let ownership_key = slot_ownership_key(my_slot);
+                                let location_key = peer_location_key(&my_peer_id);
+                                storage.insert_raw(ownership_key, ownership_bytes.clone());
+                                storage.insert_raw(location_key, ownership_bytes);
+                                info!("✅ Stored slot ownership locally (first node)");
+                                info!("🎉 Slot ownership announced: {:?} -> {}", my_slot, my_peer_id);
+                            }
                         }
                         warn!("⚠️ Relay connection attempt #{} failed: {} - retrying in {:?}", attempt, e, retry_delay);
 
@@ -248,11 +322,8 @@ impl SyncOrchestrator {
             orchestrator_webrtc.webrtc_connection_loop().await;
         });
 
-        // Spawn SDP answer loop
-        let orchestrator_sdp = self.clone();
-        tokio::spawn(async move {
-            orchestrator_sdp.sdp_answer_loop().await;
-        });
+        // SDP signaling is now handled via network events (SdpOfferReceived/SdpAnswerReceived)
+        // No separate loop needed - offers and answers processed in handle_network_event()
 
         // Startup is complete - relay connection continues in background
         info!("✅ Sync orchestrator started (relay connection running in background)");
@@ -364,7 +435,7 @@ impl SyncOrchestrator {
         info!("💓 Starting WebRTC heartbeat receiver");
 
         loop {
-            // Wait for next heartbeat from WebRTC Manager
+            // Wait for next heartbeat from WebRTC Manager (event-driven, no polling!)
             if let Some(heartbeat) = self.webrtc_manager.next_heartbeat().await {
                 debug!("💓 Received heartbeat from {}", heartbeat.peer_id);
 
@@ -381,10 +452,8 @@ impl SyncOrchestrator {
                 } else {
                     debug!("✅ Marked peer {} as alive", heartbeat.peer_id);
                 }
-            } else {
-                // Channel closed or no heartbeat available, small sleep
-                tokio::time::sleep(Duration::from_millis(100)).await;
             }
+            // If None, channel is closed - loop exits naturally via await
         }
     }
 
@@ -434,115 +503,68 @@ impl SyncOrchestrator {
                 }
             }
 
-            // Retry every 30 seconds (matches heartbeat interval)
-            tokio::time::sleep(Duration::from_secs(30)).await;
+            // TODO: Make this event-driven by subscribing to DHT slot ownership announcements
+            // For now, check frequently during mesh formation (1 second)
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
 
-    /// Establish WebRTC connection to a specific peer using DHT for SDP signaling
+    /// Establish WebRTC connection to a specific peer using relay for SDP signaling
     ///
     /// This implements the WebRTC handshake:
     /// 1. Create offer (SDP)
-    /// 2. Store offer in DHT at `sdp_offer_{my_peer_id}_{target_peer_id}`
-    /// 3. Poll DHT for answer at `sdp_answer_{target_peer_id}_{my_peer_id}`
+    /// 2. Send offer to target peer via relay (WebSocket)
+    /// 3. Wait for answer via network event (handled in handle_network_event)
     /// 4. Connection completes when answer is processed
     async fn establish_webrtc_connection(&self, target_peer_id: &str) -> Result<()> {
         // Create WebRTC offer
         let offer_sdp = self.webrtc_manager.create_offer(target_peer_id.to_string()).await?;
         info!("📡 Created WebRTC offer for {}", target_peer_id);
 
-        // Store offer in DHT at key: sdp_offer_{my_peer_id}_{target_peer_id}
-        let offer_key = format!("sdp_offer_{}_{}", self.my_peer_id, target_peer_id);
-        let offer_key_hash = blake3::hash(offer_key.as_bytes());
-        let offer_key_bytes = offer_key_hash.as_bytes().clone();
+        // Create channel to receive answer
+        let (answer_tx, answer_rx) = tokio::sync::oneshot::channel();
 
+        // Register pending answer
         {
-            let mut dht = self.lazy_node.dht_storage.lock().await;
-            dht.insert_raw(offer_key_bytes, offer_sdp.as_bytes().to_vec());
+            let mut pending = self.pending_sdp_answers.write().await;
+            pending.insert(target_peer_id.to_string(), answer_tx);
         }
 
-        info!("📤 Stored SDP offer in DHT for {}", target_peer_id);
+        // Send offer via relay (uses WebSocket as temporary signaling channel)
+        self.network.send_sdp_offer(target_peer_id, offer_sdp).await?;
+        info!("📤 Sent SDP offer to {} via relay", target_peer_id);
 
-        // Poll for answer from target peer
-        // Answer will be at key: sdp_answer_{target_peer_id}_{my_peer_id}
-        let answer_key = format!("sdp_answer_{}_{}", target_peer_id, self.my_peer_id);
-        let answer_key_hash = blake3::hash(answer_key.as_bytes());
-        let answer_key_bytes = answer_key_hash.as_bytes().clone();
+        // Wait for answer (with timeout)
+        match tokio::time::timeout(Duration::from_secs(10), answer_rx).await {
+            Ok(Ok(answer_sdp)) => {
+                info!("📥 Received SDP answer from {}", target_peer_id);
 
-        // Poll for up to 10 seconds (10 iterations × 1s)
-        for attempt in 1..=10 {
-            tokio::time::sleep(Duration::from_secs(1)).await;
-
-            let dht = self.lazy_node.dht_storage.lock().await;
-            if let Some(_answer_bytes) = dht.get_raw(&answer_key_bytes) {
-                drop(dht); // Release lock
-
-                info!("📥 Received SDP answer from {} (attempt {})", target_peer_id, attempt);
-
-                // The answer has been processed by the peer connection in handle_offer
-                // Connection is now established
-
-                info!("✅ WebRTC connection established to {}", target_peer_id);
-                return Ok(());
-            }
-        }
-
-        Err(anyhow::anyhow!("Timeout waiting for SDP answer from {}", target_peer_id))
-    }
-
-    /// SDP answer loop - processes incoming SDP offers and creates answers
-    async fn sdp_answer_loop(&self) {
-        info!("📡 Starting SDP answer loop (responding to WebRTC offers)");
-
-        loop {
-            // Scan DHT for incoming offers addressed to us
-            // Offers are at key: sdp_offer_{remote_peer_id}_{my_peer_id}
-            let incoming_offers = self.scan_dht_for_offers().await;
-
-            for (remote_peer_id, offer_sdp) in incoming_offers {
-                info!("📥 Received SDP offer from {}", remote_peer_id);
-
-                // Create answer using handle_offer
-                match self.webrtc_manager.handle_offer(remote_peer_id.clone(), offer_sdp, crate::webrtc_manager::PeerType::Node).await {
-                    Ok(answer_sdp) => {
-                        info!("📡 Created SDP answer for {}", remote_peer_id);
-
-                        // Store answer in DHT at key: sdp_answer_{my_peer_id}_{remote_peer_id}
-                        let answer_key = format!("sdp_answer_{}_{}", self.my_peer_id, remote_peer_id);
-                        let answer_key_hash = blake3::hash(answer_key.as_bytes());
-                        let answer_key_bytes = answer_key_hash.as_bytes().clone();
-
-                        {
-                            let mut dht = self.lazy_node.dht_storage.lock().await;
-                            dht.insert_raw(answer_key_bytes, answer_sdp.as_bytes().to_vec());
-                        }
-
-                        info!("📤 Stored SDP answer in DHT for {}", remote_peer_id);
-                    }
-                    Err(e) => {
-                        warn!("⚠️ Failed to create SDP answer for {}: {}", remote_peer_id, e);
-                    }
+                // Set remote description (answer) on the peer connection
+                use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
+                let peers = self.webrtc_manager.peers.read().await;
+                if let Some(peer) = peers.get(target_peer_id) {
+                    let answer = RTCSessionDescription::answer(answer_sdp)?;
+                    peer.peer_connection.set_remote_description(answer).await?;
+                    info!("✅ WebRTC connection established to {}", target_peer_id);
+                    Ok(())
+                } else {
+                    Err(anyhow::anyhow!("Peer connection not found for {}", target_peer_id))
                 }
             }
-
-            // Poll every 2 seconds for new offers
-            tokio::time::sleep(Duration::from_secs(2)).await;
+            Ok(Err(_)) => {
+                // Channel closed without answer
+                Err(anyhow::anyhow!("Answer channel closed for {}", target_peer_id))
+            }
+            Err(_) => {
+                // Timeout
+                // Clean up pending answer
+                let mut pending = self.pending_sdp_answers.write().await;
+                pending.remove(target_peer_id);
+                Err(anyhow::anyhow!("Timeout waiting for SDP answer from {}", target_peer_id))
+            }
         }
     }
 
-    /// Scan DHT for incoming SDP offers addressed to us
-    ///
-    /// Returns Vec<(remote_peer_id, offer_sdp)>
-    async fn scan_dht_for_offers(&self) -> Vec<(String, String)> {
-        // In a real implementation, we would:
-        // 1. Query DHT for all keys matching pattern: sdp_offer_*_{my_peer_id}
-        // 2. Parse the offers and extract remote_peer_id from key
-        // 3. Return list of (remote_peer_id, offer_sdp)
-        //
-        // For now, return empty vec (DHT doesn't support pattern queries yet)
-        // TODO: Implement DHT pattern queries or use a separate index
-        Vec::new()
-    }
 
     /// Single sync iteration
     async fn sync_iteration(&self) -> Result<()> {
@@ -558,19 +580,69 @@ impl SyncOrchestrator {
         info!("📤 Sending WantList to network");
         self.network.send_wantlist(&wantlist).await?;
 
-        // 3. Check for missing blocks
+        // 3. Check for missing blocks and request via WebRTC WantList
         let missing = self.p2p_manager.missing_blocks()?;
         if !missing.is_empty() {
-            info!("📥 Need to fetch {} missing blocks", missing.len());
+            info!("📥 Need to fetch {} missing blocks via SPORE WantList", missing.len());
 
-            // 4. Request missing blocks from peers
-            let peers = self.network.peers().await;
-            info!("👥 Have {} known peers", peers.len());
-            if !peers.is_empty() {
-                // Round-robin through peers
-                for (i, block_id) in missing.iter().enumerate() {
-                    let peer = &peers[i % peers.len()];
-                    self.network.request_blocks(&peer.peer_id, vec![block_id.clone()]).await?;
+            // Build have_ranges from local storage
+            let local_blocks = self.get_local_blocks().await?;
+            let mut local_block_ids = std::collections::HashSet::new();
+            for block in local_blocks {
+                local_block_ids.insert(block.id);
+            }
+
+            // Convert local blocks to ranges (sorted by key_hash)
+            use crate::spore_wantlist::build_ranges_from_keys;
+            let mut local_keys: Vec<u64> = local_block_ids.iter().map(|id| {
+                use std::collections::hash_map::DefaultHasher;
+                use std::hash::{Hash, Hasher};
+                let mut hasher = DefaultHasher::new();
+                id.hash(&mut hasher);
+                hasher.finish()
+            }).collect();
+            local_keys.sort();
+            let have_ranges = build_ranges_from_keys(&local_keys);
+
+            // Build want_ranges from missing blocks
+            let mut missing_keys: Vec<u64> = missing.iter().map(|id| {
+                use std::collections::hash_map::DefaultHasher;
+                use std::hash::{Hash, Hasher};
+                let mut hasher = DefaultHasher::new();
+                id.hash(&mut hasher);
+                hasher.finish()
+            }).collect();
+            missing_keys.sort();
+            let want_ranges = build_ranges_from_keys(&missing_keys);
+
+            // Get connected WebRTC peers
+            let webrtc_peers = self.webrtc_manager.connected_peer_ids().await;
+            info!("👥 Have {} WebRTC peers for SPORE sync", webrtc_peers.len());
+
+            if !webrtc_peers.is_empty() {
+                // Send WantList to all connected WebRTC peers
+                let wantlist = crate::spore_wantlist::WantListMessage {
+                    version: 1,
+                    want_ranges,
+                    have_ranges,
+                    have_filter: None,
+                    timestamp: std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs(),
+                    peer_id: self.my_peer_id.clone(),
+                };
+
+                for peer_id in &webrtc_peers {
+                    if let Err(e) = self.webrtc_manager.send_wantlist_to_peer(peer_id, &wantlist).await {
+                        warn!("Failed to send SPORE WantList to {}: {}", peer_id, e);
+                    } else {
+                        info!("📋 Sent SPORE WantList to {} ({} want ranges)", peer_id, wantlist.want_ranges.len());
+                    }
+                }
+
+                // Mark as downloading
+                for block_id in &missing {
                     self.p2p_manager.mark_downloading(block_id.clone())?;
                 }
             }
@@ -799,128 +871,83 @@ impl SyncOrchestrator {
             }
 
             NetworkEvent::WantListReceived(peer_id, wantlist) => {
-                info!("🔍 Received WantList from {}: gen={}, have={} blocks, known_peers={}",
-                    peer_id, wantlist.generation, wantlist.have_blocks.len(), wantlist.known_peers.len());
+                // DEPRECATED: This OLD relay-based WantList handler is deprecated!
+                // All SPORE WantList exchange now happens via WebRTC DataChannels.
+                // This handler is kept for backwards compatibility during transition.
+                warn!("⚠️ DEPRECATED: Received OLD relay WantList from {} (gen={}, have={} blocks) - WebRTC SPORE WantList should be used instead!",
+                    peer_id, wantlist.generation, wantlist.have_blocks.len());
 
-                // REMOVED: SPORE peer exchange - now using LazyNode DHT queries for neighbor discovery!
+                // Log deprecation warning and skip processing
+                info!("⏭️ Skipping OLD relay WantList handler - use WebRTC SPORE WantList instead");
+            }
 
-                // Build complete local block set (releases + auth txs + delete txs)
-                let mut local_block_ids = std::collections::HashSet::new();
+            // SDP signaling events (WebRTC connection establishment via relay)
+            NetworkEvent::SdpOfferReceived { from_peer_id, offer_sdp } => {
+                info!("📥 Received SDP offer from {} ({} bytes)", from_peer_id, offer_sdp.len());
 
-                // Add release block IDs
-                let local_blocks = self.get_local_blocks().await?;
-                for block in local_blocks {
-                    local_block_ids.insert(block.id);
-                }
+                // Create answer using WebRTC manager
+                match self.webrtc_manager.handle_offer(from_peer_id.clone(), offer_sdp, crate::webrtc_manager::PeerType::Node).await {
+                    Ok(answer_sdp) => {
+                        info!("📡 Created SDP answer for {}", from_peer_id);
 
-                // Add authorization transaction IDs
-                use crate::routes::account::AuthorizationTransaction;
-                let authorizations: Vec<AuthorizationTransaction> = self.db.get_all_with_prefix(prefixes::AUTHORIZATION)?;
-                for auth in authorizations {
-                    local_block_ids.insert(auth.id);
-                }
-
-                // Add delete transaction IDs
-                use crate::ubts::UBTSBlock;
-                let delete_txs: Vec<UBTSBlock> = self.db.get_all_with_prefix(prefixes::DELETE_TRANSACTION)?;
-                for delete_tx in delete_txs {
-                    local_block_ids.insert(delete_tx.id);
-                }
-
-                // Find missing blocks
-                let mut missing_from_peer = Vec::new();
-                for peer_block_id in &wantlist.have_blocks {
-                    if !local_block_ids.contains(peer_block_id) {
-                        missing_from_peer.push(peer_block_id.clone());
+                        // Send answer back via relay
+                        if let Err(e) = self.network.send_sdp_answer(&from_peer_id, answer_sdp).await {
+                            warn!("⚠️ Failed to send SDP answer to {}: {}", from_peer_id, e);
+                        } else {
+                            info!("✅ SDP answer sent to {} via relay", from_peer_id);
+                        }
                     }
-                }
-
-                if !missing_from_peer.is_empty() {
-                    info!("🚨 SPORE detected {} missing blocks from peer {}", missing_from_peer.len(), peer_id);
-                    for block_id in &missing_from_peer {
-                        info!("  - Missing: {}", block_id);
+                    Err(e) => {
+                        warn!("⚠️ Failed to create SDP answer for {}: {}", from_peer_id, e);
                     }
-
-                    // Request missing blocks immediately
-                    info!("📥 Requesting {} missing blocks from {}", missing_from_peer.len(), peer_id);
-                    self.network.request_blocks(&peer_id, missing_from_peer).await?;
-                } else {
-                    info!("✅ No missing blocks from peer {}", peer_id);
                 }
             }
 
-            NetworkEvent::BlockRequestReceived(peer_id, block_ids) => {
-                info!("📬 Received block request from {} for {} blocks", peer_id, block_ids.len());
+            NetworkEvent::SdpAnswerReceived { from_peer_id, answer_sdp } => {
+                info!("📥 Received SDP answer from {} ({} bytes)", from_peer_id, answer_sdp.len());
 
-                let mut blocks_to_send = Vec::new();
+                // Check if we have a pending answer channel for this peer
+                let answer_tx = {
+                    let mut pending = self.pending_sdp_answers.write().await;
+                    pending.remove(&from_peer_id)
+                };
 
-                // Check for release blocks
-                let releases: Vec<Release> = self.db.get_all_with_prefix(prefixes::RELEASE)?;
-                for release in releases {
-                    let block_data = BlockCodec::encode_release(release.clone(), 0, None)?;
-
-                    if block_ids.contains(&block_data.id) {
-                        info!("  - Prepared release block {}", block_data.id);
-
-                        // Convert to network BlockData format
-                        let network_block = lens_v2_p2p::network::BlockData {
-                            id: block_data.id,
-                            height: 0,
-                            data: block_data.data,
-                            prev: None,
-                            timestamp: block_data.timestamp,
-                        };
-
-                        blocks_to_send.push(network_block);
-                    }
-                }
-
-                // Check for authorization transaction blocks
-                use crate::routes::account::AuthorizationTransaction;
-                let authorizations: Vec<AuthorizationTransaction> = self.db.get_all_with_prefix(prefixes::AUTHORIZATION)?;
-                for auth in authorizations {
-                    if block_ids.contains(&auth.id) {
-                        // Encode authorization transaction as block data
-                        let auth_json = serde_json::to_vec(&auth)?;
-                        let network_block = lens_v2_p2p::network::BlockData {
-                            id: auth.id.clone(),
-                            height: 0, // Authorization transactions are flat (no height)
-                            data: auth_json,
-                            prev: None, // No chain
-                            timestamp: auth.timestamp,
-                        };
-
-                        blocks_to_send.push(network_block);
-                        info!("  - Prepared authorization transaction {} for {}", auth.id, auth.public_key);
-                    }
-                }
-
-                // Check for delete transaction blocks
-                use crate::ubts::UBTSBlock;
-                let delete_txs: Vec<UBTSBlock> = self.db.get_all_with_prefix(prefixes::DELETE_TRANSACTION)?;
-                for delete_tx in delete_txs {
-                    if block_ids.contains(&delete_tx.id) {
-                        // Encode delete transaction as block data
-                        let delete_json = serde_json::to_vec(&delete_tx)?;
-                        let network_block = lens_v2_p2p::network::BlockData {
-                            id: delete_tx.id.clone(),
-                            height: 0, // Delete transactions are flat (no height)
-                            data: delete_json,
-                            prev: None, // No chain
-                            timestamp: delete_tx.timestamp,
-                        };
-
-                        blocks_to_send.push(network_block);
-                        info!("  - Prepared delete transaction {}", delete_tx.id);
-                    }
-                }
-
-                if !blocks_to_send.is_empty() {
-                    info!("📤 Sending {} blocks to {}", blocks_to_send.len(), peer_id);
-                    self.network.send_blocks(&peer_id, blocks_to_send).await?;
+                if let Some(tx) = answer_tx {
+                    // Send answer through channel (establish_webrtc_connection is waiting)
+                    let _ = tx.send(answer_sdp);
+                    info!("✅ Forwarded SDP answer from {} to connection establishment", from_peer_id);
                 } else {
-                    warn!("⚠️ No matching blocks found for request from {}", peer_id);
+                    warn!("⚠️ Received SDP answer from {} but no pending connection", from_peer_id);
                 }
+            }
+
+            // SlotOwnershipGossip: Store gossiped slot ownership in local DHT cache
+            NetworkEvent::SlotOwnershipGossip { peer_id, slot, ownership_bytes } => {
+                info!("📨 Received slot ownership gossip: {} → ({}, {}, {})",
+                    peer_id, slot.x, slot.y, slot.z);
+
+                use crate::peer_registry::{peer_location_key, slot_ownership_key};
+
+                // Store in local DHT cache (both location and slot keys)
+                let mut storage = self.lazy_node.dht_storage.lock().await;
+                let location_key = peer_location_key(&peer_id);
+                let slot_key = slot_ownership_key(slot);
+                storage.insert_raw(location_key, ownership_bytes.clone());
+                storage.insert_raw(slot_key, ownership_bytes);
+
+                info!("✅ Stored gossiped slot ownership locally: {} → ({}, {}, {})",
+                    peer_id, slot.x, slot.y, slot.z);
+            }
+
+            NetworkEvent::BlockRequestReceived(peer_id, block_ids) => {
+                // DEPRECATED: This OLD relay-based BlockRequest handler is deprecated!
+                // All block exchange now happens via WebRTC SPORE WantList + RangeResponse.
+                // This handler is kept for backwards compatibility during transition.
+                warn!("⚠️ DEPRECATED: Received OLD relay BlockRequest from {} for {} blocks - WebRTC SPORE RangeResponse should be used instead!",
+                    peer_id, block_ids.len());
+
+                // Log deprecation warning and skip processing
+                info!("⏭️ Skipping OLD relay BlockRequest handler - use WebRTC SPORE RangeResponse instead");
             }
         }
 
@@ -1130,6 +1157,7 @@ mod tests {
         let webrtc_manager = Arc::new(WebRTCManager::new().unwrap());
         let (_tx, rx) = mpsc::unbounded_channel();
         let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
+        let relay_state = crate::routes::relay::RelayState::new();
 
         let mesh_config = default_mesh_config();
         let my_slot = SlotCoordinate::new(5, 5, 2);
@@ -1144,6 +1172,7 @@ mod tests {
             db,
             rx,
             dht_storage,
+            relay_state,
         );
 
         assert_eq!(orchestrator.sync_interval, Duration::from_secs(30));
@@ -1164,6 +1193,7 @@ mod tests {
 
         let mesh_config = default_mesh_config();
         let my_slot = SlotCoordinate::new(5, 5, 2);
+        let relay_state = crate::routes::relay::RelayState::new();
 
         let orchestrator = SyncOrchestrator::new(
             "ws://localhost:5002/api/v1/relay/ws".to_string(),
@@ -1175,6 +1205,7 @@ mod tests {
             db.clone(),
             rx,
             dht_storage,
+            relay_state,
         );
 
         // Create a delete transaction
@@ -1230,6 +1261,7 @@ mod tests {
             db.clone(),
             rx,
             dht_storage,
+            crate::routes::relay::RelayState::new(),
         );
 
         // Create a release in the database
@@ -1323,6 +1355,7 @@ mod tests {
             db,
             rx,
             dht_storage,
+            crate::routes::relay::RelayState::new(),
         ));
 
         // My 8 neighbors at slot (0,0,0) should be:
@@ -1384,6 +1417,7 @@ mod tests {
             db.clone(),
             rx,
             dht_storage,
+            crate::routes::relay::RelayState::new(),
         );
 
         // Create a delete transaction
@@ -1445,6 +1479,7 @@ mod tests {
             db,
             rx,
             dht_storage.clone(),
+            crate::routes::relay::RelayState::new(),
         );
 
         // Attempt WebRTC connection (will timeout waiting for answer, but offer should be stored)
@@ -1547,6 +1582,7 @@ mod tests {
             db,
             rx,
             dht_storage,
+            crate::routes::relay::RelayState::new(),
         );
 
         // Discover geometric neighbors via LazyNode
@@ -1589,6 +1625,7 @@ mod tests {
             db,
             rx,
             dht_storage.clone(),
+            crate::routes::relay::RelayState::new(),
         );
 
         let target_peer_id = "peer-bob";
@@ -1660,6 +1697,7 @@ mod tests {
             db,
             rx,
             dht_storage.clone(),
+            crate::routes::relay::RelayState::new(),
         );
 
         // First query - should hit DHT

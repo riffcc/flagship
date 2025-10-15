@@ -259,6 +259,9 @@ pub struct RelayState {
     pub dht_write_events: Arc<tokio::sync::broadcast::Sender<String>>,
     /// Peer type tracking - distinguishes server nodes from browser clients
     peer_types: Arc<RwLock<HashMap<String, PeerType>>>,
+    /// Peer slot tracking - stores each peer's CLAIMED/ANNOUNCED slot (from gossip)
+    /// DO NOT recalculate slots using peer_id_to_slot() - slots are Content Addressed and claimable!
+    peer_slots: Arc<RwLock<HashMap<String, SlotCoordinate>>>,
 }
 
 impl RelayState {
@@ -279,6 +282,7 @@ impl RelayState {
             p2p_manager: None,
             dht_write_events: Arc::new(dht_write_tx),
             peer_types: Arc::new(RwLock::new(HashMap::new())),
+            peer_slots: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -789,6 +793,13 @@ impl RelayState {
             println!("✅ Stored slot ownership locally: {} → ({}, {}, {})", peer_id, slot.x, slot.y, slot.z);
         }
 
+        // Store claimed slot in peer_slots for DHT GET routing
+        {
+            let mut peer_slots = self.peer_slots.write().await;
+            peer_slots.insert(peer_id.clone(), slot);
+            println!("🎯 Stored claimed slot for {}: ({}, {}, {})", peer_id, slot.x, slot.y, slot.z);
+        }
+
         // Use DHT PUT to store in the network (routes to responsible slot)
         println!("📤 DHT PUT: Storing slot ownership in DHT network via routing...");
         let location_key = peer_location_key(&peer_id);
@@ -1244,6 +1255,13 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                                     storage.insert_raw(slot_key, ownership_bytes);
                                     drop(storage);
 
+                                    // Store claimed slot in peer_slots for DHT GET routing
+                                    {
+                                        let mut peer_slots = state.peer_slots.write().await;
+                                        peer_slots.insert(gossiped_peer_id.to_string(), slot);
+                                        println!("🎯 Stored claimed slot for {}: ({}, {}, {})", gossiped_peer_id, slot.x, slot.y, slot.z);
+                                    }
+
                                     println!("✅ Stored gossiped slot ownership locally");
 
                                     // Re-gossip to other peers (flooding with TTL would be better)
@@ -1677,12 +1695,24 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                                     // Calculate which slot this key maps to
                                     let target_slot = key_to_slot(&request.key, &mesh_config);
 
-                                    // Calculate our own slot
-                                    let my_slot = peer_id_to_slot(&peer_id, &mesh_config);
+                                    // Get our claimed slot (NOT calculated - slots are Content Addressed!)
+                                    let my_slot_opt = {
+                                        let peer_slots = state.peer_slots.read().await;
+                                        peer_slots.get(&peer_id).cloned()
+                                    };
 
-                                    info!("🔑 Key maps to slot ({}, {}, {}), my slot is ({}, {}, {})",
-                                        target_slot.x, target_slot.y, target_slot.z,
-                                        my_slot.x, my_slot.y, my_slot.z);
+                                    let my_slot = match my_slot_opt {
+                                        Some(slot) => {
+                                            info!("🔑 Key maps to slot ({}, {}, {}), my claimed slot is ({}, {}, {})",
+                                                target_slot.x, target_slot.y, target_slot.z,
+                                                slot.x, slot.y, slot.z);
+                                            slot
+                                        },
+                                        None => {
+                                            warn!("⚠️ DHT GET: No claimed slot found for peer {}, cannot handle request", peer_id);
+                                            continue;
+                                        }
+                                    };
 
                                     if target_slot == my_slot {
                                         // This key belongs to OUR slot! Query local storage

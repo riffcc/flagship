@@ -183,6 +183,37 @@ pub fn merge_ranges(ranges: &[KeyRange]) -> Vec<KeyRange> {
     merged
 }
 
+/// Build contiguous ranges from sorted key hashes
+///
+/// Takes a sorted list of u64 key hashes and builds contiguous ranges.
+/// Adjacent keys are merged into a single range for efficient representation.
+pub fn build_ranges_from_keys(sorted_keys: &[u64]) -> Vec<KeyRange> {
+    if sorted_keys.is_empty() {
+        return vec![];
+    }
+
+    let mut ranges = Vec::new();
+    let mut range_start = sorted_keys[0];
+    let mut range_end = sorted_keys[0];
+
+    for &key in &sorted_keys[1..] {
+        if key == range_end + 1 {
+            // Adjacent key, extend range
+            range_end = key;
+        } else {
+            // Gap found, save current range and start new one
+            ranges.push((range_start, range_end));
+            range_start = key;
+            range_end = key;
+        }
+    }
+
+    // Don't forget the last range
+    ranges.push((range_start, range_end));
+
+    ranges
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

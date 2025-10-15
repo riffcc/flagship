@@ -613,6 +613,12 @@ impl WebRTCManager {
         peers.contains_key(peer_id)
     }
 
+    /// Get all connected peer IDs (both nodes and browsers)
+    pub async fn connected_peer_ids(&self) -> Vec<String> {
+        let peers = self.peers.read().await;
+        peers.keys().cloned().collect()
+    }
+
     /// Send heartbeat to a specific peer
     pub async fn send_heartbeat_to(&self, peer_id: &str, heartbeat: &Heartbeat) -> Result<()> {
         let heartbeat_json = heartbeat.to_json()
