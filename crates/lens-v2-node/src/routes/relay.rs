@@ -83,6 +83,16 @@ pub struct BrowserDiscoveredPeer {
     pub connection_quality: Option<String>, // "good", "poor", etc.
 }
 
+/// Peer type classification for relay tracking
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PeerType {
+    /// Server node - participates in mesh, has slot assignment
+    Server,
+    /// Browser client - edge client, no slot assignment, anonymous
+    Browser,
+}
+
 /// Mesh topology update event - broadcast when peers join/leave or latency changes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeshTopologyUpdate {
@@ -245,10 +255,16 @@ pub struct RelayState {
     pub pending_dht_gets: Arc<RwLock<HashMap<String, PendingDhtGet>>>,
     /// P2P manager for tracking known peers (for /map and /ready endpoints)
     pub p2p_manager: Option<Arc<lens_v2_p2p::P2pManager>>,
+    /// Event channel: fires when a DHT key is written (key_hex)
+    pub dht_write_events: Arc<tokio::sync::broadcast::Sender<String>>,
+    /// Peer type tracking - distinguishes server nodes from browser clients
+    peer_types: Arc<RwLock<HashMap<String, PeerType>>>,
 }
 
 impl RelayState {
     pub fn new() -> Self {
+        let (dht_write_tx, _) = tokio::sync::broadcast::channel(1000);
+
         Self {
             relay: Arc::new(RwLock::new(RelayServer::new())),
             peer_senders: Arc::new(RwLock::new(HashMap::new())),
@@ -261,6 +277,8 @@ impl RelayState {
             my_slot: Arc::new(RwLock::new(None)),
             pending_dht_gets: Arc::new(RwLock::new(HashMap::new())),
             p2p_manager: None,
+            dht_write_events: Arc::new(dht_write_tx),
+            peer_types: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -287,6 +305,28 @@ impl RelayState {
     pub fn with_my_slot(mut self, slot: SlotCoordinate) -> Self {
         self.my_slot = Arc::new(RwLock::new(Some(slot)));
         self
+    }
+
+    /// Mark a peer as a server node (participates in mesh)
+    pub async fn mark_as_server(&self, peer_id: &str) {
+        self.peer_types.write().await.insert(peer_id.to_string(), PeerType::Server);
+        debug!("🖥️ Marked peer {} as Server node", peer_id);
+    }
+
+    /// Mark a peer as a browser client (edge client, no mesh participation)
+    pub async fn mark_as_browser(&self, peer_id: &str) {
+        self.peer_types.write().await.insert(peer_id.to_string(), PeerType::Browser);
+        debug!("🌐 Marked peer {} as Browser client", peer_id);
+    }
+
+    /// Get peer type (defaults to Server if not set)
+    pub async fn get_peer_type(&self, peer_id: &str) -> PeerType {
+        self.peer_types.read().await.get(peer_id).copied().unwrap_or(PeerType::Server)
+    }
+
+    /// Check if peer is a browser client
+    pub async fn is_browser(&self, peer_id: &str) -> bool {
+        self.get_peer_type(peer_id).await == PeerType::Browser
     }
 
     /// Get current mesh config based on actual peer count (DYNAMIC!)
@@ -492,10 +532,23 @@ impl RelayState {
             let closest_peer_id = match closest_peer_result {
                 Some((peer_id, _slot, _dist)) => peer_id,
                 None => {
-                    // No peers at all - try to read from local storage anyway (key might hash to us)
-                    debug!("DHT GET: No connected peers, checking local storage");
-                    let storage = self.dht_storage.lock().await;
-                    return storage.get_raw(&key).map(|v| v.to_vec());
+                    // No WebRTC peers - use relay WebSocket as proxy (per CONTEXT.md)
+                    // The relay will route DHT GET to the appropriate node
+                    debug!("DHT GET: No WebRTC peers, using relay WebSocket as proxy");
+
+                    // Grab ANY connected WebSocket peer (relay acts as dumb proxy)
+                    let peer_senders = self.peer_senders.read().await;
+                    if let Some(any_peer_id) = peer_senders.keys().next().cloned() {
+                        drop(peer_senders);
+                        debug!("DHT GET: Using relay peer {} as proxy for key routing", any_peer_id);
+                        any_peer_id
+                    } else {
+                        // No WebSocket connections at all - fall back to local storage
+                        debug!("DHT GET: No connected peers at all, checking local storage");
+                        drop(peer_senders);
+                        let storage = self.dht_storage.lock().await;
+                        return storage.get_raw(&key).map(|v| v.to_vec());
+                    }
                 }
             };
 
@@ -963,7 +1016,7 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
             if let Ok(hello) = serde_json::from_str::<serde_json::Value>(&text) {
                 if let Some("hello") = hello.get("type").and_then(|v| v.as_str()) {
                     if let Some(client_peer_id) = hello.get("peer_id").and_then(|v| v.as_str()) {
-                        info!("Relay: Client announced peer_id: {}", client_peer_id);
+                        info!("Relay: Server node announced peer_id: {}", client_peer_id);
                         client_peer_id.to_string()
                     } else {
                         warn!("Relay: Hello message missing peer_id, generating random");
@@ -986,6 +1039,10 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
 
     info!("Relay: New peer connected: {}", peer_id);
 
+    // Determine if this is a server node or will be marked as browser later
+    // Default to server - browser_announce will override this
+    state.mark_as_server(&peer_id).await;
+
     // Create channel for this peer's outgoing messages
     let (tx, mut rx) = mpsc::unbounded_channel();
 
@@ -1007,7 +1064,8 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
 
     // **CITADEL DHT MESH TOPOLOGY ANNOUNCEMENT** (Section 2.4 - Recursive DHT)
     // Calculate my SlotCoordinate and announce ownership!
-    {
+    // SKIP FOR BROWSER CLIENTS - they don't participate in the mesh
+    if !state.is_browser(&peer_id).await {
         let mesh_config = state.get_mesh_config_for_assignment().await;
 
         // Check if explicit slot is set (for tests), otherwise calculate from peer_id
@@ -1020,30 +1078,22 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
             }
         };
 
-        info!("📢 Peer {} assigned to slot ({}, {}, {}) in hexagonal toroidal mesh",
+        info!("📢 Server node {} assigned to slot ({}, {}, {}) in hexagonal toroidal mesh",
             peer_id, my_slot.x, my_slot.y, my_slot.z);
 
-        // Create slot ownership announcement
-        let ownership = SlotOwnership::new(peer_id.clone(), my_slot, None);
-        let ownership_bytes = serde_json::to_vec(&ownership).unwrap_or_default();
+        // GOSSIP slot ownership to ALL nodes via broadcast-through-the-mesh
+        // Per architecture: "Keys like slot ownership should also be replicated to every node and cached"
+        // This enables LOCAL DHT queries with event-driven replication
+        // "How does anyone know who owns the slot if you're gone?" - Everyone needs to know!
 
-        // Route slot ownership via Citadel DHT PUT (no gossip!)
-        // Keys route to the slot they hash to via key_to_slot()
-        // Peers discover neighbors by sending DHT GET requests
+        state.gossip_slot_ownership(peer_id.clone(), my_slot).await;
 
-        let location_key = peer_location_key(&peer_id);
-        let slot_key = slot_ownership_key(my_slot);
-
-        // Route both PUTs through the DHT - it will store at correct slot
-        state.dht_put(location_key, ownership_bytes.clone()).await;
-        state.dht_put(slot_key, ownership_bytes).await;
-
-        info!("✅ Routed slot ownership for peer {} at ({}, {}, {}) via Citadel DHT PUT",
+        info!("✅ Gossiped slot ownership for peer {} at ({}, {}, {}) to ALL nodes via broadcast-through-mesh",
             peer_id, my_slot.x, my_slot.y, my_slot.z);
 
         // Log 8 neighbor slots for visibility (lazy discovery will query these on-demand!)
         let neighbors = get_neighbor_slots(&my_slot, &mesh_config);
-        info!("🔷 Peer {} has 8 mesh neighbors at slots: {:?}",
+        info!("🔷 Server node {} has 8 mesh neighbors at slots: {:?}",
             peer_id, neighbors.iter().map(|(_, s)| (s.x, s.y, s.z)).collect::<Vec<_>>());
 
         // Notify P2P manager about this peer for /map and /ready endpoints
@@ -1071,6 +1121,8 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
 
         // Broadcast topology update to all connected peers
         state.broadcast_topology_update(TopologyEventType::PeerJoined, &peer_id, Some(my_slot)).await;
+    } else {
+        info!("🌐 Browser client {} connected - skipping mesh slot assignment", peer_id);
     }
 
     // Spawn task to handle outgoing messages
@@ -1096,6 +1148,9 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                     info!("Relay: Parsed JSON, type = {:?}", msg_json.get("type"));
                     if let Some("browser_announce") = msg_json.get("type").and_then(|v| v.as_str()) {
                         info!("Relay: Browser peer announced: {}", peer_id);
+
+                        // Mark as browser client (no mesh participation)
+                        state.mark_as_browser(&peer_id).await;
 
                         // If WebRTC manager available, create connection to browser
                         if let Some(ref webrtc_mgr) = state.webrtc_manager {
@@ -2172,6 +2227,49 @@ pub async fn dht_get_handler(
     };
 
     info!("DHT GET HTTP: found={}", response.value.is_some());
+    Ok(axum::Json(response))
+}
+
+/// HTTP handler for LOCAL DHT GET operations (no routing)
+/// GET /api/v1/dht/get_local/:key_hex
+///
+/// Queries LOCAL storage only without routing through the mesh.
+/// This is used in tests to verify that dht_get() actually routes via network.
+/// Returns the value if found in local storage, or None if not found locally.
+pub async fn dht_get_local_handler(
+    State(state): State<RelayState>,
+    axum::extract::Path(key_hex): axum::extract::Path<String>,
+) -> Result<axum::Json<DhtGetHttpResponse>, StatusCode> {
+    // Decode hex key
+    let key_bytes = hex::decode(&key_hex).map_err(|e| {
+        warn!("DHT GET LOCAL: Invalid hex key: {}", e);
+        StatusCode::BAD_REQUEST
+    })?;
+
+    // Validate key length
+    if key_bytes.len() != 32 {
+        warn!("DHT GET LOCAL: Key must be 32 bytes, got {}", key_bytes.len());
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Convert to array
+    let mut key = [0u8; 32];
+    key.copy_from_slice(&key_bytes);
+
+    info!("DHT GET LOCAL: key={} (local storage only, no routing)", key_hex);
+
+    // Query LOCAL storage only (no routing!)
+    let value = {
+        let storage = state.dht_storage.lock().await;
+        storage.get_raw(&key).map(|v| v.to_vec())
+    };
+
+    let response = DhtGetHttpResponse {
+        key: key_hex,
+        value: value.map(hex::encode),
+    };
+
+    info!("DHT GET LOCAL: found={}", response.value.is_some());
     Ok(axum::Json(response))
 }
 
