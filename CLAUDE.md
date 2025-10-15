@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### API URL Rules (READ CAREFULLY)
 
+**ENVIRONMENT NAMING:**
+- **`global`** = PRODUCTION (api.global.riff.cc, dev.global.riff.cc)
+- **`palace`** = DEVELOPMENT (api.palace.riff.cc, dev.palace.riff.cc)
+
 **PRODUCTION BUILDS:**
 ```bash
 VITE_API_URL="https://api.global.riff.cc/api/v1" pnpm build
