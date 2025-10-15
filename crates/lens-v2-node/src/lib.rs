@@ -22,6 +22,7 @@ pub mod slot_identity;
 pub mod latency;
 pub mod distributed_dht;
 pub mod p2p_heartbeat;
+pub mod spore_wantlist;
 
 // TGP packet protocol - exported publicly for binary compatibility
 pub mod tgp;

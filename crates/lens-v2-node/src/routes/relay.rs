@@ -5,9 +5,9 @@ use axum::{
 };
 use consensus_peerexc::{
     relay::RelayServer,
-    wantlist::WantList,
     PeerInfo, PeerState,
 };
+use crate::spore_wantlist::{WantListMessage, RangeResponse, compute_want_ranges};
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -1323,22 +1323,21 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                         warn!("Relay: Target peer {} not connected", target_id);
                     }
                 }
-                // Try to parse as WantList (must be before generic JSON check)
-                else if let Ok(wantlist) = serde_json::from_str::<WantList>(&text) {
-                    info!("Relay: Received WantList from {}: gen={}, needs={}, offers={}",
-                        peer_id, wantlist.generation, wantlist.has_needs(), wantlist.has_offers());
+                // Try to parse as WantList (SPORE range-based protocol)
+                else if let Ok(wantlist) = serde_json::from_str::<WantListMessage>(&text) {
+                    info!("Relay: Received WantList from {}: wants {} ranges, has {} ranges",
+                        peer_id, wantlist.want_ranges.len(), wantlist.have_ranges.len());
 
-                    // Index the WantList
-                    {
-                        let mut relay = state.relay.write().await;
-                        relay.index_wantlist(peer_id.clone(), &wantlist);
-                    }
+                    // TODO: Store peer's have_ranges in peer registry for slot ownership tracking
 
-                    // Broadcast WantList to all other peers for SPORE comparison
+                    // Broadcast WantList to all other peers (they'll respond if they can fulfill wants)
                     let wantlist_msg = serde_json::json!({
-                        "type": "wantlist_announcement",
+                        "type": "wantlist",
                         "from_peer_id": peer_id,
-                        "wantlist": wantlist,
+                        "version": wantlist.version,
+                        "want_ranges": wantlist.want_ranges,
+                        "have_ranges": wantlist.have_ranges,
+                        "timestamp": wantlist.timestamp,
                     });
 
                     if let Ok(json) = serde_json::to_string(&wantlist_msg) {
@@ -1358,118 +1357,112 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                         }
                     }
 
-                    // Find providers for this peer's needs
-                    let providers = {
-                        let relay = state.relay.read().await;
-                        relay.find_providers(&wantlist)
-                    };
+                    // Respond with ranges we have that they want
+                    if !wantlist.want_ranges.is_empty() {
+                        // Get P2P manager to check our known peers (slot ownership)
+                        if let Some(p2p) = &state.p2p_manager {
+                            if let Ok(known_peer_ids) = p2p.get_known_peer_strings() {
+                                if !known_peer_ids.is_empty() {
+                                    let mesh_config = state.get_mesh_config().await;
 
-                    info!("Relay: Found {} providers for {}", providers.len(), peer_id);
+                                    // Build ranges from known peer slots
+                                    let mut slot_ids: Vec<u64> = known_peer_ids.iter()
+                                        .map(|peer_id_str| {
+                                            let slot = peer_id_to_slot(peer_id_str, &mesh_config);
+                                            (slot.x as u64) * 65536 + (slot.y as u64) * 256 + (slot.z as u64)
+                                        })
+                                        .collect();
 
-                    // Get all connected peers for peer discovery
-                    let all_peers = {
-                        let relay = state.relay.read().await;
-                        relay.get_peers()
-                    };
+                                    slot_ids.sort();
+                                    slot_ids.dedup();
 
-                    // SPORE: Build set of peers the sender already knows about
-                    let known_peer_ids: std::collections::HashSet<String> = wantlist
-                        .known_peers
-                        .iter()
-                        .map(|kp| kp.peer_id.clone())
-                        .collect();
+                                    // Build contiguous ranges
+                                    let mut our_ranges = Vec::new();
+                                    if !slot_ids.is_empty() {
+                                        let mut range_start = slot_ids[0];
+                                        let mut range_end = slot_ids[0];
 
-                    // Filter out self and peers they already know (SPORE exclusion)
-                    let mut peers_to_send: Vec<_> = all_peers
-                        .into_iter()
-                        .filter(|p| p.peer_id != peer_id && !known_peer_ids.contains(&p.peer_id))
-                        .collect();
+                                        for &slot in &slot_ids[1..] {
+                                            if slot == range_end + 1 {
+                                                range_end = slot;
+                                            } else {
+                                                our_ranges.push((range_start, range_end));
+                                                range_start = slot;
+                                                range_end = slot;
+                                            }
+                                        }
+                                        our_ranges.push((range_start, range_end));
+                                    }
 
-                    info!("🔍 SPORE: Peer {} knows {} peers, filtering to only unknown peers",
-                        peer_id, known_peer_ids.len());
+                                    // Compute intersection: what they WANT that we HAVE
+                                    // They want: wantlist.want_ranges
+                                    // We have: our_ranges
+                                    // Use compute_want_ranges to get intersection:
+                                    // compute_want_ranges(what_they_want, gaps_in_what_we_have, total)
+                                    // = parts of what_they_want that are IN what_we_have
 
-                    // Add specific providers if available
-                    for provider in providers {
-                        if !peers_to_send.iter().any(|p| p.peer_id == provider.peer_id) {
-                            peers_to_send.push(provider);
-                        }
-                    }
+                                    // First, compute gaps in what we have (inverse of our_ranges)
+                                    let mut gaps_in_our_ranges = vec![];
+                                    let mut cursor = 0u64;
+                                    for &(start, end) in &our_ranges {
+                                        if cursor < start {
+                                            gaps_in_our_ranges.push((cursor, start - 1));
+                                        }
+                                        cursor = end + 1;
+                                    }
+                                    if cursor <= 528 {
+                                        gaps_in_our_ranges.push((cursor, 528));
+                                    }
 
-                    // Add browser-discovered peers (browsers help nodes find each other!)
-                    {
-                        let browser_peers = state.browser_discovered_peers.read().await;
-                        let mut added_browser_peers = 0;
+                                    // Now compute: what_they_want NOT IN gaps = what_they_want IN our_ranges
+                                    let to_send = compute_want_ranges(&wantlist.want_ranges, &gaps_in_our_ranges, (0, 528));
 
-                        for (_browser_id, discovered_peers) in browser_peers.iter() {
-                            for discovered_peer in discovered_peers {
-                                // Only include connected peers
-                                if discovered_peer.connected {
-                                    // Convert browser-discovered peer to PeerInfo format
-                                    // Use score=100 for browser-discovered peers (they're direct connections)
-                                    if !peers_to_send.iter().any(|p| p.peer_id == discovered_peer.peer_id)
-                                       && discovered_peer.peer_id != peer_id {
-                                        let mut peer_info = PeerInfo::new(discovered_peer.peer_id.clone());
-                                        peer_info.score = 100; // High score for direct browser connections
-                                        peer_info.state = PeerState::Discovered; // Discovered via browser
-                                        peers_to_send.push(peer_info);
-                                        added_browser_peers += 1;
+                                    if !to_send.is_empty() {
+                                        info!("Relay: Peer {} wants {} ranges, we can provide {} ranges with {} peers",
+                                            peer_id, wantlist.want_ranges.len(), to_send.len(), known_peer_ids.len());
+
+                                        // Build and send RangeResponse
+                                        let response = RangeResponse {
+                                            range: (to_send[0].0, to_send[to_send.len() - 1].1),
+                                            entries: known_peer_ids.iter().map(|peer_id_str| {
+                                                use crate::spore_wantlist::DhtEntry;
+                                                let slot = peer_id_to_slot(peer_id_str, &mesh_config);
+                                                let slot_id = (slot.x as u64) * 65536 + (slot.y as u64) * 256 + (slot.z as u64);
+
+                                                DhtEntry {
+                                                    key_hash: slot_id,
+                                                    key: format!("slot-ownership-{}", slot_id).into_bytes(),
+                                                    value: serde_json::to_vec(&serde_json::json!({
+                                                        "peer_id": peer_id_str,
+                                                        "slot": {"x": slot.x, "y": slot.y, "z": slot.z},
+                                                    })).unwrap(),
+                                                    timestamp: std::time::SystemTime::now()
+                                                        .duration_since(std::time::UNIX_EPOCH)
+                                                        .unwrap()
+                                                        .as_secs(),
+                                                    slot_owner: peer_id_str.clone(),
+                                                }
+                                            }).collect(),
+                                            merkle_proof: None,
+                                        };
+
+                                        if let Ok(json) = serde_json::to_string(&serde_json::json!({
+                                            "type": "range_response",
+                                            "response": response,
+                                        })) {
+                                            let senders = state.peer_senders.read().await;
+                                            if let Some(tx) = senders.get(&peer_id) {
+                                                if let Err(e) = tx.send(Message::Text(json)) {
+                                                    warn!("Relay: Failed to send RangeResponse to {}: {}", peer_id, e);
+                                                } else {
+                                                    info!("Relay: Sent RangeResponse with {} entries to {}", response.entries.len(), peer_id);
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
-
-                        if added_browser_peers > 0 {
-                            info!("Relay: Added {} browser-discovered peers to referral for {}", added_browser_peers, peer_id);
-                        }
-                    }
-
-                    // Mesh neighbor discovery via DHT GET would go here
-                    // For now, peer referrals provide sufficient bootstrap
-                    // TODO: Implement async DHT GET queries for 8-neighbor discovery
-
-                    // **ENHANCEMENT 1: Add DHT Routing Hints to Peer Referrals**
-                    // Include SlotCoordinate for each peer so recipients can calculate routing distances!
-                    if !peers_to_send.is_empty() {
-                        let mesh_config = state.get_mesh_config().await;
-
-                        let referral = serde_json::json!({
-                            "type": "peer_referral",
-                            "your_peer_id": peer_id,
-                            "your_slot": {
-                                "x": peer_id_to_slot(&peer_id, &mesh_config).x,
-                                "y": peer_id_to_slot(&peer_id, &mesh_config).y,
-                                "z": peer_id_to_slot(&peer_id, &mesh_config).z,
-                            },
-                            "peers": peers_to_send.into_iter().map(|p| {
-                                let peer_slot = peer_id_to_slot(&p.peer_id, &mesh_config);
-                                serde_json::json!({
-                                    "peer_id": p.peer_id,
-                                    "latest_height": p.latest_height,
-                                    "score": p.score,
-                                    "slot": {
-                                        "x": peer_slot.x,
-                                        "y": peer_slot.y,
-                                        "z": peer_slot.z,
-                                    },
-                                })
-                            }).collect::<Vec<_>>(),
-                        });
-
-                        info!("Relay: Sending referral to {} with {} peers (with DHT routing hints)",
-                            peer_id, referral["peers"].as_array().map(|a| a.len()).unwrap_or(0));
-
-                        let senders = state.peer_senders.read().await;
-                        if let Some(tx) = senders.get(&peer_id) {
-                            if let Ok(json) = serde_json::to_string(&referral) {
-                                if let Err(e) = tx.send(Message::Text(json)) {
-                                    warn!("Relay: Failed to send referral to {}: {}", peer_id, e);
-                                } else {
-                                    info!("Relay: Successfully sent peer referral with routing hints to {}", peer_id);
-                                }
-                            }
-                        }
-                    } else {
-                        info!("Relay: No other peers to refer to {}", peer_id);
                     }
                 }
                 // Try to parse as DHT replication message (epidemic gossip protocol)
@@ -1617,74 +1610,48 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                         continue;
                     }
 
-                    // **ENHANCEMENT 2: Greedy Message Forwarding**
-                    // Try to parse as block_request or block_response and route them using greedy forwarding
+                    // **DEPRECATED: Block requests should use WebRTC DataChannels, not relay routing**
+                    // Relay is ONLY for signaling and epidemic gossip, not data transfer
                     if let Some(msg_type) = msg_json.get("type").and_then(|v| v.as_str()) {
                         if msg_type == "block_request" || msg_type == "block_response" {
-                            if let Some(to_peer_id) = msg_json.get("to_peer_id").and_then(|v| v.as_str()) {
-                                let senders = state.peer_senders.read().await;
+                            warn!("🚫 Relay: Ignoring {} from {} - blocks should use WebRTC DataChannels, not relay!",
+                                msg_type, peer_id);
+                            warn!("💡 Hint: Use SPORE WantList over WebRTC DataChannels for block exchange");
+                            continue;
+                        }
+                    }
 
-                                // Direct connection available?
-                                if let Some(target_tx) = senders.get(to_peer_id).cloned() {
-                                    drop(senders);
-                                    info!("Relay: Direct routing {} from {} to {}", msg_type, peer_id, to_peer_id);
-                                    if let Err(e) = target_tx.send(Message::Text(text.clone())) {
-                                        warn!("Relay: Failed to route {} to {}: {}", msg_type, to_peer_id, e);
-                                    } else {
-                                        info!("Relay: Routed {} from {} to {}", msg_type, peer_id, to_peer_id);
-                                    }
-                                } else {
-                                    // No direct connection - use GREEDY FORWARDING!
-                                    drop(senders);
+                    // Keep epidemic gossip for WantList broadcasting (peer discovery)
+                    // But actual data exchange (WantList requests/responses) should use WebRTC
+                    if let Some(msg_type) = msg_json.get("type").and_then(|v| v.as_str()) {
+                        if msg_type == "wantlist_request" || msg_type == "range_response" {
+                            warn!("🚫 Relay: Ignoring {} from {} - use WebRTC DataChannels for data exchange!",
+                                msg_type, peer_id);
+                            continue;
+                        }
+                    }
 
-                                    let mesh_config = state.get_mesh_config().await;
-                                    let target_slot = peer_id_to_slot(to_peer_id, &mesh_config);
-
-                                    // Find closest peer to target
-                                    if let Some((closest_peer_id, closest_slot, distance)) = state.find_closest_peer(target_slot).await {
-                                        if closest_peer_id == peer_id {
-                                            // We're already the closest peer - can't forward
-                                            warn!("Relay: Target peer {} not connected and we're the closest (distance={})", to_peer_id, distance);
-                                        } else {
-                                            // Forward to closer peer!
-                                            info!("🔀 Greedy forwarding {} from {} → {} (hop towards {}), distance: {}",
-                                                msg_type, peer_id, closest_peer_id, to_peer_id, distance);
-
-                                            let senders = state.peer_senders.read().await;
-                                            if let Some(forward_tx) = senders.get(&closest_peer_id) {
-                                                // Add routing metadata to track hops
-                                                let mut forwarded_msg = msg_json.clone();
-                                                if let Some(obj) = forwarded_msg.as_object_mut() {
-                                                    // Track routing path
-                                                    let mut hops = obj.get("routing_hops")
-                                                        .and_then(|v| v.as_array())
-                                                        .cloned()
-                                                        .unwrap_or_default();
-                                                    hops.push(serde_json::json!({
-                                                        "relay": peer_id,
-                                                        "forwarded_to": closest_peer_id,
-                                                        "distance_to_target": distance,
-                                                    }));
-                                                    obj.insert("routing_hops".to_string(), serde_json::Value::Array(hops));
-                                                }
-
-                                                if let Ok(forwarded_json) = serde_json::to_string(&forwarded_msg) {
-                                                    if let Err(e) = forward_tx.send(Message::Text(forwarded_json)) {
-                                                        warn!("Relay: Failed to greedy forward to {}: {}", closest_peer_id, e);
-                                                    } else {
-                                                        info!("Relay: Greedy forwarded {} from {} → {} (towards {})",
-                                                            msg_type, peer_id, closest_peer_id, to_peer_id);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        warn!("Relay: No connected peers available for greedy forwarding to {}", to_peer_id);
-                                    }
-                                }
+                    // OLD GREEDY FORWARDING CODE - REMOVED
+                    // Relay should NOT route data, only broadcast for peer discovery
+                    // All data exchange happens via direct WebRTC DataChannels
+                    if let Some(msg_type) = msg_json.get("type").and_then(|v| v.as_str()) {
+                        if msg_type == "block_request" || msg_type == "block_response" {
+                            // This code path should never execute due to check above
+                            // But keeping structure for clarity
+                            if let Some(_to_peer_id) = msg_json.get("to_peer_id").and_then(|v| v.as_str()) {
+                                warn!("🚫 Relay routing disabled for block messages - use WebRTC DataChannels!");
+                                continue;
                             }
                         }
                     }
+
+                    // OLD GREEDY FORWARDING CODE REMOVED
+                    // Relay is now ONLY for:
+                    // 1. WebRTC signaling (SDP/ICE)
+                    // 2. WantList epidemic gossip (peer discovery)
+                    // 3. Initial DHT bootstrap
+                    //
+                    // All data exchange uses WebRTC DataChannels!
                 }
             }
             Ok(Message::Binary(data)) => {

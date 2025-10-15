@@ -201,20 +201,36 @@ impl WebRTCManager {
                         }
 
                         // Check if this is a text message (UTF-8 encoded JSON)
-                        // Text messages include: heartbeats, gossip messages, UBTS blocks
+                        // Text messages include: heartbeats, gossip messages, UBTS blocks, WantList, RangeResponse
                         if let Ok(text) = std::str::from_utf8(&msg.data) {
                             // Try to parse as JSON to determine message type
                             if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(text) {
+                                let msg_type = json_value.get("type").and_then(|v| v.as_str());
+
+                                // Check for SPORE WantList (P2P request for missing data)
+                                if msg_type == Some("wantlist") {
+                                    info!("📋 Received SPORE WantList from peer {} via WebRTC DataChannel", peer_id);
+                                    // Forward to TGP channel for processing
+                                    if let Err(e) = tgp_tx.send((format!("WANTLIST:{}", peer_id), msg.data.to_vec())) {
+                                        error!("Failed to forward WantList from peer {}: {}", peer_id, e);
+                                    }
+                                    return;
+                                }
+
+                                // Check for SPORE RangeResponse (P2P data delivery)
+                                if msg_type == Some("range_response") {
+                                    info!("📦 Received SPORE RangeResponse from peer {} via WebRTC DataChannel", peer_id);
+                                    // Forward to TGP channel for processing
+                                    if let Err(e) = tgp_tx.send((format!("RANGERESPONSE:{}", peer_id), msg.data.to_vec())) {
+                                        error!("Failed to forward RangeResponse from peer {}: {}", peer_id, e);
+                                    }
+                                    return;
+                                }
+
                                 // Check for slot ownership gossip
-                                if let Some("slot_ownership_gossip") = json_value.get("type").and_then(|v| v.as_str()) {
+                                if msg_type == Some("slot_ownership_gossip") {
                                     info!("📢 Received slot ownership gossip from peer {} via WebRTC", peer_id);
                                     // Forward as text message to TGP channel with special marker
-                                    // We'll use peer_id prefixed with "gossip:" to indicate this is gossip, not TGP
-                                    // Actually, let's create a separate channel for gossip or handle it here
-                                    // For now, we'll just log it - the actual gossip handling should be in the TGP task
-                                    // Let's forward the text as bytes with a special marker
-                                    // Wait - TGP channel expects binary packets. We need a different approach.
-                                    // Let's just forward ALL text messages as-is and handle them in the TGP task
                                     if let Err(e) = tgp_tx.send((format!("TEXT:{}", peer_id), msg.data.to_vec())) {
                                         error!("Failed to forward text message from peer {}: {}", peer_id, e);
                                     }
@@ -475,12 +491,34 @@ impl WebRTCManager {
                 }
 
                 // Check if this is a text message (UTF-8 encoded JSON)
-                // Text messages include: heartbeats, gossip messages, UBTS blocks
+                // Text messages include: heartbeats, gossip messages, UBTS blocks, WantList, RangeResponse
                 if let Ok(text) = std::str::from_utf8(&msg.data) {
                     // Try to parse as JSON to determine message type
                     if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(text) {
+                        let msg_type = json_value.get("type").and_then(|v| v.as_str());
+
+                        // Check for SPORE WantList (P2P request for missing data)
+                        if msg_type == Some("wantlist") {
+                            info!("📋 Received SPORE WantList from node {} via WebRTC DataChannel", peer_id);
+                            // Forward to TGP channel for processing
+                            if let Err(e) = tgp_tx.send((format!("WANTLIST:{}", peer_id), msg.data.to_vec())) {
+                                error!("Failed to forward WantList from node {}: {}", peer_id, e);
+                            }
+                            return;
+                        }
+
+                        // Check for SPORE RangeResponse (P2P data delivery)
+                        if msg_type == Some("range_response") {
+                            info!("📦 Received SPORE RangeResponse from node {} via WebRTC DataChannel", peer_id);
+                            // Forward to TGP channel for processing
+                            if let Err(e) = tgp_tx.send((format!("RANGERESPONSE:{}", peer_id), msg.data.to_vec())) {
+                                error!("Failed to forward RangeResponse from node {}: {}", peer_id, e);
+                            }
+                            return;
+                        }
+
                         // Check for slot ownership gossip
-                        if let Some("slot_ownership_gossip") = json_value.get("type").and_then(|v| v.as_str()) {
+                        if msg_type == Some("slot_ownership_gossip") {
                             info!("📢 Received slot ownership gossip from node {} via WebRTC", peer_id);
                             // Forward text message to TGP channel with TEXT: prefix
                             if let Err(e) = tgp_tx.send((format!("TEXT:{}", peer_id), msg.data.to_vec())) {
@@ -646,5 +684,106 @@ impl WebRTCManager {
             }
         }
         anyhow::bail!("Peer {} not connected", peer_id);
+    }
+
+    /// Send SPORE WantList to a specific peer via WebRTC DataChannel
+    /// This requests missing blocks/data from the peer using range-based protocol
+    pub async fn send_wantlist_to_peer(&self, peer_id: &str, wantlist: &crate::spore_wantlist::WantListMessage) -> Result<()> {
+        use crate::spore_wantlist::WantListMessage;
+
+        // Wrap in message envelope
+        let msg = serde_json::json!({
+            "type": "wantlist",
+            "message": wantlist,
+        });
+
+        let json = serde_json::to_string(&msg)?;
+
+        let peers = self.peers.read().await;
+        if let Some(peer) = peers.get(peer_id) {
+            if let Some(dc) = &peer.data_channel {
+                dc.send_text(json.clone()).await?;
+                info!("📋 Sent SPORE WantList to peer {} via WebRTC ({} bytes)", peer_id, json.len());
+                return Ok(());
+            } else {
+                anyhow::bail!("Peer {} has no DataChannel", peer_id);
+            }
+        }
+        anyhow::bail!("Peer {} not connected", peer_id);
+    }
+
+    /// Send SPORE RangeResponse to a specific peer via WebRTC DataChannel
+    /// This delivers requested blocks/data to the peer
+    pub async fn send_range_response_to_peer(&self, peer_id: &str, response: &crate::spore_wantlist::RangeResponse) -> Result<()> {
+        use crate::spore_wantlist::RangeResponse;
+
+        // Wrap in message envelope
+        let msg = serde_json::json!({
+            "type": "range_response",
+            "response": response,
+        });
+
+        let json = serde_json::to_string(&msg)?;
+
+        let peers = self.peers.read().await;
+        if let Some(peer) = peers.get(peer_id) {
+            if let Some(dc) = &peer.data_channel {
+                dc.send_text(json.clone()).await?;
+                info!("📦 Sent SPORE RangeResponse to peer {} via WebRTC ({} entries, {} bytes)",
+                    peer_id, response.entries.len(), json.len());
+                return Ok(());
+            } else {
+                anyhow::bail!("Peer {} has no DataChannel", peer_id);
+            }
+        }
+        anyhow::bail!("Peer {} not connected", peer_id);
+    }
+
+    /// Get next WantList message from any peer via WebRTC
+    /// Returns (peer_id, wantlist)
+    pub async fn next_wantlist(&self) -> Option<(String, crate::spore_wantlist::WantListMessage)> {
+        loop {
+            let (marker, data) = self.tgp_rx.write().await.recv().await?;
+
+            // Check if this is a WantList message
+            if marker.starts_with("WANTLIST:") {
+                let peer_id = marker.strip_prefix("WANTLIST:")?.to_string();
+
+                // Parse WantList from JSON
+                if let Ok(text) = std::str::from_utf8(&data) {
+                    if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(text) {
+                        if let Some(message) = json_value.get("message") {
+                            if let Ok(wantlist) = serde_json::from_value(message.clone()) {
+                                return Some((peer_id, wantlist));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Get next RangeResponse message from any peer via WebRTC
+    /// Returns (peer_id, range_response)
+    pub async fn next_range_response(&self) -> Option<(String, crate::spore_wantlist::RangeResponse)> {
+        loop {
+            let (marker, data) = self.tgp_rx.write().await.recv().await?;
+
+            // Check if this is a RangeResponse message
+            if marker.starts_with("RANGERESPONSE:") {
+                let peer_id = marker.strip_prefix("RANGERESPONSE:")?.to_string();
+
+                // Parse RangeResponse from JSON
+                if let Ok(text) = std::str::from_utf8(&data) {
+                    if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(text) {
+                        if let Some(response) = json_value.get("response") {
+                            if let Ok(range_response) = serde_json::from_value(response.clone()) {
+                                return Some((peer_id, range_response));
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
