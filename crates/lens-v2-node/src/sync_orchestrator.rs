@@ -155,17 +155,53 @@ impl SyncOrchestrator {
         dht_storage: Arc<tokio::sync::Mutex<crate::dht_state::DhtState>>,
         relay_state: crate::routes::relay::RelayState,
     ) -> Self {
+        Self::new_with_dht_fn(
+            relay_url,
+            my_peer_id,
+            my_slot,
+            mesh_config,
+            p2p_manager,
+            webrtc_manager,
+            db,
+            block_notify_rx,
+            dht_storage.clone(),
+            relay_state,
+            None, // Use default relay-based dht_get_fn
+        )
+    }
+
+    /// Create a new sync orchestrator with custom DHT GET function (for testing)
+    ///
+    /// This allows tests to provide a test-friendly dht_get_fn that queries local storage
+    /// instead of routing through the relay (which doesn't exist in unit tests).
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_dht_fn(
+        relay_url: String,
+        my_peer_id: String,
+        my_slot: SlotCoordinate,
+        mesh_config: MeshConfig,
+        p2p_manager: Arc<P2pManager>,
+        webrtc_manager: Arc<WebRTCManager>,
+        db: Database,
+        block_notify_rx: mpsc::UnboundedReceiver<BlockNotification>,
+        dht_storage: Arc<tokio::sync::Mutex<crate::dht_state::DhtState>>,
+        relay_state: crate::routes::relay::RelayState,
+        custom_dht_get_fn: Option<Arc<dyn Fn([u8; 32]) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<Vec<u8>>>> + Send>> + Send + Sync>>,
+    ) -> Self {
         // Pass our peer_id and slot to network layer for relay announcements and DHT bootstrap
         let network = Arc::new(P2pNetwork::new(relay_url, my_peer_id.clone(), my_slot));
 
-        // Create DHT GET callback for LazyNode (routes via network - relay/WebRTC)
-        // This enables true distributed DHT queries instead of local storage only!
-        let dht_get_fn = Arc::new(move |key: [u8; 32]| {
-            let relay = relay_state.clone();
-            Box::pin(async move {
-                // Route DHT GET via relay/WebRTC (greedy routing to responsible slot)
-                Ok(relay.dht_get(key).await)
-            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<Vec<u8>>>> + Send>>
+        // Use custom dht_get_fn if provided (for tests), otherwise create default relay-based one
+        let dht_get_fn = custom_dht_get_fn.unwrap_or_else(|| {
+            // Create DHT GET callback for LazyNode (routes via network - relay/WebRTC)
+            // This enables true distributed DHT queries instead of local storage only!
+            Arc::new(move |key: [u8; 32]| {
+                let relay = relay_state.clone();
+                Box::pin(async move {
+                    // Route DHT GET via relay/WebRTC (greedy routing to responsible slot)
+                    Ok(relay.dht_get(key).await)
+                }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<Vec<u8>>>> + Send>>
+            })
         });
 
         // Create LazyNode for DHT-based neighbor discovery
@@ -1146,6 +1182,22 @@ mod tests {
     use lens_v2_p2p::P2pConfig;
     use uuid::Uuid;
 
+    /// Helper: Create a test-friendly DHT GET callback that queries local storage
+    ///
+    /// This is used in unit tests where there's no relay running.
+    /// Instead of routing through relay, it queries the local DHT storage directly.
+    fn create_test_dht_get_fn(
+        dht_storage: Arc<tokio::sync::Mutex<crate::dht_state::DhtState>>
+    ) -> Arc<dyn Fn([u8; 32]) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<Vec<u8>>>> + Send>> + Send + Sync> {
+        Arc::new(move |key: [u8; 32]| {
+            let storage = dht_storage.clone();
+            Box::pin(async move {
+                let dht = storage.lock().await;
+                Ok(dht.get_raw(&key).map(|v| v.clone()))
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<Vec<u8>>>> + Send>>
+        })
+    }
+
     #[tokio::test]
     async fn test_orchestrator_creation() {
         use crate::peer_registry::default_mesh_config;
@@ -1572,7 +1624,10 @@ mod tests {
             dht.insert_raw(key_h, serde_json::to_vec(&ownership_h).unwrap());
         }
 
-        let orchestrator = SyncOrchestrator::new(
+        // Create test-friendly dht_get_fn that queries local storage
+        let test_dht_get_fn = create_test_dht_get_fn(dht_storage.clone());
+
+        let orchestrator = SyncOrchestrator::new_with_dht_fn(
             "ws://localhost:5002/api/v1/relay/ws".to_string(),
             "peer-center".to_string(),
             my_slot,
@@ -1583,6 +1638,7 @@ mod tests {
             rx,
             dht_storage,
             crate::routes::relay::RelayState::new(),
+            Some(test_dht_get_fn), // Use test DHT GET function
         );
 
         // Discover geometric neighbors via LazyNode
@@ -1687,7 +1743,10 @@ mod tests {
             dht.insert_raw(key, serde_json::to_vec(&ownership).unwrap());
         }
 
-        let orchestrator = SyncOrchestrator::new(
+        // Create test-friendly dht_get_fn that queries local storage
+        let test_dht_get_fn = create_test_dht_get_fn(dht_storage.clone());
+
+        let orchestrator = SyncOrchestrator::new_with_dht_fn(
             "ws://localhost:5002/api/v1/relay/ws".to_string(),
             "peer-center".to_string(),
             my_slot,
@@ -1698,6 +1757,7 @@ mod tests {
             rx,
             dht_storage.clone(),
             crate::routes::relay::RelayState::new(),
+            Some(test_dht_get_fn), // Use test DHT GET function
         );
 
         // First query - should hit DHT

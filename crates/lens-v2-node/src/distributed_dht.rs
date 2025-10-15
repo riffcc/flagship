@@ -265,7 +265,7 @@ mod tests {
     #[tokio::test]
     async fn test_local_put_get() {
         let mesh_config = MeshConfig::new(5, 5, 2); // 50 slots
-        let my_slot = SlotCoordinate::new(2, 3, 1);
+        let my_slot = SlotCoordinate::new(0, 0, 0);  // Use (0,0,0) which is definitely valid
         let storage = Arc::new(Mutex::new(DhtState::new()));
 
         let dht = DistributedDHT::new(
@@ -275,11 +275,16 @@ mod tests {
             storage,
         );
 
-        // Find a key that hashes to our slot
+        // With CLAIMED slots, key_to_slot() still determines where keys are stored,
+        // but nodes can claim any slot they want. We need to find a key that hashes
+        // to our claimed slot coordinate.
         let mut test_key = [0u8; 32];
-        for i in 0..10000 {
+        let mut found = false;
+
+        for i in 0..100000 {  // Increased iterations
             test_key[0] = (i & 0xFF) as u8;
             test_key[1] = ((i >> 8) & 0xFF) as u8;
+            test_key[2] = ((i >> 16) & 0xFF) as u8;
 
             if key_to_slot(&test_key, &mesh_config) == my_slot {
                 // Found one!
@@ -292,11 +297,12 @@ mod tests {
                 let result = dht.get(&test_key).await.unwrap();
                 assert_eq!(result, Some(test_value));
 
-                return;
+                found = true;
+                break;
             }
         }
 
-        panic!("Could not find key that hashes to test slot");
+        assert!(found, "Could not find key that hashes to test slot {:?} after 100,000 iterations", my_slot);
     }
 
     #[tokio::test]
