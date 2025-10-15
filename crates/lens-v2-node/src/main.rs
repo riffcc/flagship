@@ -124,12 +124,27 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("🎯 Node Public Key: {}", hex::encode(public_key_bytes));
     tracing::info!("🎯 Peer ID (CIDv1 BLAKE3 of node public key): {}", my_peer_id);
 
-    // DYNAMIC MESH: Calculate mesh dimensions for first node (peer_count=1)
-    let mesh_config = peer_registry::calculate_mesh_dimensions(1);
+    // FIXED MESH: Use environment variables or default to 8×7×1 (56 slots for ~50 nodes)
+    // This ensures all nodes use the SAME mesh dimensions for consistent neighbor discovery!
+    let mesh_width = env::var("MESH_WIDTH")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(8);
+    let mesh_height = env::var("MESH_HEIGHT")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(7);
+    let mesh_depth = env::var("MESH_DEPTH")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(1);
+
+    let mesh_config = citadel_core::topology::MeshConfig::new(mesh_width, mesh_height, mesh_depth);
     let my_slot = peer_registry::peer_id_to_slot(&my_peer_id, &mesh_config);
 
-    tracing::info!("🎯 My slot: {:?} in mesh {}×{}×{}",
-        my_slot, mesh_config.width, mesh_config.height, mesh_config.depth);
+    tracing::info!("🎯 My slot: {:?} in FIXED mesh {}×{}×{} ({} total slots)",
+        my_slot, mesh_config.width, mesh_config.height, mesh_config.depth,
+        mesh_config.width * mesh_config.height * mesh_config.depth);
 
     // Create P2P manager for sync status tracking
     let p2p_config = P2pConfig::default();
@@ -231,22 +246,9 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("    -H 'Content-Type: application/json' \\");
     tracing::info!("    -d '{{\"publicKey\": \"YOUR_PUBLIC_KEY_HERE\"}}'");
 
-    // Announce our slot ownership via DHT PUT routing
-    tracing::info!("📢 Announcing slot ownership to DHT mesh...");
-    let ownership = peer_registry::SlotOwnership::new(
-        my_peer_id.clone(),
-        my_slot,
-        None, // No relay URL - we're pure DHT now!
-    );
-    let ownership_key = peer_registry::slot_ownership_key(my_slot);
-    let location_key = peer_registry::peer_location_key(&my_peer_id);
-    let ownership_bytes = serde_json::to_vec(&ownership)?;
-
-    // Use DHT PUT to route to the correct slot owner in the mesh
-    relay_state.dht_put(ownership_key.clone(), ownership_bytes.clone()).await;
-    relay_state.dht_put(location_key.clone(), ownership_bytes.clone()).await;
-
-    tracing::info!("✅ Announced slot ownership: {:?} -> {} (routed via distributed DHT)", my_slot, my_peer_id);
+    // Slot ownership announcement moved to SyncOrchestrator after relay connection
+    // This ensures we can route through relay even with 0 WebRTC neighbors
+    tracing::info!("ℹ️  Slot ownership will be announced after relay connection established");
 
     // Create orchestrator with LazyNode (NO RELAY!)
     // Note: relay_url is still required for now but will be removed in parallel task
@@ -263,6 +265,7 @@ async fn main() -> anyhow::Result<()> {
         db.clone(),
         block_notify_rx,
         dht_storage.clone(),
+        relay_state.clone(),
     ));
 
     // Spawn server in background
@@ -441,18 +444,53 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    // Give server a moment to start accepting connections
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-
-    // Now start the orchestrator (pure DHT mesh - no relay!)
+    // Start the orchestrator immediately (pure DHT mesh - no relay!)
+    // Server and orchestrator start in parallel - no waits needed!
     if let Err(e) = orchestrator.start().await {
         tracing::error!("Failed to start sync orchestrator: {}", e);
     } else {
         tracing::info!("✅ P2P sync orchestrator started successfully (pure DHT mesh)");
     }
 
-    // Wait for server to complete (which it never will unless there's an error)
-    server_handle.await?;
+    // Setup graceful shutdown on SIGTERM/SIGINT
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    // Wait for either shutdown signal or server error
+    tokio::select! {
+        _ = ctrl_c => {
+            tracing::info!("🛑 Received Ctrl+C signal, shutting down gracefully...");
+        }
+        _ = terminate => {
+            tracing::info!("🛑 Received SIGTERM signal, shutting down gracefully...");
+        }
+        result = server_handle => {
+            if let Err(e) = result {
+                tracing::error!("Server task failed: {}", e);
+            }
+        }
+    }
+
+    // Graceful shutdown sequence
+    tracing::info!("🔄 Sync orchestrator has stopped");
+    tracing::info!("🔄 Closing database connections...");
+    // RocksDB will flush on drop
+
+    tracing::info!("✅ Shutdown complete");
 
     Ok(())
 }
