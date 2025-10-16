@@ -51,6 +51,7 @@ web-sys = { version = "0.3", features = [
 tokio = { workspace = true, optional = true }
 tokio-tungstenite = { version = "0.21", features = ["rustls-tls-native-roots"], optional = true }
 tracing = { workspace = true }
+hex = "0.4"
 
 [dev-dependencies]
 # Testing (not compiled into WASM)

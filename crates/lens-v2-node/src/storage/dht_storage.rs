@@ -175,6 +175,19 @@ impl DHTStorage {
 
         serde_json::from_slice(&json_bytes).context("Failed to deserialize value")
     }
+
+    /// Scan all entries in DHT storage (for map endpoint to discover all peers)
+    /// Returns all key-value pairs as Vec<([u8; 32], Vec<u8>)>
+    pub fn scan_all(&self) -> Vec<([u8; 32], Vec<u8>)> {
+        let storage = self.local_storage.lock().unwrap();
+        storage.iter().map(|(k, v)| (*k, v.clone())).collect()
+    }
+
+    /// Get raw value from DHT storage without deserialization
+    pub fn get_raw(&self, key: &[u8; 32]) -> Option<Vec<u8>> {
+        let storage = self.local_storage.lock().unwrap();
+        storage.get(key).cloned()
+    }
 }
 
 #[async_trait]

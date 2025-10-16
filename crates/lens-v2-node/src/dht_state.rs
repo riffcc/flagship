@@ -111,6 +111,15 @@ impl DhtState {
         entries.sort_by_key(|e| e.key);
         entries
     }
+
+    /// Scan all entries in DHT (for map endpoint to discover all peers)
+    /// Returns all key-value pairs as Vec<([u8; 32], Vec<u8>)>
+    pub fn scan_all(&self) -> Vec<([u8; 32], Vec<u8>)> {
+        self.entries
+            .iter()
+            .map(|(key, entry)| (*key, entry.value.clone()))
+            .collect()
+    }
 }
 
 impl Default for DhtState {

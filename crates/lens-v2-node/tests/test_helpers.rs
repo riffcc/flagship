@@ -286,8 +286,17 @@ impl TestNode {
             }
         });
 
-        // Wait for server to be ready
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        // EVENT-DRIVEN: Wait for server to be ready by polling /ready endpoint
+        let base_url_check = base_url.clone();
+        let client = reqwest::Client::new();
+        for _ in 0..50 {  // 50 attempts * 100ms = 5 second max wait
+            if let Ok(response) = client.get(format!("{}/api/v1/ready", base_url_check)).send().await {
+                if response.status().is_success() {
+                    break;
+                }
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
 
         let test_node = TestNode {
             port,
@@ -351,10 +360,36 @@ impl TestNode {
         Ok(())
     }
 
+    /// Query DHT via network routing (routes via relay/WebRTC)
     pub async fn dht_get(&self, key: [u8; 32]) -> anyhow::Result<Option<Vec<u8>>> {
         let client = reqwest::Client::new();
         let url = format!(
             "{}/api/v1/dht/get/{}",
+            self.base_url,
+            hex::encode(key)
+        );
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let data: serde_json::Value = response.json().await?;
+            if let Some(value_hex) = data.get("value").and_then(|v| v.as_str()) {
+                Ok(Some(hex::decode(value_hex)?))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Query LOCAL DHT storage directly (no network routing)
+    /// This is used in tests to verify that data is NOT in local storage
+    /// (proving that dht_get() routes via network)
+    pub async fn dht_get_local(&self, key: [u8; 32]) -> anyhow::Result<Option<Vec<u8>>> {
+        let client = reqwest::Client::new();
+        let url = format!(
+            "{}/api/v1/dht/get_local/{}",
             self.base_url,
             hex::encode(key)
         );

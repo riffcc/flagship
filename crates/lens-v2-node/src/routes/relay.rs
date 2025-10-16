@@ -231,6 +231,14 @@ pub struct PendingDhtGet {
     pub timestamp: std::time::SystemTime,
 }
 
+/// Pending slot claim for consensus validation
+#[derive(Debug, Clone)]
+pub struct PendingSlotClaim {
+    pub peer_id: String,
+    pub proposed_slot: SlotCoordinate,
+    pub timestamp: u64,
+}
+
 /// Relay state shared across WebSocket connections
 #[derive(Clone)]
 pub struct RelayState {
@@ -244,6 +252,8 @@ pub struct RelayState {
     pub dht_storage: Arc<tokio::sync::Mutex<crate::dht_state::DhtState>>,
     /// Cached neighbor slot ownership (peer_id -> vec of neighbor caches)
     neighbor_cache: Arc<RwLock<HashMap<String, Vec<NeighborCache>>>>,
+    /// Pending slot claims for lightweight consensus (slot -> claim)
+    pending_slot_claims: Arc<RwLock<HashMap<SlotCoordinate, PendingSlotClaim>>>,
     /// DHT replication deduplication cache - tracks (key_hex, timestamp) to prevent re-gossip
     dht_seen_cache: Arc<RwLock<HashMap<String, u64>>>,
     /// This node's peer_id (for DHT routing calculations)
@@ -275,6 +285,7 @@ impl RelayState {
             browser_discovered_peers: Arc::new(RwLock::new(HashMap::new())),
             dht_storage: Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new())),
             neighbor_cache: Arc::new(RwLock::new(HashMap::new())),
+            pending_slot_claims: Arc::new(RwLock::new(HashMap::new())),
             dht_seen_cache: Arc::new(RwLock::new(HashMap::new())),
             node_peer_id: Arc::new(RwLock::new(None)),
             my_slot: Arc::new(RwLock::new(None)),
@@ -333,26 +344,51 @@ impl RelayState {
         self.get_peer_type(peer_id).await == PeerType::Browser
     }
 
-    /// Get current mesh config based on actual peer count (DYNAMIC!)
+    /// Get current mesh config based on BOUNDING BOX of all claimed slots (DYNAMIC!)
     /// This is the SINGLE SOURCE OF TRUTH for mesh dimensions.
     ///
-    /// NOTE: For slot assignment during connection, the caller should use
-    /// get_mesh_config_for_assignment() instead, which accounts for the peer being added.
-    async fn get_mesh_config(&self) -> MeshConfig {
-        let peer_senders = self.peer_senders.read().await;
-        let peer_count = peer_senders.len();
-        drop(peer_senders);
+    /// Scans all claimed slot coordinates and calculates dimensions that encompass them.
+    /// Nodes can claim ANY slot freely - mesh just needs to contain all claims.
+    /// Core principle: Slots NEVER change when nodes join/leave (except voluntarily for latency).
+    pub async fn get_mesh_config(&self) -> MeshConfig {
+        let peer_slots = self.peer_slots.read().await;
 
-        crate::peer_registry::calculate_mesh_dimensions(peer_count)
+        if peer_slots.is_empty() {
+            drop(peer_slots);
+            return MeshConfig::new(1, 1, 1);
+        }
+
+        // Find bounding box of all claimed slots
+        let mut min_x = i32::MAX;
+        let mut max_x = i32::MIN;
+        let mut min_y = i32::MAX;
+        let mut max_y = i32::MIN;
+        let mut min_z = i32::MAX;
+        let mut max_z = i32::MIN;
+
+        for slot in peer_slots.values() {
+            min_x = min_x.min(slot.x);
+            max_x = max_x.max(slot.x);
+            min_y = min_y.min(slot.y);
+            max_y = max_y.max(slot.y);
+            min_z = min_z.min(slot.z);
+            max_z = max_z.max(slot.z);
+        }
+        drop(peer_slots);
+
+        // Mesh dimensions = span of claimed slots + 1
+        let width = ((max_x - min_x) + 1) as usize;
+        let height = ((max_y - min_y) + 1) as usize;
+        let depth = ((max_z - min_z) + 1) as usize;
+
+        MeshConfig::new(width, height, depth)
     }
 
-    /// Get mesh config for initial slot assignment (includes the peer being added)
+    /// Get mesh config for initial slot assignment
+    /// Since nodes can claim ANY slot freely, this just returns current bounding box.
+    /// New node can claim any slot - mesh will expand to contain it.
     async fn get_mesh_config_for_assignment(&self) -> MeshConfig {
-        let peer_senders = self.peer_senders.read().await;
-        let peer_count = peer_senders.len() + 1; // +1 for the peer being added!
-        drop(peer_senders);
-
-        crate::peer_registry::calculate_mesh_dimensions(peer_count)
+        self.get_mesh_config().await
     }
 
     /// Get cached neighbors for a peer, or query DHT if cache is stale
@@ -1220,6 +1256,106 @@ async fn handle_socket(socket: WebSocket, state: RelayState) {
                             for (other_peer_id, tx) in senders.iter() {
                                 if other_peer_id != &peer_id {
                                     let _ = tx.send(Message::Text(text.clone()));
+                                }
+                            }
+                        }
+                        continue;
+                    }
+
+                    // Check for slot claim request (event-driven consensus)
+                    if let Some("slot_claim_request") = msg_json.get("type").and_then(|v| v.as_str()) {
+                        if let (Some(claim_peer_id), Some(slot_obj), Some(timestamp)) = (
+                            msg_json.get("peer_id").and_then(|v| v.as_str()),
+                            msg_json.get("proposed_slot"),
+                            msg_json.get("timestamp").and_then(|v| v.as_u64())
+                        ) {
+                            if let (Some(x), Some(y), Some(z)) = (
+                                slot_obj.get("x").and_then(|v| v.as_i64()),
+                                slot_obj.get("y").and_then(|v| v.as_i64()),
+                                slot_obj.get("z").and_then(|v| v.as_i64())
+                            ) {
+                                let proposed_slot = SlotCoordinate::new(x as i32, y as i32, z as i32);
+                                info!("📥 Slot claim request from {} for ({}, {}, {})", claim_peer_id, x, y, z);
+
+                                // Check for conflicts (pending claims + DHT)
+                                let mut conflict_detected = false;
+                                let mut conflicting_peer = String::new();
+
+                                // 1. Check pending claims
+                                {
+                                    let pending_claims = state.pending_slot_claims.read().await;
+                                    if let Some(existing_claim) = pending_claims.get(&proposed_slot) {
+                                        if existing_claim.peer_id != claim_peer_id {
+                                            // Conflict with pending claim - use timestamp to resolve
+                                            if timestamp > existing_claim.timestamp {
+                                                // Existing claim is earlier - NACK this one
+                                                conflict_detected = true;
+                                                conflicting_peer = existing_claim.peer_id.clone();
+                                                info!("⚠️ Slot ({}, {}, {}) already pending by {} (earlier timestamp)",
+                                                    x, y, z, existing_claim.peer_id);
+                                            } else {
+                                                // This claim is earlier - will replace existing
+                                                info!("✅ This claim for ({}, {}, {}) is earlier than pending (replacing)", x, y, z);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 2. Check DHT for committed claims (only if no pending conflict)
+                                if !conflict_detected {
+                                    let dht_storage = state.dht_storage.lock().await;
+                                    let slot_key = slot_ownership_key(proposed_slot);
+                                    if let Some(existing_ownership_bytes) = dht_storage.get_raw(&slot_key) {
+                                        if let Ok(ownership) = serde_json::from_slice::<SlotOwnership>(&existing_ownership_bytes) {
+                                            if ownership.peer_id != claim_peer_id {
+                                                conflict_detected = true;
+                                                conflicting_peer = ownership.peer_id;
+                                                info!("⚠️ Slot ({}, {}, {}) already claimed by {} in DHT", x, y, z, conflicting_peer);
+                                            }
+                                        }
+                                    }
+                                    drop(dht_storage);
+                                }
+
+                                // 3. Send ACK or NACK
+                                let senders = state.peer_senders.read().await;
+                                if let Some(peer_tx) = senders.get(claim_peer_id) {
+                                    if conflict_detected {
+                                        // Send NACK
+                                        let nack_msg = serde_json::json!({
+                                            "type": "slot_claim_nack",
+                                            "conflicting_peer": conflicting_peer,
+                                            "retry_suggestion": null, // Could calculate next free slot
+                                        });
+                                        if let Ok(json) = serde_json::to_string(&nack_msg) {
+                                            let _ = peer_tx.send(Message::Text(json));
+                                            info!("❌ Sent NACK to {} for slot ({}, {}, {})", claim_peer_id, x, y, z);
+                                        }
+                                    } else {
+                                        // No conflict - add to pending and send ACK
+                                        {
+                                            let mut pending_claims = state.pending_slot_claims.write().await;
+                                            pending_claims.insert(proposed_slot, PendingSlotClaim {
+                                                peer_id: claim_peer_id.to_string(),
+                                                proposed_slot,
+                                                timestamp,
+                                            });
+                                            info!("✅ Added pending claim: {} → ({}, {}, {})", claim_peer_id, x, y, z);
+                                        }
+
+                                        let ack_msg = serde_json::json!({
+                                            "type": "slot_claim_ack",
+                                            "slot": {
+                                                "x": x,
+                                                "y": y,
+                                                "z": z,
+                                            },
+                                        });
+                                        if let Ok(json) = serde_json::to_string(&ack_msg) {
+                                            let _ = peer_tx.send(Message::Text(json));
+                                            info!("✅ Sent ACK to {} for slot ({}, {}, {})", claim_peer_id, x, y, z);
+                                        }
+                                    }
                                 }
                             }
                         }

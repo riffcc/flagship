@@ -69,6 +69,7 @@ pub fn create_router(
         .route("/api/v1/relay/ws", get(relay::relay_handler))
         .route("/api/v1/dht/consistency", get(relay::dht_consistency_handler))
         .route("/api/v1/dht/get/:key_hex", get(relay::dht_get_handler))
+        .route("/api/v1/dht/get_local/:key_hex", get(relay::dht_get_local_handler))
         .route("/api/v1/dht/put", post(relay::dht_put_handler))
         .route("/api/v1/dht/gossip_slot_ownership", post(relay::gossip_slot_ownership_handler))
         .route("/api/v1/webrtc/offer", post(relay::webrtc_offer_handler))

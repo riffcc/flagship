@@ -176,75 +176,74 @@ pub struct NetworkStats {
 pub async fn get_network_map(
     State(state): State<MapState>,
 ) -> Result<Json<NetworkMap>, StatusCode> {
-    // For Content-Addressed Slots, we use the FIXED 256³ address space
-    // The mesh dimensions are just for visualization - the actual topology
-    // is determined by which slots peers choose to occupy via CAS
-    let mesh_config = MeshConfig::new(256, 256, 256);
+    // Use DYNAMIC mesh config from relay (SPIRAL algorithm)
+    // Mesh dimensions are calculated based on connected peer count
+    // This enables the network to scale dynamically without fixed configuration!
+    let mesh_config = state.relay.get_mesh_config().await;
 
     // Build peer nodes with slot assignments
     let mut nodes = Vec::new();
     let mut node_slots: HashMap<String, SlotCoordinate> = HashMap::new();
 
-    // LOCAL CACHE STRATEGY (powered by gossip replication):
-    // 1. Get all known peers from P2P manager (populated via PeerReferral events)
-    // 2. Query LOCAL DHT cache for each peer's slot ownership (replicated via epidemic gossip)
-    // This is FAST because all slot ownership is replicated to every node via gossip!
+    // DIRECT DHT SCAN STRATEGY (no dependency on PeerReferral events!):
+    // Scan ALL DHT entries and filter for slot ownership entries (peer-location-* keys)
+    // This works even when PeerReferral events aren't being sent by the relay
+    tracing::info!("Map: Scanning DHT for all slot ownership announcements");
 
-    let all_peer_strings = state.sync.p2p.get_known_peer_strings().unwrap_or_default();
-    tracing::info!("Map: Querying {} peers from P2P manager for slot ownership", all_peer_strings.len());
-
-    // Lock DHT storage once for all queries (LOCAL CACHE - replicated via gossip)
+    // Lock DHT storage once for scan
     let dht_storage = state.relay.dht_storage.lock().await;
+    let all_entries = dht_storage.scan_all();
 
-    for peer_id_ref in all_peer_strings {
-        let peer_id = peer_id_ref.to_string(); // Convert &str to String
+    tracing::info!("Map: Found {} total DHT entries to scan", all_entries.len());
 
-        // Query LOCAL DHT cache for this peer's slot ownership
-        // Now that we have gossip replication, all slot ownership is replicated locally!
-        let location_key = peer_location_key(&peer_id);
+    for (key, ownership_bytes) in all_entries {
+        // Try to decode as SlotOwnership (both peer-location-* and slot-* keys contain this)
+        if let Ok(ownership) = serde_json::from_slice::<SlotOwnership>(&ownership_bytes) {
+            let peer_id = ownership.peer_id.clone();
+            let slot = ownership.slot;
 
-        if let Some(ownership_bytes) = dht_storage.get_raw(&location_key) {
-            if let Ok(ownership) = serde_json::from_slice::<SlotOwnership>(&ownership_bytes) {
-                let slot = ownership.slot;
-
-                tracing::debug!("Map: Found peer {} at slot ({}, {}, {}) via local DHT cache", peer_id, slot.x, slot.y, slot.z);
-
-                node_slots.insert(peer_id.clone(), slot);
-
-                // Determine peer type from relay state tracking
-                let relay_peer_type = state.relay.get_peer_type(&peer_id).await;
-                let peer_type = match relay_peer_type {
-                    crate::routes::relay::PeerType::Browser => PeerType::Browser,
-                    crate::routes::relay::PeerType::Server => PeerType::Server,
-                };
-
-                // Anonymize browser peer IDs - only expose first 8 chars for privacy
-                let (id, label) = if peer_type == PeerType::Browser {
-                    // Take only first 8 chars (or less if peer_id is shorter)
-                    let truncated = peer_id.chars().take(8).collect::<String>();
-                    let anon_id = format!("browser-{}", truncated);
-                    (anon_id.clone(), format!("Browser ({})", truncated))
-                } else {
-                    (peer_id.clone(), peer_id.clone())
-                };
-
-                // Calculate permanent SlotId from coordinate
-                let slot_id = SlotId::from_coordinate(slot);
-
-                let node = PeerNode {
-                    id,
-                    label,
-                    slot_id: slot_id.to_hex(),
-                    slot: slot.into(),
-                    peer_type,
-                    last_heartbeat: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
-                    capabilities: vec!["webrtc".to_string(), "dht".to_string(), "spore".to_string()],
-                    online: true, // All peers with distributed DHT announcements are considered online
-                    avg_neighbor_latency_ms: None,
-                };
-
-                nodes.push(node);
+            // Skip duplicates (both peer-location-* and slot-* keys contain the same SlotOwnership)
+            if node_slots.contains_key(&peer_id) {
+                continue;
             }
+
+            tracing::debug!("Map: Found peer {} at slot ({}, {}, {}) via DHT scan", peer_id, slot.x, slot.y, slot.z);
+
+            node_slots.insert(peer_id.clone(), slot);
+
+            // Determine peer type from relay state tracking
+            let relay_peer_type = state.relay.get_peer_type(&peer_id).await;
+            let peer_type = match relay_peer_type {
+                crate::routes::relay::PeerType::Browser => PeerType::Browser,
+                crate::routes::relay::PeerType::Server => PeerType::Server,
+            };
+
+            // Anonymize browser peer IDs - only expose first 8 chars for privacy
+            let (id, label) = if peer_type == PeerType::Browser {
+                // Take only first 8 chars (or less if peer_id is shorter)
+                let truncated = peer_id.chars().take(8).collect::<String>();
+                let anon_id = format!("browser-{}", truncated);
+                (anon_id.clone(), format!("Browser ({})", truncated))
+            } else {
+                (peer_id.clone(), peer_id.clone())
+            };
+
+            // Calculate permanent SlotId from coordinate
+            let slot_id = SlotId::from_coordinate(slot);
+
+            let node = PeerNode {
+                id,
+                label,
+                slot_id: slot_id.to_hex(),
+                slot: slot.into(),
+                peer_type,
+                last_heartbeat: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+                capabilities: vec!["webrtc".to_string(), "dht".to_string(), "spore".to_string()],
+                online: true, // All peers with distributed DHT announcements are considered online
+                avg_neighbor_latency_ms: None,
+            };
+
+            nodes.push(node);
         }
     }
 

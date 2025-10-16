@@ -41,8 +41,19 @@ impl TestDHTNode {
     ) -> Self {
         let peer_id_bytes = Self::peer_id_to_bytes(&peer_id);
         let minimal_node = MinimalNode::new(slot, peer_id_bytes, config, 0);
-        // LazyNode constructor signature: new(slot, peer_id, config, dht_storage)
-        let lazy_node = LazyNode::new(slot, peer_id.clone(), config, dht_storage);
+
+        // Create DHT GET callback for LazyNode (queries local storage for tests)
+        let dht_storage_clone = dht_storage.clone();
+        let dht_get_fn = Arc::new(move |key: [u8; 32]| {
+            let storage = dht_storage_clone.clone();
+            Box::pin(async move {
+                let dht = storage.lock().await;
+                Ok(dht.get_raw(&key).map(|v| v.clone()))
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Option<Vec<u8>>>> + Send>>
+        });
+
+        // LazyNode constructor signature: new(slot, peer_id, config, dht_storage, dht_get_fn)
+        let lazy_node = LazyNode::new(slot, peer_id.clone(), config, dht_storage, dht_get_fn);
 
         Self {
             peer_id,

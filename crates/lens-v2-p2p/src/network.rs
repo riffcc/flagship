@@ -117,6 +117,30 @@ pub enum NetworkEvent {
 
     /// DHT bootstrap response from relay (complete DHT snapshot)
     DhtBootstrapResponse(DhtBootstrapResponse),
+
+    /// WebRTC SDP offer received (for establishing direct peer connections)
+    SdpOfferReceived { from_peer_id: PeerId, offer_sdp: String },
+
+    /// WebRTC SDP answer received (completing peer connection handshake)
+    SdpAnswerReceived { from_peer_id: PeerId, answer_sdp: String },
+
+    /// Slot ownership gossip received (epidemic replication of slot ownership)
+    SlotOwnershipGossip {
+        peer_id: PeerId,
+        slot: SlotCoordinate,
+        ownership_bytes: Vec<u8>,
+    },
+
+    /// Slot claim approved by relay (no conflicts detected)
+    SlotClaimAck {
+        slot: SlotCoordinate,
+    },
+
+    /// Slot claim rejected by relay (conflict detected)
+    SlotClaimNack {
+        conflicting_peer: String,
+        retry_suggestion: Option<SlotCoordinate>,
+    },
 }
 
 /// P2P Network manager
@@ -346,6 +370,99 @@ impl P2pNetwork {
                                     }
                                 }
                             }
+                            // Try to parse as sdp_offer (WebRTC signaling)
+                            else if referral["type"] == "sdp_offer" {
+                                if let (Some(from_peer_id), Some(offer_sdp)) = (
+                                    referral["from_peer_id"].as_str(),
+                                    referral["offer_sdp"].as_str(),
+                                ) {
+                                    info!("Received SDP offer from {} ({} bytes)", from_peer_id, offer_sdp.len());
+                                    let _ = event_tx.send(NetworkEvent::SdpOfferReceived {
+                                        from_peer_id: from_peer_id.to_string(),
+                                        offer_sdp: offer_sdp.to_string(),
+                                    });
+                                }
+                            }
+                            // Try to parse as sdp_answer (WebRTC signaling)
+                            else if referral["type"] == "sdp_answer" {
+                                if let (Some(from_peer_id), Some(answer_sdp)) = (
+                                    referral["from_peer_id"].as_str(),
+                                    referral["answer_sdp"].as_str(),
+                                ) {
+                                    info!("Received SDP answer from {} ({} bytes)", from_peer_id, answer_sdp.len());
+                                    let _ = event_tx.send(NetworkEvent::SdpAnswerReceived {
+                                        from_peer_id: from_peer_id.to_string(),
+                                        answer_sdp: answer_sdp.to_string(),
+                                    });
+                                }
+                            }
+                            // Try to parse as slot_ownership_gossip (epidemic replication)
+                            else if referral["type"] == "slot_ownership_gossip" {
+                                if let (Some(gossiped_peer_id), Some(slot_obj), Some(ownership_hex)) = (
+                                    referral["peer_id"].as_str(),
+                                    referral.get("slot"),
+                                    referral["ownership_bytes"].as_str(),
+                                ) {
+                                    if let (Some(x), Some(y), Some(z)) = (
+                                        slot_obj["x"].as_i64(),
+                                        slot_obj["y"].as_i64(),
+                                        slot_obj["z"].as_i64(),
+                                    ) {
+                                        let slot = SlotCoordinate::new(x as i32, y as i32, z as i32);
+
+                                        // Decode ownership bytes
+                                        if let Ok(ownership_bytes) = hex::decode(ownership_hex) {
+                                            info!("📨 Received slot ownership gossip: {} → ({}, {}, {})",
+                                                gossiped_peer_id, x, y, z);
+
+                                            let _ = event_tx.send(NetworkEvent::SlotOwnershipGossip {
+                                                peer_id: gossiped_peer_id.to_string(),
+                                                slot,
+                                                ownership_bytes,
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                            // Try to parse as slot_claim_ack (consensus approval)
+                            else if referral["type"] == "slot_claim_ack" {
+                                if let Some(slot_obj) = referral.get("slot") {
+                                    if let (Some(x), Some(y), Some(z)) = (
+                                        slot_obj["x"].as_i64(),
+                                        slot_obj["y"].as_i64(),
+                                        slot_obj["z"].as_i64(),
+                                    ) {
+                                        let slot = SlotCoordinate::new(x as i32, y as i32, z as i32);
+                                        info!("✅ Received slot claim ACK for ({}, {}, {})", x, y, z);
+
+                                        let _ = event_tx.send(NetworkEvent::SlotClaimAck { slot });
+                                    }
+                                }
+                            }
+                            // Try to parse as slot_claim_nack (consensus rejection)
+                            else if referral["type"] == "slot_claim_nack" {
+                                if let Some(conflicting_peer) = referral["conflicting_peer"].as_str() {
+                                    let retry_suggestion = referral.get("retry_suggestion")
+                                        .and_then(|s| {
+                                            if let (Some(x), Some(y), Some(z)) = (
+                                                s["x"].as_i64(),
+                                                s["y"].as_i64(),
+                                                s["z"].as_i64(),
+                                            ) {
+                                                Some(SlotCoordinate::new(x as i32, y as i32, z as i32))
+                                            } else {
+                                                None
+                                            }
+                                        });
+
+                                    info!("❌ Received slot claim NACK: conflict with {}", conflicting_peer);
+
+                                    let _ = event_tx.send(NetworkEvent::SlotClaimNack {
+                                        conflicting_peer: conflicting_peer.to_string(),
+                                        retry_suggestion,
+                                    });
+                                }
+                            }
                         }
 
                         // Try to parse as block response
@@ -512,6 +629,99 @@ impl P2pNetwork {
     /// Get list of all currently known peer IDs from peer referrals
     pub async fn get_peer_ids(&self) -> Vec<String> {
         self.peers.read().await.keys().cloned().collect()
+    }
+
+    /// Send SDP offer to target peer via relay (WebRTC signaling)
+    pub async fn send_sdp_offer(&self, target_peer_id: &str, offer_sdp: String) -> Result<()> {
+        // Get our peer ID
+        let our_peer_id = self.peer_id.read().await.clone()
+            .ok_or_else(|| P2pError::Network("Not connected to relay".to_string()))?;
+
+        info!("📤 Sending SDP offer to {} via relay ({} bytes)", target_peer_id, offer_sdp.len());
+
+        // Create SDP offer message
+        let offer_msg = serde_json::json!({
+            "type": "sdp_offer",
+            "from_peer_id": our_peer_id,
+            "to_peer_id": target_peer_id,
+            "offer_sdp": offer_sdp,
+        });
+
+        // Send via WebSocket relay
+        if let Some(tx) = self.ws_tx.read().await.as_ref() {
+            let json = serde_json::to_string(&offer_msg)
+                .map_err(|e| P2pError::Network(format!("Failed to serialize SDP offer: {}", e)))?;
+            tx.send(Message::Text(json))
+                .map_err(|e| P2pError::Network(format!("Failed to send SDP offer: {}", e)))?;
+            info!("✅ SDP offer sent to {} via relay", target_peer_id);
+        } else {
+            warn!("Cannot send SDP offer: not connected to relay");
+        }
+
+        Ok(())
+    }
+
+    /// Send SDP answer to target peer via relay (WebRTC signaling)
+    pub async fn send_sdp_answer(&self, target_peer_id: &str, answer_sdp: String) -> Result<()> {
+        // Get our peer ID
+        let our_peer_id = self.peer_id.read().await.clone()
+            .ok_or_else(|| P2pError::Network("Not connected to relay".to_string()))?;
+
+        info!("📤 Sending SDP answer to {} via relay ({} bytes)", target_peer_id, answer_sdp.len());
+
+        // Create SDP answer message
+        let answer_msg = serde_json::json!({
+            "type": "sdp_answer",
+            "from_peer_id": our_peer_id,
+            "to_peer_id": target_peer_id,
+            "answer_sdp": answer_sdp,
+        });
+
+        // Send via WebSocket relay
+        if let Some(tx) = self.ws_tx.read().await.as_ref() {
+            let json = serde_json::to_string(&answer_msg)
+                .map_err(|e| P2pError::Network(format!("Failed to serialize SDP answer: {}", e)))?;
+            tx.send(Message::Text(json))
+                .map_err(|e| P2pError::Network(format!("Failed to send SDP answer: {}", e)))?;
+            info!("✅ SDP answer sent to {} via relay", target_peer_id);
+        } else {
+            warn!("Cannot send SDP answer: not connected to relay");
+        }
+
+        Ok(())
+    }
+
+    /// Send slot claim request to relay for consensus validation
+    pub async fn send_slot_claim_request(&self, proposed_slot: SlotCoordinate) -> Result<()> {
+        // Get our peer ID
+        let our_peer_id = self.peer_id.read().await.clone()
+            .ok_or_else(|| P2pError::Network("Not connected to relay".to_string()))?;
+
+        info!("📤 Sending slot claim request for {:?} to relay", proposed_slot);
+
+        // Create slot claim request message
+        let claim_msg = serde_json::json!({
+            "type": "slot_claim_request",
+            "peer_id": our_peer_id,
+            "proposed_slot": proposed_slot,
+            "timestamp": std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        });
+
+        // Send via WebSocket relay
+        if let Some(tx) = self.ws_tx.read().await.as_ref() {
+            let json = serde_json::to_string(&claim_msg)
+                .map_err(|e| P2pError::Network(format!("Failed to serialize slot claim request: {}", e)))?;
+            tx.send(Message::Text(json))
+                .map_err(|e| P2pError::Network(format!("Failed to send slot claim request: {}", e)))?;
+            info!("✅ Slot claim request sent to relay for {:?}", proposed_slot);
+        } else {
+            warn!("Cannot send slot claim request: not connected to relay");
+        }
+
+        Ok(())
     }
 }
 

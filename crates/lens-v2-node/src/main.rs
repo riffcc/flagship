@@ -124,27 +124,21 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("🎯 Node Public Key: {}", hex::encode(public_key_bytes));
     tracing::info!("🎯 Peer ID (CIDv1 BLAKE3 of node public key): {}", my_peer_id);
 
-    // FIXED MESH: Use environment variables or default to 8×7×1 (56 slots for ~50 nodes)
-    // This ensures all nodes use the SAME mesh dimensions for consistent neighbor discovery!
-    let mesh_width = env::var("MESH_WIDTH")
-        .ok()
-        .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(8);
-    let mesh_height = env::var("MESH_HEIGHT")
-        .ok()
-        .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(7);
-    let mesh_depth = env::var("MESH_DEPTH")
-        .ok()
-        .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(1);
+    // FREE SLOT CLAIMING (no hash-based calculation!)
+    // Core principle: Nodes pick slots FREELY and announce via epidemic gossip
+    // Slots NEVER change when nodes join/leave (except voluntarily for latency)
+    //
+    // For initial startup:
+    // - First node picks origin (0,0,0)
+    // - Subsequent nodes query DHT for existing claims and pick first unclaimed spiral slot
+    // - Mesh dimensions = bounding box of all claimed slots (calculated by relay)
+    //
+    // TODO: Query DHT for existing slot claims and pick first unclaimed slot
+    // For now, all nodes start at origin and will discover actual assignments via DHT gossip
 
-    let mesh_config = citadel_core::topology::MeshConfig::new(mesh_width, mesh_height, mesh_depth);
-    let my_slot = peer_registry::peer_id_to_slot(&my_peer_id, &mesh_config);
+    let my_slot = citadel_core::topology::SlotCoordinate::new(0, 0, 0);
 
-    tracing::info!("🎯 My slot: {:?} in FIXED mesh {}×{}×{} ({} total slots)",
-        my_slot, mesh_config.width, mesh_config.height, mesh_config.depth,
-        mesh_config.width * mesh_config.height * mesh_config.depth);
+    tracing::info!("🎯 My initial slot: {:?} (will be updated after DHT sync)", my_slot);
 
     // Create P2P manager for sync status tracking
     let p2p_config = P2pConfig::default();
@@ -255,11 +249,16 @@ async fn main() -> anyhow::Result<()> {
     let relay_url = env::var("RELAY_URL")
         .unwrap_or_else(|_| format!("ws://localhost:{}/api/v1/relay/ws", port));
 
+    // Initial mesh config - minimal (1,1,1) for first node at origin
+    // Will expand dynamically via bounding box as other nodes announce slots
+    use citadel_core::topology::MeshConfig;
+    let initial_mesh_config = MeshConfig::new(1, 1, 1);
+
     let orchestrator = Arc::new(SyncOrchestrator::new(
         relay_url,
         my_peer_id.clone(),
         my_slot,
-        mesh_config,
+        initial_mesh_config, // Minimal mesh for first node, expands via bounding box
         p2p_manager.clone(),
         webrtc_manager.clone(),
         db.clone(),

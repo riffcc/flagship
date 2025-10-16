@@ -25,6 +25,12 @@ use tracing::{debug, info, warn};
 
 use crate::peer_registry::{get_neighbor_slots, slot_ownership_key, SlotOwnership};
 
+/// Callback function for DHT GET operations
+///
+/// This routes DHT GET requests via network (relay or WebRTC) instead of querying local storage.
+/// Returns Ok(Some(value)) if key found, Ok(None) if not found, Err if network error.
+type DhtGetFn = Arc<dyn Fn([u8; 32]) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<Vec<u8>>>> + Send>> + Send + Sync>;
+
 /// Cache entry for a neighbor
 #[derive(Debug, Clone)]
 struct CacheEntry {
@@ -55,6 +61,10 @@ pub struct LazyNode {
     /// Made pub(crate) so sync_orchestrator can populate DHT from PeerReferral events
     pub(crate) dht_storage: Arc<Mutex<crate::dht_state::DhtState>>,
 
+    /// DHT GET callback for network routing
+    /// Routes DHT GET requests via relay or WebRTC instead of querying local storage
+    dht_get_fn: DhtGetFn,
+
     /// Ephemeral neighbor cache (10s TTL)
     /// Vec of (direction, peer_id, cached_at) tuples
     neighbor_cache: Arc<RwLock<Vec<CacheEntry>>>,
@@ -71,11 +81,13 @@ impl LazyNode {
     /// * `my_peer_id` - Our peer ID
     /// * `mesh_config` - Mesh configuration
     /// * `dht_storage` - Shared DHT storage
+    /// * `dht_get_fn` - Callback for network DHT GET routing
     pub fn new(
         my_slot: SlotCoordinate,
         my_peer_id: String,
         mesh_config: MeshConfig,
         dht_storage: Arc<Mutex<crate::dht_state::DhtState>>,
+        dht_get_fn: DhtGetFn,
     ) -> Self {
         info!(
             "🔷 LazyNode created: peer={}, slot={:?}, mesh={}×{}×{}",
@@ -87,6 +99,7 @@ impl LazyNode {
             my_peer_id,
             mesh_config,
             dht_storage,
+            dht_get_fn,
             neighbor_cache: Arc::new(RwLock::new(Vec::new())),
             cache_ttl: Duration::from_secs(10), // 10s TTL (1 epoch)
         }
@@ -98,6 +111,7 @@ impl LazyNode {
         my_peer_id: String,
         mesh_config: MeshConfig,
         dht_storage: Arc<Mutex<crate::dht_state::DhtState>>,
+        dht_get_fn: DhtGetFn,
         cache_ttl: Duration,
     ) -> Self {
         info!(
@@ -110,6 +124,7 @@ impl LazyNode {
             my_peer_id,
             mesh_config,
             dht_storage,
+            dht_get_fn,
             neighbor_cache: Arc::new(RwLock::new(Vec::new())),
             cache_ttl,
         }
@@ -161,16 +176,21 @@ impl LazyNode {
             direction, neighbor_slot
         );
 
-        // 3. Query DHT: slot_ownership_key(neighbor_slot)
-        let ownership_key = slot_ownership_key(neighbor_slot);
-        let dht = self.dht_storage.lock().await;
+        // Event-driven heartbeat: Update BEFORE querying - proves we're active
+        // This MUST happen before the query so it updates even if neighbor is stale!
+        if let Err(e) = self.update_heartbeat().await {
+            warn!("Failed to update heartbeat before DHT read: {}", e);
+        }
 
-        let ownership_bytes = dht
-            .get_raw(&ownership_key)
+        // 3. Query DHT via network routing (NOT local storage!)
+        let ownership_key = slot_ownership_key(neighbor_slot);
+
+        let ownership_bytes = (self.dht_get_fn)(ownership_key)
+            .await?
             .ok_or_else(|| anyhow!("Neighbor slot {:?} not found in DHT", neighbor_slot))?;
 
-        // 4. Parse SlotOwnership and extract peer_id (ownership_bytes is &Vec<u8> from get_raw)
-        let ownership: SlotOwnership = serde_json::from_slice(ownership_bytes)
+        // 4. Parse SlotOwnership and extract peer_id
+        let ownership: SlotOwnership = serde_json::from_slice(&ownership_bytes)
             .map_err(|e| anyhow!("Failed to parse SlotOwnership: {}", e))?;
 
         // Skip stale peers
@@ -182,8 +202,6 @@ impl LazyNode {
         if ownership.peer_id == self.my_peer_id {
             return Err(anyhow!("Neighbor slot {:?} contains ourselves", neighbor_slot));
         }
-
-        drop(dht); // Release lock before updating cache
 
         // 5. Update ephemeral cache
         {
@@ -202,6 +220,13 @@ impl LazyNode {
             "🔷 DHT neighbor discovered: {:?} = {} at slot {:?}",
             direction, ownership.peer_id, neighbor_slot
         );
+
+        // Event-driven heartbeat: Every DHT read proves we're active
+        // This keeps our slot ownership fresh without timers
+        if let Err(e) = self.update_heartbeat().await {
+            // Log but don't fail the neighbor discovery if heartbeat update fails
+            warn!("Failed to update heartbeat after DHT read: {}", e);
+        }
 
         Ok(ownership.peer_id)
     }
@@ -368,17 +393,30 @@ impl LazyNode {
 mod tests {
     use super::*;
 
+    /// Helper: Create a DHT GET callback for tests (queries local storage)
+    fn create_test_dht_get_fn(dht_storage: Arc<Mutex<crate::dht_state::DhtState>>) -> DhtGetFn {
+        Arc::new(move |key: [u8; 32]| {
+            let storage = dht_storage.clone();
+            Box::pin(async move {
+                let dht = storage.lock().await;
+                Ok(dht.get_raw(&key).map(|v| v.clone()))
+            })
+        })
+    }
+
     #[tokio::test]
     async fn test_lazy_node_creation() {
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
         let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
+        let dht_get_fn = create_test_dht_get_fn(dht_storage.clone());
 
         let lazy_node = LazyNode::new(
             my_slot,
             "peer-123".to_string(),
             mesh_config,
             dht_storage,
+            dht_get_fn,
         );
 
         assert_eq!(lazy_node.my_peer_id(), "peer-123");
@@ -391,12 +429,14 @@ mod tests {
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
         let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
+        let dht_get_fn = create_test_dht_get_fn(dht_storage.clone());
 
         let lazy_node = LazyNode::new(
             my_slot,
             "peer-123".to_string(),
             mesh_config,
             dht_storage,
+            dht_get_fn,
         );
 
         // Empty DHT should return no neighbors
@@ -429,11 +469,13 @@ mod tests {
             }
         }
 
+        let dht_get_fn = create_test_dht_get_fn(dht_storage.clone());
         let lazy_node = LazyNode::new(
             my_slot,
             "peer-123".to_string(),
             mesh_config,
             dht_storage,
+            dht_get_fn,
         );
 
         // Should find 3 neighbors
@@ -449,12 +491,14 @@ mod tests {
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
         let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
+        let dht_get_fn = create_test_dht_get_fn(dht_storage.clone());
 
         let lazy_node = LazyNode::new(
             my_slot,
             "peer-123".to_string(),
             mesh_config,
             dht_storage.clone(),
+            dht_get_fn,
         );
 
         // Announce presence
@@ -476,12 +520,14 @@ mod tests {
         let mesh_config = MeshConfig::new(10, 10, 5);
         let my_slot = SlotCoordinate::new(5, 5, 2);
         let dht_storage = Arc::new(tokio::sync::Mutex::new(crate::dht_state::DhtState::new()));
+        let dht_get_fn = create_test_dht_get_fn(dht_storage.clone());
 
         let lazy_node = LazyNode::new(
             my_slot,
             "peer-123".to_string(),
             mesh_config,
             dht_storage.clone(),
+            dht_get_fn,
         );
 
         // Announce presence
@@ -543,11 +589,13 @@ mod tests {
             storage.insert_raw(key, value);
         }
 
+        let dht_get_fn = create_test_dht_get_fn(dht_storage.clone());
         let lazy_node = LazyNode::new(
             my_slot,
             "peer-123".to_string(),
             mesh_config,
             dht_storage,
+            dht_get_fn,
         );
 
         // Should skip stale neighbor
@@ -578,11 +626,13 @@ mod tests {
             storage.insert_raw(key, value);
         }
 
+        let dht_get_fn = create_test_dht_get_fn(dht_storage.clone());
         let lazy_node = LazyNode::new(
             my_slot,
             "peer-123".to_string(),
             mesh_config,
             dht_storage,
+            dht_get_fn,
         );
 
         // Should skip ourselves

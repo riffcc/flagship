@@ -1745,7 +1745,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
 name = "lens-v2-node"
-version = "0.8.45"
+version = "0.8.70"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1798,6 +1798,7 @@ dependencies = [
  "consensus-peerexc",
  "consensus-tgp",
  "futures",
+ "hex",
  "js-sys",
  "lens-v2-sdk",
  "serde",
