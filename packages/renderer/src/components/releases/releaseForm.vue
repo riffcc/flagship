@@ -23,7 +23,7 @@
       item-title="title"
       item-value="value"
     />
-    
+
     <!-- TV Show Fields -->
     <template v-if="isTVCategory">
       <v-autocomplete
@@ -48,7 +48,7 @@
           </v-list-item>
         </template>
       </v-autocomplete>
-      
+
       <v-row v-if="selectedSeriesId">
         <v-col cols="6">
           <v-text-field
@@ -69,7 +69,7 @@
         </v-col>
       </v-row>
     </template>
-    
+
     <v-text-field
       v-model="releaseItem.thumbnailCID"
       label="Thumbnail CID (Optional)"
@@ -160,9 +160,9 @@ import {cid} from 'is-ipfs';
 import {computed, onMounted, ref, watch} from 'vue';
 import type { ReleaseItem } from '/@/types';
 import type { ContentCategoryMetadataField, ReleaseData } from '@riffcc/lens-sdk';
-import { 
-  useAddReleaseMutation, 
-  useEditReleaseMutation, 
+import {
+  useAddReleaseMutation,
+  useEditReleaseMutation,
   useContentCategoriesQuery,
   useGetStructuresQuery,
   useAddStructureMutation,
@@ -303,14 +303,14 @@ const seriesItems = computed(() => {
     error: structuresQuery.error.value,
     dataLength: structuresQuery.data.value?.length
   });
-  
+
   if (!structuresQuery.data.value) {
     console.log('No structures data available');
     return [];
   }
-  
+
   console.log('All structures:', structuresQuery.data.value);
-  
+
   const series = structuresQuery.data.value
     .filter((s: any) => s.type === 'series')
     .map((s: any) => ({
@@ -339,7 +339,7 @@ const selectedContentCategory = computed(() => {
     });
     return null;
   }
-  
+
   const targetItem = contentCategories.value.find(item => item.id === releaseItem.value.categoryId);
   if (!targetItem || !targetItem.metadataSchema) {
     console.log('Advanced button disabled: no matching category or metadataSchema', {
@@ -348,7 +348,7 @@ const selectedContentCategory = computed(() => {
     });
     return null;
   }
-  
+
   // metadataSchema should already be parsed by the query hook
   // If it's still a string, parse it
   if (typeof targetItem.metadataSchema === 'string') {
@@ -360,7 +360,7 @@ const selectedContentCategory = computed(() => {
       return null;
     }
   }
-  
+
   return targetItem.metadataSchema;
 });
 
@@ -368,7 +368,7 @@ const handleChangeMetadataField = (fieldName: string, value: string | null) => {
   if (!releaseItem.value.metadata) {
     releaseItem.value.metadata = {};
   }
-  
+
   // Only update fields that are defined in the schema
   if (selectedContentCategory.value && fieldName in selectedContentCategory.value) {
     releaseItem.value.metadata = {
@@ -385,14 +385,14 @@ onMounted(() => {
       ...props.initialData,
       metadata: props.initialData.metadata || {},
     };
-    
+
     // If editing a TV episode, initialize the TV-specific fields
     if (props.initialData.metadata?.seriesId) {
       selectedSeriesId.value = props.initialData.metadata.seriesId as string;
       seasonNumber.value = (props.initialData.metadata.seasonNumber as number) || 1;
       episodeNumber.value = (props.initialData.metadata.episodeNumber as number) || 1;
       selectedSeasonId.value = (props.initialData.metadata.seasonId as string) || '';
-      
+
       console.log('Initialized TV episode fields:', {
         seriesId: selectedSeriesId.value,
         seasonNumber: seasonNumber.value,
@@ -434,9 +434,9 @@ const readyToSave = computed(() => {
 // Create a new TV series
 const createNewSeries = async () => {
   if (!seriesSearchText.value) return;
-  
+
   console.log('Creating new series:', seriesSearchText.value);
-  
+
   try {
     const response = await addStructureMutation.mutateAsync({
       name: seriesSearchText.value,
@@ -444,9 +444,9 @@ const createNewSeries = async () => {
       description: '',
       itemIds: [],
     });
-    
+
     console.log('Series creation response:', response);
-    
+
     if (response.success) {
       // The response might have the ID in different fields
       const newSeriesId = response.id || response.hash;
@@ -455,7 +455,7 @@ const createNewSeries = async () => {
         console.log('Series created with ID:', newSeriesId);
         // Refetch structures to include the new series
         await structuresQuery.refetch();
-        
+
         // Clear the search text
         seriesSearchText.value = '';
       } else {
@@ -473,15 +473,15 @@ const createNewSeries = async () => {
 // Handle season change - check if we need to create a new season structure
 const handleSeasonChange = async () => {
   if (!selectedSeriesId.value || !seasonNumber.value) return;
-  
+
   console.log('Handling season change:', { seriesId: selectedSeriesId.value, seasonNumber: seasonNumber.value });
-  
+
   // Check if season structure already exists
   const seasonName = `Season ${seasonNumber.value}`;
   const existingSeason = structuresQuery.data.value?.find(
     (s: any) => {
       if (s.type !== 'season' || s.parentId !== selectedSeriesId.value) return false;
-      
+
       // Check by metadata seasonNumber first, then by name
       if (s.metadata) {
         try {
@@ -491,11 +491,11 @@ const handleSeasonChange = async () => {
           // Invalid metadata, fall through to name check
         }
       }
-      
+
       return s.name === seasonName;
     }
   );
-  
+
   if (existingSeason) {
     console.log('Found existing season:', existingSeason);
     selectedSeasonId.value = existingSeason.id;
@@ -511,9 +511,9 @@ const handleSeasonChange = async () => {
         itemIds: [],
         metadata: JSON.stringify({ seasonNumber: seasonNumber.value }),
       });
-      
+
       console.log('Season creation response:', response);
-      
+
       if (response.success) {
         const newSeasonId = response.id || response.hash;
         if (newSeasonId) {
@@ -536,7 +536,7 @@ const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
 
   const data = readyToSave.value;
-  
+
   // If this is a TV episode, ensure we have the proper structure hierarchy
   if (isTVCategory.value && selectedSeriesId.value) {
     console.log('Processing TV episode submission:', {
@@ -544,17 +544,17 @@ const handleOnSubmit = async () => {
       seasonNumber: seasonNumber.value,
       episodeNumber: episodeNumber.value
     });
-    
+
     // Ensure season structure exists
     await handleSeasonChange();
-    
+
     // Add episode metadata
     if (!data.metadata) data.metadata = {};
     data.metadata.seasonNumber = seasonNumber.value;
     data.metadata.episodeNumber = episodeNumber.value;
     data.metadata.seriesId = selectedSeriesId.value;
     data.metadata.seasonId = selectedSeasonId.value;
-    
+
     console.log('Episode metadata set:', data.metadata);
   }
 
@@ -569,7 +569,7 @@ const handleOnSubmit = async () => {
       siteAddress: data.siteAddress!,
       postedBy: data.postedBy as any,
     });
-    
+
     // If TV episode and successful, add to season's itemIds
     // Use the original episode ID (data.id) not response.id since we're editing
     if (isTVCategory.value && selectedSeasonId.value && response.success) {
@@ -583,7 +583,7 @@ const handleOnSubmit = async () => {
       thumbnailCID: data.thumbnailCID,
       metadata: data.metadata,
     });
-    
+
     // If TV episode and successful, add to season's itemIds
     if (isTVCategory.value && selectedSeasonId.value && response.success) {
       await updateSeasonWithEpisode(response.id!);
@@ -594,11 +594,11 @@ const handleOnSubmit = async () => {
 // Add episode to season's itemIds
 const updateSeasonWithEpisode = async (episodeId: string) => {
   if (!selectedSeasonId.value) return;
-  
+
   // Fetch current season structure
   const seasons = await structuresQuery.refetch();
   const season = seasons.data.value?.find((s: any) => s.id === selectedSeasonId.value);
-  
+
   if (season) {
     // Check if episode is already in itemIds
     const currentItemIds = season.itemIds || [];
@@ -632,7 +632,7 @@ const fieldLabelMap: Record<string, string> = {
   fileFormat: 'File Format',
   bitrate: 'Bitrate',
   mediaFormat: 'Media Format',
-  
+
   // Video fields
   title: 'Title',
   duration: 'Duration',
@@ -641,12 +641,12 @@ const fieldLabelMap: Record<string, string> = {
   uploader: 'Uploader',
   uploadDate: 'Upload Date',
   sourceUrl: 'Source URL',
-  
+
   // Movie fields
   TMDBID: 'TMDB ID',
   IMDBID: 'IMDB ID',
   classification: 'Classification',
-  
+
   // TV Show fields
   seasons: 'Seasons',
   totalEpisodes: 'Total Episodes',
@@ -654,7 +654,7 @@ const fieldLabelMap: Record<string, string> = {
   status: 'Status',
   network: 'Network',
   averageEpisodeDuration: 'Average Episode Duration',
-  
+
   // Common field
   cover: 'Cover Image CID',
   author: 'Author',

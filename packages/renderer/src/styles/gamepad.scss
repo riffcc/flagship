@@ -20,7 +20,7 @@
 // Featured slider adjustments - preserve background images
 .v-carousel {
   background: #000000 !important;
-  
+
   // Allow carousel items to show their background images
 }
 
@@ -30,7 +30,7 @@
   border: none !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  
+
   // Create a subtle background frame around the image
   &::before {
     content: '';
@@ -44,26 +44,26 @@
     z-index: -1;
     transition: all 0.3s ease;
   }
-  
+
   // Keep images clean
   .v-img {
     background: #000000 !important;
     border-radius: 4px;
     overflow: hidden;
   }
-  
+
   &:hover {
     transform: scale(1.02);
-    
+
     &::before {
       background: rgba(255, 255, 255, 0.04);
     }
   }
-  
+
   &.gamepad-focused {
     transform: scale(1.05);
     z-index: 10;
-    
+
     &::before {
       background: rgba(138, 43, 226, 0.1);
       top: -6px;
@@ -78,7 +78,7 @@
 .v-btn {
   &:not(.v-btn--variant-elevated) {
     background: rgba(255, 255, 255, 0.05) !important;
-    
+
     &:hover {
       background: rgba(255, 255, 255, 0.1) !important;
     }
@@ -117,7 +117,7 @@ html {
 
 .gamepad-focused,
 *:focus-visible:not(.nav-tab) {
-  box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.8), 
+  box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.8),
               0 0 20px rgba(138, 43, 226, 0.5) !important;
   outline: none !important;
   border-radius: 4px;

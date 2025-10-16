@@ -126,10 +126,10 @@ const focusFirstMenuItem = () => {
 // Handle gamepad navigation within menu
 const handleMenuNavigation = () => {
   if (!show.value) return;
-  
+
   const items = document.querySelectorAll('.start-menu-card .v-list-item');
   if (items.length === 0) return;
-  
+
   // D-pad navigation
   if (gamepadState.value.buttons.down) {
     selectedIndex.value = Math.min(selectedIndex.value + 1, items.length - 1);
@@ -138,12 +138,12 @@ const handleMenuNavigation = () => {
     selectedIndex.value = Math.max(selectedIndex.value - 1, 0);
     (items[selectedIndex.value] as HTMLElement).focus();
   }
-  
+
   // A button to select
   if (gamepadState.value.buttons.a) {
     (items[selectedIndex.value] as HTMLElement).click();
   }
-  
+
   // B button to close
   if (gamepadState.value.buttons.b) {
     show.value = false;
@@ -157,7 +157,7 @@ onMounted(() => {
       handleMenuNavigation();
     }
   }, 100);
-  
+
   onUnmounted(() => {
     clearInterval(interval);
   });

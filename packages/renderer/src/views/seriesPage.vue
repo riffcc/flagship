@@ -59,10 +59,10 @@
             </template>
           </v-img>
         </v-col>
-        
+
         <v-col cols="12" md="9">
           <h1 class="text-h3 text-sm-h2 font-weight-bold mb-2">{{ series.name }}</h1>
-          
+
           <div class="d-flex align-center ga-4 mb-4">
             <v-chip size="small" color="primary">
               {{ totalSeasons }} {{ totalSeasons === 1 ? 'Season' : 'Seasons' }}
@@ -112,7 +112,7 @@
         <h2 class="text-h5 font-weight-bold mb-4">
           {{ selectedSeason?.name || 'Episodes' }}
         </h2>
-        
+
         <v-row>
           <v-col
             v-for="episode in currentSeasonEpisodes"
@@ -141,7 +141,7 @@
                   </v-sheet>
                 </template>
               </v-img>
-              
+
               <v-card-text>
                 <p class="text-caption text-grey mb-1">
                   Episode {{ episode.metadata?.episodeNumber || '?' }}
@@ -278,18 +278,18 @@ const currentSeasonEpisodes = computed<ReleaseItem[]>(() => {
 // Get first episode for play button
 const firstEpisode = computed(() => {
   if (episodes.value.length === 0) return null;
-  
+
   // Sort all episodes and return the first
   const sorted = [...episodes.value].sort((a: ReleaseItem, b: ReleaseItem) => {
     const aSeason = a.metadata?.seasonNumber || 1;
     const bSeason = b.metadata?.seasonNumber || 1;
     const aEpisode = a.metadata?.episodeNumber || 0;
     const bEpisode = b.metadata?.episodeNumber || 0;
-    
+
     if (aSeason !== bSeason) return aSeason - bSeason;
     return aEpisode - bEpisode;
   });
-  
+
   return sorted[0];
 });
 </script>

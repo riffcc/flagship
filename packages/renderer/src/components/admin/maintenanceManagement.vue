@@ -332,39 +332,39 @@ const deleteAllData = async () => {
 // Helper function to map category slug to ID
 const getCategoryIdFromSlug = (categorySlug: string): string => {
   if (!contentCategories.value) return categorySlug;
-  
+
   // First check if it's already a valid category ID
   const existingById = contentCategories.value.find(c => c.id === categorySlug);
   if (existingById) return categorySlug;
-  
+
   // Normalize the input slug
   const normalizedInput = categorySlug.toLowerCase().trim();
-  
+
   // Try exact match with category slugs
-  const exactMatch = contentCategories.value.find(c => 
+  const exactMatch = contentCategories.value.find(c =>
     c.categoryId?.toLowerCase() === normalizedInput
   );
   if (exactMatch) return exactMatch.id;
-  
+
   // Try matching by adding/removing 's' for plural/singular
   const withS = normalizedInput.endsWith('s') ? normalizedInput : normalizedInput + 's';
   const withoutS = normalizedInput.endsWith('s') ? normalizedInput.slice(0, -1) : normalizedInput;
-  
-  const pluralMatch = contentCategories.value.find(c => 
+
+  const pluralMatch = contentCategories.value.find(c =>
     c.categoryId?.toLowerCase() === withS || c.categoryId?.toLowerCase() === withoutS
   );
   if (pluralMatch) return pluralMatch.id;
-  
+
   // Try matching with spaces converted to hyphens and vice versa
   const withHyphens = normalizedInput.replace(/\s+/g, '-');
   const withSpaces = normalizedInput.replace(/-/g, ' ');
-  
-  const formattedMatch = contentCategories.value.find(c => 
-    c.categoryId?.toLowerCase() === withHyphens || 
+
+  const formattedMatch = contentCategories.value.find(c =>
+    c.categoryId?.toLowerCase() === withHyphens ||
     c.categoryId?.toLowerCase() === withSpaces
   );
   if (formattedMatch) return formattedMatch.id;
-  
+
   // If nothing matches, return the original (will likely fail, but preserves the error)
   return categorySlug;
 };
@@ -442,23 +442,23 @@ const deleteStructureMutation = useDeleteStructureMutation();
 const cleanupEmptyStructures = async () => {
   isCleaningUp.value = true;
   cleanupResults.value = null;
-  
+
   try {
     if (!structures.value || !releases.value) {
       cleanupResults.value = { message: 'No structures or releases found', error: true };
       return;
     }
-    
+
     let deletedCount = 0;
     const errors: string[] = [];
-    
+
     // Find empty series (series with no episodes)
     const tvSeries = structures.value.filter((s: any) => s.type === 'series');
     for (const series of tvSeries) {
-      const hasEpisodes = releases.value.some((r: any) => 
+      const hasEpisodes = releases.value.some((r: any) =>
         r.metadata?.seriesId === series.id
       );
-      
+
       if (!hasEpisodes) {
         try {
           await deleteStructureMutation.mutateAsync(series.id);
@@ -469,15 +469,15 @@ const cleanupEmptyStructures = async () => {
         }
       }
     }
-    
+
     // Find empty seasons (seasons with no episodes)
     const seasons = structures.value.filter((s: any) => s.type === 'season');
     for (const season of seasons) {
-      const hasEpisodes = releases.value.some((r: any) => 
+      const hasEpisodes = releases.value.some((r: any) =>
         r.metadata?.seriesId === season.parentId &&
         r.metadata?.seasonNumber === season.metadata?.seasonNumber
       );
-      
+
       if (!hasEpisodes) {
         try {
           await deleteStructureMutation.mutateAsync(season.id);
@@ -488,14 +488,14 @@ const cleanupEmptyStructures = async () => {
         }
       }
     }
-    
+
     // Find empty artists (artists with no releases)
     const artists = structures.value.filter((s: any) => s.type === 'artist');
     for (const artist of artists) {
-      const hasReleases = releases.value.some((r: any) => 
+      const hasReleases = releases.value.some((r: any) =>
         r.metadata?.artistId === artist.id || r.metadata?.structureId === artist.id
       );
-      
+
       if (!hasReleases) {
         try {
           await deleteStructureMutation.mutateAsync(artist.id);
@@ -506,14 +506,14 @@ const cleanupEmptyStructures = async () => {
         }
       }
     }
-    
+
     // Find empty albums (albums with no tracks)
     const albums = structures.value.filter((s: any) => s.type === 'album');
     for (const album of albums) {
-      const hasTracks = releases.value.some((r: any) => 
+      const hasTracks = releases.value.some((r: any) =>
         r.metadata?.albumId === album.id || r.metadata?.structureId === album.id
       );
-      
+
       if (!hasTracks) {
         try {
           await deleteStructureMutation.mutateAsync(album.id);
@@ -524,16 +524,16 @@ const cleanupEmptyStructures = async () => {
         }
       }
     }
-    
+
     if (errors.length > 0) {
-      cleanupResults.value = { 
-        message: `Deleted ${deletedCount} empty structures. Errors: ${errors.join(', ')}`, 
-        error: true 
+      cleanupResults.value = {
+        message: `Deleted ${deletedCount} empty structures. Errors: ${errors.join(', ')}`,
+        error: true
       };
     } else {
-      cleanupResults.value = { 
-        message: `Successfully deleted ${deletedCount} empty structures`, 
-        error: false 
+      cleanupResults.value = {
+        message: `Successfully deleted ${deletedCount} empty structures`,
+        error: false
       };
     }
   } catch (error) {

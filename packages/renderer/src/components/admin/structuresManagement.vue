@@ -34,7 +34,7 @@
         <h3>Manage Artists</h3>
       </v-list-item>
       <v-divider class="mt-2 mb-4"></v-divider>
-      
+
       <!-- Breadcrumb Navigation -->
       <v-breadcrumbs v-if="breadcrumbs.length > 0" :items="breadcrumbs" class="pa-0 mb-4">
         <template #divider>
@@ -50,7 +50,7 @@
           </v-btn>
         </template>
       </v-breadcrumbs>
-      
+
       <!-- Loading state -->
       <v-progress-linear
         v-if="isLoading"
@@ -58,7 +58,7 @@
         color="primary"
         class="mt-4"
       ></v-progress-linear>
-      
+
       <!-- Artists View -->
       <div v-else-if="currentView === 'categories'">
         <v-row>
@@ -76,7 +76,7 @@
               </v-card-text>
             </v-card>
           </v-col>
-          
+
           <!-- Tags Category -->
           <v-col cols="12" md="6">
             <v-card @click="navigateToCategory('tags')">
@@ -91,7 +91,7 @@
               </v-card-text>
             </v-card>
           </v-col>
-          
+
           <!-- Collections Category -->
           <v-col cols="12" md="6">
             <v-card @click="navigateToCategory('collections')">
@@ -108,7 +108,7 @@
           </v-col>
         </v-row>
       </div>
-      
+
       <!-- TV Shows List View -->
       <div v-else-if="currentView === 'tv-list'">
         <div class="d-flex align-center mb-4">
@@ -121,7 +121,7 @@
             All Episodes
           </v-btn>
         </div>
-        
+
         <v-list v-if="tvSeries.length > 0" lines="two">
           <v-list-item
             v-for="series in tvSeries"
@@ -140,7 +140,7 @@
             </template>
             <v-list-item-title>{{ series.name }}</v-list-item-title>
             <v-list-item-subtitle>
-              {{ formatSeasonCount(getSeriesSeasonCount(series.id)) }} • 
+              {{ formatSeasonCount(getSeriesSeasonCount(series.id)) }} •
               {{ formatEpisodeCount(getSeriesEpisodeCount(series.id)) }}
             </v-list-item-subtitle>
             <template #append>
@@ -165,14 +165,14 @@
           No TV series yet. Series will appear automatically when you upload TV episodes with series information.
         </v-alert>
       </div>
-      
+
       <!-- Series Detail View (Seasons) -->
       <div v-else-if="currentView === 'series-detail'">
         <div class="d-flex align-center mb-4">
           <h4>{{ currentSeries?.name }}</h4>
           <v-spacer></v-spacer>
         </div>
-        
+
         <!-- Seasons List -->
         <h5 class="mb-2">Seasons</h5>
         <template v-if="currentSeasons.length > 0">
@@ -222,7 +222,7 @@
             No seasons found. Seasons will be automatically created when you add or edit episodes with season numbers.
           </v-alert>
         </template>
-        
+
         <!-- Episodes without seasons -->
         <template v-if="orphanEpisodes.length > 0">
           <h5 class="mt-4 mb-2">Uncategorized Episodes</h5>
@@ -250,14 +250,14 @@
           </v-list>
         </template>
       </div>
-      
+
       <!-- Season Detail View (Episodes) -->
       <div v-else-if="currentView === 'season-detail'">
         <div class="d-flex align-center mb-4">
           <h4>{{ currentSeason?.name || `Season ${currentSeason?.metadata?.seasonNumber}` }}</h4>
           <v-spacer></v-spacer>
         </div>
-        
+
         <v-list lines="two">
           <v-list-item
             v-for="episode in currentEpisodes"
@@ -290,7 +290,7 @@
           </v-list-item>
         </v-list>
       </div>
-      
+
       <!-- Music/Artists List View -->
       <div v-else-if="currentView === 'music-list'">
         <div class="d-flex align-center mb-4">
@@ -311,7 +311,7 @@
             All Releases
           </v-btn>
         </div>
-        
+
         <v-list lines="two">
           <v-list-item
             v-for="artist in artists"
@@ -330,7 +330,7 @@
             </template>
             <v-list-item-title>{{ artist.name }}</v-list-item-title>
             <v-list-item-subtitle>
-              {{ artist.metadata?.genres?.join(', ') || 'No genres' }} • 
+              {{ artist.metadata?.genres?.join(', ') || 'No genres' }} •
               {{ getArtistReleaseCount(artist.id) }} Releases
             </v-list-item-subtitle>
             <template #append>
@@ -352,14 +352,14 @@
           </v-list-item>
         </v-list>
       </div>
-      
+
       <!-- Artist Detail View -->
       <div v-else-if="currentView === 'artist-detail'">
         <div class="d-flex align-center mb-4">
           <h4>{{ currentArtist?.name }}</h4>
           <v-spacer></v-spacer>
         </div>
-        
+
         <v-list lines="two">
           <v-list-item
             v-for="release in currentArtistReleases"
@@ -392,7 +392,7 @@
           </v-list-item>
         </v-list>
       </div>
-      
+
       <!-- Tags List View -->
       <div v-else-if="currentView === 'tags-list'">
         <div class="d-flex align-center mb-4">
@@ -406,7 +406,7 @@
             New Tag
           </v-btn>
         </div>
-        
+
         <v-chip-group>
           <v-chip
             v-for="tag in tags"
@@ -420,7 +420,7 @@
           </v-chip>
         </v-chip-group>
       </div>
-      
+
       <!-- Collections List View -->
       <div v-else-if="currentView === 'collections-list'">
         <div class="d-flex align-center mb-4">
@@ -434,7 +434,7 @@
             New Collection
           </v-btn>
         </div>
-        
+
         <v-list lines="two">
           <v-list-item
             v-for="collection in collections"
@@ -453,7 +453,7 @@
             </template>
             <v-list-item-title>{{ collection.name }}</v-list-item-title>
             <v-list-item-subtitle>
-              {{ collection.metadata?.collectionType || 'Custom' }} • 
+              {{ collection.metadata?.collectionType || 'Custom' }} •
               {{ collection.itemIds?.length || 0 }} items
             </v-list-item-subtitle>
             <template #append>
@@ -475,14 +475,14 @@
           </v-list-item>
         </v-list>
       </div>
-      
+
       <!-- All Episodes View -->
       <div v-else-if="currentView === 'all-episodes'">
         <div class="d-flex align-center mb-4">
           <h4>All TV Episodes</h4>
           <v-spacer></v-spacer>
         </div>
-        
+
         <v-data-table
           :headers="episodeTableHeaders"
           :items="allTVEpisodes"
@@ -520,14 +520,14 @@
           </template>
         </v-data-table>
       </div>
-      
+
       <!-- All Music Releases View -->
       <div v-else-if="currentView === 'all-music'">
         <div class="d-flex align-center mb-4">
           <h4>All Music Releases</h4>
           <v-spacer></v-spacer>
         </div>
-        
+
         <v-data-table
           :headers="musicTableHeaders"
           :items="allMusicReleases"
@@ -564,7 +564,7 @@
       </div>
     </v-sheet>
   </v-container>
-  
+
   <!-- Edit dialog -->
   <v-dialog v-model="editStructureDialog" max-width="600px">
     <v-card class="py-3">
@@ -599,7 +599,7 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
-  
+
   <!-- Delete confirmation -->
   <confirmation-dialog
     message="Are you sure you want to delete this structure?"
@@ -607,7 +607,7 @@
     @close="() => {confirmDeleteDialog = false}"
     @confirm="confirmDelete"
   ></confirmation-dialog>
-  
+
   <!-- Snackbar -->
   <v-snackbar
     v-model="showSnackbar"
@@ -678,7 +678,7 @@ const allSeasons = computed(() => {
 // Store references to empty structures for manual cleanup
 const emptyStructures = computed(() => {
   if (!releases.value || !structures.value || !contentCategories.value) return { series: [], seasons: [] };
-  
+
   // Get all TV show category IDs (including federated)
   const tvCategoryIds = new Set<string>();
   contentCategories.value.forEach(cat => {
@@ -689,23 +689,23 @@ const emptyStructures = computed(() => {
       }
     }
   });
-  
+
   // Find empty seasons (seasons with no episodes)
   const emptySeasons = allSeasons.value.filter(season => {
-    const episodeCount = releases.value?.filter((r: any) => 
-      tvCategoryIds.has(r.categoryId) && 
+    const episodeCount = releases.value?.filter((r: any) =>
+      tvCategoryIds.has(r.categoryId) &&
       r.metadata?.seriesId === season.parentId &&
       r.metadata?.seasonNumber === season.metadata?.seasonNumber
     ).length || 0;
-    
+
     return episodeCount === 0;
   });
-  
+
   // Find empty series (series with no episodes)
   const emptySeries = tvSeries.value.filter(series => {
     return getSeriesEpisodeCount(series.id) === 0;
   });
-  
+
   return {
     series: emptySeries,
     seasons: emptySeasons
@@ -731,8 +731,8 @@ const currentSeasons = computed(() => {
   if (!structures.value || !currentSeries.value) return [];
   // Show all seasons for this series
   return structures.value
-    .filter((s: any) => 
-      s.type === 'season' && 
+    .filter((s: any) =>
+      s.type === 'season' &&
       s.parentId === currentSeries.value.id
     )
     .map((s: any) => {
@@ -753,7 +753,7 @@ const currentSeasons = computed(() => {
 
 const currentEpisodes = computed(() => {
   if (!releases.value || !currentSeason.value) return [];
-  
+
   // Get all TV category hashes for federation support
   const tvCategoryIds = new Set<string>();
   contentCategories.value?.forEach(cat => {
@@ -764,7 +764,7 @@ const currentEpisodes = computed(() => {
       }
     }
   });
-  
+
   // Get the season number from metadata (handle both parsed and string)
   let seasonNumber = currentSeason.value?.metadata?.seasonNumber;
   if (seasonNumber === undefined && typeof currentSeason.value?.metadata === 'string') {
@@ -775,17 +775,17 @@ const currentEpisodes = computed(() => {
       console.error('Failed to parse season metadata:', e);
     }
   }
-  
+
   console.log('Looking for episodes with:', {
     seriesId: currentSeries.value?.id,
     seasonNumber,
     categoryIds: Array.from(tvCategoryIds)
   });
-  
+
   // Episodes that belong to this season
   const episodes = releases.value
     .filter((r: any) => {
-      const matches = tvCategoryIds.has(r.categoryId) && 
+      const matches = tvCategoryIds.has(r.categoryId) &&
         r.metadata?.seriesId === currentSeries.value?.id &&
         r.metadata?.seasonNumber === seasonNumber;
       if (r.metadata?.seriesId === currentSeries.value?.id) {
@@ -800,14 +800,14 @@ const currentEpisodes = computed(() => {
       return matches;
     })
     .sort((a: any, b: any) => (a.metadata?.episodeNumber || 0) - (b.metadata?.episodeNumber || 0));
-    
+
   console.log('Found episodes:', episodes.length);
   return episodes;
 });
 
 const orphanEpisodes = computed(() => {
   if (!releases.value || !currentSeries.value) return [];
-  
+
   // Get all TV category hashes for federation support
   const tvCategoryIds = new Set<string>();
   contentCategories.value?.forEach(cat => {
@@ -818,11 +818,11 @@ const orphanEpisodes = computed(() => {
       }
     }
   });
-  
+
   // Episodes that belong to this series but have no season
   return releases.value
-    .filter((r: any) => 
-      tvCategoryIds.has(r.categoryId) && 
+    .filter((r: any) =>
+      tvCategoryIds.has(r.categoryId) &&
       r.metadata?.seriesId === currentSeries.value.id &&
       !r.metadata?.seasonNumber
     );
@@ -831,15 +831,15 @@ const orphanEpisodes = computed(() => {
 const currentArtistReleases = computed(() => {
   if (!releases.value || !currentArtist.value) return [];
   return releases.value
-    .filter((r: any) => 
-      r.categorySlug === 'music' && 
+    .filter((r: any) =>
+      r.categorySlug === 'music' &&
       r.metadata?.artistId === currentArtist.value.id
     );
 });
 
 const allTVEpisodes = computed(() => {
   if (!releases.value || !contentCategories.value) return [];
-  
+
   // Get all TV show category IDs (including federated)
   const tvCategoryIds = new Set<string>();
   contentCategories.value.forEach(cat => {
@@ -850,14 +850,14 @@ const allTVEpisodes = computed(() => {
       }
     }
   });
-  
+
   return releases.value
     .filter((r: any) => tvCategoryIds.has(r.categoryId))
     .map((episode: any) => {
       // Find the series structure to get the name
       const seriesId = episode.metadata?.seriesId;
       const series = seriesId ? structures.value?.find((s: any) => s.id === seriesId && s.type === 'series') : null;
-      
+
       // Enrich the episode with series name
       return {
         ...episode,
@@ -871,7 +871,7 @@ const allTVEpisodes = computed(() => {
 
 const allMusicReleases = computed(() => {
   if (!releases.value || !contentCategories.value) return [];
-  
+
   // Get all music category IDs (including federated)
   const musicCategoryIds = new Set<string>();
   contentCategories.value.forEach(cat => {
@@ -882,7 +882,7 @@ const allMusicReleases = computed(() => {
       }
     }
   });
-  
+
   return releases.value.filter((r: any) => musicCategoryIds.has(r.categoryId));
 });
 
@@ -895,50 +895,50 @@ const collectionCount = computed(() => collections.value.length);
 // Breadcrumbs
 const breadcrumbs = computed(() => {
   const items = [];
-  
+
   if (currentView.value !== 'categories') {
     items.push({ title: 'Categories', value: 'categories' });
   }
-  
+
   if (currentView.value === 'tv-list' || currentView.value === 'series-detail' || currentView.value === 'season-detail' || currentView.value === 'all-episodes') {
     items.push({ title: 'TV Shows', value: 'tv-list' });
   }
-  
+
   if (currentView.value === 'series-detail' || currentView.value === 'season-detail') {
     items.push({ title: currentSeries.value?.name || 'Series', value: 'series-detail' });
   }
-  
+
   if (currentView.value === 'season-detail') {
-    items.push({ 
-      title: currentSeason.value?.name || `Season ${currentSeason.value?.metadata?.seasonNumber}`, 
-      value: 'season-detail' 
+    items.push({
+      title: currentSeason.value?.name || `Season ${currentSeason.value?.metadata?.seasonNumber}`,
+      value: 'season-detail'
     });
   }
-  
+
   if (currentView.value === 'music-list' || currentView.value === 'artist-detail' || currentView.value === 'all-music') {
     items.push({ title: 'Music', value: 'music-list' });
   }
-  
+
   if (currentView.value === 'artist-detail') {
     items.push({ title: currentArtist.value?.name || 'Artist', value: 'artist-detail' });
   }
-  
+
   if (currentView.value === 'tags-list') {
     items.push({ title: 'Tags', value: 'tags-list' });
   }
-  
+
   if (currentView.value === 'collections-list') {
     items.push({ title: 'Collections', value: 'collections-list' });
   }
-  
+
   if (currentView.value === 'all-episodes') {
     items.push({ title: 'All Episodes', value: 'all-episodes' });
   }
-  
+
   if (currentView.value === 'all-music') {
     items.push({ title: 'All Releases', value: 'all-music' });
   }
-  
+
   return items;
 });
 
@@ -961,7 +961,7 @@ const musicTableHeaders = [
 // Helper functions
 function getSeriesEpisodeCount(seriesId: string): number {
   if (!releases.value || !contentCategories.value) return 0;
-  
+
   // Get all TV show category IDs (including federated)
   const tvCategoryIds = new Set<string>();
   contentCategories.value.forEach(cat => {
@@ -972,17 +972,17 @@ function getSeriesEpisodeCount(seriesId: string): number {
       }
     }
   });
-  
+
   // Count episodes that belong to this series
-  return releases.value.filter((r: any) => 
-    tvCategoryIds.has(r.categoryId) && 
+  return releases.value.filter((r: any) =>
+    tvCategoryIds.has(r.categoryId) &&
     r.metadata?.seriesId === seriesId
   ).length;
 }
 
 function getSeriesSeasonCount(seriesId: string): number {
   if (!releases.value || !contentCategories.value) return 0;
-  
+
   // Get all TV show category IDs (including federated)
   const tvCategoryIds = new Set<string>();
   contentCategories.value.forEach(cat => {
@@ -993,18 +993,18 @@ function getSeriesSeasonCount(seriesId: string): number {
       }
     }
   });
-  
+
   // Get unique season numbers from episodes of this series
   const seasonNumbers = new Set(
     releases.value
-      .filter((r: any) => 
-        tvCategoryIds.has(r.categoryId) && 
-        r.metadata?.seriesId === seriesId && 
+      .filter((r: any) =>
+        tvCategoryIds.has(r.categoryId) &&
+        r.metadata?.seriesId === seriesId &&
         r.metadata?.seasonNumber !== undefined
       )
       .map((r: any) => r.metadata.seasonNumber)
   );
-  
+
   return seasonNumbers.size;
 }
 
@@ -1018,7 +1018,7 @@ function formatEpisodeCount(count: number): string {
 
 function getSeasonEpisodeCount(seasonId: string, seriesId?: string, seasonNumber?: number): number {
   if (!releases.value) return 0;
-  
+
   // Get all TV category hashes for federation support
   const tvCategoryIds = new Set<string>();
   contentCategories.value?.forEach(cat => {
@@ -1029,16 +1029,16 @@ function getSeasonEpisodeCount(seasonId: string, seriesId?: string, seasonNumber
       }
     }
   });
-  
+
   // If we have series and season info, count actual episodes
   if (seriesId && seasonNumber !== undefined) {
-    return releases.value.filter((r: any) => 
-      tvCategoryIds.has(r.categoryId) && 
+    return releases.value.filter((r: any) =>
+      tvCategoryIds.has(r.categoryId) &&
       r.metadata?.seriesId === seriesId &&
       r.metadata?.seasonNumber === seasonNumber
     ).length;
   }
-  
+
   // Fallback to checking season's itemIds
   const season = structures.value?.find((s: any) => s.id === seasonId);
   return season?.itemIds?.length || 0;
@@ -1046,7 +1046,7 @@ function getSeasonEpisodeCount(seasonId: string, seriesId?: string, seasonNumber
 
 function getArtistReleaseCount(artistId: string): number {
   if (!releases.value) return 0;
-  return releases.value.filter((r: any) => 
+  return releases.value.filter((r: any) =>
     r.categorySlug === 'music' && r.metadata?.artistId === artistId
   ).length;
 }
@@ -1096,14 +1096,14 @@ function navigateToRelease(releaseId: string) {
 
 function navigateToBreadcrumb(item: any) {
   currentView.value = item.value;
-  
+
   // Reset context when navigating up
   if (item.value === 'categories' || item.value === 'tv-list' || item.value === 'music-list') {
     currentSeries.value = null;
     currentSeason.value = null;
     currentArtist.value = null;
   }
-  
+
   if (item.value === 'series-detail') {
     currentSeason.value = null;
   }
@@ -1119,7 +1119,7 @@ function showAllMusicReleases() {
 
 function createNewStructure(type: string) {
   currentStructureType.value = type;
-  
+
   // Set parent context if applicable
   if (type === 'season' && currentSeries.value) {
     parentContext.value = {
@@ -1129,7 +1129,7 @@ function createNewStructure(type: string) {
   } else {
     parentContext.value = null;
   }
-  
+
   createStructureDialog.value = true;
 }
 

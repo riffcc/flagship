@@ -101,7 +101,7 @@ Flagship is Riff.CC's decentralized media platform for watching, sharing, and cu
    - **Graceful P2P Fallback**: Falls back to Peerbit when API is unavailable
    - **Non-Blocking P2P Init**: Peerbit initializes in background without blocking UI
    - **Smart Loading Screen**: Shows appropriate loading state based on data source
-   
+
    Implementation details:
    - Router guard in `plugins/router.ts` performs API health check
    - If healthy, pre-fetches and seeds TanStack Query cache

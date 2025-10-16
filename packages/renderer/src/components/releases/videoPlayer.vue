@@ -20,7 +20,7 @@
           :style="{zIndex: 1000}"
           @click="canBack ? router.back() : router.push('/')"
         ></v-btn>
-        
+
         <!-- Floating video controls -->
         <template v-if="floating">
           <!-- Close button -->
@@ -33,7 +33,7 @@
             size="small"
             @click="closeFloatingVideo()"
           ></v-btn>
-          
+
           <!-- Now Playing bar -->
           <v-sheet
             v-if="isHovering"
@@ -54,7 +54,7 @@
               @click="navigateToRelease"
             ></v-btn>
           </v-sheet>
-          
+
           <!-- Resize handles -->
           <template v-if="floating">
             <div
@@ -74,7 +74,7 @@
               @mousedown="startResize('se', $event)"
             ></div>
           </template>
-          
+
           <!-- Center play arrow -->
           <v-btn
             v-if="isHovering && !isPlaying"
@@ -312,39 +312,39 @@ const navigateToRelease = () => {
 // Drag handlers
 const startDrag = (e: MouseEvent) => {
   if (!props.floating || !containerRef.value || isResizing.value) return;
-  
+
   const rect = containerRef.value.getBoundingClientRect();
   isDragging.value = true;
   dragStart.value = { x: e.clientX - rect.left, y: e.clientY - rect.top };
   containerPosition.value = { x: rect.left, y: rect.top };
-  
+
   document.addEventListener('mousemove', handleDrag);
   document.addEventListener('mouseup', stopDrag);
 };
 
 const startResize = (direction: string, e: MouseEvent) => {
   if (!props.floating || !containerRef.value) return;
-  
+
   e.stopPropagation();
   e.preventDefault();
-  
+
   const rect = containerRef.value.getBoundingClientRect();
   isResizing.value = true;
   resizeDirection.value = direction;
   dragStart.value = { x: e.clientX, y: e.clientY };
   initialSize.value = { width: rect.width, height: rect.height };
   initialPosition.value = { x: rect.left, y: rect.top };
-  
+
   document.addEventListener('mousemove', handleResize);
   document.addEventListener('mouseup', stopDrag);
 };
 
 const handleDrag = (e: MouseEvent) => {
   if (!containerRef.value || !isDragging.value || isResizing.value) return;
-  
+
   const newX = Math.max(0, Math.min(window.innerWidth - containerRef.value.offsetWidth, e.clientX - dragStart.value.x));
   const newY = Math.max(0, Math.min(window.innerHeight - containerRef.value.offsetHeight, e.clientY - dragStart.value.y));
-  
+
   containerRef.value.style.left = `${newX}px`;
   containerRef.value.style.top = `${newY}px`;
   containerRef.value.style.right = 'auto';
@@ -353,19 +353,19 @@ const handleDrag = (e: MouseEvent) => {
 
 const handleResize = (e: MouseEvent) => {
   if (!isResizing.value || !containerRef.value) return;
-  
+
   const deltaX = e.clientX - dragStart.value.x;
   const deltaY = e.clientY - dragStart.value.y;
-  
+
   let newWidth = initialSize.value.width;
   let newHeight = initialSize.value.height;
   let newX = initialPosition.value.x;
   let newY = initialPosition.value.y;
-  
+
   // Minimum sizes
   const minWidth = 320;
   const minHeight = 180;
-  
+
   // Handle resizing based on direction
   switch (resizeDirection.value) {
     case 'se': // Southeast (bottom-right)
@@ -409,11 +409,11 @@ const handleResize = (e: MouseEvent) => {
       newHeight = nwHeight;
       break;
   }
-  
+
   // Constrain to window bounds
   newX = Math.max(0, Math.min(window.innerWidth - newWidth, newX));
   newY = Math.max(0, Math.min(window.innerHeight - newHeight, newY));
-  
+
   // Update styles
   containerRef.value.style.width = `${newWidth}px`;
   containerRef.value.style.height = `${newHeight}px`;
@@ -456,7 +456,7 @@ const onVideoError = (event: Event) => {
   const video = event.target as HTMLVideoElement;
   if (video.error) {
     codecError.value = true;
-    
+
     // Provide user-friendly error messages
     switch (video.error.code) {
       case video.error.MEDIA_ERR_ABORTED:
@@ -547,11 +547,11 @@ onBeforeUnmount(() => {
   if (!props.floating && isPlaying.value && videoPlayerRef.value) {
     floatingVideoSource.value = props.contentCid;
     floatingVideoInitialTime.value = videoPlayerRef.value.currentTime;
-    
+
     // Store release info - use props if available, otherwise try to get from current route
     const releaseId = props.releaseId || (route.name === 'Release' ? route.params.id as string : undefined);
     const releaseName = props.releaseName || 'Video';
-    
+
     if (releaseId) {
       floatingVideoRelease.value = {
         id: releaseId,

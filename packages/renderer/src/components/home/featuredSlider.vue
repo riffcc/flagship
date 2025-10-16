@@ -85,7 +85,7 @@
                 {{ featuredItem.name }}
               </h5>
               <template v-if="['music'].includes(getCategorySlug(featuredItem.categoryId))">
-                <p 
+                <p
                   v-if="featuredItem.metadata?.['author']"
                   class="text-body-2 text-sm-body-1"
                 >

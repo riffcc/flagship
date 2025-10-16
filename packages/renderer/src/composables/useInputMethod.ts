@@ -21,9 +21,9 @@ export function useInputMethod() {
 
   // Detect mouse movement
   function handleMouseMove(e: MouseEvent) {
-    const moved = Math.abs(e.clientX - lastMousePosition.x) > 5 || 
+    const moved = Math.abs(e.clientX - lastMousePosition.x) > 5 ||
                   Math.abs(e.clientY - lastMousePosition.y) > 5;
-    
+
     if (moved) {
       lastMousePosition = { x: e.clientX, y: e.clientY };
       setInputMethod('mouse');
@@ -40,11 +40,11 @@ export function useInputMethod() {
   onMounted(() => {
     // Initialize body class
     updateBodyClass(currentInputMethod.value);
-    
+
     // Add event listeners
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('keydown', handleKeyboard);
-    
+
     // Store initial mouse position
     lastMousePosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
   });

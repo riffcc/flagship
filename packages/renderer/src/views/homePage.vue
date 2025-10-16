@@ -171,21 +171,21 @@ const activeSections = computed(() => {
 
         return false;
       });
-      
+
       // For TV shows, group episodes by series
       // Check both categoryId and displayName for TV category (handle corrupted data)
       if (featuredCategory.categoryId === 'tv-shows' || featuredCategory.displayName === 'TV Shows') {
         const seriesMap = new Map<string, any>();
-        const seriesStructures = structures.value ? 
+        const seriesStructures = structures.value ?
           structures.value.filter((s: any) => s.type === 'series') : [];
-        
+
         for (const release of items) {
           const seriesId = release.metadata?.seriesId;
-          
+
           if (seriesId) {
             // Episode has a series ID
             const series = seriesStructures.find((s: any) => s.id === seriesId);
-            
+
             if (!seriesMap.has(seriesId)) {
               if (series) {
                 seriesMap.set(seriesId, {
@@ -220,17 +220,17 @@ const activeSections = computed(() => {
                 });
               }
             }
-            
+
             seriesMap.get(seriesId).metadata.episodeCount++;
             seriesMap.get(seriesId).metadata.episodes.push(release);
-            
+
             // Sort episodes
             seriesMap.get(seriesId).metadata.episodes.sort((a: any, b: any) => {
               const aSeason = a.metadata?.seasonNumber || 0;
               const bSeason = b.metadata?.seasonNumber || 0;
               const aEpisode = a.metadata?.episodeNumber || 0;
               const bEpisode = b.metadata?.episodeNumber || 0;
-              
+
               if (aSeason !== bSeason) return aSeason - bSeason;
               return aEpisode - bEpisode;
             });
@@ -245,10 +245,10 @@ const activeSections = computed(() => {
             });
           }
         }
-        
+
         items = Array.from(seriesMap.values());
       }
-      
+
       // Map category slugs to simple routes
       const routeMap: Record<string, string> = {
         'music': '/music',

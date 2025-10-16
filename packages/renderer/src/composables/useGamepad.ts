@@ -33,7 +33,7 @@ const SCROLL_SPEED_MAX = 20;
 
 export function useGamepad() {
   const { setInputMethod } = useInputMethod();
-  
+
   const gamepadState = ref<GamepadState>({
     connected: false,
     type: 'generic',
@@ -97,12 +97,12 @@ export function useGamepad() {
 
     const gamepads = navigator.getGamepads();
     const gamepad = gamepads[gamepadIndex.value];
-    
+
     if (!gamepad) {
       gamepadState.value.connected = false;
       return;
     }
-    
+
     // Debug: Log raw input - commented out to reduce console spam
     // if (Math.random() < 0.016) {
     //   console.log('Gamepad state:', {
@@ -116,12 +116,12 @@ export function useGamepad() {
     const leftY = applyDeadZone(gamepad.axes[1]);
     const rightX = applyDeadZone(gamepad.axes[2]);
     const rightY = applyDeadZone(gamepad.axes[3]);
-    
+
     gamepadState.value.leftStick = { x: leftX, y: leftY };
     gamepadState.value.rightStick = { x: rightX, y: rightY };
-    
+
     // Check if there's any gamepad input
-    const hasStickInput = Math.abs(leftX) > 0 || Math.abs(leftY) > 0 || 
+    const hasStickInput = Math.abs(leftX) > 0 || Math.abs(leftY) > 0 ||
                          Math.abs(rightX) > 0 || Math.abs(rightY) > 0;
 
     // Map buttons (standard gamepad mapping)
@@ -150,10 +150,10 @@ export function useGamepad() {
     // Update button states and trigger callbacks
     Object.entries(buttonMappings).forEach(([key, button]) => {
       if (!button) return; // Skip if button doesn't exist
-      
+
       const pressed = button.pressed;
       const value = button.value;
-      
+
       if (key === 'lt' || key === 'rt') {
         // Apply dead zone to triggers
         const triggerValue = value > TRIGGER_DEAD_ZONE ? value : 0;
@@ -163,16 +163,16 @@ export function useGamepad() {
         const wasPressed = previousButtonStates.get(key) || false;
         (gamepadState.value.buttons as any)[key] = pressed;
         if (pressed) hasButtonInput = true;
-        
+
         // Trigger callback on button press (not release)
         if (pressed && !wasPressed && buttonCallbacks.has(key)) {
           buttonCallbacks.get(key)!();
         }
-        
+
         previousButtonStates.set(key, pressed);
       }
     });
-    
+
     // Set input method to gamepad if there's any input
     if (hasStickInput || hasButtonInput) {
       if (!hasRecentInput) {
@@ -190,7 +190,7 @@ export function useGamepad() {
     y: calculateScrollSpeed(gamepadState.value.leftStick.y),
   }));
 
-  const isMoving = computed(() => 
+  const isMoving = computed(() =>
     gamepadState.value.leftStick.x !== 0 || gamepadState.value.leftStick.y !== 0
   );
 
@@ -233,7 +233,7 @@ export function useGamepad() {
   onMounted(() => {
     window.addEventListener('gamepadconnected', handleGamepadConnected);
     window.addEventListener('gamepaddisconnected', handleGamepadDisconnected);
-    
+
     // Check for already connected gamepads
     const gamepads = navigator.getGamepads();
     for (let i = 0; i < gamepads.length; i++) {
@@ -244,7 +244,7 @@ export function useGamepad() {
         break;
       }
     }
-    
+
     startGamepadPolling();
   });
 

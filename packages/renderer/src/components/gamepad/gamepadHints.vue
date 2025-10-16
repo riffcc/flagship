@@ -7,36 +7,36 @@
     >
       <div class="hint-container">
         <span class="hint">
-          <gamepad-button 
-            :type="gamepadState.type" 
+          <gamepad-button
+            :type="gamepadState.type"
             button="a"
           />
           Select
         </span>
         <span class="hint">
-          <gamepad-button 
-            :type="gamepadState.type" 
+          <gamepad-button
+            :type="gamepadState.type"
             button="b"
           />
           Back
         </span>
         <span class="hint">
-          <gamepad-button 
-            :type="gamepadState.type" 
+          <gamepad-button
+            :type="gamepadState.type"
             button="x"
           />
           Stop
         </span>
         <span class="hint">
-          <gamepad-button 
-            :type="gamepadState.type" 
+          <gamepad-button
+            :type="gamepadState.type"
             button="y"
           />
           Filter
         </span>
         <span class="hint">
-          <gamepad-button 
-            :type="gamepadState.type" 
+          <gamepad-button
+            :type="gamepadState.type"
             button="start"
           />
           Menu
@@ -45,13 +45,13 @@
           L3/R3 Play/Pause
         </span>
         <span class="hint">
-          <gamepad-button 
-            :type="gamepadState.type" 
+          <gamepad-button
+            :type="gamepadState.type"
             button="lb"
           />
           /
-          <gamepad-button 
-            :type="gamepadState.type" 
+          <gamepad-button
+            :type="gamepadState.type"
             button="rb"
           />
           Tabs
@@ -83,7 +83,7 @@ let hasMovedSticks = false;
 
 // Hide hints when sticks are moved
 watch([() => props.gamepadState.leftStick, () => props.gamepadState.rightStick], ([leftStick, rightStick]) => {
-  if (!hasMovedSticks && (Math.abs(leftStick.x) > 0.2 || Math.abs(leftStick.y) > 0.2 || 
+  if (!hasMovedSticks && (Math.abs(leftStick.x) > 0.2 || Math.abs(leftStick.y) > 0.2 ||
       Math.abs(rightStick.x) > 0.2 || Math.abs(rightStick.y) > 0.2)) {
     hasMovedSticks = true;
     showHints.value = false;

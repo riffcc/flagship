@@ -9,19 +9,19 @@
       :disabled="mode === 'edit'"
       required
     ></v-select>
-    
+
     <v-text-field
       v-model="formData.name"
       label="Name"
       required
     ></v-text-field>
-    
+
     <v-textarea
       v-model="formData.description"
       label="Description"
       rows="3"
     ></v-textarea>
-    
+
     <v-text-field
       v-model="formData.thumbnailCID"
       label="Thumbnail CID"
@@ -29,7 +29,7 @@
       prepend-icon="$image"
       hint="Upload image to IPFS and paste the CID here"
     ></v-text-field>
-    
+
     <!-- Type-specific fields -->
     <template v-if="formData.type === 'series'">
       <v-divider class="my-4"></v-divider>
@@ -56,7 +56,7 @@
         :max="new Date().getFullYear() + 1"
       ></v-text-field>
     </template>
-    
+
     <template v-else-if="formData.type === 'artist'">
       <v-divider class="my-4"></v-divider>
       <p class="text-subtitle-2 mb-2">Artist Information</p>
@@ -78,7 +78,7 @@
         type="url"
       ></v-text-field>
     </template>
-    
+
     <template v-else-if="formData.type === 'season'">
       <v-divider class="my-4"></v-divider>
       <p class="text-subtitle-2 mb-2">Season Information</p>
@@ -104,7 +104,7 @@
         min="1"
       ></v-text-field>
     </template>
-    
+
     <template v-else-if="formData.type === 'tag'">
       <v-divider class="my-4"></v-divider>
       <p class="text-subtitle-2 mb-2">Tag Information</p>
@@ -119,7 +119,7 @@
         label="Tag Category"
       ></v-select>
     </template>
-    
+
     <template v-else-if="formData.type === 'collection'">
       <v-divider class="my-4"></v-divider>
       <p class="text-subtitle-2 mb-2">Collection Information</p>
@@ -137,7 +137,7 @@
         label="Allow Contributions"
       ></v-switch>
     </template>
-    
+
     <v-btn
       type="submit"
       color="primary"
@@ -243,7 +243,7 @@ onMounted(() => {
 
 async function handleSubmit() {
   isSubmitting.value = true;
-  
+
   try {
     const structureData = {
       ...formData.value,
@@ -253,7 +253,7 @@ async function handleSubmit() {
         Object.entries(formData.value.metadata).filter(([_, v]) => v !== '' && v !== null)
       ),
     };
-    
+
     if (props.mode === 'edit') {
       // For editing, we need to include the immutable properties
       const editData = {
@@ -267,7 +267,7 @@ async function handleSubmit() {
       await createMutation.mutateAsync(structureData);
       emit('update:success', 'Structure created successfully');
     }
-    
+
     // Reset form if creating
     if (props.mode !== 'edit') {
       formData.value = {

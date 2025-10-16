@@ -74,7 +74,7 @@ const { data: featuredReleases, isLoading: isFeaturedLoading } = useGetFeaturedR
 
 const pageCategory = computed(() => {
   const slug = props.category; // This is the slug from the URL like "tv-shows"
-  
+
   // Find category by categoryId (slug) - API now merges duplicates
   return contentCategories.value?.find((cat) => cat.categoryId === slug);
 });
@@ -127,21 +127,21 @@ const featuredReleasesInCategory = computed<ReleaseItem[]>(() => {
   // For TV shows, group by series and return series tiles
   if (isTVCategory.value) {
     const seriesMap = new Map<string, any>();
-    
+
     // Get all series structures if available
-    const seriesStructures = structures.value ? 
+    const seriesStructures = structures.value ?
       structures.value.filter((s: any) => s.type === 'series') : [];
-    
+
     console.log('TV Category - Processing releases:', categoryReleases.length, 'Series structures:', seriesStructures.length, 'Error loading structures:', structuresError.value);
-    
+
     // For each episode, find its series
     for (const release of categoryReleases) {
       const seriesId = release.metadata?.seriesId;
-      
+
       if (seriesId) {
         // Episode has a series ID from the upload form
         const series = seriesStructures.find((s: any) => s.id === seriesId);
-        
+
         if (!seriesMap.has(seriesId)) {
           // Create entry for the series
           if (series) {
@@ -179,18 +179,18 @@ const featuredReleasesInCategory = computed<ReleaseItem[]>(() => {
             });
           }
         }
-        
+
         // Add episode to series
         seriesMap.get(seriesId).metadata.episodeCount++;
         seriesMap.get(seriesId).metadata.episodes.push(release);
-        
+
         // Sort episodes by season and episode number
         seriesMap.get(seriesId).metadata.episodes.sort((a: any, b: any) => {
           const aSeason = a.metadata?.seasonNumber || 0;
           const bSeason = b.metadata?.seasonNumber || 0;
           const aEpisode = a.metadata?.episodeNumber || 0;
           const bEpisode = b.metadata?.episodeNumber || 0;
-          
+
           if (aSeason !== bSeason) return aSeason - bSeason;
           return aEpisode - bEpisode;
         });
@@ -206,7 +206,7 @@ const featuredReleasesInCategory = computed<ReleaseItem[]>(() => {
         });
       }
     }
-    
+
     console.log('Series map created:', seriesMap.size, 'series/episodes');
     return Array.from(seriesMap.values());
   }

@@ -331,7 +331,7 @@ watchEffect(() => {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, 
+  background: linear-gradient(90deg,
     rgba(98, 28, 166, 0.3) 0%,
     rgba(98, 28, 166, 0.6) 15%,
     rgba(98, 28, 166, 0.9) 30%,
@@ -379,7 +379,7 @@ watchEffect(() => {
   left: 0;
   right: 0;
   height: 20px;
-  background: linear-gradient(180deg, 
+  background: linear-gradient(180deg,
     rgba(138, 43, 226, 0.2) 0%,
     rgba(138, 43, 226, 0.1) 30%,
     transparent 100%

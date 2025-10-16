@@ -734,7 +734,7 @@ export function useGetStructureQuery(id: string, options?: { enabled?: boolean |
         } catch (apiError) {
           console.warn('API fetch failed, falling back to Peerbit:', apiError);
         }
-        
+
         // Fallback to Peerbit if API fails
         const structure = await lensService.getStructure(id);
         return structure ? {
@@ -775,7 +775,7 @@ export function useGetStructuresQuery(options?: {
         } catch (apiError) {
           console.warn('API fetch failed, falling back to Peerbit:', apiError);
         }
-        
+
         // Fallback to Peerbit if API fails
         const structures = await lensService.getStructures(options?.searchOptions);
         return structures.map(s => ({

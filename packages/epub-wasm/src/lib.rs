@@ -1,6 +1,6 @@
-use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
+use wasm_bindgen::prelude::*;
 use zip::ZipArchive;
 
 #[derive(Serialize, Deserialize)]
@@ -56,7 +56,14 @@ impl EpubParser {
 
         // Parse content.opf
         let content_opf = self.read_file(&mut archive, &content_opf_path)?;
-        self.parse_content_opf(&content_opf, &mut title, &mut author, &mut publisher, &mut language, &mut spine)?;
+        self.parse_content_opf(
+            &content_opf,
+            &mut title,
+            &mut author,
+            &mut publisher,
+            &mut language,
+            &mut spine,
+        )?;
 
         // Build chapters
         for item in &spine {
@@ -83,10 +90,8 @@ impl EpubParser {
     #[wasm_bindgen]
     pub fn get_metadata(&self) -> Result<JsValue, JsValue> {
         match &self.book {
-            Some(book) => {
-                serde_wasm_bindgen::to_value(&book.metadata)
-                    .map_err(|e| JsValue::from_str(&format!("Error: {}", e)))
-            }
+            Some(book) => serde_wasm_bindgen::to_value(&book.metadata)
+                .map_err(|e| JsValue::from_str(&format!("Error: {}", e))),
             None => Err(JsValue::from_str("Not parsed")),
         }
     }
@@ -94,10 +99,8 @@ impl EpubParser {
     #[wasm_bindgen]
     pub fn get_toc(&self) -> Result<JsValue, JsValue> {
         match &self.book {
-            Some(book) => {
-                serde_wasm_bindgen::to_value(&book.chapters)
-                    .map_err(|e| JsValue::from_str(&format!("Error: {}", e)))
-            }
+            Some(book) => serde_wasm_bindgen::to_value(&book.chapters)
+                .map_err(|e| JsValue::from_str(&format!("Error: {}", e))),
             None => Err(JsValue::from_str("Not parsed")),
         }
     }
@@ -121,7 +124,11 @@ impl EpubParser {
         }
     }
 
-    fn read_file(&self, archive: &mut ZipArchive<Cursor<&[u8]>>, path: &str) -> Result<String, JsValue> {
+    fn read_file(
+        &self,
+        archive: &mut ZipArchive<Cursor<&[u8]>>,
+        path: &str,
+    ) -> Result<String, JsValue> {
         use std::io::Read;
 
         let mut file = archive

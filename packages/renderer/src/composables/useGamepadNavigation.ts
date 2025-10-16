@@ -18,16 +18,16 @@ const navigationLocked = ref(false);
 export function useGamepadNavigation() {
   const router = useRouter();
   const { gamepadState, onButtonPress } = useGamepad();
-  
+
   const focusedElement = ref<HTMLElement | null>(null);
   const navigableElements = ref<NavigableElement[]>([]);
   const lastStickDirection = ref({ x: 0, y: 0 });
   const lastDpadState = ref({ up: false, down: false, left: false, right: false });
-  
+
   // Custom cursor for right stick
   const cursorPosition = ref({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
   const showCursor = ref(false);
-  
+
   // Track which control method was used last
   const lastControlMethod = ref<'leftStick' | 'rightStick'>('leftStick');
 
@@ -37,11 +37,11 @@ export function useGamepadNavigation() {
 
   // Cursor timeout
   let cursorTimeoutId: number | undefined;
-  
+
   // Tab navigation
   const currentTabIndex = ref(0);
   const tabs = ['/', '/music', '/movies', '/tv'];
-  
+
   // Update navigable elements
   function updateNavigableElements() {
     // If navigation is locked, only look for elements in the modal
@@ -82,17 +82,17 @@ export function useGamepadNavigation() {
         });
     }
   }
-  
+
   // Find nearest element in a direction
   function findNearestElement(direction: 'up' | 'down' | 'left' | 'right'): HTMLElement | null {
     if (!focusedElement.value) {
       return navigableElements.value[0]?.element || null;
     }
-    
+
     const currentRect = focusedElement.value.getBoundingClientRect();
     const currentX = currentRect.left + currentRect.width / 2;
     const currentY = currentRect.top + currentRect.height / 2;
-    
+
     let candidates = navigableElements.value.filter(el => {
       switch (direction) {
         case 'up':
@@ -105,17 +105,17 @@ export function useGamepadNavigation() {
           return el.x > currentX + 10;
       }
     });
-    
+
     // Sort by distance
     candidates.sort((a, b) => {
       const distA = Math.sqrt(Math.pow(a.x - currentX, 2) + Math.pow(a.y - currentY, 2));
       const distB = Math.sqrt(Math.pow(b.x - currentX, 2) + Math.pow(b.y - currentY, 2));
       return distA - distB;
     });
-    
+
     return candidates[0]?.element || null;
   }
-  
+
   // Focus an element with visual feedback
   function focusElement(element: HTMLElement | null) {
     // Remove previous focus
@@ -124,7 +124,7 @@ export function useGamepadNavigation() {
       focusedElement.value.style.removeProperty('box-shadow');
       focusedElement.value.style.removeProperty('outline');
     }
-    
+
     if (element) {
       element.focus();
       element.classList.add('gamepad-focused');
@@ -135,14 +135,14 @@ export function useGamepadNavigation() {
       focusedElement.value = element;
     }
   }
-  
+
   // Handle left stick navigation
   watch([() => gamepadState.value.leftStick, () => gamepadState.value.buttons], ([stick, buttons]) => {
     // Skip navigation if locked (modal is open)
     if (navigationLocked.value) return;
-    
+
     // Update control method and hide cursor when using left stick
-    if (Math.abs(stick.x) > 0.3 || Math.abs(stick.y) > 0.3 || 
+    if (Math.abs(stick.x) > 0.3 || Math.abs(stick.y) > 0.3 ||
         buttons.up || buttons.down || buttons.left || buttons.right) {
       lastControlMethod.value = 'leftStick';
       showCursor.value = false;
@@ -151,7 +151,7 @@ export function useGamepadNavigation() {
         cursorEl.style.display = 'none';
       }
     }
-    
+
     // D-pad navigation (instant snap)
     const now = Date.now();
     const canNavigate = now - lastNavigationTime.value > navigationCooldown;
@@ -202,7 +202,7 @@ export function useGamepadNavigation() {
       }
     }
   });
-  
+
   // Handle right stick cursor
   watch(() => gamepadState.value.rightStick, (stick) => {
     if (Math.abs(stick.x) > 0.1 || Math.abs(stick.y) > 0.1) {
@@ -212,7 +212,7 @@ export function useGamepadNavigation() {
       cursorPosition.value.x = Math.max(0, Math.min(window.innerWidth, cursorPosition.value.x + stick.x * speed));
       // Normal Y axis - positive stick.y moves cursor down
       cursorPosition.value.y = Math.max(0, Math.min(window.innerHeight, cursorPosition.value.y + stick.y * speed));
-      
+
       // Update cursor element position
       const cursorEl = document.getElementById('gamepad-cursor');
       if (cursorEl) {
@@ -221,12 +221,12 @@ export function useGamepadNavigation() {
         cursorEl.style.left = `${cursorPosition.value.x}px`;
         cursorEl.style.top = `${cursorPosition.value.y}px`;
       }
-      
+
       // Clear existing timeout and set new one
       if (cursorTimeoutId) {
         clearTimeout(cursorTimeoutId);
       }
-      
+
       // Fade cursor after 4 seconds of inactivity
       cursorTimeoutId = setTimeout(() => {
         const cursorEl = document.getElementById('gamepad-cursor');
@@ -241,7 +241,7 @@ export function useGamepadNavigation() {
       }, 4000) as unknown as number;
     }
   });
-  
+
   // Button handlers
   onButtonPress('a', () => {
     // Select based on which control method was used last
@@ -256,16 +256,16 @@ export function useGamepadNavigation() {
       focusedElement.value.click();
     }
   });
-  
+
   onButtonPress('b', () => {
     router.back();
   });
-  
+
   onButtonPress('x', () => {
     // Stop any playing media
     const { activeTrack } = useAudioAlbum();
     const { floatingVideoSource, closeFloatingVideo } = useFloatingVideo();
-    
+
     if (activeTrack.value) {
       activeTrack.value = undefined;
     }
@@ -273,7 +273,7 @@ export function useGamepadNavigation() {
       closeFloatingVideo();
     }
   });
-  
+
   onButtonPress('y', () => {
     // Toggle search/filter panel
     const filterPanel = document.querySelector('[data-filter-panel]');
@@ -284,31 +284,31 @@ export function useGamepadNavigation() {
       router.push('/search');
     }
   });
-  
+
   onButtonPress('lb', () => {
     currentTabIndex.value = Math.max(0, currentTabIndex.value - 1);
     router.push(tabs[currentTabIndex.value]);
   });
-  
+
   onButtonPress('rb', () => {
     currentTabIndex.value = Math.min(tabs.length - 1, currentTabIndex.value + 1);
     router.push(tabs[currentTabIndex.value]);
   });
-  
+
   // Removed - R3 is now used for play/pause
-  
+
   // Start button is handled in App.vue for the start menu overlay
   // onButtonPress('start', () => {
   //   // Open menu
   //   router.push('/menu');
   // });
-  
+
   // L3/R3 for play/pause
   const playPauseHandler = () => {
     const { activeTrack } = useAudioAlbum();
     const audioPlayer = document.querySelector('audio') as HTMLAudioElement;
     const videoPlayer = document.querySelector('video') as HTMLVideoElement;
-    
+
     if (audioPlayer) {
       if (audioPlayer.paused) {
         audioPlayer.play();
@@ -326,15 +326,15 @@ export function useGamepadNavigation() {
       focusedElement.value.click();
     }
   };
-  
+
   onButtonPress('leftStickButton', playPauseHandler);
   onButtonPress('rightStickButton', playPauseHandler);
-  
+
   // Update navigable elements on route change and mutations
   const observer = new MutationObserver(() => {
     updateNavigableElements();
   });
-  
+
   // Clear focus on mouse click
   function handleMouseClick() {
     if (focusedElement.value) {
@@ -344,14 +344,14 @@ export function useGamepadNavigation() {
       focusedElement.value = null;
     }
   }
-  
+
   onMounted(() => {
     updateNavigableElements();
     observer.observe(document.body, { childList: true, subtree: true });
-    
+
     // Add global mouse click handler
     document.addEventListener('click', handleMouseClick);
-    
+
     // Create cursor element
     const cursor = document.createElement('div');
     cursor.id = 'gamepad-cursor';
@@ -370,7 +370,7 @@ export function useGamepadNavigation() {
     `;
     document.body.appendChild(cursor);
   });
-  
+
   onUnmounted(() => {
     observer.disconnect();
     document.removeEventListener('click', handleMouseClick);
@@ -380,13 +380,13 @@ export function useGamepadNavigation() {
     const cursor = document.getElementById('gamepad-cursor');
     cursor?.remove();
   });
-  
+
   // Lock/unlock navigation for modal dialogs
   function lockNavigation() {
     navigationLocked.value = true;
     updateNavigableElements();
   }
-  
+
   function unlockNavigation() {
     navigationLocked.value = false;
     updateNavigableElements();

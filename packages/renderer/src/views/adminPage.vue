@@ -116,8 +116,11 @@
         <v-window-item
           value="p2p"
         >
-          <v-container class="fill-height">
-            <network-map-graph />
+          <v-container class="fill-height d-flex flex-column">
+            <!-- 3D Network Graph with Split Beam Bidirectional Latency -->
+            <div class="flex-grow-1">
+              <network-map-graph />
+            </div>
           </v-container>
         </v-window-item>
       </v-window>

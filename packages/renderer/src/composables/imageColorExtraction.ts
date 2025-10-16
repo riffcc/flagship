@@ -27,14 +27,14 @@ export function useImageColorExtraction() {
       // Create an image element
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      
+
       // Create a promise to wait for image load
       const colorPromise = new Promise<string>((resolve) => {
         img.onload = () => {
           // Create canvas
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
-          
+
           if (!ctx) {
             resolve('to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)');
             return;
@@ -44,18 +44,18 @@ export function useImageColorExtraction() {
           const sampleSize = 50;
           canvas.width = sampleSize;
           canvas.height = sampleSize;
-          
+
           // Draw scaled image
           ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
-          
+
           // Get image data
           const imageData = ctx.getImageData(0, 0, sampleSize, sampleSize);
           const data = imageData.data;
-          
+
           // Calculate average color
           let r = 0, g = 0, b = 0;
           let pixelCount = 0;
-          
+
           for (let i = 0; i < data.length; i += 4) {
             // Skip very dark or very light pixels
             const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
@@ -66,47 +66,47 @@ export function useImageColorExtraction() {
               pixelCount++;
             }
           }
-          
+
           if (pixelCount === 0) {
             resolve('to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)');
             return;
           }
-          
+
           // Average the colors
           r = Math.round(r / pixelCount);
           g = Math.round(g / pixelCount);
           b = Math.round(b / pixelCount);
-          
+
           // Create gradient with darkened tint
           // Top: 40% opacity with slight darkening
           // Bottom: 60% opacity with more darkening
           const topColor = `rgba(${Math.round(r * 0.7)},${Math.round(g * 0.7)},${Math.round(b * 0.7)},.4)`;
           const bottomColor = `rgba(${Math.round(r * 0.5)},${Math.round(g * 0.5)},${Math.round(b * 0.5)},.6)`;
-          
+
           const gradient = `to bottom, ${topColor}, ${bottomColor}`;
           resolve(gradient);
         };
-        
+
         img.onerror = () => {
           // Fallback gradient on error
           resolve('to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)');
         };
       });
-      
+
       // Start loading the image
       img.src = imageUrl;
-      
+
       // Wait with timeout
       const gradient = await Promise.race([
         colorPromise,
-        new Promise<string>((resolve) => 
+        new Promise<string>((resolve) =>
           setTimeout(() => resolve('to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)'), 2000)
         )
       ]);
-      
+
       // Cache the result
       extractedColors.value.set(imageUrl, gradient);
-      
+
       return gradient;
     } catch (error) {
       console.error('Error extracting color:', error);

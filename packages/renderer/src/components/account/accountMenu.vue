@@ -64,20 +64,20 @@ const menuItems = computed(() => {
   const items = [
     { label: 'Account', onClick: () => router.push('/account')},
   ];
-  
+
   if (canUpload.value) {
     items.push({ label: 'Upload', onClick: () => router.push('/upload')});
   }
-  
+
   if (canAccessAdminPanel.value) {
     items.push({ label: 'Admin', onClick: () => router.push('/admin')});
   }
-  
+
   items.push(
     { label: 'Settings', onClick: () => router.push('/account/settings')},
     { label: 'Disconnect', onClick: () => { userData.value = null; }},
   );
-  
+
   return items;
 });
 </script>

@@ -78,7 +78,7 @@
           </div>
         </v-col>
       </v-row>
-      
+
       <!-- Show ID3 tag warnings for users who can edit -->
       <v-alert
         v-if="canEditRelease && trackWarnings.size > 0"
@@ -110,7 +110,7 @@
           </li>
         </ul>
       </v-alert>
-      
+
       <v-row>
         <v-list class="pb-10 w-100">
           <v-list-item
@@ -302,7 +302,7 @@ function getTrackArtworkStyle(trackIndex: number) {
 // Calculate total album duration
 const totalDuration = computed(() => {
   let totalSeconds = 0;
-  
+
   albumFiles.value.forEach(track => {
     if (track.duration) {
       const [minutes, seconds] = track.duration.split(':').map(Number);
@@ -311,13 +311,13 @@ const totalDuration = computed(() => {
       }
     }
   });
-  
+
   if (totalSeconds === 0) return '';
-  
+
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  
+
   if (hours > 0) {
     // Format as "1h 37m" for albums
     if (minutes > 0) {
@@ -350,8 +350,8 @@ const isAdmin = computed(() => accountStatus.value?.isAdmin || false);
 const isModerator = computed(() => accountStatus.value?.hasRole?.('moderator') || false);
 const canEditRelease = computed(() => {
   // User can edit if they are admin, moderator, or the original poster
-  return isAdmin.value || 
-         isModerator.value || 
+  return isAdmin.value ||
+         isModerator.value ||
          (accountStatus.value?.publicKey && props.release.postedBy?.toString() === accountStatus.value.publicKey);
 });
 
@@ -384,19 +384,19 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
     console.error(`Could not construct a valid IPFS URL for CID: ${cid}`);
     return [];
   }
-  
+
   // Check if we have stored track metadata
   let storedTracks = null;
   if (metadata.value?.trackMetadata) {
     try {
-      storedTracks = typeof metadata.value.trackMetadata === 'string' 
+      storedTracks = typeof metadata.value.trackMetadata === 'string'
         ? JSON.parse(metadata.value.trackMetadata)
         : metadata.value.trackMetadata;
     } catch (e) {
       console.warn('Failed to parse trackMetadata:', e);
     }
   }
-  
+
   try {
     const ipfsFiles: AudioTrack[] = [];
     const response = await fetch(url, { method: 'HEAD' });
@@ -410,7 +410,7 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
       // It's a single audio file
       const contentLength = response.headers.get('content-length');
       const fileName = props.release.name || 'Unknown Track';
-      
+
       ipfsFiles.push({
         index: 0,
         album: props.release.name,
@@ -509,7 +509,7 @@ function setTrackToDownload(track: AudioTrack) {
 
 async function fixAllTrackTitles() {
   isFixingTracks.value = true;
-  
+
   try {
     console.log('Starting fixAllTrackTitles for release:', props.release.id);
     console.log('Current metadata:', metadata.value);
@@ -520,7 +520,7 @@ async function fixAllTrackTitles() {
       accountStatus: accountStatus.value,
       canEditRelease: canEditRelease.value
     });
-    
+
     // Build updated track metadata from ID3 data
     const updatedTracks = albumFiles.value.map((track, index) => {
       const id3Data = id3TrackData.value.get(index);
@@ -537,17 +537,17 @@ async function fixAllTrackTitles() {
         duration: track.duration
       };
     });
-    
+
     console.log('Updated tracks:', updatedTracks);
-    
+
     // Update the release metadata
     const updatedMetadata = {
       ...metadata.value,
       trackMetadata: JSON.stringify(updatedTracks)
     };
-    
+
     console.log('Updated metadata to save:', updatedMetadata);
-    
+
     // Save the updated release
     const mutationPayload = {
       id: props.release.id,
@@ -559,11 +559,11 @@ async function fixAllTrackTitles() {
       thumbnailCID: props.release.thumbnailCID,
       metadata: updatedMetadata
     };
-    
+
     console.log('Mutation payload:', mutationPayload);
     console.log('postedBy type:', typeof props.release.postedBy);
     console.log('postedBy value:', props.release.postedBy);
-    
+
     const result = await editReleaseMutation.mutateAsync(mutationPayload);
     console.log('Mutation result:', result);
   } catch (error) {
@@ -575,10 +575,10 @@ async function fixAllTrackTitles() {
 
 function formatTime(seconds: number): string {
   if (!seconds || isNaN(seconds)) return '';
-  
+
   const totalMinutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.floor(seconds % 60);
-  
+
   // If track is 60 minutes or longer, use hour format
   if (totalMinutes >= 60) {
     const hours = Math.floor(totalMinutes / 60);
@@ -589,7 +589,7 @@ function formatTime(seconds: number): string {
       return `${hours}h`;
     }
   }
-  
+
   // Otherwise use traditional minute:second format
   return `${totalMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
@@ -599,39 +599,39 @@ async function loadTrackMetadataAndVerify() {
   if (abortController.value) {
     abortController.value.abort();
   }
-  
+
   // Clear previous audio elements
   audioElements.value.forEach(audio => {
     audio.src = '';
     audio.remove();
   });
   audioElements.value = [];
-  
+
   // Create new abort controller
   abortController.value = new AbortController();
   const signal = abortController.value.signal;
-  
+
   // Load durations for all tracks, and ID3 tags only for admins
   const updatedTracks = await Promise.all(
     albumFiles.value.map(async (track, index) => {
       if (signal.aborted) return track;
-      
+
       try {
         const url = parseUrlOrCid(track.cid);
-        
+
         // Load audio metadata for duration if not already stored
         if (!track.duration) {
           const audio = new Audio();
           audioElements.value.push(audio); // Track for cleanup
           audio.crossOrigin = 'anonymous';
           audio.src = url;
-          
+
           const trackWithDuration = await new Promise<AudioTrack>((resolve) => {
             const cleanup = () => {
               audio.removeEventListener('loadedmetadata', onLoadedMetadata);
               audio.removeEventListener('error', onError);
             };
-            
+
             const onLoadedMetadata = () => {
               cleanup();
               if (!signal.aborted) {
@@ -643,23 +643,23 @@ async function loadTrackMetadataAndVerify() {
                 resolve(track);
               }
             };
-            
+
             const onError = () => {
               cleanup();
               // Silently fail - durations should be stored in metadata anyway
               resolve(track); // Return track without duration on error
             };
-            
+
             audio.addEventListener('loadedmetadata', onLoadedMetadata);
             audio.addEventListener('error', onError);
-            
+
             // Check if aborted
             signal.addEventListener('abort', () => {
               cleanup();
               audio.src = '';
               resolve(track);
             });
-            
+
             // Timeout after 10 seconds
             setTimeout(() => {
               if (!signal.aborted) {
@@ -669,10 +669,10 @@ async function loadTrackMetadataAndVerify() {
               }
             }, 10000);
           });
-          
+
           track = trackWithDuration;
         }
-        
+
         // Only check ID3 tags if user can edit the release
         if (canEditRelease.value) {
           return new Promise<AudioTrack>((resolve) => {
@@ -680,7 +680,7 @@ async function loadTrackMetadataAndVerify() {
               onSuccess: (tag) => {
                 const tags = tag.tags;
                 console.log('ID3 tags for track:', track.title, tags);
-                
+
                 // Store ID3 data
                 if (tags.title || tags.artist) {
                   id3TrackData.value.set(index, {
@@ -688,12 +688,12 @@ async function loadTrackMetadataAndVerify() {
                     artist: tags.artist
                   });
                 }
-                
+
                 // Check for mismatches
                 if (tags.title && tags.title !== track.title) {
                   trackWarnings.value.set(index, `ID3 title "${tags.title}" doesn't match stored title "${track.title}"`);
                 }
-                
+
                 resolve(track); // Keep stored data, just log warnings
               },
               onError: (error) => {
@@ -703,7 +703,7 @@ async function loadTrackMetadataAndVerify() {
             });
           });
         }
-        
+
         return track;
       } catch (error) {
         console.warn(`Error loading metadata for track: ${track.title}`, error);
@@ -711,7 +711,7 @@ async function loadTrackMetadataAndVerify() {
       }
     })
   );
-  
+
   albumFiles.value = updatedTracks;
 }
 
@@ -745,7 +745,7 @@ onUnmounted(() => {
   if (abortController.value) {
     abortController.value.abort();
   }
-  
+
   // Clean up audio elements
   audioElements.value.forEach(audio => {
     audio.src = '';

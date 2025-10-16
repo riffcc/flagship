@@ -225,7 +225,7 @@
           min-height="256px"
         >
           <h6 class="text-h6 font-weight-bold mb-4">Featured Releases</h6>
-          <v-list 
+          <v-list
             v-if="(featuredWithReleases?.length ?? 0) > 0"
             class="featured-list"
           >
@@ -314,7 +314,7 @@
         </v-sheet>
       </v-col>
     </v-row>
-    
+
     <!-- Edit Dialog -->
     <v-dialog
       v-model="showEditDialog"
@@ -515,14 +515,14 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    
+
     <confirmation-dialog
       message="Are you sure you want to end this featured release?"
       :dialog-open="Boolean(featuredItemIdToEnd)"
       :on-close="() => featuredItemIdToEnd = null"
       :on-confirm="confirmEndFeaturedRelease"
     ></confirmation-dialog>
-    
+
     <confirmation-dialog
       message="Remove this ended featured release from the list?"
       :dialog-open="Boolean(featuredItemToRemove)"
@@ -577,14 +577,14 @@ const { data: releases, isLoading: releasesLoading } = useGetReleasesQuery();
 // Enhanced featured releases with release names and sorted by order
 const featuredWithReleases = computed(() => {
   if (!featuredReleases.value) return [];
-  
+
   const enhanced = featuredReleases.value.map(featured => ({
     ...featured,
     releaseName: releases.value?.find(r => r.id === featured.releaseId)?.name || 'Unknown Release',
     // Ensure order exists for TypeScript, but it might be undefined
     order: (featured as FeaturedReleaseItem & { order?: number }).order
   }));
-  
+
   // Sort by order field if present, otherwise by created date
   return enhanced.sort((a, b) => {
     // If both have order, sort by order (ascending)
@@ -715,7 +715,7 @@ watch(() => props.initialFeatureData, (newData) => {
     newFeaturedRelease.value = {
       ...newData,
     };
-    
+
     // Find and select the release
     if (newData.releaseId && releases.value) {
       selectedRelease.value = releases.value.find(r => r.id === newData.releaseId) || null;
@@ -966,23 +966,23 @@ const formatDateRange = (startTime: string, endTime: string) => {
   const start = new Date(startTime);
   const end = new Date(endTime);
   const now = new Date();
-  
+
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     });
   };
-  
+
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
-  
+
   if (start.toDateString() === end.toDateString()) {
     return `${formatDate(start)} • ${formatTime(start)} - ${formatTime(end)}`;
   } else {
@@ -1010,19 +1010,19 @@ const onDragOver = (index: number, event: DragEvent) => {
 
 const onDrop = async (dropIndex: number, event: DragEvent) => {
   event.preventDefault();
-  
+
   if (draggedIndex.value === null || draggedIndex.value === dropIndex) {
     return;
   }
-  
+
   const items = [...featuredWithReleases.value];
   const [draggedItem] = items.splice(draggedIndex.value, 1);
   items.splice(dropIndex, 0, draggedItem);
-  
+
   // Update order field for all items
   try {
     reorderingLoading.value = true;
-    
+
     // Update each item with its new order
     const updatePromises = items.map((item, index) => {
       // Only update if order changed or item didn't have order before
@@ -1034,17 +1034,17 @@ const onDrop = async (dropIndex: number, event: DragEvent) => {
       }
       return Promise.resolve();
     });
-    
+
     await Promise.all(updatePromises);
     openSnackbar('Featured releases reordered successfully!', 'success');
-    
+
   } catch (error) {
     console.error('Error reordering featured releases:', error);
     openSnackbar('Failed to reorder featured releases', 'error');
   } finally {
     reorderingLoading.value = false;
   }
-  
+
   draggedIndex.value = null;
   dragOverIndex.value = null;
 };

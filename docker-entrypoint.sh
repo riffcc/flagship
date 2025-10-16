@@ -23,7 +23,7 @@ fi
 # Determine which lens node we're connecting to based on PORT
 if [ "$PORT" = "5175" ]; then
     echo "Configuring Flagship for Primary lens node..."
-    
+
     # Wait for ALL required files
     echo "Waiting for primary lens node to be ready..."
     while true; do
@@ -37,14 +37,14 @@ if [ "$PORT" = "5175" ]; then
         echo "Still waiting for primary lens node files... (site: $(test -f /shared/primary-site-address.txt && echo 'exists' || echo 'missing'), multiaddr: $(test -f /shared/primary-multiaddr.txt && echo 'exists' || echo 'missing'))"
         sleep 2
     done
-    
+
     SITE_ADDRESS=$(cat /shared/primary-site-address.txt)
     MULTIADDR=$(cat /shared/primary-multiaddr.txt)
     API_PORT=3001
-    
+
 elif [ "$PORT" = "5176" ]; then
     echo "Configuring Flagship for Light lens node..."
-    
+
     # Light node uses same site as primary but has its own multiaddr
     echo "Waiting for light lens node to be ready..."
     while true; do
@@ -58,14 +58,14 @@ elif [ "$PORT" = "5176" ]; then
         echo "Still waiting for light lens node files... (site: $(test -f /shared/primary-site-address.txt && echo 'exists' || echo 'missing'), multiaddr: $(test -f /shared/light-multiaddr.txt && echo 'exists' || echo 'missing'))"
         sleep 2
     done
-    
+
     SITE_ADDRESS=$(cat /shared/primary-site-address.txt)
     MULTIADDR=$(cat /shared/light-multiaddr.txt)
     API_PORT=3002
-    
+
 elif [ "$PORT" = "5177" ]; then
     echo "Configuring Flagship for Federated lens node..."
-    
+
     echo "Waiting for federated lens node to be ready..."
     while true; do
         if [ -f /shared/federated-site-address.txt ] && [ -f /shared/federated-multiaddr.txt ]; then
@@ -78,7 +78,7 @@ elif [ "$PORT" = "5177" ]; then
         echo "Still waiting for federated lens node files... (site: $(test -f /shared/federated-site-address.txt && echo 'exists' || echo 'missing'), multiaddr: $(test -f /shared/federated-multiaddr.txt && echo 'exists' || echo 'missing'))"
         sleep 2
     done
-    
+
     SITE_ADDRESS=$(cat /shared/federated-site-address.txt)
     MULTIADDR=$(cat /shared/federated-multiaddr.txt)
     API_PORT=3003

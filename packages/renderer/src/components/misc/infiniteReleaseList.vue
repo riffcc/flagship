@@ -95,7 +95,7 @@ const filteredReleases = computed(() => {
   if (!releases.value) return [];
 
   let categoryReleases = releases.value;
-  
+
   // Filter by category slug if specified (for federation support)
   if (props.categorySlug) {
     const allCategoryIds = new Set<string>();

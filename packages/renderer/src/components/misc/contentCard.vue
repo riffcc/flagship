@@ -180,11 +180,11 @@ const cardHeight = computed(() => {
 const cardTitle = computed(() => {
   const categoryId = props.item.categoryId;
   const metadata = props.item.metadata;
-  
+
   if (categoryId === 'music') {
     return props.item.name;
   }
-  
+
   // For TV content - check if it's a series or an episode
   if (categoryId === 'tvShow' || metadata?.seriesId) {
     // If it's a series tile (has isSeries flag)
@@ -197,7 +197,7 @@ const cardTitle = computed(() => {
     }
     return props.item.name;
   }
-  
+
   if (categoryId === 'movie') {
     return props.item.name;
   }
@@ -207,11 +207,11 @@ const cardTitle = computed(() => {
 const cardSubtitle = computed(() => {
   const categoryId = props.item.categoryId;
   const metadata = props.item.metadata;
-  
+
   if (categoryId === 'music') {
     return props.item.metadata?.['author'] ?? '';
   }
-  
+
   // For TV content - check if it's a series or an episode
   if (categoryId === 'tvShow' || metadata?.seriesId) {
     // If it's a series tile
@@ -224,7 +224,7 @@ const cardSubtitle = computed(() => {
     }
     return props.item.name;
   }
-  
+
   // Default
   if (categoryId === 'movie') {
     return props.item.metadata?.['releaseYear'] ? `(${props.item.metadata['releaseYear']})` : undefined;
