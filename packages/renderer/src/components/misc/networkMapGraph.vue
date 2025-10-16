@@ -91,9 +91,12 @@
         elevation="4"
       >
         <v-card-title class="text-caption pa-2 pb-1">
-          Link Latency
+          Bidirectional Latency
         </v-card-title>
         <v-card-text class="pa-2 pt-0">
+          <div class="legend-description text-caption mb-2">
+            Each connection shows two parallel beams (upstream/downstream)
+          </div>
           <div class="legend-gradient"></div>
           <div class="legend-labels">
             <span class="text-caption">0ms</span>
@@ -153,6 +156,7 @@
 import { ref, onMounted, watch, nextTick, onBeforeUnmount, computed } from 'vue';
 import ForceGraph3D from '3d-force-graph';
 import SpriteText from 'three-spritetext';
+import * as THREE from 'three';
 import { useNetworkMap } from '/@/composables/useNetworkMap';
 import { useTheme } from '/@/composables/useTheme';
 
@@ -257,71 +261,124 @@ const initializeGraph = () => {
   };
 
   // Initialize 3D force graph
-  graphInstance = ForceGraph3D()(graphContainer.value)
+  graphInstance = new ForceGraph3D(graphContainer.value)
     .graphData(graphData)
     .backgroundColor(backgroundColor.value)
 
     // Node styling
-    .nodeLabel(node => {
+    .nodeLabel((node: any) => {
       const n = node as any;
       return `${n.name}<br/>Slot: (${n.slot.x}, ${n.slot.y}, ${n.slot.z})<br/>Type: ${n.peer_type}<br/>Capabilities: ${n.capabilities.join(', ')}`;
     })
-    .nodeColor(node => {
+    .nodeColor((node: any) => {
       const n = node as any;
       // Theme-aware colors: Server nodes use primary color, Browser nodes use theme-specific color
       return n.peer_type === 'server' ? serverNodeColor.value : browserNodeColor.value;
     })
-    .nodeVal(node => {
+    .nodeVal((node: any) => {
       const n = node as any;
       // Server nodes bigger than browser nodes
       return n.peer_type === 'server' ? 8 : 3;
     })
-    .nodeThreeObject(node => {
+    .nodeThreeObject((node: any) => {
       const n = node as any;
       const sprite = new SpriteText(n.name);
       sprite.color = n.peer_type === 'server' ? serverNodeColor.value : browserNodeColor.value;
       sprite.textHeight = n.peer_type === 'server' ? 8 : 6;
-      sprite.position.y = n.peer_type === 'server' ? 20 : 15;
+      // SpriteText extends THREE.Sprite which has position property
+      (sprite as THREE.Object3D).position.y = n.peer_type === 'server' ? 20 : 15;
       return sprite;
     })
     .nodeThreeObjectExtend(true)  // Extend default sphere with our text sprite
 
-    // Link styling - pH strip style latency gradient
-    .linkColor(link => {
+    // Custom split beam link rendering - two parallel lines per connection
+    .linkThreeObject((link: any) => {
       const l = link as any;
-      // Use our latency-based color gradient function
-      return getLatencyColor(l.latency_ms);
+
+      // Get source and target nodes (they'll be populated by the force graph)
+      const source = l.source as any;
+      const target = l.target as any;
+
+      // For now, use same latency for both directions
+      // TODO: Get separate up/down latency from backend when available
+      const latencyUp = l.latency_ms || 0;
+      const latencyDown = l.latency_ms || 0;
+
+      // Create a group to hold both beams
+      const group = new THREE.Group();
+
+      // Calculate direction vector
+      const start = new THREE.Vector3(source.x || 0, source.y || 0, source.z || 0);
+      const end = new THREE.Vector3(target.x || 0, target.y || 0, target.z || 0);
+      const dir = new THREE.Vector3().subVectors(end, start);
+      const length = dir.length();
+
+      // Calculate perpendicular offset for split beams
+      const up = new THREE.Vector3(0, 1, 0);
+      const perp = new THREE.Vector3().crossVectors(dir, up).normalize();
+
+      // Offset distance (5% of connection length, minimum 2 units)
+      const offsetDist = Math.max(2, length * 0.05);
+
+      // Upstream beam (left side, A→B)
+      const upstreamOffset = perp.clone().multiplyScalar(-offsetDist / 2);
+      const upstreamStart = start.clone().add(upstreamOffset);
+      const upstreamEnd = end.clone().add(upstreamOffset);
+
+      const upstreamGeometry = new THREE.BufferGeometry().setFromPoints([upstreamStart, upstreamEnd]);
+      const upstreamMaterial = new THREE.LineBasicMaterial({
+        color: getLatencyColor(latencyUp),
+        opacity: l.is_browser_connection ? 0.6 : 0.8,
+        transparent: true,
+        linewidth: 2,
+      });
+      const upstreamLine = new THREE.Line(upstreamGeometry, upstreamMaterial);
+      group.add(upstreamLine);
+
+      // Downstream beam (right side, B→A)
+      const downstreamOffset = perp.clone().multiplyScalar(offsetDist / 2);
+      const downstreamStart = start.clone().add(downstreamOffset);
+      const downstreamEnd = end.clone().add(downstreamOffset);
+
+      const downstreamGeometry = new THREE.BufferGeometry().setFromPoints([downstreamStart, downstreamEnd]);
+      const downstreamMaterial = new THREE.LineBasicMaterial({
+        color: getLatencyColor(latencyDown),
+        opacity: l.is_browser_connection ? 0.6 : 0.8,
+        transparent: true,
+        linewidth: 2,
+      });
+      const downstreamLine = new THREE.Line(downstreamGeometry, downstreamMaterial);
+      group.add(downstreamLine);
+
+      // Add directional particles for relay connections
+      if (l.type === 'relay') {
+        // Create small spheres as particles along the upstream beam
+        const particleGeometry = new THREE.SphereGeometry(1, 8, 8);
+        const particleMaterial = new THREE.MeshBasicMaterial({
+          color: getLatencyColor(latencyUp),
+          opacity: 0.8,
+          transparent: true,
+        });
+
+        for (let i = 0; i < 3; i++) {
+          const t = i / 3;
+          const particlePos = new THREE.Vector3().lerpVectors(upstreamStart, upstreamEnd, t);
+          const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+          particle.position.copy(particlePos);
+          group.add(particle);
+        }
+      }
+
+      return group;
     })
-    .linkWidth(link => {
-      const l = link as any;
-      return l.type === 'neighbor' ? 2 : 2;  // Slightly thicker for visibility
-    })
-    .linkOpacity(link => {
-      const l = link as any;
-      // Browser connections slightly more transparent
-      return l.is_browser_connection ? 0.6 : 0.8;
-    })
-    .linkLineDash(link => {
-      const l = link as any;
-      // Dashed lines for browser-to-server connections
-      return l.is_browser_connection ? [5, 5] : null;
-    })
-    .linkDashScale(1)
-    .linkDashGap(2)
-    .linkLabel(link => {
+    .linkThreeObjectExtend(false) // Replace default link rendering with our custom beams
+    .linkLabel((link: any) => {
       const l = link as any;
       if (l.latency_ms !== null && l.latency_ms !== undefined) {
-        return `${l.type} connection<br/>Latency: ${l.latency_ms}ms`;
+        return `${l.type} connection<br/>Latency: ${l.latency_ms}ms (bidirectional)`;
       }
       return `${l.type} connection`;
     })
-    .linkDirectionalParticles(link => {
-      const l = link as any;
-      // Show particles on relay connections
-      return l.type === 'relay' ? 2 : 0;
-    })
-    .linkDirectionalParticleWidth(2)
-    .linkDirectionalParticleSpeed(0.005)
 
     // Controls
     .enableNodeDrag(true)
@@ -332,12 +389,12 @@ const initializeGraph = () => {
     .cameraPosition({ z: 400 })
 
     // Interaction
-    .onNodeHover(node => {
+    .onNodeHover((node: any) => {
       if (graphContainer.value) {
         graphContainer.value.style.cursor = node ? 'pointer' : 'default';
       }
     })
-    .onNodeClick(node => {
+    .onNodeClick((node: any) => {
       if (!graphInstance) return;
       const n = node as any;
       // Focus camera on clicked node
@@ -370,6 +427,7 @@ onMounted(async () => {
   // Fetch initial network map
   await fetchNetworkMap();
   await nextTick();
+
   initializeGraph();
 });
 
