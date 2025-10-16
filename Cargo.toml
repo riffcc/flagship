@@ -1,9 +1,5 @@
 [workspace]
 members = [
-    "crates/lens-v2-sdk",
-    "crates/lens-v2-node",
-    "crates/lens-v2-p2p",
-    "crates/lens-v2-wasm",
     "packages/epub-wasm",
 ]
 resolver = "2"
