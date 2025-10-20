@@ -8,7 +8,7 @@ export class WasmP2pService {
   private initialized = false;
   private peerAnnouncementInterval: number | null = null;
 
-  constructor(private relayUrl: string = 'ws://localhost:5002/api/v1/relay/ws') {}
+  constructor(private relayUrl: string = 'ws://localhost:5002/ws') {}
 
   /**
    * Initialize WASM module and connect to relay

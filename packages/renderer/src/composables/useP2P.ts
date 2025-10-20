@@ -95,7 +95,7 @@ export function useP2P() {
     const wsUrl = apiUrl.replace('http://', 'ws://').replace('https://', 'wss://')
     // Remove trailing /api/v1 if present, then add the relay path
     const baseUrl = wsUrl.replace(/\/api\/v1\/?$/, '')
-    return `${baseUrl}/api/v1/relay/ws`
+    return `${baseUrl}/ws`
   })
 
   // ICE servers for NAT traversal (using Google's public STUN server)

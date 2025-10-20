@@ -50,7 +50,7 @@ export function getRelayUrl(): string {
   const apiUrl = getApiUrl();
   const wsUrl = apiUrl.replace('http://', 'ws://').replace('https://', 'wss://');
   const baseUrl = wsUrl.replace(/\/api\/v1\/?$/, '');
-  return `${baseUrl}/api/v1/relay/ws`;
+  return `${baseUrl}/ws`;
 }
 
 /**
