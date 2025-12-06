@@ -1,6 +1,7 @@
 import type {types as orbiterTypes} from '@riffcc/orbiter';
 import {Orbiter, configIsComplete} from '@riffcc/orbiter';
 import type {App} from 'vue';
+// import { inject } from 'vue'
 
 export default {
   install: (app: App) => {
@@ -14,7 +15,7 @@ export default {
         ...orbiterConfig,
       });
     } else {
-      throw new Error('Orbiter config is invalid, please check the .env or generate a new one with orb export-config');
+      throw new Error('Orbiter config is invalid, please check the .enssv or generate a new one with orb export-config');
     }
 
     app.config.globalProperties.$orbiter = orbiterApp;

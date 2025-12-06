@@ -4,6 +4,9 @@
     <v-main min-height="100vh">
       <router-view />
     </v-main>
+    <div id="app">
+    <router-view />
+  </div>
     <audio-player v-if="activeTrack"></audio-player>
     <video-player
       v-if="floatingVideoSource"

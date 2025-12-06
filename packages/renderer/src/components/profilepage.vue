@@ -47,12 +47,12 @@ watchEffect(() => {
 const bio = ref('')
 const savebio = async () => {
   await orbiter.changeBio({
-    name: bio.value,
+    bio: bio.value,
     language: 'english',
   })
 }
 
-const apiBio = follow(orbiter.listenFornBioChange.bind(orbiter))
+const apiBio = follow(orbiter.listenForBioChange.bind(orbiter))
 watchEffect(() => {
   if (apiBio.value && apiBio.value) {
     bio.value = apiBio.value.english;

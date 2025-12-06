@@ -1,7 +1,7 @@
 import type {App} from 'vue';
-
 import {mandataire} from '@constl/ipa';
 import {RIFFCC_PROTOCOL} from '/@/utils';
+
 
 const DOMAINS = process.env.VITE_DOMAINS?.split(',').map(d=>d.trim());
 
