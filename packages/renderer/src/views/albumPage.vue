@@ -42,12 +42,12 @@
       <!-- Album header -->
       <v-row class="mb-6">
         <v-col cols="12" md="4" lg="3">
-          <!-- Flippable Album Cover -->
+          <!-- Flippable Album Cover (easter egg - only works if back cover exists) -->
           <div
             class="album-cover-container"
             :class="{ 'is-flipped': isFlipped }"
-            @mousedown="startDrag"
-            @touchstart="startDrag"
+            @mousedown="album.metadata?.backCoverCID ? startDrag($event) : null"
+            @touchstart="album.metadata?.backCoverCID ? startDrag($event) : null"
           >
             <div class="album-cover-flipper">
               <!-- Front Cover -->
@@ -68,10 +68,6 @@
                     </v-sheet>
                   </template>
                 </v-img>
-                <div class="flip-hint">
-                  <v-icon size="16" color="white">$gesture-swipe-horizontal</v-icon>
-                  <span class="text-caption ml-1">Drag to flip</span>
-                </div>
               </div>
 
               <!-- Back Cover (if available) -->
@@ -483,23 +479,4 @@ function startDrag(event: MouseEvent | TouchEvent) {
   transform: rotateY(180deg);
 }
 
-.flip-hint {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  padding: 4px 12px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  color: white;
-}
-
-.album-cover-container:hover .flip-hint {
-  opacity: 1;
-}
 </style>
