@@ -1,9 +1,16 @@
 <template>
-  <v-container fluid class="fill-height pa-0">
-    <P2PMesh />
+  <v-container fluid class="fill-height d-flex align-center justify-center pa-4">
+    <NetworkMapGraph @close="handleClose" />
   </v-container>
 </template>
 
 <script setup lang="ts">
-import P2PMesh from '/@/components/P2PMesh.vue';
+import { useRouter } from 'vue-router';
+import NetworkMapGraph from '/@/components/misc/networkMapGraph.vue';
+
+const router = useRouter();
+
+const handleClose = () => {
+  router.push('/');
+};
 </script>

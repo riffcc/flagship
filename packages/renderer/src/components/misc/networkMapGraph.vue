@@ -5,18 +5,6 @@
   >
     <v-card-title class="d-flex justify-space-between align-center pa-4">
       <span>Network Mesh Topology</span>
-      <div class="d-flex gap-2">
-        <v-btn
-          :icon="isDark ? '$weather-sunny' : '$weather-night'"
-          variant="text"
-          @click="toggleTheme"
-        ></v-btn>
-        <v-btn
-          icon="$close"
-          variant="text"
-          @click="$emit('close')"
-        ></v-btn>
-      </div>
     </v-card-title>
 
     <!-- Stats Bar -->
@@ -164,8 +152,8 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-const { networkMap, loading, error, fetchNetworkMap, connectWebSocket, disconnectWebSocket } = useNetworkMap();
-const { isDark, currentTheme, toggleTheme } = useTheme();
+const { networkMap, loading, error, fetchNetworkMap } = useNetworkMap();
+const { isDark, currentTheme } = useTheme();
 const graphContainer = ref<HTMLDivElement | null>(null);
 
 let graphInstance: any = null;
@@ -440,13 +428,8 @@ const refresh = async () => {
 
 // Initialize on mount
 onMounted(async () => {
-  // Connect to WebSocket for real-time updates
-  connectWebSocket();
-
-  // Fetch initial network map
   await fetchNetworkMap();
   await nextTick();
-
   initializeGraph();
 });
 
@@ -464,9 +447,6 @@ watch([isDark, serverNodeColor, browserNodeColor, backgroundColor], async () => 
 
 // Cleanup on unmount
 onBeforeUnmount(() => {
-  // Disconnect WebSocket
-  disconnectWebSocket();
-
   // Clean up graph instance
   if (graphInstance) {
     graphInstance._destructor();
