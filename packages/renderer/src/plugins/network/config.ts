@@ -40,8 +40,8 @@ export interface NetworkConfig {
 export const defaultNetworkConfig: NetworkConfig = {
   mode: 'hybrid',
   peerbit: {
-    enabled: true,
-    relayUrl: 'ws://localhost:5002/ws',
+    enabled: false, // Disabled - WASM P2P removed, using REST API
+    relayUrl: '',
     bootstrappers: [],
     siteAddress: ''
   },
@@ -59,6 +59,6 @@ export const defaultNetworkConfig: NetworkConfig = {
   fallback: {
     timeout: 2000,
     retryCount: 2,
-    order: ['citadel', 'peerbit', 'http']
+    order: ['citadel', 'http'] // peerbit removed
   }
 };

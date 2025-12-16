@@ -136,7 +136,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
-import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useWasmP2pDeleteReleaseMutation, useWasmP2pDeleteFeaturedReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useContentCategoriesQuery, useGetStructuresQuery, useDeleteStructureMutation, useBulkDeleteAllReleasesMutation } from '/@/plugins/lensService/hooks';
+import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useDeleteFeaturedReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useContentCategoriesQuery, useGetStructuresQuery, useDeleteStructureMutation, useBulkDeleteAllReleasesMutation } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import { useIdentity } from '/@/composables/useIdentity';
 import type { ReleaseItem } from '/@/types';
@@ -168,7 +168,7 @@ const editReleaseMutation = useEditReleaseMutation({
   onError: (e) => console.error('Failed to edit release:', e),
 });
 
-const deleteReleaseMutation = useWasmP2pDeleteReleaseMutation({
+const deleteReleaseMutation = useDeleteReleaseMutation({
   onError: (e) => console.error('Failed to delete release:', e),
 });
 
@@ -184,7 +184,7 @@ const editFeaturedReleaseMutation = useEditFeaturedReleaseMutation({
   onError: (e) => console.error('Failed to edit featured release:', e),
 });
 
-const deleteFeaturedReleaseMutation = useWasmP2pDeleteFeaturedReleaseMutation({
+const deleteFeaturedReleaseMutation = useDeleteFeaturedReleaseMutation({
   onError: (e) => console.error('Failed to delete featured release:', e),
 });
 
