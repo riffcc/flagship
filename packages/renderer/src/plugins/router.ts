@@ -25,6 +25,7 @@ const AudiobookPage = () => import('../views/audiobookPage.vue');
 const BookPage = () => import('../views/bookPage.vue');
 const ReaderPage = () => import('../views/readerPage.vue');
 const BooksPage = () => import('../views/booksPage.vue');
+const P2PPage = () => import('../views/p2pPage.vue');
 
 // Use runtime configuration for API URL (supports both build-time and runtime injection)
 export const API_URL = getRuntimeApiUrl();
@@ -594,6 +595,11 @@ const routes: Array<RouteRecordRaw> = [
         next();
       }
     },
+  },
+  {
+    path: '/p2p',
+    name: 'P2P',
+    component: P2PPage,
   },
 ];
 
