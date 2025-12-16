@@ -7,12 +7,12 @@
       <span>Network Mesh Topology</span>
       <div class="d-flex gap-2">
         <v-btn
-          :icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
+          :icon="isDark ? '$weather-sunny' : '$weather-night'"
           variant="text"
           @click="toggleTheme"
         ></v-btn>
         <v-btn
-          icon="mdi-close"
+          icon="$close"
           variant="text"
           @click="$emit('close')"
         ></v-btn>
@@ -23,23 +23,23 @@
     <v-card-subtitle v-if="networkMap" class="px-4 pb-2">
       <v-row dense class="text-caption">
         <v-col>
-          <v-icon start size="small">mdi-server</v-icon>
+          <v-icon start size="small">$server</v-icon>
           {{ networkMap.stats.total_peers }} peers
         </v-col>
         <v-col>
-          <v-icon start size="small" color="primary">mdi-hexagon-multiple</v-icon>
+          <v-icon start size="small" color="primary">$hexagon-multiple</v-icon>
           {{ networkMap.stats.server_nodes }} servers
         </v-col>
         <v-col>
-          <v-icon start size="small" color="secondary">mdi-web</v-icon>
+          <v-icon start size="small" color="secondary">$web</v-icon>
           {{ networkMap.stats.browser_peers }} browsers
         </v-col>
         <v-col>
-          <v-icon start size="small">mdi-vector-polyline</v-icon>
+          <v-icon start size="small">$vector-polyline</v-icon>
           {{ networkMap.stats.mesh_edges }} edges
         </v-col>
         <v-col>
-          <v-icon start size="small">mdi-percent</v-icon>
+          <v-icon start size="small">$percent</v-icon>
           {{ networkMap.stats.occupancy_percent.toFixed(1) }}% occupancy
         </v-col>
       </v-row>
@@ -130,22 +130,22 @@
       <v-btn
         size="small"
         variant="text"
-        prepend-icon="mdi-refresh"
+        prepend-icon="$refresh"
         @click="refresh"
       >
         Refresh
       </v-btn>
       <v-spacer></v-spacer>
       <v-chip size="x-small" variant="text">
-        <v-icon start size="small" color="primary">mdi-hexagon</v-icon>
+        <v-icon start size="small" color="primary">$hexagon</v-icon>
         Server
       </v-chip>
       <v-chip size="x-small" variant="text">
-        <v-icon start size="small" color="secondary">mdi-circle-small</v-icon>
+        <v-icon start size="small" color="secondary">$circle-small</v-icon>
         Browser
       </v-chip>
       <v-chip size="x-small" variant="text">
-        <v-icon start size="small" color="success">mdi-circle-small</v-icon>
+        <v-icon start size="small" color="success">$circle-small</v-icon>
         DHT
       </v-chip>
     </v-card-actions>

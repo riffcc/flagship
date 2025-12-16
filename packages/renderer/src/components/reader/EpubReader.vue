@@ -3,7 +3,7 @@
     <!-- Reader toolbar -->
     <v-app-bar color="surface" elevation="1" class="reader-toolbar">
       <v-btn icon @click="goBack">
-        <v-icon>mdi-arrow-left</v-icon>
+        <v-icon>$arrow-left</v-icon>
       </v-btn>
 
       <v-toolbar-title class="text-truncate mx-4">
@@ -13,11 +13,11 @@
       <v-spacer />
 
       <v-btn icon @click="toggleToc">
-        <v-icon>mdi-format-list-bulleted</v-icon>
+        <v-icon>$format-list-bulleted</v-icon>
       </v-btn>
 
       <v-btn icon @click="toggleSettings">
-        <v-icon>mdi-cog</v-icon>
+        <v-icon>$cog</v-icon>
       </v-btn>
     </v-app-bar>
 
@@ -41,7 +41,7 @@
         :disabled="currentPage === 0"
         class="nav-btn nav-prev"
       >
-        <v-icon>mdi-chevron-left</v-icon>
+        <v-icon>$chevron-left</v-icon>
       </v-btn>
 
       <div class="progress-indicator">
@@ -64,7 +64,7 @@
         :disabled="currentPage >= totalPages - 1"
         class="nav-btn nav-next"
       >
-        <v-icon>mdi-chevron-right</v-icon>
+        <v-icon>$chevron-right</v-icon>
       </v-btn>
     </div>
 

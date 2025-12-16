@@ -81,7 +81,7 @@
           v-if="accountStatus.isAdmin"
           variant="flat"
           color="primary"
-          prepend-icon="mdi-shield-crown"
+          prepend-icon="$shield-crown"
           to="/admin"
           block
         >
@@ -91,7 +91,7 @@
           v-else-if="accountStatus.permissions.includes('upload')"
           variant="flat"
           color="primary"
-          prepend-icon="mdi-upload"
+          prepend-icon="$upload"
           to="/upload"
           block
         >

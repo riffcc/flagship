@@ -133,7 +133,7 @@
               size="64"
               color="warning"
               class="mb-4"
-            >mdi-alert-circle-outline</v-icon>
+            >$alert-circle-outline</v-icon>
             <h3 class="text-h6 mb-2">Unable to play this video</h3>
             <p class="text-body-2 text-medium-emphasis">
               We don't appear to support playing this video in your browser.<br>

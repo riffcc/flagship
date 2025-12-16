@@ -3,7 +3,7 @@
     <v-text-field
       v-model="query"
       label="Search music, movies, TV shows..."
-      prepend-inner-icon="mdi-magnify"
+      prepend-inner-icon="$magnify"
       clearable
       variant="outlined"
       density="comfortable"

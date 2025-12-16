@@ -24,7 +24,7 @@
         size="64"
         class="mb-4 text-center"
         color="grey"
-      >mdi-podcast</v-icon>
+      >$podcast</v-icon>
       <p class="text-h6 text-center mb-2">Podcast not found</p>
       <p class="text-body-2 text-center text-grey mb-4">
         The podcast you're looking for doesn't exist or has been removed.
@@ -54,7 +54,7 @@
                 color="grey-darken-3"
                 class="d-flex align-center justify-center fill-height"
               >
-                <v-icon size="64" color="grey">mdi-podcast</v-icon>
+                <v-icon size="64" color="grey">$podcast</v-icon>
               </v-sheet>
             </template>
           </v-img>
@@ -107,7 +107,7 @@
                     color="grey-darken-3"
                     class="d-flex align-center justify-center fill-height"
                   >
-                    <v-icon size="32" color="grey">mdi-microphone</v-icon>
+                    <v-icon size="32" color="grey">$microphone</v-icon>
                   </v-sheet>
                 </template>
               </v-avatar>
@@ -127,7 +127,7 @@
             </v-list-item-subtitle>
 
             <template #append>
-              <v-icon color="grey">mdi-chevron-right</v-icon>
+              <v-icon color="grey">$chevron-right</v-icon>
             </template>
           </v-list-item>
         </v-list>

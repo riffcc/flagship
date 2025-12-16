@@ -25,7 +25,7 @@
             gradient="to bottom, rgba(0,0,0,.1), rgba(0,0,0,.7)"
           >
             <div class="pa-6 d-flex flex-column justify-end fill-height">
-              <v-icon size="48" color="white" class="mb-2">mdi-book-open-page-variant</v-icon>
+              <v-icon size="48" color="white" class="mb-2">$book-open-page-variant</v-icon>
               <h2 class="text-h4 text-white font-weight-bold">Written Books</h2>
               <p class="text-body-1 text-white mt-2">
                 Classic eBooks and digital literature - read at your own pace
@@ -50,7 +50,7 @@
             gradient="to bottom, rgba(0,0,0,.1), rgba(0,0,0,.7)"
           >
             <div class="pa-6 d-flex flex-column justify-end fill-height">
-              <v-icon size="48" color="white" class="mb-2">mdi-book-music</v-icon>
+              <v-icon size="48" color="white" class="mb-2">$book-music</v-icon>
               <h2 class="text-h4 text-white font-weight-bold">Audiobooks</h2>
               <p class="text-body-1 text-white mt-2">
                 Narrated stories and literature - listen anywhere, anytime
@@ -75,7 +75,7 @@
             gradient="to bottom, rgba(0,0,0,.1), rgba(0,0,0,.7)"
           >
             <div class="pa-6 d-flex flex-column justify-end fill-height">
-              <v-icon size="48" color="white" class="mb-2">mdi-book-multiple</v-icon>
+              <v-icon size="48" color="white" class="mb-2">$book-multiple</v-icon>
               <h2 class="text-h4 text-white font-weight-bold">Visual Books</h2>
               <p class="text-body-1 text-white mt-2">
                 Graphic novels, comics, and illustrated stories
@@ -100,7 +100,7 @@
             gradient="to bottom, rgba(0,0,0,.1), rgba(0,0,0,.7)"
           >
             <div class="pa-6 d-flex flex-column justify-end fill-height">
-              <v-icon size="48" color="white" class="mb-2">mdi-braille</v-icon>
+              <v-icon size="48" color="white" class="mb-2">$braille</v-icon>
               <h2 class="text-h4 text-white font-weight-bold">Accessible Books</h2>
               <p class="text-body-1 text-white mt-2">
                 Braille, large print, and accessibility-enhanced formats
@@ -209,14 +209,14 @@ function navigateToBook(book: ReleaseItem) {
 function getBookIcon(type?: string) {
   switch (type) {
     case 'audiobook':
-      return 'mdi-book-music';
+      return '$book-music';
     case 'graphic-novel':
     case 'comic':
-      return 'mdi-book-multiple';
+      return '$book-multiple';
     case 'braille':
-      return 'mdi-braille';
+      return '$braille';
     default:
-      return 'mdi-book-open-page-variant';
+      return '$book-open-page-variant';
   }
 }
 

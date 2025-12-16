@@ -24,7 +24,7 @@
         size="64"
         class="mb-4 text-center"
         color="grey"
-      >mdi-microphone</v-icon>
+      >$microphone</v-icon>
       <p class="text-h6 text-center mb-2">Episode not found</p>
       <p class="text-body-2 text-center text-grey mb-4">
         The episode you're looking for doesn't exist or has been removed.
@@ -54,7 +54,7 @@
                 color="grey-darken-3"
                 class="d-flex align-center justify-center fill-height"
               >
-                <v-icon size="64" color="grey">mdi-microphone</v-icon>
+                <v-icon size="64" color="grey">$microphone</v-icon>
               </v-sheet>
             </template>
           </v-img>
@@ -73,7 +73,7 @@
               @click="router.push(`/podcast/${episode.metadata?.podcastId}`)"
             >
               <template #placeholder>
-                <v-icon size="20">mdi-podcast</v-icon>
+                <v-icon size="20">$podcast</v-icon>
               </template>
             </v-avatar>
             <a
@@ -104,7 +104,7 @@
           <v-btn
             color="primary"
             size="large"
-            prepend-icon="mdi-play-circle"
+            prepend-icon="$play-circle"
             class="mt-2"
             @click="router.push(`/release/${episode.id}`)"
           >

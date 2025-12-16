@@ -7,18 +7,18 @@
       <span>Citadel Mesh - Split Beam Visualization</span>
       <div class="d-flex gap-2">
         <v-btn
-          :icon="showLabels ? 'mdi-label' : 'mdi-label-off'"
+          :icon="showLabels ? '$label' : '$label-off'"
           variant="text"
           @click="toggleLabels"
           :title="showLabels ? 'Hide labels' : 'Show labels'"
         ></v-btn>
         <v-btn
-          :icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
+          :icon="isDark ? '$weather-sunny' : '$weather-night'"
           variant="text"
           @click="toggleTheme"
         ></v-btn>
         <v-btn
-          icon="mdi-refresh"
+          icon="$refresh"
           variant="text"
           @click="reconnect"
           :loading="connectionState === 'connecting' || connectionState === 'reconnecting'"
@@ -30,15 +30,15 @@
     <v-card-subtitle v-if="meshData" class="px-4 pb-2">
       <v-row dense class="text-caption">
         <v-col>
-          <v-icon start size="small">mdi-server-network</v-icon>
+          <v-icon start size="small">$server-network</v-icon>
           {{ meshData.node_count }} nodes
         </v-col>
         <v-col>
-          <v-icon start size="small">mdi-vector-polyline</v-icon>
+          <v-icon start size="small">$vector-polyline</v-icon>
           {{ meshData.connection_count }} connections
         </v-col>
         <v-col>
-          <v-icon start size="small">mdi-speedometer</v-icon>
+          <v-icon start size="small">$speedometer</v-icon>
           {{ meshData.avg_latency.toFixed(1) }}ms avg
         </v-col>
         <v-col>
@@ -159,11 +159,11 @@
 
     <v-card-actions class="pa-2">
       <v-chip size="x-small" variant="text">
-        <v-icon start size="small">mdi-alpha-c-circle</v-icon>
+        <v-icon start size="small">$alpha-c-circle</v-icon>
         Citadel DHT
       </v-chip>
       <v-chip size="x-small" variant="text">
-        <v-icon start size="small">mdi-ray-start-arrow</v-icon>
+        <v-icon start size="small">$ray-start-arrow</v-icon>
         Split Beams
       </v-chip>
       <v-spacer></v-spacer>
@@ -211,16 +211,16 @@ const connectionStateColor = computed(() => {
 const connectionStateIcon = computed(() => {
   switch (connectionState.value) {
     case ConnectionState.CONNECTED:
-      return 'mdi-check-circle';
+      return '$check-circle';
     case ConnectionState.CONNECTING:
     case ConnectionState.RECONNECTING:
-      return 'mdi-sync';
+      return '$sync';
     case ConnectionState.ERROR:
-      return 'mdi-alert-circle';
+      return '$alert-circle';
     case ConnectionState.DISCONNECTED:
-      return 'mdi-close-circle';
+      return '$close-circle';
     default:
-      return 'mdi-help-circle';
+      return '$help-circle';
   }
 });
 

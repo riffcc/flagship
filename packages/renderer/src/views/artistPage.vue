@@ -24,7 +24,7 @@
         size="64"
         class="mb-4 text-center"
         color="grey"
-      >mdi-account-music</v-icon>
+      >$account-music</v-icon>
       <p class="text-h6 text-center mb-2">Artist not found</p>
       <p class="text-body-2 text-center text-grey mb-4">
         The artist you're looking for doesn't exist or has been removed.
@@ -54,7 +54,7 @@
                 color="grey-darken-3"
                 class="d-flex align-center justify-center fill-height"
               >
-                <v-icon size="64" color="grey">mdi-account-music</v-icon>
+                <v-icon size="64" color="grey">$account-music</v-icon>
               </v-sheet>
             </template>
           </v-img>
@@ -111,7 +111,7 @@
                     color="grey-darken-3"
                     class="d-flex align-center justify-center fill-height"
                   >
-                    <v-icon size="48" color="grey">mdi-album</v-icon>
+                    <v-icon size="48" color="grey">$album</v-icon>
                   </v-sheet>
                 </template>
               </v-img>

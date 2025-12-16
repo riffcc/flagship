@@ -24,7 +24,7 @@
         size="64"
         class="mb-4 text-center"
         color="grey"
-      >mdi-album</v-icon>
+      >$album</v-icon>
       <p class="text-h6 text-center mb-2">Album not found</p>
       <p class="text-body-2 text-center text-grey mb-4">
         The album you're looking for doesn't exist or has been removed.
@@ -64,12 +64,12 @@
                       color="grey-darken-3"
                       class="d-flex align-center justify-center fill-height"
                     >
-                      <v-icon size="64" color="grey">mdi-album</v-icon>
+                      <v-icon size="64" color="grey">$album</v-icon>
                     </v-sheet>
                   </template>
                 </v-img>
                 <div class="flip-hint">
-                  <v-icon size="16" color="white">mdi-gesture-swipe-horizontal</v-icon>
+                  <v-icon size="16" color="white">$gesture-swipe-horizontal</v-icon>
                   <span class="text-caption ml-1">Drag to flip</span>
                 </div>
               </div>
@@ -91,7 +91,7 @@
                   rounded="lg"
                 >
                   <div class="text-center pa-4">
-                    <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-album</v-icon>
+                    <v-icon size="48" color="grey-lighten-1" class="mb-2">$album</v-icon>
                     <p class="text-caption text-grey-lighten-1">Back Cover</p>
                   </div>
                 </v-sheet>
@@ -113,7 +113,7 @@
               @click="router.push(`/artist/${album.metadata?.artistId}`)"
             >
               <template #placeholder>
-                <v-icon size="20">mdi-account-music</v-icon>
+                <v-icon size="20">$account-music</v-icon>
               </template>
             </v-avatar>
             <a
@@ -141,7 +141,7 @@
           <v-btn
             color="primary"
             size="large"
-            prepend-icon="mdi-play-circle"
+            prepend-icon="$play-circle"
             class="mt-2"
             @click="router.push(`/release/${album.id}`)"
           >
@@ -180,7 +180,7 @@
                     color="grey-darken-3"
                     class="d-flex align-center justify-center fill-height"
                   >
-                    <v-icon size="48" color="grey">mdi-image</v-icon>
+                    <v-icon size="48" color="grey">$image</v-icon>
                   </v-sheet>
                 </template>
               </v-img>
@@ -208,7 +208,7 @@
           </v-card-text>
           <v-card-actions class="justify-center">
             <v-btn
-              icon="mdi-chevron-left"
+              icon="$chevron-left"
               @click="previousArtwork"
               :disabled="selectedArtworkIndex === 0"
             />
@@ -219,7 +219,7 @@
               Close
             </v-btn>
             <v-btn
-              icon="mdi-chevron-right"
+              icon="$chevron-right"
               @click="nextArtwork"
               :disabled="selectedArtworkIndex === trackArtworkArray.length - 1"
             />

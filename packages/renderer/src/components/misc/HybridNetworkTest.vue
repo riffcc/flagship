@@ -23,7 +23,7 @@
               <v-list-item>
                 <template v-slot:prepend>
                   <v-icon :color="isInitialized ? 'success' : 'warning'">
-                    {{ isInitialized ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+                    {{ isInitialized ? '$check-circle' : '$alert-circle' }}
                   </v-icon>
                 </template>
                 <v-list-item-title>Service Initialized: {{ isInitialized }}</v-list-item-title>
@@ -32,7 +32,7 @@
               <v-list-item>
                 <template v-slot:prepend>
                   <v-icon :color="isLoading ? 'info' : 'grey'">
-                    {{ isLoading ? 'mdi-loading mdi-spin' : 'mdi-circle' }}
+                    {{ isLoading ? '$loading' : '$circle' }}
                   </v-icon>
                 </template>
                 <v-list-item-title>Loading: {{ isLoading }}</v-list-item-title>
@@ -40,7 +40,7 @@
 
               <v-list-item v-if="error">
                 <template v-slot:prepend>
-                  <v-icon color="error">mdi-alert</v-icon>
+                  <v-icon color="error">$alert</v-icon>
                 </template>
                 <v-list-item-title>Error: {{ error.message }}</v-list-item-title>
               </v-list-item>

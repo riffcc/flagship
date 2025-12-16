@@ -247,7 +247,7 @@
                 <template #prepend>
                   <v-icon
                     v-if="filterActivedFeatured(featuredRelease)"
-                    icon="mdi-drag-vertical"
+                    icon="$drag-vertical"
                     class="drag-handle mr-2"
                     :style="{ cursor: 'grab' }"
                   />
@@ -293,7 +293,7 @@
                 </template>
                 <template #append>
                   <v-btn
-                    :icon="filterActivedFeatured(featuredRelease) ? '$check' : 'mdi-delete'"
+                    :icon="filterActivedFeatured(featuredRelease) ? '$check' : '$delete'"
                     size="small"
                     density="compact"
                     :color="filterActivedFeatured(featuredRelease) ? 'warning' : 'error'"
@@ -326,10 +326,10 @@
           <span>Edit Featured Release</span>
           <div v-if="editingFeatured.views !== undefined || editingFeatured.clicks !== undefined" class="text-caption text-medium-emphasis">
             <v-chip size="small" class="mr-2" :text="`${Number(editingFeatured.views || 0)} views`">
-              <v-icon icon="mdi-eye" size="small" class="mr-1"></v-icon>
+              <v-icon icon="$eye" size="small" class="mr-1"></v-icon>
             </v-chip>
             <v-chip size="small" :text="`${Number(editingFeatured.clicks || 0)} clicks`">
-              <v-icon icon="mdi-cursor-default-click" size="small" class="mr-1"></v-icon>
+              <v-icon icon="$cursor-default-click" size="small" class="mr-1"></v-icon>
             </v-chip>
           </div>
         </v-card-title>

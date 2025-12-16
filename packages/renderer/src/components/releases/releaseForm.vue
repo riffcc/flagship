@@ -42,7 +42,7 @@
             class="text-primary"
           >
             <v-list-item-title>
-              <v-icon start>mdi-plus</v-icon>
+              <v-icon start>$plus</v-icon>
               Create "{{ seriesSearchText }}"
             </v-list-item-title>
           </v-list-item>

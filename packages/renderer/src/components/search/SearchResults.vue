@@ -44,7 +44,7 @@
             class="ml-2"
             @click.stop="goToEdit(result)"
           >
-            <v-icon size="18">mdi-pencil</v-icon>
+            <v-icon size="18">$pencil</v-icon>
           </v-btn>
         </template>
       </v-list-item>
@@ -103,14 +103,14 @@ function goToEdit(result: any) {
  */
 function getIconForType(type: string): string {
   const iconMap: Record<string, string> = {
-    artist: 'mdi-account-music',
-    music: 'mdi-music',
-    movie: 'mdi-movie',
-    tv: 'mdi-television',
-    other: 'mdi-file'
+    artist: '$account-music',
+    music: '$music',
+    movie: '$movie',
+    tv: '$television',
+    other: '$file'
   };
 
-  return iconMap[type] || 'mdi-file';
+  return iconMap[type] || '$file';
 }
 
 /**

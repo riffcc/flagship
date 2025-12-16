@@ -24,7 +24,7 @@
         size="64"
         class="mb-4 text-center"
         color="grey"
-      >mdi-book-music</v-icon>
+      >$book-music</v-icon>
       <p class="text-h6 text-center mb-2">Audiobook not found</p>
       <p class="text-body-2 text-center text-grey mb-4">
         The audiobook you're looking for doesn't exist or has been removed.
@@ -54,7 +54,7 @@
                 color="grey-darken-3"
                 class="d-flex align-center justify-center fill-height"
               >
-                <v-icon size="64" color="grey">mdi-book-music</v-icon>
+                <v-icon size="64" color="grey">$book-music</v-icon>
               </v-sheet>
             </template>
           </v-img>
@@ -92,7 +92,7 @@
           <v-btn
             color="primary"
             size="large"
-            prepend-icon="mdi-play-circle"
+            prepend-icon="$play-circle"
             class="mt-2"
             @click="router.push(`/release/${audiobook.id}`)"
           >
