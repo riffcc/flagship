@@ -104,7 +104,7 @@
             left: 0,
             backgroundColor: '#0a0a0a',
           }"
-          :src="p2pStreamUrl || parseUrlOrCid(props.contentCid)"
+          :src="parseUrlOrCid(props.contentCid)"
           :controls="false"
           crossorigin="anonymous"
           @click="togglePlay"
@@ -226,8 +226,6 @@ import {useAudioAlbum} from '../../composables/audioAlbum';
 import {useFloatingVideo} from '/@/composables/floatingVideo';
 import {usePlaybackController} from '/@/composables/playbackController';
 import {usePlayerVolume} from '/@/composables/playerVolume';
-import {useP2P} from '/@/composables/useP2P';
-import {useP2PStreaming} from '/@/composables/useP2PStreaming';
 import { parseUrlOrCid } from '/@/utils';
 
 const props = defineProps<{
@@ -260,12 +258,6 @@ const {
 const {volume, toggleVolume} = usePlayerVolume();
 const {albumFiles, activeTrack} = useAudioAlbum();
 const {floatingVideoSource, floatingVideoInitialTime, floatingVideoRelease, closeFloatingVideo} = useFloatingVideo();
-
-// P2P streaming
-const { directPeersConnected } = useP2P();
-const { startStream, stopStream, getStreamUrl, isStreaming } = useP2PStreaming();
-const p2pStreamUrl = ref<string | null>(null);
-const useP2PForVideo = ref(false);
 
 // Dragging state
 const isDragging = ref(false);
@@ -477,23 +469,6 @@ const onVideoError = (event: Event) => {
   }
 };
 
-// Watch for direct P2P connections and switch to P2P streaming
-watch(directPeersConnected, (connectedCount) => {
-  if (connectedCount > 0 && !useP2PForVideo.value && !isStreaming(props.contentCid)) {
-    console.log('[VideoPlayer] Direct P2P peers connected, attempting P2P streaming');
-    // TODO: In a real implementation, we would need:
-    // 1. Metadata about which blocks make up this video content
-    // 2. The MIME type/codec for this video
-    // For now, we'll use HTTP loading as fallback
-    //
-    // Example P2P streaming initialization:
-    // const blockIds = await fetchVideoBlockMetadata(props.contentCid);
-    // const mimeType = 'video/webm; codecs="vp9"';
-    // p2pStreamUrl.value = startStream(props.contentCid, blockIds, mimeType);
-    // useP2PForVideo.value = true;
-  }
-});
-
 onMounted((): void => {
   albumFiles.value = [];
   activeTrack.value = undefined;
@@ -539,11 +514,6 @@ onMounted((): void => {
 });
 
 onBeforeUnmount(() => {
-  // Clean up P2P streaming if active
-  if (useP2PForVideo.value && isStreaming(props.contentCid)) {
-    stopStream(props.contentCid);
-  }
-
   if (!props.floating && isPlaying.value && videoPlayerRef.value) {
     floatingVideoSource.value = props.contentCid;
     floatingVideoInitialTime.value = videoPlayerRef.value.currentTime;

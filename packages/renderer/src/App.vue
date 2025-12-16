@@ -20,17 +20,6 @@
       id="gamepad-cursor"
       class="gamepad-cursor"
     ></div>
-    <!-- P2P Status Indicator -->
-    <v-chip
-      v-if="connected || peers.length > 0 || directPeersConnected > 0"
-      size="small"
-      variant="tonal"
-      class="p2p-status-indicator"
-      :color="directPeersConnected > 0 ? 'success' : (connected ? 'primary' : 'warning')"
-    >
-      <v-icon start>{{ directPeersConnected > 0 ? 'mdi-lan-connect' : (connected ? 'mdi-cloud-check' : 'mdi-cloud-off') }}</v-icon>
-      P2P: {{ peers.length }} relay{{ directPeersConnected > 0 ? ` | ${directPeersConnected} direct` : '' }}
-    </v-chip>
 
     <!-- DHT Debug Overlay (activated by typing "magicmagicmagic") -->
     <v-overlay
@@ -55,42 +44,8 @@
           <v-row dense>
             <v-col cols="12">
               <v-card variant="outlined">
-                <v-card-subtitle>Site Information</v-card-subtitle>
+                <v-card-subtitle>Content Status</v-card-subtitle>
                 <v-card-text>
-                  <div><strong>Site ID:</strong> {{ myPeerId || 'Not connected' }}</div>
-                  <div><strong>Connected Peers (Relay):</strong> {{ peers.length }}</div>
-                  <div><strong>Connected Peers (Direct):</strong> {{ directPeersConnected }}</div>
-                  <div><strong>Relay Status:</strong> {{ connected ? 'Connected' : 'Disconnected' }}</div>
-                </v-card-text>
-              </v-card>
-            </v-col>
-
-            <v-col cols="12" v-if="peers.length > 0">
-              <v-card variant="outlined">
-                <v-card-subtitle>Discovered Peers</v-card-subtitle>
-                <v-card-text>
-                  <v-list density="compact">
-                    <v-list-item
-                      v-for="peer in peers"
-                      :key="peer.peer_id"
-                      :title="peer.peer_id"
-                      :subtitle="`Score: ${peer.score} | Height: ${peer.latest_height}`"
-                    >
-                      <template #prepend>
-                        <v-icon color="success">mdi-lan</v-icon>
-                      </template>
-                    </v-list-item>
-                  </v-list>
-                </v-card-text>
-              </v-card>
-            </v-col>
-
-            <v-col cols="12">
-              <v-card variant="outlined">
-                <v-card-subtitle>Sync Status</v-card-subtitle>
-                <v-card-text>
-                  <div><strong>Local Blocks:</strong> {{ localBlocks.length }}</div>
-                  <div><strong>Needed Blocks:</strong> {{ neededBlocks.length }}</div>
                   <div><strong>Total Releases:</strong> {{ releases?.length || 0 }}</div>
                   <div><strong>Featured Releases:</strong> {{ featuredReleases?.length || 0 }}</div>
                 </v-card-text>
@@ -150,12 +105,10 @@ import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useContentCategoriesQ
 import { useGlobalPlayback } from '/@/composables/globalPlayback';
 import { useInputMethod } from '/@/composables/useInputMethod';
 import { useLocalSearch } from '/@/composables/useLocalSearch';
-import { useP2P } from '/@/composables/useP2P';
 import { useIdentity } from '/@/composables/useIdentity';
 
 const { showDefederation, showDHTDebug } = useShowDefederation();
 const showNetworkMap = ref(false);
-const { connected, peers, directPeersConnected, connect, myPeerId, localBlocks, neededBlocks } = useP2P();
 const { activeTrack } = useAudioAlbum();
 const { floatingVideoSource, floatingVideoRelease } = useFloatingVideo();
 
@@ -258,14 +211,6 @@ onMounted(async () => {
   }
 
   initLensService();
-
-  // Connect to P2P relay for peer discovery
-  try {
-    connect();
-    console.log('[App] P2P relay connection initiated');
-  } catch (error) {
-    console.warn('[App] Failed to connect to P2P relay:', error);
-  }
 
   // Setup gamepad controls
   onButtonPress('start', () => {
