@@ -17,7 +17,8 @@
     </div>
     <v-btn
       v-else-if="onNavigate"
-      variant="text"
+      variant="plain"
+      :ripple="false"
       slim
       density="comfortable"
       text="View All"

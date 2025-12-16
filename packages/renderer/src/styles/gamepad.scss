@@ -76,7 +76,7 @@
 
 // Button styles for OLED
 .v-btn {
-  &:not(.v-btn--variant-elevated) {
+  &:not(.v-btn--variant-elevated):not(.v-btn--variant-plain) {
     background: rgba(255, 255, 255, 0.05) !important;
 
     &:hover {
