@@ -7,7 +7,7 @@
   >
     <v-text-field
       v-model="releaseItem.name"
-      :label="isTVCategory ? 'Episode Name' : 'Name'"
+      :label="isTVCategory ? 'Episode Name' : 'Title'"
       :rules="[rules.required]"
     />
     <v-text-field
@@ -23,6 +23,40 @@
       item-title="title"
       item-value="value"
     />
+
+    <!-- Music Fields (Artist and Release Name visible by default) -->
+    <template v-if="isMusicCategory">
+      <v-autocomplete
+        v-model="selectedArtistId"
+        :items="artistItems"
+        :loading="artistsQuery.isLoading.value"
+        label="Artist"
+        placeholder="Type to search or create new artist..."
+        clearable
+        @update:model-value="(v) => handleChangeMetadataField('artistId', v)"
+        @update:search="artistSearchText = $event"
+      >
+        <template v-if="shouldShowCreateArtistOption" #append-item>
+          <v-list-item
+            @click="createNewArtist"
+            class="text-primary"
+          >
+            <v-list-item-title>
+              <v-icon start>$plus</v-icon>
+              Create "{{ artistSearchText }}"
+            </v-list-item-title>
+          </v-list-item>
+        </template>
+      </v-autocomplete>
+
+      <v-text-field
+        label="Release Name"
+        :model-value="String((releaseItem.metadata && releaseItem.metadata['albumTitle']) || '')"
+        hint="Album or EP name"
+        persistent-hint
+        @update:model-value="(v) => handleChangeMetadataField('albumTitle', v)"
+      />
+    </template>
 
     <!-- TV Show Fields -->
     <template v-if="isTVCategory">
@@ -75,6 +109,8 @@
       label="Thumbnail CID (Optional)"
       :rules="[rules.isValidCid]"
     />
+
+    <!-- Advanced: year, format, license, etc. -->
     <v-dialog
       v-model="openAdvanced"
       width="auto"
@@ -90,50 +126,55 @@
           block
         ></v-btn>
       </template>
-      <v-sheet
+      <v-card
         v-if="selectedContentCategory && releaseItem.metadata"
         width="480px"
         max-height="620px"
-        class="pa-8 ma-auto"
+        class="pa-8 ma-auto overflow-y-auto"
+        color="black"
       >
         <p class="text-subtitle mb-6 text-center">
-          Please fill out any extra information about the content that might be useful.
+          Additional metadata options
         </p>
-        <div
+
+        <template
           v-for="[fieldName, fieldConfig] in Object.entries(selectedContentCategory)"
           :key="fieldName"
         >
-          <v-select
-            v-if="(fieldConfig as any).options"
-            :items="(fieldConfig as any).options"
-            :label="formatFieldLabel(fieldName)"
-            :model-value="String((releaseItem.metadata && releaseItem.metadata[fieldName]) || '')"
-            @update:model-value="(v) => handleChangeMetadataField(fieldName, v)"
-          />
-          <v-text-field
-            v-else
-            :label="formatFieldLabel(fieldName)"
-            :model-value="String((releaseItem.metadata && releaseItem.metadata[fieldName]) || '')"
-            :type="(fieldConfig as any).type || 'text'"
-            @update:model-value="(v) => handleChangeMetadataField(fieldName, v)"
-          >
-            <template #append-inner>
-              <v-tooltip
-                location="top"
-                :text="(fieldConfig as any).description || ''"
-              >
-                <template #activator="{props: tooltipProps}">
-                  <v-icon
-                    size="small"
-                    v-bind="tooltipProps"
-                    color="grey-lighten-1"
-                    icon="$help-circle-outline"
-                  ></v-icon>
-                </template>
-              </v-tooltip>
-            </template>
-          </v-text-field>
-        </div>
+          <!-- Skip hidden/auto-managed fields and primary fields shown above -->
+          <template v-if="!HIDDEN_METADATA_FIELDS.includes(fieldName) && !PRIMARY_METADATA_FIELDS.includes(fieldName)">
+            <v-select
+              v-if="(fieldConfig as any).options"
+              :items="(fieldConfig as any).options"
+              :label="formatFieldLabel(fieldName)"
+              :model-value="String((releaseItem.metadata && releaseItem.metadata[fieldName]) || '')"
+              @update:model-value="(v) => handleChangeMetadataField(fieldName, v)"
+            />
+            <v-text-field
+              v-else
+              :label="formatFieldLabel(fieldName)"
+              :model-value="String((releaseItem.metadata && releaseItem.metadata[fieldName]) || '')"
+              :type="(fieldConfig as any).type || 'text'"
+              @update:model-value="(v) => handleChangeMetadataField(fieldName, v)"
+            >
+              <template #append-inner>
+                <v-tooltip
+                  location="top"
+                  :text="(fieldConfig as any).description || ''"
+                >
+                  <template #activator="{props: tooltipProps}">
+                    <v-icon
+                      size="small"
+                      v-bind="tooltipProps"
+                      color="grey-lighten-1"
+                      icon="$help-circle-outline"
+                    ></v-icon>
+                  </template>
+                </v-tooltip>
+              </template>
+            </v-text-field>
+          </template>
+        </template>
         <v-btn
           rounded="0"
           text="Save"
@@ -141,7 +182,7 @@
           block
           @click="openAdvanced = false"
         />
-      </v-sheet>
+      </v-card>
     </v-dialog>
     <v-btn
       rounded="0"
@@ -166,7 +207,8 @@ import {
   useContentCategoriesQuery,
   useGetStructuresQuery,
   useAddStructureMutation,
-  useEditStructureMutation
+  useEditStructureMutation,
+  useGetReleasesQuery
 } from '/@/plugins/lensService/hooks';
 // import { StringMatch, StringMatchMethod } from '@peerbit/document';
 
@@ -198,6 +240,16 @@ const seasonNumber = ref<number>(1);
 const episodeNumber = ref<number>(1);
 const selectedSeasonId = ref<string>('');
 
+// Artist association state
+const selectedArtistId = ref<string>('');
+const artistSearchText = ref<string>('');
+
+// Hidden metadata fields that are auto-managed (not shown anywhere)
+const HIDDEN_METADATA_FIELDS = ['trackMetadata', 'type', 'artistId', 'artist'];
+
+// Primary fields shown in the main form (not in Advanced dialog)
+const PRIMARY_METADATA_FIELDS = ['albumTitle'];
+
 const rules = {
   required: (v: string) => Boolean(v) || 'Required field.',
   isValidCid: (v: string) => !v || cid(v) || 'Please enter a valid CID.',
@@ -206,10 +258,19 @@ const rules = {
 
 // Check if TV category is selected (moved before structuresQuery to avoid circular dependency)
 const isTVCategory = computed(() => {
-  const category = contentCategories.value?.find(c => c.id === releaseItem.value.categoryId);
-  // Check both categoryId and displayName for TV shows (handle corrupted data)
+  const catId = releaseItem.value.categoryId;
+  // Match by hash ID or by slug (categoryId field on the category object)
+  const category = contentCategories.value?.find(c => c.id === catId || c.categoryId === catId);
   const isTV = category?.categoryId === 'tv-shows' || category?.displayName === 'TV Shows';
   return isTV;
+});
+
+// Check if Music category is selected
+const isMusicCategory = computed(() => {
+  const catId = releaseItem.value.categoryId;
+  // Match by hash ID or by slug (categoryId field on the category object)
+  const category = contentCategories.value?.find(c => c.id === catId || c.categoryId === catId);
+  return category?.categoryId === 'music' || category?.displayName === 'Music';
 });
 
 const addReleaseMutation = useAddReleaseMutation({
@@ -246,6 +307,23 @@ const structuresQuery = useGetStructuresQuery({
     console.log('Structures query enabled:', enabled, 'isTVCategory:', isTVCategory.value);
     return enabled;
   }),
+});
+
+// Fetch all releases to find artists (for music category)
+const artistsQuery = useGetReleasesQuery({
+  enabled: computed(() => isMusicCategory.value),
+});
+
+// Get list of artists for the dropdown
+const artistItems = computed(() => {
+  if (!artistsQuery.data.value) return [];
+
+  return artistsQuery.data.value
+    .filter((r: any) => r.metadata?.type === 'artist')
+    .map((r: any) => ({
+      value: r.id,
+      title: r.name,
+    }));
 });
 
 // Watch for structure query errors
@@ -331,6 +409,16 @@ const shouldShowCreateSeriesOption = computed(() => {
   return !exists;
 });
 
+// Check if we should show the "Create new artist" option
+const shouldShowCreateArtistOption = computed(() => {
+  if (!artistSearchText.value || artistSearchText.value.length < 2) return false;
+  // Check if artist already exists
+  const exists = artistItems.value.some(
+    (a: any) => a.title.toLowerCase() === artistSearchText.value.toLowerCase()
+  );
+  return !exists;
+});
+
 const selectedContentCategory = computed(() => {
   if (!contentCategories.value || !releaseItem.value.categoryId) {
     console.log('Advanced button disabled: no categories or categoryId', {
@@ -400,6 +488,12 @@ onMounted(() => {
         seasonId: selectedSeasonId.value
       });
     }
+
+    // If editing a music release, initialize the artist field
+    if (props.initialData.metadata?.artistId) {
+      selectedArtistId.value = props.initialData.metadata.artistId as string;
+      console.log('Initialized artist ID:', selectedArtistId.value);
+    }
   }
 });
 
@@ -416,6 +510,19 @@ watch(selectedSeriesId, (newId) => {
   if (newId) {
     // When a series is selected, trigger season handling
     handleSeasonChange();
+  }
+});
+
+// Watch for artist selection changes
+watch(selectedArtistId, (newId) => {
+  console.log('Selected artist ID changed:', newId);
+  if (!releaseItem.value.metadata) {
+    releaseItem.value.metadata = {};
+  }
+  if (newId) {
+    releaseItem.value.metadata.artistId = newId;
+  } else {
+    delete releaseItem.value.metadata.artistId;
   }
 });
 
@@ -467,6 +574,40 @@ const createNewSeries = async () => {
   } catch (error) {
     console.error('Failed to create series:', error);
     emit('update:error', `Failed to create series: ${error.message}`);
+  }
+};
+
+// Create a new artist (as a release with type: 'artist')
+// TODO: Artists should be Structures, not releases - this is a temporary workaround
+const createNewArtist = async () => {
+  if (!artistSearchText.value) return;
+
+  try {
+    // Find the music category ID
+    const musicCategory = contentCategories.value?.find(
+      c => c.categoryId === 'music' || c.displayName === 'Music'
+    );
+    if (!musicCategory) {
+      emit('update:error', 'Music category not found');
+      return;
+    }
+
+    const response = await addReleaseMutation.mutateAsync({
+      name: artistSearchText.value,
+      categoryId: musicCategory.id,
+      contentCID: 'bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku', // Empty content placeholder
+      metadata: { type: 'artist' },
+    });
+
+    if (response.success && response.id) {
+      selectedArtistId.value = response.id;
+      handleChangeMetadataField('artistId', response.id);
+      // Refetch to include the new artist
+      await artistsQuery.refetch();
+      artistSearchText.value = '';
+    }
+  } catch (error: any) {
+    emit('update:error', `Failed to create artist: ${error.message}`);
   }
 };
 
@@ -558,6 +699,12 @@ const handleOnSubmit = async () => {
     console.log('Episode metadata set:', data.metadata);
   }
 
+  // For music releases, ensure artistId is in metadata
+  if (isMusicCategory.value && selectedArtistId.value) {
+    if (!data.metadata) data.metadata = {};
+    data.metadata.artistId = selectedArtistId.value;
+  }
+
   if (props.mode === 'edit' && data.id) {
     const response = await editReleaseMutation.mutateAsync({
       id: data.id,
@@ -626,7 +773,7 @@ const fieldLabelMap: Record<string, string> = {
   genres: 'Genres',
   tags: 'Tags',
   musicBrainzID: 'MusicBrainz ID',
-  albumTitle: 'Album Title',
+  albumTitle: 'Release Name',
   releaseYear: 'Release Year',
   releaseType: 'Release Type',
   fileFormat: 'File Format',

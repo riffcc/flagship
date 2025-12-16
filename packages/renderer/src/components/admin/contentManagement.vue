@@ -119,6 +119,7 @@
     <v-dialog
       :model-value="Boolean(targetReleaseToEdit)"
       max-width="500px"
+      @update:model-value="(v) => { if (!v) targetReleaseToEdit = null }"
     >
       <v-card class="py-3" color="black">
         <v-card-title>
@@ -218,12 +219,10 @@ type Header = {
   key: string;
 };
 const smTableHeaders: Header[] = [
-  { title: 'ID', align: 'start', key: 'id' },
   { title: 'Name', align: 'start', key: 'name' },
   { title: 'Actions', key: 'actions', sortable: false },
 ];
 const tableHeaders: Header[] = [
-  { title: 'ID', align: 'start', key: 'id' },
   {
     title: 'Thumbnail',
     align: 'start',

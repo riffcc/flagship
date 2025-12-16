@@ -246,9 +246,17 @@ const { data: contentCategories } = useContentCategoriesQuery({
 const { indexContent } = useLocalSearch();
 
 // Index catalog data when releases load
+// Structure types (artists, series, etc.) are excluded from the count
+const STRUCTURE_TYPES = ['artist', 'series', 'season', 'author', 'collection'];
+
 watchEffect(() => {
   if (releases.value && releases.value.length > 0) {
-    const searchableContent = releases.value.map(release => ({
+    // Filter out structure-type releases (artists, series, etc.)
+    const contentReleases = releases.value.filter(release =>
+      !STRUCTURE_TYPES.includes(release.metadata?.type as string)
+    );
+
+    const searchableContent = contentReleases.map(release => ({
       id: release.id,
       title: release.name,
       artist: release.metadata?.artist as string | undefined,
@@ -256,8 +264,7 @@ watchEffect(() => {
       category: release.categoryId || 'other',
       tags: (release.metadata?.tags as string[]) || [],
       year: release.metadata?.year as number | undefined,
-      type: (release.metadata?.type === 'artist' ? 'artist' :
-             release.categoryId === 'music' ? 'music' :
+      type: (release.categoryId === 'music' ? 'music' :
              release.categoryId === 'movies' ? 'movie' :
              release.categoryId === 'tv-shows' ? 'tv' :
              'other') as 'music' | 'movie' | 'tv' | 'artist' | 'other',
@@ -265,7 +272,7 @@ watchEffect(() => {
     }));
 
     indexContent(searchableContent);
-    console.log(`[App] Indexed ${searchableContent.length} releases for search`);
+    console.log(`[App] Indexed ${searchableContent.length} content releases for search (${releases.value.length - searchableContent.length} structure releases excluded)`);
   }
 });
 

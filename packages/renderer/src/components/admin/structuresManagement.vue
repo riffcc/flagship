@@ -550,28 +550,122 @@
         >
           <template #item.name="{ item }">
             <div class="d-flex align-center">
-              <v-avatar size="32" class="mr-2">
+              <v-avatar
+                size="32"
+                class="mr-2 clickable-thumbnail"
+                @click="navigateToAlbum(item.id)"
+              >
                 <v-img
                   v-if="item.thumbnailCID"
                   :src="parseUrlOrCid(item.thumbnailCID)"
                 ></v-img>
                 <v-icon v-else size="small">$music</v-icon>
               </v-avatar>
-              {{ item.name }}
+              <div class="editable-cell flex-grow-1" @click="startInlineEdit(item, 'name')">
+                <template v-if="inlineEditTarget?.id === item.id && inlineEditField === 'name'">
+                  <v-text-field
+                    v-model="inlineEditValue"
+                    density="compact"
+                    hide-details
+                    autofocus
+                    @keyup.enter="saveInlineEdit(item)"
+                    @keyup.escape="cancelInlineEdit"
+                    @blur="saveInlineEdit(item)"
+                  ></v-text-field>
+                </template>
+                <template v-else>
+                  {{ item.name }}
+                  <v-icon size="x-small" class="ml-1 edit-hint">$pencil</v-icon>
+                </template>
+              </div>
             </div>
           </template>
           <template #item.artist="{ item }">
-            {{ item.metadata?.author || 'Unknown' }}
+            <div class="editable-cell" @click="startInlineEdit(item, 'artist')">
+              <template v-if="inlineEditTarget?.id === item.id && inlineEditField === 'artist'">
+                <v-autocomplete
+                  v-model="inlineEditValue"
+                  :items="artists"
+                  item-title="name"
+                  item-value="id"
+                  density="compact"
+                  hide-details
+                  autofocus
+                  @update:model-value="saveInlineEdit(item)"
+                  @update:search="inlineArtistSearch = $event"
+                >
+                  <template v-if="shouldShowCreateArtistInline" #append-item>
+                    <v-list-item
+                      class="text-primary"
+                      @click="createArtistAndAssociateMatching(inlineArtistSearch)"
+                    >
+                      <v-list-item-title>
+                        <v-icon start>$plus</v-icon>
+                        Create "{{ inlineArtistSearch }}" and associate matching
+                      </v-list-item-title>
+                    </v-list-item>
+                  </template>
+                </v-autocomplete>
+              </template>
+              <template v-else>
+                <span :class="{ 'text-purple': hasArtistStructure(item.metadata?.artistId) }">
+                  {{ getArtistName(item.metadata?.artistId) || item.metadata?.author || 'Unknown' }}
+                </span>
+                <v-icon size="x-small" class="ml-1 edit-hint">$pencil</v-icon>
+              </template>
+            </div>
           </template>
           <template #item.year="{ item }">
-            {{ item.metadata?.releaseYear || '-' }}
+            <div class="editable-cell" @click="startInlineEdit(item, 'year')">
+              <template v-if="inlineEditTarget?.id === item.id && inlineEditField === 'year'">
+                <v-text-field
+                  v-model="inlineEditValue"
+                  type="number"
+                  density="compact"
+                  hide-details
+                  autofocus
+                  @keyup.enter="saveInlineEdit(item)"
+                  @keyup.escape="cancelInlineEdit"
+                  @blur="saveInlineEdit(item)"
+                ></v-text-field>
+              </template>
+              <template v-else>
+                {{ item.metadata?.releaseYear || '-' }}
+                <v-icon size="x-small" class="ml-1 edit-hint">$pencil</v-icon>
+              </template>
+            </div>
           </template>
           <template #item.actions="{ item }">
             <v-btn
-              icon="$open-in-new"
+              icon="$pencil"
               variant="text"
               density="comfortable"
               size="small"
+              title="Edit"
+              @click="editMusicRelease(item)"
+            ></v-btn>
+            <v-btn
+              icon="$link-variant"
+              variant="text"
+              density="comfortable"
+              size="small"
+              title="Associate with Artist"
+              @click="associateRelease(item)"
+            ></v-btn>
+            <v-btn
+              icon="$star-plus-outline"
+              variant="text"
+              density="comfortable"
+              size="small"
+              title="Feature"
+              @click="featureRelease(item)"
+            ></v-btn>
+            <v-btn
+              icon="$play"
+              variant="text"
+              density="comfortable"
+              size="small"
+              title="Play"
               @click="navigateToRelease(item.id)"
             ></v-btn>
           </template>
@@ -623,6 +717,72 @@
     @confirm="confirmDelete"
   ></confirmation-dialog>
 
+  <!-- Edit Release Dialog -->
+  <v-dialog v-model="editReleaseDialog" max-width="500px">
+    <v-card class="py-3" color="black">
+      <v-card-title>
+        <span class="text-h6 ml-2">Edit Release</span>
+      </v-card-title>
+      <v-card-text>
+        <release-form
+          v-if="editedRelease"
+          :initial-data="editedRelease"
+          mode="edit"
+          @update:success="handleReleaseSuccess"
+          @update:error="handleError"
+        />
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn
+          color="blue-darken-1"
+          variant="text"
+          @click="editReleaseDialog = false"
+        >
+          Cancel
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Associate with Artist Dialog -->
+  <v-dialog v-model="associateDialog" max-width="400px">
+    <v-card class="py-3" color="black">
+      <v-card-title>
+        <span class="text-h6 ml-2">Associate with Artist</span>
+      </v-card-title>
+      <v-card-text>
+        <v-autocomplete
+          v-model="selectedArtistForAssociation"
+          :items="artists"
+          item-title="name"
+          item-value="id"
+          label="Select Artist"
+          placeholder="Search for an artist..."
+          clearable
+        ></v-autocomplete>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn
+          color="blue-darken-1"
+          variant="text"
+          @click="associateDialog = false"
+        >
+          Cancel
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="flat"
+          :disabled="!selectedArtistForAssociation"
+          @click="confirmAssociation"
+        >
+          Associate
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <!-- Snackbar -->
   <v-snackbar
     v-model="showSnackbar"
@@ -644,18 +804,21 @@
 <script setup lang="ts">
 import { ref, computed, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
-import { useGetStructuresQuery, useGetReleasesQuery, useDeleteStructureMutation, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
+import { useGetStructuresQuery, useGetReleasesQuery, useDeleteStructureMutation, useContentCategoriesQuery, useEditReleaseMutation, useAddReleaseMutation } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import { parseUrlOrCid } from '/@/utils';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
 import structureForm from '/@/components/admin/structureForm.vue';
 import artistForm from '/@/components/admin/artistForm.vue';
+import ReleaseForm from '/@/components/releases/releaseForm.vue';
 
 const router = useRouter();
 const { data: structures, isLoading: isStructuresLoading } = useGetStructuresQuery();
 const { data: releases, isLoading: isReleasesLoading } = useGetReleasesQuery();
 const { data: contentCategories } = useContentCategoriesQuery();
 const deleteStructureMutation = useDeleteStructureMutation();
+const editReleaseMutation = useEditReleaseMutation();
+const addReleaseMutation = useAddReleaseMutation();
 
 const isLoading = computed(() => isStructuresLoading.value || isReleasesLoading.value);
 
@@ -671,9 +834,19 @@ const parentContext = ref<any>(null);
 const createStructureDialog = ref(false);
 const editStructureDialog = ref(false);
 const confirmDeleteDialog = ref(false);
+const editReleaseDialog = ref(false);
+const associateDialog = ref(false);
 
 const editedStructure = ref<any>({});
+const editedRelease = ref<any>(null);
 const deleteTarget = ref<any>(null);
+const selectedArtistForAssociation = ref<string | null>(null);
+
+// Inline editing state
+const inlineEditTarget = ref<any>(null);
+const inlineEditField = ref<string>('');
+const inlineEditValue = ref<string | number>('');
+const inlineArtistSearch = ref<string>('');
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
@@ -898,7 +1071,18 @@ const allMusicReleases = computed(() => {
     }
   });
 
-  return releases.value.filter((r: any) => musicCategoryIds.has(r.categoryId));
+  // Filter: music category AND not a structure release (like artists)
+  return releases.value.filter((r: any) =>
+    musicCategoryIds.has(r.categoryId) &&
+    r.metadata?.type !== 'artist'
+  );
+});
+
+// Show "Create artist" option in inline dropdown when search has text and no exact match
+const shouldShowCreateArtistInline = computed(() => {
+  if (!inlineArtistSearch.value || inlineArtistSearch.value.length < 2) return false;
+  const searchLower = inlineArtistSearch.value.toLowerCase();
+  return !artists.value.some((a: any) => a.name.toLowerCase() === searchLower);
 });
 
 // Counts
@@ -1132,6 +1316,10 @@ function navigateToRelease(releaseId: string) {
   router.push(`/release/${releaseId}`);
 }
 
+function navigateToAlbum(releaseId: string) {
+  router.push(`/album/${releaseId}`);
+}
+
 function navigateToBreadcrumb(item: any) {
   currentView.value = item.value;
 
@@ -1210,6 +1398,211 @@ async function confirmDelete() {
   }
   confirmDeleteDialog.value = false;
 }
+
+// Music release actions
+function editMusicRelease(release: any) {
+  editedRelease.value = release;
+  editReleaseDialog.value = true;
+}
+
+function associateRelease(release: any) {
+  editedRelease.value = release;
+  associateDialog.value = true;
+}
+
+function featureRelease(release: any) {
+  // Emit to parent or handle featuring
+  openSnackbar('Feature functionality coming soon', 'info');
+}
+
+function handleReleaseSuccess(message: string) {
+  openSnackbar(message, 'success');
+  editReleaseDialog.value = false;
+  editedRelease.value = null;
+}
+
+async function confirmAssociation() {
+  if (!editedRelease.value || !selectedArtistForAssociation.value) return;
+
+  try {
+    await editReleaseMutation.mutateAsync({
+      id: editedRelease.value.id,
+      name: editedRelease.value.name,
+      categoryId: editedRelease.value.categoryId,
+      contentCID: editedRelease.value.contentCID,
+      thumbnailCID: editedRelease.value.thumbnailCID,
+      metadata: {
+        ...editedRelease.value.metadata,
+        artistId: selectedArtistForAssociation.value,
+      },
+      siteAddress: editedRelease.value.siteAddress,
+      postedBy: editedRelease.value.postedBy,
+    });
+    openSnackbar('Release associated with artist successfully', 'success');
+    associateDialog.value = false;
+    editedRelease.value = null;
+    selectedArtistForAssociation.value = null;
+  } catch (error: any) {
+    openSnackbar(`Failed to associate: ${error.message}`, 'error');
+  }
+}
+
+// Inline editing functions
+function startInlineEdit(item: any, field: string) {
+  inlineEditTarget.value = item;
+  inlineEditField.value = field;
+
+  if (field === 'name') {
+    inlineEditValue.value = item.name;
+  } else if (field === 'artist') {
+    inlineEditValue.value = item.metadata?.artistId || '';
+  } else if (field === 'year') {
+    inlineEditValue.value = item.metadata?.releaseYear || '';
+  }
+}
+
+function cancelInlineEdit() {
+  inlineEditTarget.value = null;
+  inlineEditField.value = '';
+  inlineEditValue.value = '';
+}
+
+async function saveInlineEdit(item: any) {
+  if (!inlineEditTarget.value || !inlineEditField.value) return;
+
+  try {
+    const updates: any = {
+      id: item.id,
+      name: item.name,
+      categoryId: item.categoryId,
+      contentCID: item.contentCID,
+      thumbnailCID: item.thumbnailCID,
+      metadata: { ...item.metadata },
+      siteAddress: item.siteAddress,
+      postedBy: item.postedBy,
+    };
+
+    if (inlineEditField.value === 'name') {
+      updates.name = inlineEditValue.value;
+    } else if (inlineEditField.value === 'artist') {
+      updates.metadata.artistId = inlineEditValue.value;
+    } else if (inlineEditField.value === 'year') {
+      updates.metadata.releaseYear = inlineEditValue.value ? Number(inlineEditValue.value) : undefined;
+    }
+
+    await editReleaseMutation.mutateAsync(updates);
+    openSnackbar('Updated successfully', 'success');
+  } catch (error: any) {
+    openSnackbar(`Failed to update: ${error.message}`, 'error');
+  }
+
+  cancelInlineEdit();
+}
+
+function getArtistName(artistId: string | undefined): string | null {
+  if (!artistId) return null;
+  const artist = artists.value.find((a: any) => a.id === artistId);
+  return artist?.name || null;
+}
+
+// Check if an artist ID corresponds to an actual artist structure/release
+function hasArtistStructure(artistId: string | undefined): boolean {
+  if (!artistId) return false;
+  return artists.value.some((a: any) => a.id === artistId);
+}
+
+// Create a new artist and associate all unassociated releases with matching author name
+async function createArtistAndAssociateMatching(artistName: string) {
+  if (!artistName || artistName.length < 2) return;
+
+  try {
+    // Get music category ID
+    const musicCategory = contentCategories.value?.find(
+      (c: any) => c.categoryId === 'music'
+    );
+    if (!musicCategory) {
+      openSnackbar('Music category not found', 'error');
+      return;
+    }
+
+    // Create artist release (artists are temporarily stored as releases with metadata.type = 'artist')
+    const artistData = {
+      name: artistName,
+      categoryId: musicCategory.id,
+      contentCID: '',
+      thumbnailCID: '',
+      metadata: {
+        type: 'artist',
+      },
+    };
+
+    const response = await addReleaseMutation.mutateAsync(artistData);
+    const newArtistId = response?.id;
+
+    if (!newArtistId) {
+      openSnackbar('Failed to create artist - no ID returned', 'error');
+      return;
+    }
+
+    // Find all unassociated music releases with matching author name
+    const releasesToAssociate = allMusicReleases.value.filter((r: any) => {
+      const author = r.metadata?.author || '';
+      const hasNoArtistId = !r.metadata?.artistId;
+      const authorMatches = author.toLowerCase() === artistName.toLowerCase();
+      return hasNoArtistId && authorMatches;
+    });
+
+    // Associate each matching release
+    let associatedCount = 0;
+    for (const release of releasesToAssociate) {
+      try {
+        await editReleaseMutation.mutateAsync({
+          id: release.id,
+          name: release.name,
+          categoryId: release.categoryId,
+          contentCID: release.contentCID,
+          thumbnailCID: release.thumbnailCID,
+          metadata: {
+            ...release.metadata,
+            artistId: newArtistId,
+          },
+          siteAddress: release.siteAddress,
+          postedBy: release.postedBy,
+        });
+        associatedCount++;
+      } catch (e) {
+        console.error('Failed to associate release:', release.id, e);
+      }
+    }
+
+    // Also associate the currently editing release if it's open
+    if (inlineEditTarget.value) {
+      try {
+        await editReleaseMutation.mutateAsync({
+          id: inlineEditTarget.value.id,
+          name: inlineEditTarget.value.name,
+          categoryId: inlineEditTarget.value.categoryId,
+          contentCID: inlineEditTarget.value.contentCID,
+          thumbnailCID: inlineEditTarget.value.thumbnailCID,
+          metadata: {
+            ...inlineEditTarget.value.metadata,
+            artistId: newArtistId,
+          },
+          siteAddress: inlineEditTarget.value.siteAddress,
+          postedBy: inlineEditTarget.value.postedBy,
+        });
+        associatedCount++;
+      } catch (e) {
+        console.error('Failed to associate inline target:', e);
+      }
+    }
+
+    openSnackbar(`Created "${artistName}" and associated ${associatedCount} release${associatedCount !== 1 ? 's' : ''}`, 'success');
+    cancelInlineEdit();
+  } catch (error: any) {
+    openSnackbar(`Failed to create artist: ${error.message}`, 'error');
+  }
+}
 </script>
 
 <style scoped>
@@ -1220,5 +1613,39 @@ async function confirmDelete() {
 
 .v-card:hover {
   transform: translateY(-2px);
+}
+
+.editable-cell {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.editable-cell:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.editable-cell .edit-hint {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.editable-cell:hover .edit-hint {
+  opacity: 0.5;
+}
+
+.text-purple {
+  color: #9c27b0 !important;
+}
+
+.clickable-thumbnail {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.clickable-thumbnail:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.4);
 }
 </style>
