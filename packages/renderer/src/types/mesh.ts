@@ -6,11 +6,17 @@
  */
 
 /**
- * 3D slot coordinate in the mesh
+ * SPIRAL slot coordinate in the hex mesh
+ * Uses axial hex coordinates (q, r) with vertical layers (z)
  */
 export interface SlotCoordinate {
-  x: number;
-  y: number;
+  /** SPIRAL index (slot number in enumeration order) */
+  index: number | null;
+  /** Hex axial coordinate q */
+  q: number;
+  /** Hex axial coordinate r */
+  r: number;
+  /** Vertical layer z (2.5D) */
   z: number;
 }
 
@@ -33,6 +39,24 @@ export interface MeshNode {
 }
 
 /**
+ * Multi-window latency statistics for a connection
+ */
+export interface LatencyStats {
+  /** Average latency over the last 1 second */
+  last_1s_ms: number | null;
+  /** Average latency over the last 60 seconds */
+  last_60s_ms: number | null;
+  /** Average latency over the last 1 hour */
+  last_1h_ms: number | null;
+  /** Number of samples in the 1s window */
+  samples_1s: number;
+  /** Number of samples in the 60s window */
+  samples_60s: number;
+  /** Number of samples in the 1h window */
+  samples_1h: number;
+}
+
+/**
  * A bidirectional connection between two nodes
  * Split into upstream and downstream beams for asymmetric latency visualization
  */
@@ -45,6 +69,8 @@ export interface MeshConnection {
   latency_up_ms: number;
   /** Downstream latency (to -> from) in milliseconds */
   latency_down_ms: number;
+  /** Multi-window latency statistics */
+  latency_stats?: LatencyStats;
   /** Connection type (neighbor, relay, etc.) */
   connection_type?: 'neighbor' | 'relay' | 'replication';
 }

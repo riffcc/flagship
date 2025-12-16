@@ -118,7 +118,7 @@
               <span class="text-caption">High</span>
             </div>
             <div class="color-label">
-              <div class="color-box" style="background: #000000;"></div>
+              <div class="color-box" style="background: #880088;"></div>
               <span class="text-caption">Dead</span>
             </div>
           </div>
@@ -188,14 +188,15 @@ const getLatencyColor = (latencyMs: number | null | undefined): string => {
   }
 
   if (latencyMs >= 1000) {
-    return '#000000'; // Black for dead links (1000ms+)
+    return '#880088'; // Dark magenta for dead links (1000ms+) - visible on both light and dark backgrounds
   }
 
   if (latencyMs >= 300) {
-    // 300-1000ms: Red to black
+    // 300-1000ms: Red to dark magenta
     const t = (latencyMs - 300) / 700; // 0 at 300ms, 1 at 1000ms
-    const r = Math.floor(255 * (1 - t));
-    return `rgb(${r}, 0, 0)`;
+    const r = Math.floor(255 - (255 - 136) * t); // 255 -> 136 (0x88)
+    const b = Math.floor(136 * t); // 0 -> 136 (0x88)
+    return `rgb(${r}, 0, ${b})`;
   }
 
   // 0-300ms: Rainbow gradient (green → yellow → orange → red)
@@ -254,6 +255,7 @@ const initializeGraph = () => {
         target: edge.to,
         type: edge.connection_type,
         latency_ms: edge.latency_ms,
+        latency_stats: edge.latency_stats,
         color: edge.color,
         is_browser_connection: isBrowserConnection,
       };
@@ -268,7 +270,10 @@ const initializeGraph = () => {
     // Node styling
     .nodeLabel((node: any) => {
       const n = node as any;
-      return `${n.name}<br/>Slot: (${n.slot.x}, ${n.slot.y}, ${n.slot.z})<br/>Type: ${n.peer_type}<br/>Capabilities: ${n.capabilities.join(', ')}`;
+      const slotInfo = n.slot.index !== null
+        ? `Slot #${n.slot.index} (${n.slot.q}, ${n.slot.r}, ${n.slot.z})`
+        : 'Unclaimed';
+      return `${n.name}<br/>${slotInfo}<br/>Type: ${n.peer_type}<br/>Capabilities: ${n.capabilities.join(', ')}`;
     })
     .nodeColor((node: any) => {
       const n = node as any;
@@ -374,8 +379,22 @@ const initializeGraph = () => {
     .linkThreeObjectExtend(false) // Replace default link rendering with our custom beams
     .linkLabel((link: any) => {
       const l = link as any;
+      const stats = l.latency_stats;
+
+      // Show multi-window latency stats if available
+      if (stats && (stats.last_1s_ms !== null || stats.last_60s_ms !== null || stats.last_1h_ms !== null)) {
+        const fmt = (v: number | null) => v !== null ? `${v.toFixed(1)}ms` : '—';
+        return [
+          `<b>${l.type}</b>`,
+          `Last 1s: ${fmt(stats.last_1s_ms)} (${stats.samples_1s || 0} samples)`,
+          `Last 60s: ${fmt(stats.last_60s_ms)} (${stats.samples_60s || 0} samples)`,
+          `Last 1h: ${fmt(stats.last_1h_ms)} (${stats.samples_1h || 0} samples)`,
+        ].join('<br/>');
+      }
+
+      // Fallback to old single-value latency
       if (l.latency_ms !== null && l.latency_ms !== undefined) {
-        return `${l.type} connection<br/>Latency: ${l.latency_ms}ms (bidirectional)`;
+        return `${l.type} connection<br/>Latency: ${l.latency_ms}ms`;
       }
       return `${l.type} connection`;
     })
@@ -481,8 +500,8 @@ onBeforeUnmount(() => {
     #ffff00 25%,   /* Yellow */
     #ff7f00 40%,   /* Orange */
     #ff0000 50%,   /* Red at 300ms */
-    #cc0000 75%,   /* Dark red */
-    #000000 100%   /* Black at 1000ms+ */
+    #bb0044 75%,   /* Red-magenta transition */
+    #880088 100%   /* Dark magenta at 1000ms+ (visible on dark backgrounds) */
   );
   margin-bottom: 4px;
   border: 1px solid rgba(0, 0, 0, 0.2);
