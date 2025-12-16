@@ -31,7 +31,7 @@
             </v-card>
           </v-dialog>
         </template>
-        <h3>Manage Artists</h3>
+        <h3>{{ currentViewTitle }}</h3>
       </v-list-item>
       <v-divider class="mt-2 mb-4"></v-divider>
 
@@ -59,11 +59,11 @@
         class="mt-4"
       ></v-progress-linear>
 
-      <!-- Artists View -->
+      <!-- Categories View -->
       <div v-else-if="currentView === 'categories'">
         <v-row>
-          <!-- Music/Artists - auto-navigate -->
-          <v-col cols="12" md="12">
+          <!-- Music/Artists -->
+          <v-col cols="12" md="6">
             <v-card @click="navigateToCategory('music')">
               <v-card-title class="d-flex align-center">
                 <v-icon icon="$music" class="mr-2"></v-icon>
@@ -73,6 +73,21 @@
               </v-card-title>
               <v-card-text>
                 Manage artists, albums, and musical releases
+              </v-card-text>
+            </v-card>
+          </v-col>
+
+          <!-- TV Shows -->
+          <v-col cols="12" md="6">
+            <v-card @click="navigateToCategory('tv')">
+              <v-card-title class="d-flex align-center">
+                <v-icon icon="$television" class="mr-2"></v-icon>
+                TV Shows
+                <v-spacer></v-spacer>
+                <v-chip>{{ tvSeriesCount }}</v-chip>
+              </v-card-title>
+              <v-card-text>
+                Manage TV series, seasons, and episodes
               </v-card-text>
             </v-card>
           </v-col>
@@ -892,12 +907,35 @@ const artistCount = computed(() => artists.value.length);
 const tagCount = computed(() => tags.value.length);
 const collectionCount = computed(() => collections.value.length);
 
+// Dynamic title based on current view
+const currentViewTitle = computed(() => {
+  switch (currentView.value) {
+    case 'categories':
+      return 'Meta';
+    case 'music-list':
+    case 'artist-detail':
+    case 'all-music':
+      return 'Artists';
+    case 'tv-list':
+    case 'series-detail':
+    case 'season-detail':
+    case 'all-episodes':
+      return 'TV Shows';
+    case 'tags-list':
+      return 'Tags';
+    case 'collections-list':
+      return 'Collections';
+    default:
+      return 'Meta';
+  }
+});
+
 // Breadcrumbs
 const breadcrumbs = computed(() => {
   const items = [];
 
   if (currentView.value !== 'categories') {
-    items.push({ title: 'Categories', value: 'categories' });
+    items.push({ title: 'Meta', value: 'categories' });
   }
 
   if (currentView.value === 'tv-list' || currentView.value === 'series-detail' || currentView.value === 'season-detail' || currentView.value === 'all-episodes') {
