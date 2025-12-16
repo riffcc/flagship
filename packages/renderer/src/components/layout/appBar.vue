@@ -26,7 +26,7 @@
         :to="`/featured/${item.categoryId}`"
         class="nav-link"
       >
-        {{ item.displayName }}
+        {{ item.displayName === 'TV Shows' ? 'TV' : item.displayName }}
       </router-link>
       <router-link
         to="/books"
@@ -60,7 +60,7 @@
         <v-list-item
           v-for="item in featuredContentCategories"
           :key="item.id"
-          :title="item.displayName"
+          :title="item.displayName === 'TV Shows' ? 'TV' : item.displayName"
           active-class="text-primary-lighten-1"
           :active="route.path === item.categoryId"
           @click="router.push(`/featured/${item.categoryId}`)"

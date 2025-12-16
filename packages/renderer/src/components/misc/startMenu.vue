@@ -51,7 +51,7 @@
           @click="goMovies"
         ></v-list-item>
         <v-list-item
-          title="📺 TV Shows"
+          title="📺 TV"
           :data-navigable="true"
           @click="goTVShows"
         ></v-list-item>
