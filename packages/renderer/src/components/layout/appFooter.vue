@@ -67,7 +67,7 @@
                     class="mb-2 pl-1"
                     min-height="12px"
                     height="24px"
-                    @click="router.push(`/featured/${item.categoryId}`)"
+                    @click="router.push(getCategoryRoute(item.categoryId))"
                   ></v-list-item>
                 </template>
               </v-list>
@@ -92,7 +92,7 @@
     height="64px"
     class="d-flex align-center justify-center px-4"
   >
-    <v-chip variant="text">
+    <v-chip variant="text" class="slogan-chip">
       <template #prepend>
         <img
           src="/cc.svg"
@@ -103,7 +103,10 @@
           height="20"
         />
       </template>
-      e cinere surgemus.
+      <span class="slogan-text">
+        <span class="slogan-default">e cinere surgemus.</span>
+        <span class="slogan-hover">The Library shall not fall again.</span>
+      </span>
     </v-chip>
   </v-sheet>
 </template>
@@ -130,4 +133,57 @@ const openEmailClient = () => {
   window.location.href = 'mailto:wings@riff.cc';
 };
 
+// Map category slugs to clean routes
+const categoryRouteMap: Record<string, string> = {
+  'music': '/music',
+  'movies': '/movies',
+  'tv-shows': '/tv',
+  'books': '/books',
+  'audiobooks': '/audiobooks',
+  'games': '/games',
+};
+
+const getCategoryRoute = (categoryId: string) => {
+  return categoryRouteMap[categoryId] || `/featured/${categoryId}`;
+};
+
 </script>
+
+<style scoped>
+/* Slogan hover effect */
+.slogan-chip {
+  cursor: default;
+}
+
+.slogan-text {
+  position: relative;
+  display: inline-block;
+  min-width: 180px; /* Ensure enough width for longer hover text */
+  text-align: center;
+}
+
+.slogan-default,
+.slogan-hover {
+  transition: opacity 0.3s ease;
+}
+
+.slogan-default {
+  display: block;
+}
+
+.slogan-hover {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  white-space: nowrap;
+}
+
+.slogan-chip:hover .slogan-default {
+  opacity: 0;
+}
+
+.slogan-chip:hover .slogan-hover {
+  opacity: 1;
+}
+</style>
