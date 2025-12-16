@@ -120,7 +120,7 @@
       :model-value="Boolean(targetReleaseToEdit)"
       max-width="500px"
     >
-      <v-card class="py-3">
+      <v-card class="py-3" color="black">
         <v-card-title>
           <span class="text-h6 ml-2">Edit Release</span>
         </v-card-title>

@@ -14,7 +14,7 @@
                 v-bind="activatorProps"
               ></v-btn>
             </template>
-            <v-card width="600px" max-height="620px" class="pa-8 ma-auto">
+            <v-card width="600px" max-height="620px" class="pa-8 ma-auto" color="black">
               <artist-form
                 v-if="currentStructureType === 'artist'"
                 mode="create"
@@ -567,7 +567,7 @@
 
   <!-- Edit dialog -->
   <v-dialog v-model="editStructureDialog" max-width="600px">
-    <v-card class="py-3">
+    <v-card class="py-3" color="black">
       <v-card-title>
         <span class="text-h6 ml-2">{{ editedStructure?.metadata?.type === 'artist' ? 'Edit Artist' : 'Edit Structure' }}</span>
       </v-card-title>
