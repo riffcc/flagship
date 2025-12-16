@@ -258,7 +258,7 @@ export class SplitBeamRenderer {
    * Draw a node
    */
   private drawNode(node: MeshNode): void {
-    const [x, y] = this.project3D([node.slot.x, node.slot.y, node.slot.z]);
+    const [x, y] = this.project3D([node.slot.q, node.slot.r, node.slot.z]);
 
     // Node color based on latency
     const color = latencyToColor(node.latency_ms);

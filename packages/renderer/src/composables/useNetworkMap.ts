@@ -17,8 +17,13 @@ export interface PeerNode {
   id: string;
   label: string;
   slot: {
-    x: number;
-    y: number;
+    /** SPIRAL index (slot number in enumeration order) */
+    index: number | null;
+    /** Hex axial coordinate q */
+    q: number;
+    /** Hex axial coordinate r */
+    r: number;
+    /** Vertical layer z */
     z: number;
   };
   peer_type: 'server' | 'browser';

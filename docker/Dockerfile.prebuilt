@@ -10,8 +10,8 @@ RUN apk add --no-cache gettext
 # Copy pre-built static files from host
 COPY packages/renderer/dist/web /usr/share/nginx/html
 
-# Copy custom nginx config for API proxying
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config template for API proxying (will be processed at runtime)
+COPY docker/nginx.conf.template /etc/nginx/nginx.conf.template
 
 # Copy runtime configuration template and entrypoint script
 COPY docker/config.template.js /etc/nginx/config.template.js
@@ -19,8 +19,10 @@ COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 # Environment variables (can be overridden at runtime)
-ENV API_URL=http://localhost:5002/api/v1
-ENV RELAY_URL=ws://localhost:5002/api/v1/relay/ws
+# CITADEL_PEERS: comma-separated list of citadel mesh nodes (host:port)
+# LENS_NODE: lens node for local API queries (host:port)
+ENV CITADEL_PEERS=""
+ENV LENS_NODE=""
 
 # Health check
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \

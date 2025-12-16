@@ -8,6 +8,7 @@ import lensServicePlugin from './lensService';
 import wasmP2pPlugin from './wasmP2pPlugin';
 import { VueQueryPlugin } from '@tanstack/vue-query';
 import { queryClient } from './tanstackQuery';
+import unifiedNetworkService from './network';
 
 export function registerPlugins (app: App) {
   app
@@ -15,5 +16,6 @@ export function registerPlugins (app: App) {
     .use(router)
     .use(VueQueryPlugin, { queryClient })
     .use(lensServicePlugin)
-    .use(wasmP2pPlugin);
+    .use(wasmP2pPlugin)
+    .use(unifiedNetworkService);
 }

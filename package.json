@@ -6,7 +6,7 @@
     "name": "Julien Jean Malard-Adam",
     "url": "https://github.com/julienmalard"
   },
-  "version": "0.10.0",
+  "version": "0.11.0",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "main": "packages/main/dist/index.js",
@@ -114,5 +114,5 @@
       "magic-string": "0.30.15"
     }
   },
-  "packageManager": "pnpm@10.10.0+sha1.f657bc37aa5e08da2ecff3877fe3bbb4b13703ba"
+  "packageManager": "pnpm@10.25.0+sha512.5e82639027af37cf832061bcc6d639c219634488e0f2baebe785028a793de7b525ffcd3f7ff574f5e9860654e098fe852ba8ac5dd5cefe1767d23a020a92f501"
 }

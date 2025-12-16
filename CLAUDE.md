@@ -2,41 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🚨 CRITICAL BUILD CONFIGURATION 🚨
-
-### API URL Rules (READ CAREFULLY)
-
-**ENVIRONMENT NAMING:**
-- **`global`** = PRODUCTION (api.global.riff.cc, dev.global.riff.cc)
-- **`palace`** = DEVELOPMENT (api.palace.riff.cc, dev.palace.riff.cc)
-
-**PRODUCTION BUILDS:**
-```bash
-VITE_API_URL="https://api.global.riff.cc/api/v1" pnpm build
-```
-- Use `api.global.riff.cc` for ALL production deployments
-- Use when building Docker images for production
-- Use when deploying to live infrastructure
-
-**DEV/TEST BUILDS:**
-```bash
-VITE_API_URL="https://api.palace.riff.cc/api/v1" pnpm build
-```
-- Use `api.palace.riff.cc` for ALL dev/test environments
-- Use in Docker Compose test clusters (even with 50+ nodes)
-- Use for local development and testing
-
-**THIS HAS BEEN FORGOTTEN 10 TIMES. DO NOT FORGET IT AGAIN.**
-
-The frontend MUST be built with the correct API URL:
-- **Production:** `https://api.global.riff.cc/api/v1`
-- **Dev/Test:** `https://api.palace.riff.cc/api/v1`
-
-This is not negotiable. This is not optional. This is ALWAYS required.
-
 ## Project Overview
 
-Flagship is Riff.CC's decentralized media platform for watching, sharing, and curating legally free content. It uses peer-to-peer technology with PeerBit for metadata and IPFS for content/data distribution, and can run as both an Electron desktop app and a web application.
+Flagship is Riff.CC's decentralized media platform for watching, sharing, and curating legally free content.
 
 ## Key Commands
 
@@ -75,8 +43,8 @@ Flagship is Riff.CC's decentralized media platform for watching, sharing, and cu
 - **Frontend**: Vue 3 + TypeScript + Vuetify 3
 - **State Management**: TanStack Query (Vue Query) + Vue Composables
 - **Build Tool**: Vite with multiple plugins
-- **P2P Layer**: PeerBit (metadata) and IPFS (content/data)
-- **Desktop**: Electron v34
+- **P2P Layer**: Citadel + Lens V2
+- **Desktop**: Electron
 
 ### Key Architectural Patterns
 
@@ -98,8 +66,8 @@ Flagship is Riff.CC's decentralized media platform for watching, sharing, and cu
 
 4. **Hybrid Data Loading Architecture (PR #70)**
    - **API-First Pre-fetching**: Attempts to load data from REST API immediately for instant UI
-   - **Graceful P2P Fallback**: Falls back to Peerbit when API is unavailable
-   - **Non-Blocking P2P Init**: Peerbit initializes in background without blocking UI
+   - **Graceful P2P Fallback**: Falls back to Citadel when API is unavailable
+   - **Non-Blocking P2P Init**: Citadel initializes in background without blocking UI
    - **Smart Loading Screen**: Shows appropriate loading state based on data source
 
    Implementation details:

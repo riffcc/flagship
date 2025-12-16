@@ -1,29 +1,38 @@
 #!/bin/sh
 set -e
 
-# Default values if environment variables are not set
-API_URL="${API_URL:-http://localhost:5002/api/v1}"
-RELAY_URL="${RELAY_URL:-ws://localhost:5002/api/v1/relay/ws}"
+# Citadel mesh peers (comma-separated host:port)
+CITADEL_PEERS="${CITADEL_PEERS:-}"
+# Lens node API endpoint (full URL, e.g., https://api.global.riff.cc/api/v1)
+LENS_NODE="${LENS_NODE:-http://127.0.0.1:8080/api/v1}"
+
+# Derive WebSocket URL from LENS_NODE
+LENS_NODE_WS=$(echo "$LENS_NODE" | sed 's|^http://|ws://|' | sed 's|^https://|wss://|' | sed 's|/api/v1$|/ws|')
 
 echo "🔧 Configuring Flagship with runtime settings..."
-echo "   API_URL:   $API_URL"
-echo "   RELAY_URL: $RELAY_URL"
+echo "   CITADEL_PEERS: $CITADEL_PEERS"
+echo "   LENS_NODE:     $LENS_NODE"
+echo "   LENS_NODE_WS:  $LENS_NODE_WS"
 
-# Substitute environment variables in config template
-# Note: We export the variables for envsubst
-export API_URL
-export RELAY_URL
+# Export for envsubst
+export CITADEL_PEERS
+export LENS_NODE
+export LENS_NODE_WS
 
 # Generate runtime config.js from template
-envsubst '${API_URL} ${RELAY_URL}' < /etc/nginx/config.template.js > /usr/share/nginx/html/config.js
+envsubst '${CITADEL_PEERS} ${LENS_NODE}' < /etc/nginx/config.template.js > /usr/share/nginx/html/config.js
+echo "✅ Runtime config.js generated"
 
-echo "✅ Runtime configuration generated at /usr/share/nginx/html/config.js"
+# Generate nginx config from template
+envsubst '${LENS_NODE} ${LENS_NODE_WS}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf
+echo "✅ Nginx config generated with API proxy to $LENS_NODE"
 
-# Inject config.js script tag into index.html
-echo "🔧 Injecting config.js script tag into index.html..."
-sed -i 's|<title>Riff.CC</title>|<title>Riff.CC</title>\n  <!-- Runtime configuration (injected by Docker at container startup) -->\n  <script src="/config.js"></script>|' /usr/share/nginx/html/index.html
-
-echo "✅ Runtime configuration script tag injected"
+# Inject config.js script tag into index.html if not already present
+if ! grep -q 'config.js' /usr/share/nginx/html/index.html; then
+    echo "🔧 Injecting config.js script tag into index.html..."
+    sed -i 's|<title>Riff.CC</title>|<title>Riff.CC</title>\n  <script src="/config.js"></script>|' /usr/share/nginx/html/index.html
+    echo "✅ Runtime configuration script tag injected"
+fi
 
 # Start nginx in foreground
 echo "🚀 Starting nginx..."

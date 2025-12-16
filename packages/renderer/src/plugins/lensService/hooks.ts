@@ -212,7 +212,7 @@ export function useContentCategoriesQuery(options?: {
           name: c.name,
           displayName: c.name,
           slug: c.slug,
-          metadataSchema: c.metadata_schema,
+          metadataSchema: c.metadataSchema,
           siteAddress: c.siteAddress,
           featured: c.featured,
         }));
@@ -231,7 +231,7 @@ export function useContentCategoriesQuery(options?: {
               name: c.name,
               displayName: c.name, // Map for compatibility
               slug: c.slug,
-              metadataSchema: c.metadata_schema, // Already an object from API
+              metadataSchema: c.metadataSchema, // Already an object from API
               siteAddress: c.siteAddress, // For filtering by site
             }));
           }
