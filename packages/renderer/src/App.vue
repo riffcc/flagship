@@ -1,7 +1,8 @@
 <template>
   <v-app>
     <div class="app-header-border"></div>
-    <gamepad-nav-bar />
+    <gamepad-nav-bar v-if="gamepadState.connected" />
+    <app-bar v-else />
     <v-main min-height="100vh" class="mt-12">
       <router-view />
     </v-main>
@@ -35,7 +36,7 @@
         <v-card-title class="d-flex justify-space-between align-center">
           <span>DHT & Sync Debug Console</span>
           <v-btn
-            icon="mdi-close"
+            icon="$close"
             variant="text"
             @click="showDHTDebug = false"
           ></v-btn>
@@ -86,6 +87,7 @@ import { onKeyStroke } from '@vueuse/core';
 import { ref, watchEffect, onMounted, defineAsyncComponent } from 'vue';
 
 import appFooter from '/@/components/layout/appFooter.vue';
+import appBar from '/@/components/layout/appBar.vue';
 import GamepadNavBar from '/@/components/layout/gamepadNavBar.vue';
 import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';

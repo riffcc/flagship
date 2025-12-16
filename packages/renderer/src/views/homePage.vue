@@ -57,22 +57,16 @@
           <v-col
             v-for="item in section.items"
             :key="item.id"
+            cols="6"
+            sm="4"
+            md="3"
+            lg="2"
+            class="content-col"
           >
             <content-card
               :item="item"
               cursor-pointer
               @click="handleItemClick(item)"
-            />
-          </v-col>
-          <!-- Ghost items to maintain alignment -->
-          <v-col
-            v-for="n in Math.max(0, 8 - section.items.length)"
-            :key="`ghost-${section.id}-${n}`"
-            style="visibility: hidden;"
-          >
-            <content-card
-              :item="{}"
-              cursor-pointer
             />
           </v-col>
         </content-section>

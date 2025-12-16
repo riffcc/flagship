@@ -120,7 +120,6 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue';
-import { useDisplay } from 'vuetify';
 import { useShowDefederation } from '/@/composables/showDefed';
 import { useSiteColors } from '/@/composables/siteColors';
 import { useImageColorExtraction } from '/@/composables/imageColorExtraction';
@@ -132,7 +131,6 @@ import { useRouter } from 'vue-router';
 const { showDefederation } = useShowDefederation();
 const { getSiteColor } = useSiteColors();
 const { getColorTintedGradient } = useImageColorExtraction();
-const { xs } = useDisplay();
 const router = useRouter();
 
 const props = defineProps<{
@@ -160,14 +158,8 @@ watch(() => props.item.thumbnailCID, async (newCID) => {
 });
 
 const cardWidth = computed(() => {
-  const categoryId = props.item.categoryId;
-  if (categoryId === 'music') {
-    return xs.value ? '10.5rem' : '15rem';
-  }
-  if (categoryId === 'tvShow') {
-    return '17rem';
-  }
-  return xs.value ? '10.5rem' : '12rem';
+  // Fluid width - let the grid handle sizing
+  return '100%';
 });
 
 const cardHeight = computed(() => {
