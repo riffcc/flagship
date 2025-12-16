@@ -150,40 +150,24 @@ const getCategoryRoute = (categoryId: string) => {
 </script>
 
 <style scoped>
-/* Slogan hover effect */
+/* Slogan hover effect - simple inline swap */
 .slogan-chip {
   cursor: default;
 }
 
-.slogan-text {
-  position: relative;
-  display: inline-block;
-  min-width: 180px; /* Ensure enough width for longer hover text */
-  text-align: center;
-}
-
-.slogan-default,
-.slogan-hover {
-  transition: opacity 0.3s ease;
-}
-
 .slogan-default {
-  display: block;
+  display: inline;
 }
 
 .slogan-hover {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  opacity: 0;
-  white-space: nowrap;
+  display: none;
 }
 
 .slogan-chip:hover .slogan-default {
-  opacity: 0;
+  display: none;
 }
 
 .slogan-chip:hover .slogan-hover {
-  opacity: 1;
+  display: inline;
 }
 </style>

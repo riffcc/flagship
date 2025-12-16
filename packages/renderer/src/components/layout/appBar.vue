@@ -23,7 +23,7 @@
       <router-link
         v-for="item in featuredContentCategories"
         :key="item.categoryId"
-        :to="`/featured/${item.categoryId}`"
+        :to="getCategoryRoute(item.categoryId)"
         class="nav-link"
       >
         {{ item.displayName === 'TV Shows' ? 'TV' : item.displayName }}
@@ -63,7 +63,7 @@
           :title="item.displayName === 'TV Shows' ? 'TV' : item.displayName"
           active-class="text-primary-lighten-1"
           :active="route.path === item.categoryId"
-          @click="router.push(`/featured/${item.categoryId}`)"
+          @click="router.push(getCategoryRoute(item.categoryId))"
         ></v-list-item>
         <template v-if="userData">
           <v-divider class="my-1"></v-divider>
@@ -150,6 +150,20 @@ const { userData } = useUserSession();
 
 function handleOnDisconnect() {
   userData.value = null;
+};
+
+// Map category slugs to clean routes
+const categoryRouteMap: Record<string, string> = {
+  'music': '/music',
+  'movies': '/movies',
+  'tv-shows': '/tv',
+  'books': '/books',
+  'audiobooks': '/audiobooks',
+  'games': '/games',
+};
+
+const getCategoryRoute = (categoryId: string) => {
+  return categoryRouteMap[categoryId] || `/featured/${categoryId}`;
 };
 
 </script>

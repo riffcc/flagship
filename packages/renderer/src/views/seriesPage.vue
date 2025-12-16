@@ -31,7 +31,7 @@
       </p>
       <v-btn
         color="primary"
-        @click="router.push('/featured/tv-shows')"
+        @click="router.push('/tv')"
       >
         Browse TV Shows
       </v-btn>
