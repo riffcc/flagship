@@ -26,9 +26,9 @@
       @click="onNavigate"
     ></v-btn>
   </div>
-  <v-row dense>
+  <div class="content-grid">
     <slot></slot>
-  </v-row>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -40,3 +40,12 @@ defineProps<{
   onNext?: () => void;
 }>();
 </script>
+
+<style scoped>
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+</style>

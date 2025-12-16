@@ -54,21 +54,13 @@
           :pagination="section.id === 'tvShow' && section.items.length > 4"
           @navigate="() => router.push(section.navigationPath)"
         >
-          <v-col
+          <content-card
             v-for="item in section.items"
             :key="item.id"
-            cols="6"
-            sm="4"
-            md="3"
-            lg="2"
-            class="content-col"
-          >
-            <content-card
-              :item="item"
-              cursor-pointer
-              @click="handleItemClick(item)"
-            />
-          </v-col>
+            :item="item"
+            cursor-pointer
+            @click="handleItemClick(item)"
+          />
         </content-section>
       </template>
     </template>

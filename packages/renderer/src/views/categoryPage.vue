@@ -27,16 +27,13 @@
 
       <template v-else-if="featuredReleasesInCategory.length > 0 && pageCategory">
         <content-section :title="pageCategory.displayName">
-          <v-col
+          <content-card
             v-for="item in featuredReleasesInCategory"
             :key="item.id"
-          >
-            <content-card
-              :item="item"
-              cursor-pointer
-              @click="handleItemClick(item)"
-            />
-          </v-col>
+            :item="item"
+            cursor-pointer
+            @click="handleItemClick(item)"
+          />
         </content-section>
       </template>
 
