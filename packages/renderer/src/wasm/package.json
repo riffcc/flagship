@@ -1,0 +1,15 @@
+{
+  "name": "lens-v2-wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "lens_v2_wasm_bg.wasm",
+    "lens_v2_wasm.js",
+    "lens_v2_wasm.d.ts"
+  ],
+  "main": "lens_v2_wasm.js",
+  "types": "lens_v2_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

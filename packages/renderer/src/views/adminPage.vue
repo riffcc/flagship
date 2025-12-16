@@ -129,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, type Ref} from 'vue';
+import {ref, type Ref, defineAsyncComponent} from 'vue';
 import {useDisplay} from 'vuetify';
 import contentManagement from '/@/components/admin/contentManagement.vue';
 import accessManagement from '/@/components/admin/accessManagement.vue';
@@ -139,7 +139,9 @@ import siteManagement from '/@/components/admin/siteManagement.vue';
 import categoriesManagement from '/@/components/admin/categoriesManagement.vue';
 import structuresManagement from '/@/components/admin/structuresManagement.vue';
 import maintenanceManagement from '/@/components/admin/maintenanceManagement.vue';
-import NetworkMapGraph from '/@/components/misc/networkMapGraph.vue';
+
+// Lazy load NetworkMapGraph to avoid WebGPU errors from 3d-force-graph on browsers without support
+const NetworkMapGraph = defineAsyncComponent(() => import('/@/components/misc/networkMapGraph.vue'));
 import type { PartialFeaturedReleaseItem } from '/@//types';
 
 const {lgAndUp} = useDisplay();

@@ -128,7 +128,7 @@
 
 <script setup lang="ts">
 import { onKeyStroke } from '@vueuse/core';
-import { ref, watchEffect, onMounted } from 'vue';
+import { ref, watchEffect, onMounted, defineAsyncComponent } from 'vue';
 
 import appFooter from '/@/components/layout/appFooter.vue';
 import GamepadNavBar from '/@/components/layout/gamepadNavBar.vue';
@@ -136,7 +136,9 @@ import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
 import GamepadHints from '/@/components/gamepad/gamepadHints.vue';
 import StartMenu from '/@/components/misc/startMenu.vue';
-import NetworkMapGraph from '/@/components/misc/networkMapGraph.vue';
+
+// Lazy load NetworkMapGraph to avoid WebGPU errors from 3d-force-graph on browsers without support
+const NetworkMapGraph = defineAsyncComponent(() => import('/@/components/misc/networkMapGraph.vue'));
 
 import { useAudioAlbum } from '/@/composables/audioAlbum';
 import { useFloatingVideo } from '/@/composables/floatingVideo';
