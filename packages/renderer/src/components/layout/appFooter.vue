@@ -90,7 +90,7 @@
   <v-sheet
     color="primary-darken-1"
     height="64px"
-    class="d-flex align-center items-center justify-space-between px-4"
+    class="d-flex align-center justify-center px-4"
   >
     <v-chip variant="text">
       <template #prepend>
@@ -105,7 +105,6 @@
       </template>
       e cinere surgemus.
     </v-chip>
-
   </v-sheet>
 </template>
 
