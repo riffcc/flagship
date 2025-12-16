@@ -1,12 +1,13 @@
 <template>
   <v-sheet
-    position="sticky"
-    location="bottom right"
-    class="w-100 border rounded-t-xl mx-auto"
+    position="fixed"
+    location="bottom"
+    class="w-100 border rounded-t-xl audio-player-sheet"
     color="black"
     :elevation="24"
     height="100px"
     max-width="960px"
+    style="left: 50%; transform: translateX(-50%); z-index: 1000;"
     :data-navigable="true"
     @dblclick="navigateToAlbum"
   >
