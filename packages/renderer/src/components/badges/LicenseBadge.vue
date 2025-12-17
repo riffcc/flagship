@@ -1,5 +1,5 @@
 <template>
-  <v-tooltip v-if="license" location="bottom">
+  <v-tooltip v-if="license" location="bottom" content-class="license-tooltip-content">
     <template #activator="{ props: tooltipProps }">
       <a
         v-if="linkable"
@@ -55,18 +55,18 @@ const emit = defineEmits<{
 
 /**
  * Get short display text for the license (without CC- prefix since logo shows it)
+ * No version shown - just the license type
  */
 const displayText = computed(() => {
   if (!props.license) return null;
 
-  const version = props.license.version || '4.0';
   // Remove 'cc-' prefix since the logo already shows CC
   const type = props.license.type === 'cc0' ? '0' : props.license.type.replace('cc-', '').toUpperCase();
-  return `${type} ${version}`;
+  return type;
 });
 
 /**
- * Get full license name
+ * Get full license name for tooltip
  */
 const fullLicenseName = computed(() => {
   if (!props.license) return '';
@@ -82,9 +82,13 @@ const fullLicenseName = computed(() => {
   };
 
   const name = names[props.license.type] || props.license.type;
-  const version = props.license.version || '4.0';
 
-  return `Creative Commons ${name} ${version}`;
+  // Don't show version if unknown
+  if (!props.license.version || props.license.version === 'unknown') {
+    return `Creative Commons ${name}`;
+  }
+
+  return `Creative Commons ${name} ${props.license.version}`;
 });
 
 /**
@@ -98,8 +102,8 @@ const licenseUrl = computed(() => {
     return props.license.url;
   }
 
-  // Generate CC license URL
-  const version = props.license.version || '4.0';
+  // Generate CC license URL (use 4.0 if version is unknown or not set)
+  const version = (!props.license.version || props.license.version === 'unknown') ? '4.0' : props.license.version;
   const licenseSlug = props.license.type === 'cc0' ? 'zero' : props.license.type.replace('cc-', '');
 
   return `https://creativecommons.org/licenses/${licenseSlug}/${version}/`;
@@ -150,5 +154,21 @@ function handleClick() {
 
 .license-tooltip {
   max-width: 300px;
+}
+</style>
+
+<style>
+/* Non-scoped styles for tooltip portal content */
+.license-tooltip-content {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+.license-tooltip-content .font-weight-bold {
+  color: #fff !important;
+}
+
+.license-tooltip-content .text-caption {
+  color: rgba(255, 255, 255, 0.8) !important;
 }
 </style>

@@ -310,47 +310,29 @@ const trackList = computed<Track[]>(() => {
   }
 });
 
-// The Slip artwork (temporary hardcoded for demonstration)
-const SLIP_ARTWORK_BASE = '/synthesis/nin-the-slip';
-const THE_SLIP_ID = 'b9103d29-3e20-4855-96f1-1b2774bdb5da';
-
-const slipArtwork = [
-  `${SLIP_ARTWORK_BASE}/track-01-999999.jpg`,
-  `${SLIP_ARTWORK_BASE}/track-02-1000000.jpg`,
-  `${SLIP_ARTWORK_BASE}/track-03-letting-you.jpg`,
-  `${SLIP_ARTWORK_BASE}/track-04-discipline.jpg`,
-  `${SLIP_ARTWORK_BASE}/track-05-echoplex.jpg`,
-  `${SLIP_ARTWORK_BASE}/track-06-head-down.jpg`,
-  `${SLIP_ARTWORK_BASE}/track-07-lights-in-the-sky.jpg`,
-  `${SLIP_ARTWORK_BASE}/track-08-corona-radiata.jpg`,
-  `${SLIP_ARTWORK_BASE}/track-09-four-of-us-dying.jpg`,
-  `${SLIP_ARTWORK_BASE}/track-10-demon-seed.jpg`,
-];
-
-// Get track artwork array
+// Get track artwork array from metadata (parsed through parseUrlOrCid)
 const trackArtworkArray = computed(() => {
-  // Check if metadata has trackArtwork array/object
-  if (album.value?.metadata?.trackArtwork) {
-    try {
-      const artwork = typeof album.value.metadata.trackArtwork === 'string'
-        ? JSON.parse(album.value.metadata.trackArtwork)
-        : album.value.metadata.trackArtwork;
+  if (!album.value?.metadata?.trackArtwork) return [];
 
-      if (Array.isArray(artwork)) {
-        return artwork;
-      }
-      // If it's an object, convert to array
-      if (typeof artwork === 'object') {
-        return Object.values(artwork);
-      }
-    } catch (e) {
-      console.error('Failed to parse trackArtwork:', e);
+  try {
+    const artwork = typeof album.value.metadata.trackArtwork === 'string'
+      ? JSON.parse(album.value.metadata.trackArtwork)
+      : album.value.metadata.trackArtwork;
+
+    if (Array.isArray(artwork)) {
+      // Filter out empty strings and parse through parseUrlOrCid
+      return artwork
+        .filter((url: string) => url && url.trim() !== '')
+        .map((url: string) => parseUrlOrCid(url));
     }
-  }
-
-  // Fallback for The Slip
-  if (album.value?.id === THE_SLIP_ID) {
-    return slipArtwork;
+    // If it's an object, convert to array
+    if (typeof artwork === 'object') {
+      return Object.values(artwork)
+        .filter((url: any) => url && url.trim() !== '')
+        .map((url: any) => parseUrlOrCid(url));
+    }
+  } catch (e) {
+    console.error('Failed to parse trackArtwork:', e);
   }
 
   return [];

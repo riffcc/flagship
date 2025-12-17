@@ -379,7 +379,7 @@
           <v-list-item
             v-for="release in currentArtistReleases"
             :key="release.id"
-            @click="navigateToRelease(release.id)"
+            @click="navigateToAlbumEdit(release)"
           >
             <template #prepend>
               <v-avatar>
@@ -397,15 +397,195 @@
             </v-list-item-subtitle>
             <template #append>
               <v-btn
-                icon="$open-in-new"
+                icon="$pencil"
                 variant="text"
                 density="comfortable"
                 size="small"
+                title="Edit album"
+                @click.stop="navigateToAlbumEdit(release)"
+              ></v-btn>
+              <v-btn
+                icon="$play"
+                variant="text"
+                density="comfortable"
+                size="small"
+                title="Play album"
                 @click.stop="navigateToRelease(release.id)"
               ></v-btn>
             </template>
           </v-list-item>
         </v-list>
+      </div>
+
+      <!-- Album Detail View -->
+      <div v-else-if="currentView === 'album-detail' && currentAlbum">
+        <div class="d-flex align-center mb-4">
+          <v-avatar size="64" class="mr-4">
+            <v-img
+              v-if="currentAlbum.thumbnailCID"
+              :src="parseUrlOrCid(currentAlbum.thumbnailCID)"
+              cover
+            ></v-img>
+            <v-icon v-else size="32">$album</v-icon>
+          </v-avatar>
+          <div>
+            <h4>{{ currentAlbum.name }}</h4>
+            <p class="text-body-2 text-grey">{{ currentAlbum.metadata?.releaseYear || 'Unknown year' }}</p>
+          </div>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="primary"
+            prepend-icon="$content-save"
+            @click="saveAlbumDetails"
+          >
+            Save Changes
+          </v-btn>
+        </div>
+
+        <v-divider class="my-4"></v-divider>
+
+        <!-- Album Covers Section -->
+        <h5 class="text-h6 mb-3">Album Artwork</h5>
+        <v-row class="mb-6">
+          <v-col cols="12" sm="6" md="4">
+            <v-card>
+              <v-card-subtitle class="pt-3">Front Cover</v-card-subtitle>
+              <v-img
+                :src="parseUrlOrCid(currentAlbum.thumbnailCID)"
+                aspect-ratio="1"
+                cover
+                max-height="200"
+              >
+                <template #placeholder>
+                  <v-sheet color="grey-darken-3" class="d-flex align-center justify-center fill-height">
+                    <v-icon size="48" color="grey">$album</v-icon>
+                  </v-sheet>
+                </template>
+              </v-img>
+              <v-card-text>
+                <v-text-field
+                  :model-value="currentAlbum.thumbnailCID"
+                  label="Front Cover URL/CID"
+                  density="compact"
+                  hide-details
+                  @update:model-value="currentAlbum.thumbnailCID = $event"
+                ></v-text-field>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col cols="12" sm="6" md="4">
+            <v-card>
+              <v-card-subtitle class="pt-3">Back Cover</v-card-subtitle>
+              <v-img
+                :src="parseUrlOrCid(albumBackCover) || undefined"
+                aspect-ratio="1"
+                cover
+                max-height="200"
+              >
+                <template #placeholder>
+                  <v-sheet color="grey-darken-3" class="d-flex align-center justify-center fill-height">
+                    <v-icon size="48" color="grey">$album</v-icon>
+                    <span class="text-caption ml-2">No back cover</span>
+                  </v-sheet>
+                </template>
+              </v-img>
+              <v-card-text>
+                <v-text-field
+                  v-model="albumBackCover"
+                  label="Back Cover URL/CID"
+                  density="compact"
+                  hide-details
+                  placeholder="Enter URL or CID"
+                ></v-text-field>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+
+        <v-divider class="my-4"></v-divider>
+
+        <!-- Track List Section -->
+        <div class="d-flex align-center mb-3">
+          <h5 class="text-h6">Track List</h5>
+          <v-spacer></v-spacer>
+          <v-btn
+            size="small"
+            prepend-icon="$plus"
+            variant="tonal"
+            @click="addTrack"
+          >
+            Add Track
+          </v-btn>
+        </div>
+
+        <v-card v-if="albumTracks.length > 0">
+          <v-list>
+            <v-list-item
+              v-for="(track, index) in albumTracks"
+              :key="index"
+              class="py-3"
+            >
+              <template #prepend>
+                <div class="d-flex align-center mr-3">
+                  <span class="text-body-2 text-grey mr-3" style="min-width: 24px;">
+                    {{ (index + 1).toString().padStart(2, '0') }}
+                  </span>
+                  <v-avatar size="48" rounded="lg" class="track-artwork-preview">
+                    <v-img
+                      v-if="track.artwork"
+                      :src="parseUrlOrCid(track.artwork)"
+                      cover
+                    ></v-img>
+                    <v-icon v-else size="24" color="grey">$music</v-icon>
+                  </v-avatar>
+                </div>
+              </template>
+
+              <v-row dense align="center">
+                <v-col cols="12" sm="4">
+                  <v-text-field
+                    v-model="track.title"
+                    label="Track Title"
+                    density="compact"
+                    hide-details
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="3">
+                  <v-text-field
+                    v-model="track.artist"
+                    label="Artist (optional)"
+                    density="compact"
+                    hide-details
+                    :placeholder="currentArtist?.name || 'Same as album'"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <v-text-field
+                    v-model="track.artwork"
+                    label="Track Artwork URL/CID"
+                    density="compact"
+                    hide-details
+                    placeholder="Leave empty for album art"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="1" class="text-right">
+                  <v-btn
+                    icon="$delete"
+                    variant="text"
+                    size="small"
+                    color="error"
+                    @click="removeTrack(index)"
+                  ></v-btn>
+                </v-col>
+              </v-row>
+            </v-list-item>
+          </v-list>
+        </v-card>
+
+        <v-sheet v-else color="transparent" class="text-center pa-8">
+          <v-icon size="48" color="grey" class="mb-2">$music-note</v-icon>
+          <p class="text-body-2 text-grey">No tracks yet. Click "Add Track" to get started.</p>
+        </v-sheet>
       </div>
 
       <!-- Tags List View -->
@@ -823,10 +1003,15 @@ const addReleaseMutation = useAddReleaseMutation();
 const isLoading = computed(() => isStructuresLoading.value || isReleasesLoading.value);
 
 // View state
-const currentView = ref<'categories' | 'tv-list' | 'series-detail' | 'season-detail' | 'music-list' | 'artist-detail' | 'tags-list' | 'collections-list' | 'all-episodes' | 'all-music'>('categories');
+const currentView = ref<'categories' | 'tv-list' | 'series-detail' | 'season-detail' | 'music-list' | 'artist-detail' | 'album-detail' | 'tags-list' | 'collections-list' | 'all-episodes' | 'all-music'>('categories');
 const currentSeries = ref<any>(null);
 const currentSeason = ref<any>(null);
 const currentArtist = ref<any>(null);
+const currentAlbum = ref<any>(null);
+
+// Album editing state
+const albumTracks = ref<Array<{ title: string; artist?: string; artwork?: string }>>([]);
+const albumBackCover = ref<string>('');
 const currentStructureType = ref<string>('series');
 const parentContext = ref<any>(null);
 
@@ -1100,6 +1285,8 @@ const currentViewTitle = computed(() => {
     case 'artist-detail':
     case 'all-music':
       return 'Artists';
+    case 'album-detail':
+      return 'Album';
     case 'tv-list':
     case 'series-detail':
     case 'season-detail':
@@ -1137,12 +1324,16 @@ const breadcrumbs = computed(() => {
     });
   }
 
-  if (currentView.value === 'music-list' || currentView.value === 'artist-detail' || currentView.value === 'all-music') {
+  if (currentView.value === 'music-list' || currentView.value === 'artist-detail' || currentView.value === 'album-detail' || currentView.value === 'all-music') {
     items.push({ title: 'Music', value: 'music-list' });
   }
 
-  if (currentView.value === 'artist-detail') {
+  if (currentView.value === 'artist-detail' || currentView.value === 'album-detail') {
     items.push({ title: currentArtist.value?.name || 'Artist', value: 'artist-detail' });
+  }
+
+  if (currentView.value === 'album-detail') {
+    items.push({ title: currentAlbum.value?.name || 'Album', value: 'album-detail' });
   }
 
   if (currentView.value === 'tags-list') {
@@ -1307,6 +1498,48 @@ function navigateToArtist(artist: any) {
   currentView.value = 'artist-detail';
 }
 
+function navigateToAlbumEdit(album: any) {
+  currentAlbum.value = album;
+
+  // Parse existing track metadata
+  if (album.metadata?.trackMetadata) {
+    try {
+      const tracks = typeof album.metadata.trackMetadata === 'string'
+        ? JSON.parse(album.metadata.trackMetadata)
+        : album.metadata.trackMetadata;
+
+      // Get existing track artwork
+      let artworkArray: string[] = [];
+      if (album.metadata?.trackArtwork) {
+        try {
+          artworkArray = typeof album.metadata.trackArtwork === 'string'
+            ? JSON.parse(album.metadata.trackArtwork)
+            : album.metadata.trackArtwork;
+        } catch (e) {
+          console.error('Failed to parse trackArtwork:', e);
+        }
+      }
+
+      // Merge track data with artwork
+      albumTracks.value = tracks.map((t: any, i: number) => ({
+        title: t.title || '',
+        artist: t.artist || '',
+        artwork: artworkArray[i] || ''
+      }));
+    } catch (e) {
+      console.error('Failed to parse trackMetadata:', e);
+      albumTracks.value = [];
+    }
+  } else {
+    albumTracks.value = [];
+  }
+
+  // Parse existing back cover
+  albumBackCover.value = album.metadata?.backCoverCID || '';
+
+  currentView.value = 'album-detail';
+}
+
 function navigateToCollection(collection: any) {
   // TODO: Implement collection detail view
   openSnackbar('Collection detail view coming soon', 'info');
@@ -1328,10 +1561,15 @@ function navigateToBreadcrumb(item: any) {
     currentSeries.value = null;
     currentSeason.value = null;
     currentArtist.value = null;
+    currentAlbum.value = null;
   }
 
   if (item.value === 'series-detail') {
     currentSeason.value = null;
+  }
+
+  if (item.value === 'artist-detail') {
+    currentAlbum.value = null;
   }
 }
 
@@ -1341,6 +1579,58 @@ function showAllEpisodes() {
 
 function showAllMusicReleases() {
   currentView.value = 'all-music';
+}
+
+// Album track management
+function addTrack() {
+  albumTracks.value.push({ title: '', artist: '', artwork: '' });
+}
+
+function removeTrack(index: number) {
+  albumTracks.value.splice(index, 1);
+}
+
+async function saveAlbumDetails() {
+  if (!currentAlbum.value) return;
+
+  try {
+    // Build track metadata (title and artist only, as per original structure)
+    const trackMetadata = albumTracks.value.map(t => ({
+      title: t.title,
+      ...(t.artist ? { artist: t.artist } : {})
+    }));
+
+    // Build track artwork array (just the URLs/CIDs)
+    const trackArtwork = albumTracks.value.map(t => t.artwork || '');
+
+    // Build updated metadata
+    const updatedMetadata = {
+      ...currentAlbum.value.metadata,
+      trackMetadata: JSON.stringify(trackMetadata),
+      trackArtwork: JSON.stringify(trackArtwork),
+      ...(albumBackCover.value ? { backCoverCID: albumBackCover.value } : {})
+    };
+
+    // Remove backCoverCID if empty
+    if (!albumBackCover.value && updatedMetadata.backCoverCID) {
+      delete updatedMetadata.backCoverCID;
+    }
+
+    await editReleaseMutation.mutateAsync({
+      id: currentAlbum.value.id,
+      name: currentAlbum.value.name,
+      categoryId: currentAlbum.value.categoryId,
+      contentCID: currentAlbum.value.contentCID,
+      thumbnailCID: currentAlbum.value.thumbnailCID,
+      metadata: updatedMetadata,
+      siteAddress: currentAlbum.value.siteAddress,
+      postedBy: currentAlbum.value.postedBy,
+    });
+
+    openSnackbar('Album updated successfully', 'success');
+  } catch (error: any) {
+    openSnackbar(`Failed to save album: ${error.message}`, 'error');
+  }
 }
 
 function createNewStructure(type: string) {
@@ -1647,5 +1937,10 @@ async function createArtistAndAssociateMatching(artistName: string) {
 .clickable-thumbnail:hover {
   transform: scale(1.1);
   box-shadow: 0 2px 8px rgba(156, 39, 176, 0.4);
+}
+
+.track-artwork-preview {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
 }
 </style>

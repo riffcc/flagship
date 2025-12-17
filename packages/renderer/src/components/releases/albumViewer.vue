@@ -225,52 +225,55 @@ const audioElements = ref<HTMLAudioElement[]>([]);
 
 // Parse metadata if it's a string
 const metadata = computed(() => {
-  if (typeof props.release.metadata === 'string') {
-    return JSON.parse(props.release.metadata);
+  let meta = props.release.metadata;
+  if (typeof meta === 'string') {
+    meta = JSON.parse(meta);
   }
-  return props.release.metadata;
+  // Parse nested license field if it's a string
+  if (meta?.license && typeof meta.license === 'string') {
+    try {
+      meta = { ...meta, license: JSON.parse(meta.license) };
+    } catch (e) {
+      console.error('Failed to parse license:', e);
+    }
+  }
+  return meta;
 });
 
 // Per-track artwork support (generic for any album)
-// Fallback for The Slip (can be stored in metadata.trackArtwork in the future)
-const SLIP_ARTWORK_BASE = '/synthesis/nin-the-slip';
-const THE_SLIP_ID = 'b9103d29-3e20-4855-96f1-1b2774bdb5da';
-
-const defaultSlipArtwork: Record<number, string> = {
-  0: `${SLIP_ARTWORK_BASE}/track-01-999999.jpg`,         // Track 1: 999,999
-  1: `${SLIP_ARTWORK_BASE}/track-02-1000000.jpg`,        // Track 2: 1,000,000
-  2: `${SLIP_ARTWORK_BASE}/track-03-letting-you.jpg`,    // Track 3: Letting You
-  3: `${SLIP_ARTWORK_BASE}/track-04-discipline.jpg`,     // Track 4: Discipline
-  4: `${SLIP_ARTWORK_BASE}/track-05-echoplex.jpg`,       // Track 5: Echoplex
-  5: `${SLIP_ARTWORK_BASE}/track-06-head-down.jpg`,      // Track 6: Head Down
-  6: `${SLIP_ARTWORK_BASE}/track-07-lights-in-the-sky.jpg`, // Track 7: Lights in the Sky
-  7: `${SLIP_ARTWORK_BASE}/track-08-corona-radiata.jpg`, // Track 8: Corona Radiata
-  8: `${SLIP_ARTWORK_BASE}/track-09-four-of-us-dying.jpg`, // Track 9: The Four of Us Are Dying
-  9: `${SLIP_ARTWORK_BASE}/track-10-demon-seed.jpg`,     // Track 10: Demon Seed
-};
-
-// Get track artwork map from metadata or fallback
+// Track artwork is stored in metadata.trackArtwork as a JSON array
+// URLs are parsed through parseUrlOrCid to handle CIDs
 const trackArtworkMap = computed(() => {
-  // Check if metadata has trackArtwork array/object
-  if (metadata.value?.trackArtwork) {
-    try {
-      const artwork = typeof metadata.value.trackArtwork === 'string'
-        ? JSON.parse(metadata.value.trackArtwork)
-        : metadata.value.trackArtwork;
+  if (!metadata.value?.trackArtwork) return null;
 
-      // Convert array to object if needed
-      if (Array.isArray(artwork)) {
-        return artwork.reduce((acc, url, index) => ({ ...acc, [index]: url }), {});
-      }
-      return artwork;
-    } catch (e) {
-      console.error('Failed to parse trackArtwork:', e);
+  try {
+    const artwork = typeof metadata.value.trackArtwork === 'string'
+      ? JSON.parse(metadata.value.trackArtwork)
+      : metadata.value.trackArtwork;
+
+    // Convert array to object indexed by track number, parsing URLs
+    if (Array.isArray(artwork)) {
+      const filtered = artwork.reduce((acc, url, index) => {
+        if (url && url.trim() !== '') {
+          acc[index] = parseUrlOrCid(url);
+        }
+        return acc;
+      }, {} as Record<number, string>);
+      return Object.keys(filtered).length > 0 ? filtered : null;
     }
-  }
 
-  // Fallback for The Slip (temporary until metadata is updated)
-  if (props.release.id === THE_SLIP_ID) {
-    return defaultSlipArtwork;
+    // If it's already an object, filter empty values and parse URLs
+    if (typeof artwork === 'object') {
+      const filtered = Object.entries(artwork).reduce((acc, [key, url]) => {
+        if (url && typeof url === 'string' && url.trim() !== '') {
+          acc[parseInt(key)] = parseUrlOrCid(url);
+        }
+        return acc;
+      }, {} as Record<number, string>);
+      return Object.keys(filtered).length > 0 ? filtered : null;
+    }
+  } catch (e) {
+    console.error('Failed to parse trackArtwork:', e);
   }
 
   return null;

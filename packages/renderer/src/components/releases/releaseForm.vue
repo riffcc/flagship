@@ -110,6 +110,70 @@
       :rules="[rules.isValidCid]"
     />
 
+    <!-- License Chooser -->
+    <v-select
+      v-model="selectedLicenseType"
+      :items="licenseOptions"
+      label="License"
+      item-title="title"
+      item-value="value"
+      clearable
+      hint="Choose a Creative Commons license or enter a custom URL"
+      persistent-hint
+    >
+      <template #item="{ item, props: itemProps }">
+        <v-list-item v-bind="itemProps">
+          <template #subtitle>
+            <span class="text-caption">{{ item.raw.description }}</span>
+          </template>
+        </v-list-item>
+      </template>
+    </v-select>
+
+    <!-- License details (shown when a CC license is selected) -->
+    <template v-if="selectedLicenseType && selectedLicenseType !== 'custom'">
+      <v-row>
+        <v-col cols="6">
+          <v-select
+            v-model="licenseVersion"
+            :items="licenseVersionOptions"
+            label="Version"
+            item-title="title"
+            item-value="value"
+          />
+        </v-col>
+        <v-col cols="6">
+          <v-autocomplete
+            v-model="licenseJurisdiction"
+            :items="jurisdictionOptions"
+            label="Country"
+            item-title="title"
+            item-value="value"
+            clearable
+          />
+        </v-col>
+      </v-row>
+    </template>
+
+    <!-- Custom URL field (shown when 'custom' is selected) -->
+    <v-text-field
+      v-if="selectedLicenseType === 'custom'"
+      v-model="customLicenseUrl"
+      label="License URL"
+      hint="Enter the full URL to the license"
+      persistent-hint
+      placeholder="https://example.com/license"
+    />
+
+    <!-- Attribution field (shown when any license is selected) -->
+    <v-text-field
+      v-if="selectedLicenseType"
+      v-model="licenseAttribution"
+      label="Attribution (Optional)"
+      hint="Credit the original creator, e.g. 'Music by Artist Name'"
+      persistent-hint
+    />
+
     <!-- Advanced: year, format, license, etc. -->
     <v-dialog
       v-model="openAdvanced"
@@ -244,8 +308,87 @@ const selectedSeasonId = ref<string>('');
 const selectedArtistId = ref<string>('');
 const artistSearchText = ref<string>('');
 
+// License state
+const selectedLicenseType = ref<string>('');
+const licenseVersion = ref<string>('4.0');
+const licenseJurisdiction = ref<string>('');
+const licenseAttribution = ref<string>('');
+const customLicenseUrl = ref<string>('');
+
+// License options
+const licenseOptions = [
+  { value: 'cc0', title: 'CC0 (Public Domain)', description: 'No rights reserved - free for any use' },
+  { value: 'cc-by', title: 'CC BY', description: 'Attribution required' },
+  { value: 'cc-by-sa', title: 'CC BY-SA', description: 'Attribution + ShareAlike (copyleft)' },
+  { value: 'cc-by-nd', title: 'CC BY-ND', description: 'Attribution + No Derivatives' },
+  { value: 'cc-by-nc', title: 'CC BY-NC', description: 'Attribution + NonCommercial' },
+  { value: 'cc-by-nc-sa', title: 'CC BY-NC-SA', description: 'Attribution + NonCommercial + ShareAlike' },
+  { value: 'cc-by-nc-nd', title: 'CC BY-NC-ND', description: 'Attribution + NonCommercial + No Derivatives' },
+  { value: 'custom', title: 'Custom URL', description: 'Enter a custom license URL' },
+];
+
+// CC License versions
+const licenseVersionOptions = [
+  { value: '4.0', title: '4.0 (Current)' },
+  { value: '3.0', title: '3.0' },
+  { value: '2.5', title: '2.5' },
+  { value: '2.0', title: '2.0' },
+  { value: '1.0', title: '1.0' },
+  { value: 'unknown', title: 'Unknown' },
+];
+
+// Common CC jurisdiction ports (country codes)
+const jurisdictionOptions = [
+  { value: '', title: 'International' },
+  { value: 'au', title: 'Australia' },
+  { value: 'at', title: 'Austria' },
+  { value: 'be', title: 'Belgium' },
+  { value: 'br', title: 'Brazil' },
+  { value: 'ca', title: 'Canada' },
+  { value: 'cl', title: 'Chile' },
+  { value: 'cn', title: 'China' },
+  { value: 'co', title: 'Colombia' },
+  { value: 'hr', title: 'Croatia' },
+  { value: 'cz', title: 'Czech Republic' },
+  { value: 'dk', title: 'Denmark' },
+  { value: 'ec', title: 'Ecuador' },
+  { value: 'fi', title: 'Finland' },
+  { value: 'fr', title: 'France' },
+  { value: 'de', title: 'Germany' },
+  { value: 'gr', title: 'Greece' },
+  { value: 'hk', title: 'Hong Kong' },
+  { value: 'hu', title: 'Hungary' },
+  { value: 'in', title: 'India' },
+  { value: 'ie', title: 'Ireland' },
+  { value: 'il', title: 'Israel' },
+  { value: 'it', title: 'Italy' },
+  { value: 'jp', title: 'Japan' },
+  { value: 'kr', title: 'South Korea' },
+  { value: 'my', title: 'Malaysia' },
+  { value: 'mx', title: 'Mexico' },
+  { value: 'nl', title: 'Netherlands' },
+  { value: 'nz', title: 'New Zealand' },
+  { value: 'no', title: 'Norway' },
+  { value: 'pe', title: 'Peru' },
+  { value: 'ph', title: 'Philippines' },
+  { value: 'pl', title: 'Poland' },
+  { value: 'pt', title: 'Portugal' },
+  { value: 'ro', title: 'Romania' },
+  { value: 'rs', title: 'Serbia' },
+  { value: 'sg', title: 'Singapore' },
+  { value: 'za', title: 'South Africa' },
+  { value: 'es', title: 'Spain' },
+  { value: 'se', title: 'Sweden' },
+  { value: 'ch', title: 'Switzerland' },
+  { value: 'tw', title: 'Taiwan' },
+  { value: 'th', title: 'Thailand' },
+  { value: 'uk', title: 'United Kingdom' },
+  { value: 'us', title: 'United States' },
+  { value: 'vn', title: 'Vietnam' },
+];
+
 // Hidden metadata fields that are auto-managed (not shown anywhere)
-const HIDDEN_METADATA_FIELDS = ['trackMetadata', 'type', 'artistId', 'artist'];
+const HIDDEN_METADATA_FIELDS = ['trackMetadata', 'type', 'artistId', 'artist', 'license'];
 
 // Primary fields shown in the main form (not in Advanced dialog)
 const PRIMARY_METADATA_FIELDS = ['albumTitle'];
@@ -494,6 +637,25 @@ onMounted(() => {
       selectedArtistId.value = props.initialData.metadata.artistId as string;
       console.log('Initialized artist ID:', selectedArtistId.value);
     }
+
+    // If editing, initialize the license fields
+    if (props.initialData.metadata?.license) {
+      const license = typeof props.initialData.metadata.license === 'string'
+        ? JSON.parse(props.initialData.metadata.license)
+        : props.initialData.metadata.license;
+
+      // Check if it's a custom URL (type is 'custom' or has a url but type doesn't match known CC types)
+      if (license.type === 'custom' || (license.url && !licenseOptions.some(o => o.value === license.type))) {
+        selectedLicenseType.value = 'custom';
+        customLicenseUrl.value = license.url || '';
+      } else {
+        selectedLicenseType.value = license.type || '';
+        licenseVersion.value = license.version || '4.0';
+        licenseJurisdiction.value = license.jurisdiction || '';
+      }
+      licenseAttribution.value = license.attribution || '';
+      console.log('Initialized license:', license);
+    }
   }
 });
 
@@ -676,7 +838,11 @@ const handleSeasonChange = async () => {
 const handleOnSubmit = async () => {
   if (!readyToSave.value) return;
 
-  const data = readyToSave.value;
+  // Clone the data to avoid readonly proxy issues
+  const data = {
+    ...readyToSave.value,
+    metadata: { ...readyToSave.value.metadata },
+  };
 
   // If this is a TV episode, ensure we have the proper structure hierarchy
   if (isTVCategory.value && selectedSeriesId.value) {
@@ -704,6 +870,44 @@ const handleOnSubmit = async () => {
     if (!data.metadata) data.metadata = {};
     data.metadata.artistId = selectedArtistId.value;
   }
+
+  // Add license to metadata if selected
+  console.log('[ReleaseForm] License state:', {
+    selectedLicenseType: selectedLicenseType.value,
+    licenseVersion: licenseVersion.value,
+    licenseJurisdiction: licenseJurisdiction.value,
+    licenseAttribution: licenseAttribution.value,
+    customLicenseUrl: customLicenseUrl.value,
+  });
+
+  if (selectedLicenseType.value) {
+    if (!data.metadata) data.metadata = {};
+
+    if (selectedLicenseType.value === 'custom') {
+      // Custom URL license
+      data.metadata.license = JSON.stringify({
+        type: 'custom',
+        url: customLicenseUrl.value,
+        ...(licenseAttribution.value ? { attribution: licenseAttribution.value } : {}),
+      });
+    } else {
+      // CC license with version and optional jurisdiction
+      data.metadata.license = JSON.stringify({
+        type: selectedLicenseType.value,
+        version: licenseVersion.value,
+        ...(licenseJurisdiction.value ? { jurisdiction: licenseJurisdiction.value } : {}),
+        ...(licenseAttribution.value ? { attribution: licenseAttribution.value } : {}),
+      });
+    }
+    console.log('[ReleaseForm] License to save:', data.metadata.license);
+  } else {
+    // Clear license if none selected
+    if (data.metadata?.license) {
+      delete data.metadata.license;
+    }
+  }
+
+  console.log('[ReleaseForm] Final metadata:', data.metadata);
 
   if (props.mode === 'edit' && data.id) {
     const response = await editReleaseMutation.mutateAsync({
@@ -820,6 +1024,22 @@ const clearForm = () => {
     metadata: {},
     siteAddress: '',
   };
+  // Clear license fields
+  selectedLicenseType.value = '';
+  licenseVersion.value = '4.0';
+  licenseJurisdiction.value = '';
+  licenseAttribution.value = '';
+  customLicenseUrl.value = '';
+  // Clear artist field
+  selectedArtistId.value = '';
+  artistSearchText.value = '';
+  // Clear TV fields
+  selectedSeriesId.value = '';
+  seriesSearchText.value = '';
+  seasonNumber.value = 1;
+  episodeNumber.value = 1;
+  selectedSeasonId.value = '';
+
   formRef.value?.resetValidation();
   formRef.value?.reset();
 };
