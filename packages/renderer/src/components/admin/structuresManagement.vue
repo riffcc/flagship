@@ -774,14 +774,25 @@
                   @update:model-value="saveInlineEdit(item)"
                   @update:search="inlineArtistSearch = $event"
                 >
-                  <template v-if="shouldShowCreateArtistInline" #append-item>
+                  <template #append-item>
                     <v-list-item
+                      v-if="shouldShowCreateArtistInline"
                       class="text-primary"
                       @click="createArtistAndAssociateMatching(inlineArtistSearch)"
                     >
                       <v-list-item-title>
                         <v-icon start>$plus</v-icon>
                         Create "{{ inlineArtistSearch }}" and associate matching
+                      </v-list-item-title>
+                    </v-list-item>
+                    <v-list-item
+                      v-if="matchingExistingArtist"
+                      class="text-primary"
+                      @click="associateMatchingWithExistingArtist(matchingExistingArtist)"
+                    >
+                      <v-list-item-title>
+                        <v-icon start>$link</v-icon>
+                        Associate matching with "{{ matchingExistingArtist.name }}"
                       </v-list-item-title>
                     </v-list-item>
                   </template>
@@ -1268,6 +1279,13 @@ const shouldShowCreateArtistInline = computed(() => {
   if (!inlineArtistSearch.value || inlineArtistSearch.value.length < 2) return false;
   const searchLower = inlineArtistSearch.value.toLowerCase();
   return !artists.value.some((a: any) => a.name.toLowerCase() === searchLower);
+});
+
+// Show "Associate matching" when an existing artist matches the search
+const matchingExistingArtist = computed(() => {
+  if (!inlineArtistSearch.value || inlineArtistSearch.value.length < 2) return null;
+  const searchLower = inlineArtistSearch.value.toLowerCase();
+  return artists.value.find((a: any) => a.name.toLowerCase() === searchLower);
 });
 
 // Counts
@@ -1892,6 +1910,74 @@ async function createArtistAndAssociateMatching(artistName: string) {
   } catch (error: any) {
     openSnackbar(`Failed to create artist: ${error.message}`, 'error');
   }
+}
+
+// Associate all unassociated releases with matching author to an EXISTING artist
+async function associateMatchingWithExistingArtist(artist: any) {
+  const artistId = artist.id;
+  const artistName = artist.name;
+
+  // Find all unassociated music releases with matching author name
+  const releasesToAssociate = allMusicReleases.value.filter((r: any) => {
+    const author = r.metadata?.author || '';
+    const hasNoArtistId = !r.metadata?.artistId;
+    const authorMatches = author.toLowerCase() === artistName.toLowerCase();
+    return hasNoArtistId && authorMatches;
+  });
+
+  if (releasesToAssociate.length === 0) {
+    openSnackbar(`No unassociated releases found matching "${artistName}"`, 'warning');
+    cancelInlineEdit();
+    return;
+  }
+
+  // Associate each matching release
+  let associatedCount = 0;
+  for (const release of releasesToAssociate) {
+    try {
+      await editReleaseMutation.mutateAsync({
+        id: release.id,
+        name: release.name,
+        categoryId: release.categoryId,
+        contentCID: release.contentCID,
+        thumbnailCID: release.thumbnailCID,
+        metadata: {
+          ...release.metadata,
+          artistId: artistId,
+        },
+        siteAddress: release.siteAddress,
+        postedBy: release.postedBy,
+      });
+      associatedCount++;
+    } catch (e) {
+      console.error('Failed to associate release:', release.id, e);
+    }
+  }
+
+  // Also associate the currently editing release if it matches
+  if (inlineEditTarget.value && !inlineEditTarget.value.metadata?.artistId) {
+    try {
+      await editReleaseMutation.mutateAsync({
+        id: inlineEditTarget.value.id,
+        name: inlineEditTarget.value.name,
+        categoryId: inlineEditTarget.value.categoryId,
+        contentCID: inlineEditTarget.value.contentCID,
+        thumbnailCID: inlineEditTarget.value.thumbnailCID,
+        metadata: {
+          ...inlineEditTarget.value.metadata,
+          artistId: artistId,
+        },
+        siteAddress: inlineEditTarget.value.siteAddress,
+        postedBy: inlineEditTarget.value.postedBy,
+      });
+      associatedCount++;
+    } catch (e) {
+      console.error('Failed to associate inline target:', e);
+    }
+  }
+
+  openSnackbar(`Associated ${associatedCount} release${associatedCount !== 1 ? 's' : ''} with "${artistName}"`, 'success');
+  cancelInlineEdit();
 }
 </script>
 

@@ -3,7 +3,7 @@
     <div class="app-header-border"></div>
     <gamepad-nav-bar v-if="gamepadState.connected" />
     <app-bar v-else />
-    <v-main min-height="100vh" class="mt-12">
+    <v-main min-height="100vh">
       <router-view />
     </v-main>
     <audio-player v-if="activeTrack"></audio-player>
@@ -230,9 +230,7 @@ onMounted(async () => {
 });
 
 
-const { data: releases } = useGetReleasesQuery({
-  enabled: isLensReady,
-});
+const { data: releases } = useGetReleasesQuery();
 
 const {  data: featuredReleases } = useGetFeaturedReleasesQuery({
   enabled: isLensReady,
@@ -250,6 +248,7 @@ const { indexContent } = useLocalSearch();
 const STRUCTURE_TYPES = ['artist', 'series', 'season', 'author', 'collection'];
 
 watchEffect(() => {
+  console.log('[App] watchEffect triggered, releases:', releases.value?.length || 0);
   if (releases.value && releases.value.length > 0) {
     // Filter out structure-type releases (artists, series, etc.)
     const contentReleases = releases.value.filter(release =>

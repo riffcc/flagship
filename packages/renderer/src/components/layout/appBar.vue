@@ -29,6 +29,7 @@
         {{ item.displayName === 'TV Shows' ? 'TV' : item.displayName }}
       </router-link>
       <router-link
+        v-if="canAccessAdminPanel"
         to="/books"
         class="nav-link"
       >
@@ -117,10 +118,8 @@ import SearchBar from '/@/components/search/SearchBar.vue';
 const router = useRouter();
 const route = useRoute();
 
-const { data: contentCategories } = useContentCategoriesQuery();
-const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
-
 const { data: accountStatus } = useAccountStatusQuery();
+const { userData } = useUserSession();
 
 const canUpload = computed(() =>
   accountStatus.value?.permissions.includes('release:create') ?? false,
@@ -146,7 +145,16 @@ const canAccessAdminPanel = computed(() => {
   // If none of the above, deny access.
   return false;
 });
-const { userData } = useUserSession();
+
+const { data: contentCategories } = useContentCategoriesQuery();
+const featuredContentCategories = computed(() => {
+  const featured = contentCategories.value?.filter(c => c.featured) || [];
+  // Hide TV Shows from non-admins
+  if (!canAccessAdminPanel.value) {
+    return featured.filter(c => c.id !== 'tv-shows');
+  }
+  return featured;
+});
 
 function handleOnDisconnect() {
   userData.value = null;

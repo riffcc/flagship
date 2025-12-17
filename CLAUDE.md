@@ -258,6 +258,51 @@ cargo test dht_
 
 ---
 
+## Deployment
+
+### Deploying Citadel (lens-node) to Relays
+
+The relay nodes use docker-compose at `/root/docker-compose.yml`. To deploy a new version:
+
+```bash
+# Build and push new image (from citadel repo)
+cd /mnt/riffcastle/lagun-project/citadel
+cargo build --release -p citadel-lens
+docker build -f Dockerfile.local -t riffcc/lens-node:v0.1.XX .
+docker push riffcc/lens-node:v0.1.XX
+
+# Deploy to all relays
+for host in relay01.us.riff.cc relay02.us.riff.cc relay01.eu.riff.cc relay02.eu.riff.cc; do
+  echo "=== Deploying to $host ==="
+  ssh root@$host "cd /root && docker-compose pull && docker-compose up -d"
+done
+```
+
+Or deploy with inline docker run (without compose):
+```bash
+for host in relay01.us.riff.cc relay02.us.riff.cc relay01.eu.riff.cc relay02.eu.riff.cc; do
+  ssh root@$host "docker pull riffcc/lens-node:v0.1.XX && docker stop lens-node; docker rm lens-node; docker run -d --name lens-node --restart unless-stopped -p 8080:8080 -p 9000:9000 -p 9000:9000/udp -v /data/citadel:/data -e CITADEL_PEERS=5.78.147.14:9000,5.78.70.121:9000,116.203.235.87:9000,37.27.220.204:9000 -e ADMIN_PUBLIC_KEY=ed25519p/44e8fb52a6220c79374b42ff14ac317a4e55e88ca3f0f8db61324ff47270996d,ed25519p/2ba6f33c1125d8ad92db347328562aab7edafcec5f5b1edd8e844db2fa97d6f9,ed25519p/b0955a489fc59c5e2eb3b3d01f908a4f56c1b9be6f42fbfdbf65459a1b3fe147,ed25519p/4ca9ba8ac59d18a276bafd50a74a2b6ed83bd6d8a0066825b1eb9f98b3bcaa3a riffcc/lens-node:v0.1.XX"
+done
+```
+
+### Deploying Flagship (frontend)
+
+```bash
+# Build and push (from flagship repo)
+pnpm build
+docker build -f docker/Dockerfile.lighttpd -t riffcc/flagship:latest -t riffcc/flagship:vX.Y.Z .
+docker push riffcc/flagship:latest
+docker push riffcc/flagship:vX.Y.Z
+```
+
+### Relay IPs
+- relay01.us.riff.cc: 5.78.147.14
+- relay02.us.riff.cc: 5.78.70.121
+- relay01.eu.riff.cc: 116.203.235.87
+- relay02.eu.riff.cc: 37.27.220.204
+
+---
+
 ## Important Instructions
 - NEVER use git checkout to revert changes - this will throw away hours of work
 - Always manually revert specific changes using the Edit tool

@@ -76,16 +76,6 @@
         </v-col>
       </v-row>
     </v-container>
-    <v-btn
-      icon="$chevron-up"
-      density="comfortable"
-      color="primary-darken-1"
-      rounded="0"
-      class="position-absolute bottom-0 right-0 mb-2 mr-2"
-      @click="scrollToTop"
-    >
-      <v-icon />
-    </v-btn>
   </v-footer>
   <v-sheet
     color="primary-darken-1"
@@ -122,13 +112,6 @@ const router = useRouter();
 const { data: contentCategories } = useContentCategoriesQuery();
 
 const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
-const scrollToTop = () => {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth',
-  });
-};
-
 const openEmailClient = () => {
   window.location.href = 'mailto:wings@riff.cc';
 };

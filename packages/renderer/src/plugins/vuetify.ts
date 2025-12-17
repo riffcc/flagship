@@ -123,6 +123,7 @@ import {
   mdiPlusBox,
   mdiInformation,
   mdiExclamation,
+  mdiLink,
 } from '@mdi/js';
 
 const iconsAliasesMapping = {
@@ -235,6 +236,7 @@ const iconsAliasesMapping = {
   'plus-box': mdiPlusBox,
   'information': mdiInformation,
   'exclamation': mdiExclamation,
+  'link': mdiLink,
 
   // Vuetify internal component default aliases
   complete: mdiCheck,

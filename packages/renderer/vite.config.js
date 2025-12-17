@@ -79,7 +79,7 @@ const config = {
     alias: générerAliasRésolution(),
     extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
   },
-  base: '',
+  base: '/',
   server: {
     port: parseInt(process.env.PORT) || 5175,
     fs: {

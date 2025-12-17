@@ -152,7 +152,7 @@ const confirmDialog = ref(false);
 const cleanupResults = ref<{ message: string; error: boolean } | null>(null);
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
-const { publicKey } = useIdentity();
+const { publicKey, sign } = useIdentity();
 
 // Queries
 const { data: releases } = useGetReleasesQuery();
@@ -386,15 +386,22 @@ const performImport = async () => {
     openSnackbar(`Importing ${importData.releases.length} releases via bulk API...`, 'info');
 
     const { API_URL } = await import('/@/plugins/router');
+
+    // Sign the request body for authentication
+    const payload = JSON.stringify(importData);
+    const timestamp = Date.now().toString();
+    const messageToSign = `${timestamp}:${payload}`;
+    const signature = await sign(messageToSign);
+
     const response = await fetch(`${API_URL}/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
       },
-      body: JSON.stringify({
-        publicKey: publicKey.value,
-        data: importData,
-      }),
+      body: payload,
     });
 
     if (!response.ok) {
