@@ -105,7 +105,14 @@
           v-if="cardSubtitle"
           class="text-caption text-sm-subtitle-1 text-center text-medium-emphasis"
         >
-          {{ cardSubtitle }}
+          <a
+            v-if="item.metadata?.artistId"
+            class="artist-link"
+            @click.stop="router.push(`/artist/${item.metadata.artistId}`)"
+          >
+            {{ cardSubtitle }}
+          </a>
+          <span v-else>{{ cardSubtitle }}</span>
         </p>
         <p
           v-if="item.metadata?.isSeries && item.metadata?.episodeCount"
@@ -231,6 +238,16 @@ const isOverlapping = computed(() => {
 const cardBackgroundGradient = computed(() => {
   return props.item.categoryId === 'tvShow' ? dynamicGradient.value : undefined;
 });
-
-
 </script>
+
+<style scoped>
+.artist-link {
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.artist-link:hover {
+  text-decoration: underline;
+}
+</style>

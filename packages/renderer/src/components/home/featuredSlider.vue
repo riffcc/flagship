@@ -89,7 +89,14 @@
                   v-if="featuredItem.metadata?.['author']"
                   class="text-body-2 text-sm-body-1"
                 >
-                  {{ featuredItem.metadata?.['author'] }}
+                  <a
+                    v-if="featuredItem.metadata?.['artistId']"
+                    class="artist-link"
+                    @click.stop="router.push(`/artist/${featuredItem.metadata['artistId']}`)"
+                  >
+                    {{ featuredItem.metadata?.['author'] }}
+                  </a>
+                  <span v-else>{{ featuredItem.metadata?.['author'] }}</span>
                 </p>
                 <v-chip
                   v-if="featuredItem.metadata?.['totalSongs'] && featuredItem.metadata?.['releaseYear']"
@@ -216,5 +223,15 @@ const {getSiteColor} = useSiteColors();
   backdrop-filter: blur(4px);
   border-radius: 12px;
   padding: 24px;
+}
+
+.artist-link {
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.artist-link:hover {
+  text-decoration: underline;
 }
 </style>
