@@ -175,22 +175,30 @@ async function handleOnSubmit() {
   }
 
   try {
-    const releaseData = {
-      name: artistData.value.name!,
-      categoryId: artistData.value.categoryId!,
-      contentCID: artistData.value.contentCID || '',
-      thumbnailCID: artistData.value.thumbnailCID,
-      metadata: artistData.value.metadata
-    };
-
     if (props.mode === 'edit' && props.initialData?.id) {
-      await editMutation.mutateAsync({
+      // Use flat structure matching what structuresManagement uses
+      const payload = {
         id: props.initialData.id,
-        data: releaseData
-      });
+        name: artistData.value.name!,
+        categoryId: artistData.value.categoryId!,
+        contentCID: artistData.value.contentCID || '',
+        thumbnailCID: artistData.value.thumbnailCID || '',
+        metadata: artistData.value.metadata,
+        siteAddress: props.initialData.siteAddress,
+        postedBy: props.initialData.postedBy,
+      };
+      console.log('[ArtistForm] Saving artist with payload:', payload);
+      console.log('[ArtistForm] thumbnailCID value:', artistData.value.thumbnailCID);
+      await editMutation.mutateAsync(payload);
       emit('update:success', 'Artist updated successfully');
     } else {
-      await addMutation.mutateAsync(releaseData);
+      await addMutation.mutateAsync({
+        name: artistData.value.name!,
+        categoryId: artistData.value.categoryId!,
+        contentCID: artistData.value.contentCID || '',
+        thumbnailCID: artistData.value.thumbnailCID || '',
+        metadata: artistData.value.metadata
+      });
       emit('update:success', 'Artist created successfully');
     }
   } catch (error) {
