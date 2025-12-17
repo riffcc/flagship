@@ -82,6 +82,8 @@ const config = {
   base: '/',
   server: {
     port: parseInt(process.env.PORT) || 5175,
+    host: process.env.VITE_HOST || 'localhost',
+    allowedHosts: ['.riff.cc'],
     fs: {
       strict: true,
     },
