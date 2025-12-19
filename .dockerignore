@@ -20,4 +20,3 @@ coverage
 docker
 tests
 scripts
-.electron-vendors.cache.json
