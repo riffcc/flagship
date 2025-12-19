@@ -3,10 +3,17 @@
 Dynamic Citadel cluster launcher.
 
 Usage:
-    ./cluster.py up [N]      - Start N nodes (default: 20)
-    ./cluster.py down        - Stop the cluster
-    ./cluster.py logs [svc]  - View logs (optional: specific service)
-    ./cluster.py ps          - List running containers
+    ./cluster.py up [N] [--docker-rust-build]  - Start N nodes (default: 5)
+    ./cluster.py down                           - Stop the cluster
+    ./cluster.py logs [svc]                     - View logs (optional: specific service)
+    ./cluster.py ps                             - List running containers
+
+Options:
+    --docker-rust-build   Build Rust in Docker instead of cross-compiling on host.
+                          Slower but doesn't require cross-compile toolchain.
+
+Default: Cross-compile on host with:
+    cd ~/projects/citadel && cross build --release -p citadel-lens --target aarch64-unknown-linux-gnu
 
 Environment:
     Reads from .env.docker.dev if present. Copy .env.docker.dev.example to get started.
@@ -30,7 +37,7 @@ def load_env():
                     key, value = line.split('=', 1)
                     os.environ.setdefault(key.strip(), value.strip())
 
-def generate_compose(num_nodes: int) -> dict:
+def generate_compose(num_nodes: int, docker_rust_build: bool = True) -> dict:
     """Generate docker-compose config for N citadel nodes."""
 
     # Base citadel node config (used as template)
@@ -38,11 +45,11 @@ def generate_compose(num_nodes: int) -> dict:
         'image': 'debian:trixie-slim',
         'command': '''bash -c "
             apt-get update && apt-get install -y inotify-tools &&
-            while [ ! -f /citadel/target/release/lens-node ]; do sleep 2; done &&
+            while [ ! -f /citadel/target/aarch64-unknown-linux-gnu/release/lens-node ]; do sleep 2; done &&
             while true; do
-                /citadel/target/release/lens-node &
+                /citadel/target/aarch64-unknown-linux-gnu/release/lens-node &
                 PID=$$!
-                inotifywait -e close_write /citadel/target/release/lens-node
+                inotifywait -e close_write /citadel/target/aarch64-unknown-linux-gnu/release/lens-node
                 kill $$PID 2>/dev/null || true
                 sleep 1
             done
@@ -52,23 +59,29 @@ def generate_compose(num_nodes: int) -> dict:
             'ADMIN_PUBLIC_KEY': '${ADMIN_PUBLIC_KEY:-}',
             'RUST_LOG': '${RUST_LOG:-info}',
         },
-        'depends_on': ['citadel-builder'],
         'networks': ['citadel-mesh'],
     }
+    if docker_rust_build:
+        citadel_node_base['depends_on'] = ['citadel-builder']
+
+    # Resolve home directory for bind mounts
+    home = os.path.expanduser('~')
+    flagship_src = f'{home}/projects/flagship'
+    citadel_src = f'{home}/projects/citadel'
 
     # Build services dict
     services = {
         'flagship-dev': {
-            'image': 'node:22-alpine',
+            'build': {
+                'context': '.',
+                'dockerfile': 'Dockerfile.dev',
+            },
             'working_dir': '/app',
-            'command': 'sh -c "corepack enable && pnpm install && pnpm dev --host 0.0.0.0 --port 5175"',
+            'command': 'sh -c "pnpm install || true; pnpm dev --host 0.0.0.0 --port 5175"',
             'ports': ['${FLAGSHIP_HOST:-0.0.0.0}:${FLAGSHIP_PORT:-9999}:5175'],
-            'volumes': ['..:/app', 'flagship_node_modules:/app/node_modules'],
-            'environment': [
-                'NODE_ENV=development',
-                'VITE_API_URL=https://citadel.lon.riff.cc/api/v1',
-                'VITE_ALLOWED_HOSTS=flagship.lon.riff.cc',
-            ],
+            'volumes': [f'{flagship_src}:/app', 'flagship_node_modules:/app/node_modules'],
+            'env_file': ['.env'],
+            'environment': ['NODE_ENV=development', 'WEB=true'],
             'depends_on': ['citadel-lb'],
             'networks': ['citadel-mesh'],
         },
@@ -82,38 +95,43 @@ def generate_compose(num_nodes: int) -> dict:
             'depends_on': [f'citadel-{i}' for i in range(1, num_nodes + 1)],
             'networks': ['citadel-mesh'],
         },
-        'citadel-builder': {
-            'image': 'rust:1.83-bookworm',
+    }
+
+    # Add citadel-builder only if docker_rust_build is enabled
+    if docker_rust_build:
+        services['citadel-builder'] = {
+            'image': 'rust:1.92-slim-trixie',
             'working_dir': '/citadel',
+            'environment': {'CARGO_BUILD_JOBS': '2'},
             'command': '''bash -c "
                 apt-get update && apt-get install -y git curl libclang-dev build-essential &&
                 curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
                 cargo binstall -y watchexec-cli
                 rustup component add rustfmt
-                if [ ! -d /citadel/.git ]; then
-                    git clone https://github.com/rifflabs/citadel.git /citadel-tmp &&
-                    mv /citadel-tmp/* /citadel-tmp/.* /citadel/ 2>/dev/null || true &&
-                    rm -rf /citadel-tmp
-                fi &&
                 watchexec -r -w crates/citadel-lens/src -- cargo build --release -p citadel-lens &&
                 sleep infinity
             "''',
             'volumes': [
-                'citadel_src:/citadel',
+                f'{citadel_src}:/citadel',
                 'citadel_cargo:/usr/local/cargo/registry',
                 'citadel_target:/citadel/target',
             ],
-        },
-    }
+        }
 
     # Generate citadel nodes
     for i in range(1, num_nodes + 1):
+        # Use docker volume for target when building in docker, host path otherwise
+        if docker_rust_build:
+            target_volume = 'citadel_target:/citadel/target:ro'
+        else:
+            target_volume = f'{citadel_src}/target:/citadel/target:ro'
+
         node = {
             **citadel_node_base,
             'environment': dict(citadel_node_base['environment']),  # Copy
             'volumes': [
-                'citadel_src:/citadel:ro',
-                'citadel_target:/citadel/target:ro',
+                f'{citadel_src}:/citadel:ro',
+                target_volume,
                 f'citadel_data_{i}:/data',
             ],
         }
@@ -122,13 +140,13 @@ def generate_compose(num_nodes: int) -> dict:
             node['ports'] = ['8080:8080']
         services[f'citadel-{i}'] = node
 
-    # Build volumes dict
+    # Build volumes dict (bind mounts for src, volumes for caches)
     volumes = {
         'flagship_node_modules': None,
-        'citadel_src': None,
-        'citadel_cargo': None,
-        'citadel_target': None,
     }
+    if docker_rust_build:
+        volumes['citadel_cargo'] = None
+        volumes['citadel_target'] = None
     for i in range(1, num_nodes + 1):
         volumes[f'citadel_data_{i}'] = None
 
@@ -183,11 +201,20 @@ def main():
     cmd = sys.argv[1]
 
     if cmd == 'up':
-        num_nodes = int(sys.argv[2]) if len(sys.argv) > 2 else 20
-        print(f"Starting {num_nodes}-node Citadel cluster...")
+        # Parse arguments
+        args = sys.argv[2:]
+        docker_rust_build = '--docker-rust-build' in args
+        args = [a for a in args if not a.startswith('--')]
+        num_nodes = int(args[0]) if args else 5
+
+        if docker_rust_build:
+            print(f"Starting {num_nodes}-node Citadel cluster (Rust builds in Docker)...")
+        else:
+            print(f"Starting {num_nodes}-node Citadel cluster (cross-compile on host)...")
+            print("  Build: cd ~/projects/citadel && cross build --release -p citadel-lens --target aarch64-unknown-linux-gnu")
 
         # Generate configs
-        compose = generate_compose(num_nodes)
+        compose = generate_compose(num_nodes, docker_rust_build=docker_rust_build)
         haproxy = generate_haproxy_config(num_nodes)
 
         # Write configs
