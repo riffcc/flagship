@@ -22,10 +22,7 @@ COPY version/ ./version/
 RUN pnpm install --frozen-lockfile
 
 # Build production bundle
-# Copy indexBrowser.html to index.html for web build (vite entry point)
-RUN cp packages/renderer/indexBrowser.html packages/renderer/index.html && \
-    cd packages/renderer && \
-    MODE=production WEB=true NODE_OPTIONS='--max-old-space-size=8192' pnpm exec vite build
+RUN pnpm build
 
 # Production image
 FROM alpine:latest
