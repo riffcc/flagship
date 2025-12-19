@@ -3,7 +3,7 @@
 import Vue from '@vitejs/plugin-vue';
 import {copyFileSync} from 'fs';
 import {join} from 'node:path';
-import Fonts from 'unplugin-fonts/vite';
+// Fonts are self-hosted in public/fonts/ and imported via src/styles/fonts.css
 import {splitVendorChunkPlugin} from 'vite';
 import {nodePolyfills} from 'vite-plugin-node-polyfills';
 import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
@@ -24,6 +24,7 @@ if (forElectron) {
 const générerAliasRésolution = () => {
   const common = {
     '/@/': join(PACKAGE_ROOT, 'src') + '/',
+    '@riffcc/citadel-sdk': join(PROJECT_ROOT, 'packages/citadel-sdk/src/index.ts'),
   };
   if (forElectron) {
     return common;
@@ -52,16 +53,6 @@ const config = {
       autoImport: true,
       styles: {
         configFile: 'src/styles/settings.scss',
-      },
-    }),
-    Fonts({
-      google: {
-        families: [
-          {
-            name: 'Josefin Sans',
-            weights: [100, 300, 400, 500, 700],
-          },
-        ],
       },
     }),
     nodePolyfills({

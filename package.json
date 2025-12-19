@@ -14,7 +14,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "cd packages/renderer && cross-env WEB=true vite",
+    "dev": "cd packages/renderer && ENV=web vite",
     "dev:stub": "cross-env VITE_STUB_DATA=true pnpm dev",
     "build": "cd packages/renderer && cross-env MODE=production WEB=true NODE_OPTIONS='--max-old-space-size=8192' vite build",
     "preview": "pnpm build && cd packages/renderer && vite preview --outDir ./dist/web",
@@ -22,6 +22,7 @@
     "format": "prettier --write \"**/*.{js,mjs,cjs,ts,mts,cts,vue,json}\"",
     "typecheck": "vue-tsc --noEmit -p packages/renderer/tsconfig.json",
     "typecheck:renderer": "vue-tsc --noEmit -p packages/renderer/tsconfig.json",
+    "typecheck:citadel-sdk": "tsc --noEmit -p packages/citadel-sdk/tsconfig.json",
     "test": "vitest run",
     "test:unit": "vitest run --dir tests/unit",
     "test:e2e": "playwright test",
@@ -78,7 +79,7 @@
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@multiformats/multiaddr": "^12.5.1",
     "@noble/ed25519": "^3.0.0",
-    "@riffcc/lens-sdk": "^0.1.33-a1",
+    "@riffcc/citadel-sdk": "workspace:*",
     "@tanstack/vue-query": "^5.81.2",
     "@vueuse/core": "^12.8.2",
     "core-js": "^3.43.0",

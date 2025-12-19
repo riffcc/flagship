@@ -3,7 +3,6 @@
 
 import { NetworkRouter } from './router';
 import { NetworkConfig, defaultNetworkConfig } from './config';
-import { PeerbitAdapter } from './adapters/peerbit';
 import { CitadelAdapter } from './adapters/citadel';
 import { HttpAdapter } from './adapters/http';
 import { App } from 'vue';
@@ -16,8 +15,7 @@ export class UnifiedNetworkService {
     const finalConfig = { ...defaultNetworkConfig, ...config };
     this.router = new NetworkRouter(finalConfig);
 
-    // Register adapters
-    this.router.registerAdapter('peerbit', new PeerbitAdapter());
+    // Register adapters (peerbit removed - using citadel + http only)
     this.router.registerAdapter('citadel', new CitadelAdapter());
     this.router.registerAdapter('http', new HttpAdapter(finalConfig.http.baseUrl));
   }

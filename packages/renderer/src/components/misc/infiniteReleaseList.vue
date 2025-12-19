@@ -46,7 +46,7 @@ import { computed, ref, watch } from 'vue';
 import type { ReleaseItem } from '/@/types';
 import ContentCard from './contentCard.vue';
 import { useGetReleasesQuery, useGetStructuresQuery, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
-import type { SearchOptions } from '@riffcc/lens-sdk';
+import type { SearchOptions } from '@riffcc/citadel-sdk';
 
 const props = defineProps<{
   categoryFilter?: string;  // Category ID (hash) to filter by

@@ -4,7 +4,7 @@ import { multiaddr } from '@multiformats/multiaddr';
 // Keep HomePage as direct import since it's the landing page
 import HomePage from '/@/views/homePage.vue';
 import { queryClient } from './tanstackQuery';
-import type { AccountStatusResponse } from '@riffcc/lens-sdk';
+import type { AccountStatusResponse } from '@riffcc/citadel-sdk';
 import { getApiUrl as getRuntimeApiUrl } from '/@/utils/runtimeConfig';
 
 // Lazy load all other routes

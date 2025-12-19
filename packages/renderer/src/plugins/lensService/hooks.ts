@@ -6,15 +6,18 @@ import type {
   HashResponse,
   IdResponse,
   AnyObject,
-  LensService,
+  CitadelService,
   ReleaseData,
   SearchOptions,
   FeaturedReleaseData,
   SubscriptionData,
   AddInput,
   EditInput,
-} from '@riffcc/lens-sdk';
+} from '@riffcc/citadel-sdk';
 import type { ContentCategoryItem, FeaturedReleaseItem, ReleaseItem } from '/@/types';
+
+// Alias for backwards compatibility
+type LensService = CitadelService;
 
 export function useLensService() {
   const lensService = inject<LensService>('lensService');
@@ -58,7 +61,6 @@ export function useAccountStatusQuery(options?: { enabled?: boolean | Ref<boolea
       }
 
       const encodedKey = encodeURIComponent(publicKey.value);
-      console.log('[useAccountStatusQuery] Fetching account status for:', publicKey.value);
       const response = await fetch(`${API_URL}/account/${encodedKey}`);
 
       if (!response.ok) {
@@ -67,19 +69,12 @@ export function useAccountStatusQuery(options?: { enabled?: boolean | Ref<boolea
       }
 
       const result = await response.json();
-      console.log('[useAccountStatusQuery] Account status:', result);
       return result;
     },
     refetchInterval: 15000,
     // Only run when identity is initialized and publicKey is available
     enabled: computed(() => {
-      const shouldEnable = (options?.enabled !== false) && isInitialized.value && !!publicKey.value;
-      console.log('[useAccountStatusQuery] Query enabled:', shouldEnable, {
-        optionsEnabled: options?.enabled,
-        isInitialized: isInitialized.value,
-        hasPublicKey: !!publicKey.value
-      });
-      return shouldEnable;
+      return (options?.enabled !== false) && isInitialized.value && !!publicKey.value;
     }),
   });
 }

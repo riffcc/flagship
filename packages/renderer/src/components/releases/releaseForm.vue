@@ -264,7 +264,7 @@
 import {cid} from 'is-ipfs';
 import {computed, onMounted, ref, watch} from 'vue';
 import type { ReleaseItem } from '/@/types';
-import type { ContentCategoryMetadataField, ReleaseData } from '@riffcc/lens-sdk';
+import type { ReleaseData } from '@riffcc/citadel-sdk';
 import {
   useAddReleaseMutation,
   useEditReleaseMutation,

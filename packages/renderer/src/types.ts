@@ -5,7 +5,7 @@ import type {
   AnyObject,
   ContentCategoryData,
   ContentCategoryMetadataField,
-} from '@riffcc/lens-sdk';
+} from '@riffcc/citadel-sdk';
 
 export type ReleaseItem= ImmutableProps & ReleaseData<AnyObject>;
 
