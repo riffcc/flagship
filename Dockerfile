@@ -14,8 +14,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Copy package files first for caching
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .electron-vendors.cache.json ./
 
-# Copy workspace packages
+# Copy workspace packages and version plugin
 COPY packages/ ./packages/
+COPY version/ ./version/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
