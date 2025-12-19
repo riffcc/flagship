@@ -8,8 +8,8 @@ RUN apk add --no-cache python3 make g++ linux-headers
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Enable corepack for pnpm
+RUN corepack enable pnpm
 
 # Copy package files first for caching
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .electron-vendors.cache.json ./
