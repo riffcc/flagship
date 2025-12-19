@@ -21,7 +21,9 @@ COPY packages/ ./packages/
 RUN pnpm install --frozen-lockfile
 
 # Build production bundle
-RUN cd packages/renderer && \
+# Copy indexBrowser.html to index.html for web build (vite entry point)
+RUN cp packages/renderer/indexBrowser.html packages/renderer/index.html && \
+    cd packages/renderer && \
     MODE=production WEB=true NODE_OPTIONS='--max-old-space-size=8192' pnpm exec vite build
 
 # Production image
