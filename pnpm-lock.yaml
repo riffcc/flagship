@@ -56,9 +56,12 @@ importers:
       multiformats:
         specifier: ^13.3.7
         version: 13.3.7
+      three:
+        specifier: ^0.182.0
+        version: 0.182.0
       three-spritetext:
         specifier: ^1.10.0
-        version: 1.10.0(three@0.180.0)
+        version: 1.10.0(three@0.182.0)
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -3400,8 +3403,8 @@ packages:
     peerDependencies:
       three: '>=0.86.0'
 
-  three@0.180.0:
-    resolution: {integrity: sha512-o+qycAMZrh+TsE01GqWUxUIKR1AL0S8pq7zDkYOQw8GqfX8b8VoCKYUoHbhiX5j+7hr8XsuHDVU6+gkQJQKg9w==}
+  three@0.182.0:
+    resolution: {integrity: sha512-GbHabT+Irv+ihI1/f5kIIsZ+Ef9Sl5A1Y7imvS5RQjWgtTPfPnZ43JmlYI7NtCRDK9zir20lQpfg8/9Yd02OvQ==}
 
   timers-browserify@2.0.12:
     resolution: {integrity: sha512-9phl76Cqm6FhSX9Xe1ZUAMLtm1BLkKj2Qd5ApyWkXzsMRaA7dgr81kf4wJmQf/hAvg8EEyJxDo3du/0KlhPiKQ==}
@@ -3846,9 +3849,9 @@ snapshots:
     dependencies:
       accessor-fn: 1.5.3
       kapsule: 1.16.3
-      three: 0.180.0
-      three-forcegraph: 1.43.0(three@0.180.0)
-      three-render-objects: 1.40.4(three@0.180.0)
+      three: 0.182.0
+      three-forcegraph: 1.43.0(three@0.182.0)
+      three-render-objects: 1.40.4(three@0.182.0)
 
   7zip-bin@5.2.0: {}
 
@@ -7382,7 +7385,7 @@ snapshots:
       source-map-support: 0.5.21
     optional: true
 
-  three-forcegraph@1.43.0(three@0.180.0):
+  three-forcegraph@1.43.0(three@0.182.0):
     dependencies:
       accessor-fn: 1.5.3
       d3-array: 3.2.4
@@ -7393,23 +7396,23 @@ snapshots:
       kapsule: 1.16.3
       ngraph.forcelayout: 3.3.1
       ngraph.graph: 20.1.0
-      three: 0.180.0
+      three: 0.182.0
       tinycolor2: 1.6.0
 
-  three-render-objects@1.40.4(three@0.180.0):
+  three-render-objects@1.40.4(three@0.182.0):
     dependencies:
       '@tweenjs/tween.js': 25.0.0
       accessor-fn: 1.5.3
       float-tooltip: 1.7.5
       kapsule: 1.16.3
       polished: 4.3.1
-      three: 0.180.0
+      three: 0.182.0
 
-  three-spritetext@1.10.0(three@0.180.0):
+  three-spritetext@1.10.0(three@0.182.0):
     dependencies:
-      three: 0.180.0
+      three: 0.182.0
 
-  three@0.180.0: {}
+  three@0.182.0: {}
 
   timers-browserify@2.0.12:
     dependencies:
