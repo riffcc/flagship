@@ -83,6 +83,33 @@ def ensure_citadel_node_image():
         ], check=True)
 
 
+def get_peers_for_node(node_num: int) -> str:
+    """
+    Get CITADEL_PEERS for a specific node.
+
+    Each node connects to up to 3 predecessors to distribute connection load.
+    This prevents bottlenecking on the first few nodes.
+
+    Examples:
+      Node 1: "" (genesis, no peers)
+      Node 2: "citadel-1:9000"
+      Node 3: "citadel-1:9000,citadel-2:9000"
+      Node 4: "citadel-1:9000,citadel-2:9000,citadel-3:9000"
+      Node 5: "citadel-2:9000,citadel-3:9000,citadel-4:9000"
+      Node 6: "citadel-3:9000,citadel-4:9000,citadel-5:9000"
+    """
+    if node_num <= 1:
+        return ""  # Genesis node has no peers
+
+    # Connect to up to 3 predecessors
+    # Start from max(1, node_num - 3) to get the 3 nodes before this one
+    start = max(1, node_num - 3)
+    end = node_num  # exclusive (don't connect to self)
+
+    peers = [f'citadel-{i}:9000' for i in range(start, end)]
+    return ','.join(peers)
+
+
 def generate_compose(num_nodes: int, docker_rust_build: bool = True) -> dict:
     """Generate docker-compose config for N citadel nodes."""
 
@@ -91,6 +118,7 @@ def generate_compose(num_nodes: int, docker_rust_build: bool = True) -> dict:
 
     # Base citadel node config (used as template)
     # Uses pre-built image with inotify-tools to avoid apt-get at runtime
+    # Note: CITADEL_PEERS is set per-node in the loop below
     citadel_node_base = {
         'image': 'citadel-node:latest',
         'command': f'''bash -c "
@@ -104,7 +132,6 @@ def generate_compose(num_nodes: int, docker_rust_build: bool = True) -> dict:
             done
         "''',
         'environment': {
-            'CITADEL_PEERS': ','.join(f'citadel-{i}:9000' for i in range(1, min(4, num_nodes + 1))),
             'ADMIN_PUBLIC_KEY': '${ADMIN_PUBLIC_KEY:-}',
             'RUST_LOG': '${RUST_LOG:-info}',
         },
@@ -186,9 +213,15 @@ def generate_compose(num_nodes: int, docker_rust_build: bool = True) -> dict:
         else:
             target_volume = f'{citadel_src}/target:/citadel/target:ro'
 
+        # Each node connects to its 3 predecessors (distributes load)
+        node_peers = get_peers_for_node(i)
+
         node = {
             **citadel_node_base,
-            'environment': dict(citadel_node_base['environment']),  # Copy
+            'environment': {
+                **citadel_node_base['environment'],
+                'CITADEL_PEERS': node_peers,
+            },
             'volumes': [
                 f'{citadel_src}:/citadel:ro',
                 target_volume,
