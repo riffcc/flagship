@@ -39,8 +39,12 @@ services:
       - flagship_node_modules:/app/node_modules
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=https://citadel.lon.riff.cc/api/v1
-      - VITE_ALLOWED_HOSTS=flagship.lon.riff.cc
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8085/api/v1}
+      - VITE_ALLOWED_HOSTS=*
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
     depends_on:
       - citadel-lb
     networks:

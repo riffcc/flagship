@@ -12,18 +12,50 @@ Options:
     --docker-rust-build   Build Rust in Docker instead of cross-compiling on host.
                           Slower but doesn't require cross-compile toolchain.
 
-Default: Cross-compile on host with:
-    cd ~/projects/citadel && cross build --release -p citadel-lens --target aarch64-unknown-linux-gnu
+Default: Cross-compile on host (auto-detects Apple Silicon vs Linux)
 
 Environment:
     Reads from .env.docker.dev if present. Copy .env.docker.dev.example to get started.
 """
 
 import os
+import platform
 import subprocess
 import sys
 from pathlib import Path
 import yaml
+
+
+def get_cross_compile_target() -> str | None:
+    """
+    Detect if cross-compilation is needed based on host platform.
+    Returns the target triple if cross-compile needed, None for native build.
+
+    - Apple Silicon (macOS ARM64): needs cross-compile to x86_64-unknown-linux-gnu
+    - Linux x86_64: native build (no cross-compile)
+    - Linux ARM64: native build (no cross-compile)
+    """
+    system = platform.system()
+    machine = platform.machine()
+
+    if system == 'Darwin' and machine == 'arm64':
+        # Apple Silicon - cross-compile to Linux x86_64 for Docker
+        return 'x86_64-unknown-linux-gnu'
+    elif system == 'Darwin' and machine == 'x86_64':
+        # Intel Mac - cross-compile to Linux x86_64
+        return 'x86_64-unknown-linux-gnu'
+    else:
+        # Linux or other - native build
+        return None
+
+
+def get_binary_path() -> str:
+    """Get the path to the lens-node binary based on cross-compile target."""
+    target = get_cross_compile_target()
+    if target:
+        return f'/citadel/target/{target}/release/lens-node'
+    else:
+        return '/citadel/target/release/lens-node'
 
 
 def load_env():
@@ -40,16 +72,19 @@ def load_env():
 def generate_compose(num_nodes: int, docker_rust_build: bool = True) -> dict:
     """Generate docker-compose config for N citadel nodes."""
 
+    # Get binary path (auto-detects cross-compile for macOS)
+    binary_path = get_binary_path()
+
     # Base citadel node config (used as template)
     citadel_node_base = {
         'image': 'debian:trixie-slim',
-        'command': '''bash -c "
+        'command': f'''bash -c "
             apt-get update && apt-get install -y inotify-tools &&
-            while [ ! -f /citadel/target/aarch64-unknown-linux-gnu/release/lens-node ]; do sleep 2; done &&
+            while [ ! -f {binary_path} ]; do sleep 2; done &&
             while true; do
-                /citadel/target/aarch64-unknown-linux-gnu/release/lens-node &
+                {binary_path} &
                 PID=$$!
-                inotifywait -e close_write /citadel/target/aarch64-unknown-linux-gnu/release/lens-node
+                inotifywait -e close_write {binary_path}
                 kill $$PID 2>/dev/null || true
                 sleep 1
             done
@@ -81,7 +116,18 @@ def generate_compose(num_nodes: int, docker_rust_build: bool = True) -> dict:
             'ports': ['${FLAGSHIP_HOST:-0.0.0.0}:${FLAGSHIP_PORT:-9999}:5175'],
             'volumes': [f'{flagship_src}:/app', 'flagship_node_modules:/app/node_modules'],
             'env_file': ['.env'],
-            'environment': ['NODE_ENV=development', 'WEB=true'],
+            'environment': [
+                'NODE_ENV=development',
+                'WEB=true',
+                'VITE_API_URL=${VITE_API_URL:-http://localhost:8085/api/v1}',
+                'VITE_ALLOWED_HOSTS=*',
+            ],
+            'ulimits': {
+                'nofile': {
+                    'soft': 1048576,
+                    'hard': 1048576,
+                },
+            },
             'depends_on': ['citadel-lb'],
             'networks': ['citadel-mesh'],
         },
@@ -210,8 +256,13 @@ def main():
         if docker_rust_build:
             print(f"Starting {num_nodes}-node Citadel cluster (Rust builds in Docker)...")
         else:
-            print(f"Starting {num_nodes}-node Citadel cluster (cross-compile on host)...")
-            print("  Build: cd ~/projects/citadel && cross build --release -p citadel-lens --target aarch64-unknown-linux-gnu")
+            target = get_cross_compile_target()
+            if target:
+                print(f"Starting {num_nodes}-node Citadel cluster (cross-compile to {target})...")
+                print(f"  Build: cd ~/projects/citadel && cross build --release -p citadel-lens --target {target}")
+            else:
+                print(f"Starting {num_nodes}-node Citadel cluster (native build)...")
+                print("  Build: cd ~/projects/citadel && cargo build --release -p citadel-lens")
 
         # Generate configs
         compose = generate_compose(num_nodes, docker_rust_build=docker_rust_build)
