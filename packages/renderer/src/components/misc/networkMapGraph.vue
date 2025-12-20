@@ -49,6 +49,24 @@
         <div class="mt-4">Loading network map...</div>
       </v-overlay>
 
+      <!-- WebGL Not Supported State -->
+      <v-overlay
+        v-else-if="!webglSupported"
+        contained
+        model-value
+        class="align-center justify-center"
+      >
+        <v-alert
+          type="warning"
+          variant="tonal"
+          max-width="400"
+        >
+          <div class="text-h6 mb-2">3D Visualization Unavailable</div>
+          <div>Your browser does not support WebGL, which is required for the 3D network visualization.</div>
+          <div class="mt-2 text-caption">Try using a modern browser like Chrome, Firefox, or Edge with hardware acceleration enabled.</div>
+        </v-alert>
+      </v-overlay>
+
       <!-- Error State -->
       <v-overlay
         v-else-if="error"
@@ -67,14 +85,14 @@
 
       <!-- 3D Force Graph Container -->
       <div
-        v-show="!loading && !error"
+        v-show="webglSupported && !loading && !error"
         ref="graphContainer"
         style="width: 100%; height: 100%;"
       ></div>
 
       <!-- Latency Legend (floating bottom-right) -->
       <v-card
-        v-show="!loading && !error"
+        v-show="webglSupported && !loading && !error"
         class="latency-legend"
         elevation="4"
       >
@@ -141,12 +159,19 @@
 </template>
 
 <script setup lang="ts">
+// IMPORTANT: Import WebGPU shim FIRST before any Three.js or 3d-force-graph imports
+// This provides fallback constants for browsers without WebGPU support (e.g., Firefox)
+import { isWebGLSupported } from '/@/lib/webgpu-shim';
+
 import { ref, onMounted, watch, nextTick, onBeforeUnmount, computed } from 'vue';
 import ForceGraph3D from '3d-force-graph';
 import SpriteText from 'three-spritetext';
 import * as THREE from 'three';
 import { useNetworkMap } from '/@/composables/useNetworkMap';
 import { useTheme } from '/@/composables/useTheme';
+
+// Check WebGL support on component load
+const webglSupported = isWebGLSupported();
 
 const emit = defineEmits<{
   close: [];
@@ -214,7 +239,7 @@ const getLatencyColor = (latencyMs: number | null | undefined): string => {
 };
 
 const initializeGraph = () => {
-  if (!graphContainer.value || !networkMap.value) return;
+  if (!webglSupported || !graphContainer.value || !networkMap.value) return;
 
   // Clear any existing graph
   if (graphInstance) {
