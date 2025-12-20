@@ -81,3 +81,4 @@ docker/.env.docker.dev
 docker/docker-compose.generated.yml
 docker/haproxy-dynamic.cfg
 CLAUDE.local.md
+__pycache__/
