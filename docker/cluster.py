@@ -31,16 +31,17 @@ def get_cross_compile_target() -> str | None:
     Detect if cross-compilation is needed based on host platform.
     Returns the target triple if cross-compile needed, None for native build.
 
-    - Apple Silicon (macOS ARM64): needs cross-compile to x86_64-unknown-linux-gnu
-    - Linux x86_64: native build (no cross-compile)
-    - Linux ARM64: native build (no cross-compile)
+    - Apple Silicon (macOS ARM64): cross-compile to aarch64-unknown-linux-gnu
+      (Docker Desktop runs ARM64 Linux containers natively)
+    - Intel Mac (macOS x86_64): cross-compile to x86_64-unknown-linux-gnu
+    - Linux: native build (no cross-compile needed)
     """
     system = platform.system()
     machine = platform.machine()
 
     if system == 'Darwin' and machine == 'arm64':
-        # Apple Silicon - cross-compile to Linux x86_64 for Docker
-        return 'x86_64-unknown-linux-gnu'
+        # Apple Silicon - cross-compile to Linux ARM64 for Docker
+        return 'aarch64-unknown-linux-gnu'
     elif system == 'Darwin' and machine == 'x86_64':
         # Intel Mac - cross-compile to Linux x86_64
         return 'x86_64-unknown-linux-gnu'
