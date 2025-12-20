@@ -69,6 +69,20 @@ def load_env():
                     key, value = line.split('=', 1)
                     os.environ.setdefault(key.strip(), value.strip())
 
+def ensure_citadel_node_image():
+    """Build the citadel-node base image if it doesn't exist."""
+    result = subprocess.run(
+        ['docker', 'images', '-q', 'citadel-node:latest'],
+        capture_output=True, text=True
+    )
+    if not result.stdout.strip():
+        print("Building citadel-node base image...")
+        subprocess.run([
+            'docker', 'build', '-t', 'citadel-node:latest',
+            '-f', 'Dockerfile.citadel-node', '.'
+        ], check=True)
+
+
 def generate_compose(num_nodes: int, docker_rust_build: bool = True) -> dict:
     """Generate docker-compose config for N citadel nodes."""
 
@@ -76,10 +90,10 @@ def generate_compose(num_nodes: int, docker_rust_build: bool = True) -> dict:
     binary_path = get_binary_path()
 
     # Base citadel node config (used as template)
+    # Uses pre-built image with inotify-tools to avoid apt-get at runtime
     citadel_node_base = {
-        'image': 'debian:trixie-slim',
+        'image': 'citadel-node:latest',
         'command': f'''bash -c "
-            apt-get update && apt-get install -y inotify-tools &&
             while [ ! -f {binary_path} ]; do sleep 2; done &&
             while true; do
                 {binary_path} &
@@ -263,6 +277,9 @@ def main():
             else:
                 print(f"Starting {num_nodes}-node Citadel cluster (native build)...")
                 print("  Build: cd ~/projects/citadel && cargo build --release -p citadel-lens")
+
+        # Ensure base image exists (builds once, reused by all nodes)
+        ensure_citadel_node_image()
 
         # Generate configs
         compose = generate_compose(num_nodes, docker_rust_build=docker_rust_build)

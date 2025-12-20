@@ -2,10 +2,11 @@
 # Usage: docker compose -f docker-compose.dev.yml up -d
 
 x-citadel-node: &citadel-node
-  image: debian:trixie-slim
+  build:
+    context: .
+    dockerfile: Dockerfile.citadel-node
   command: >
     bash -c "
-      apt-get update && apt-get install -y inotify-tools &&
       while [ ! -f /citadel/target/release/lens-node ]; do sleep 2; done &&
       while true; do
         /citadel/target/release/lens-node &
