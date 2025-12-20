@@ -5,6 +5,23 @@
   >
     <v-card-title class="d-flex justify-space-between align-center pa-4">
       <span>Network Mesh Topology</span>
+      <div class="d-flex align-center ga-2">
+        <v-progress-circular
+          v-if="loading && !initialLoading"
+          indeterminate
+          size="16"
+          width="2"
+          color="primary"
+        ></v-progress-circular>
+        <v-chip
+          :color="connected ? 'success' : 'error'"
+          size="small"
+          variant="tonal"
+        >
+          <v-icon start size="small">{{ connected ? '$broadcast' : '$broadcast-off' }}</v-icon>
+          {{ connected ? 'Live' : 'Disconnected' }}
+        </v-chip>
+      </div>
     </v-card-title>
 
     <!-- Stats Bar -->
@@ -34,9 +51,9 @@
     </v-card-subtitle>
 
     <v-card-text class="flex-grow-1 pa-0" style="position: relative;">
-      <!-- Loading State -->
+      <!-- Loading State (only shown on initial load) -->
       <v-overlay
-        v-if="loading"
+        v-if="initialLoading"
         contained
         model-value
         class="align-center justify-center"
@@ -85,14 +102,14 @@
 
       <!-- 3D Force Graph Container -->
       <div
-        v-show="webglSupported && !loading && !error"
+        v-show="webglSupported && !initialLoading && !error"
         ref="graphContainer"
         style="width: 100%; height: 100%;"
       ></div>
 
       <!-- Latency Legend (floating bottom-right) -->
       <v-card
-        v-show="webglSupported && !loading && !error"
+        v-show="webglSupported && !initialLoading && !error"
         class="latency-legend"
         elevation="4"
       >
@@ -177,7 +194,7 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-const { networkMap, loading, error, fetchNetworkMap } = useNetworkMap();
+const { networkMap, loading, initialLoading, error, connected, fetchNetworkMap, connectWebSocket, disconnectWebSocket } = useNetworkMap();
 const { isDark, currentTheme } = useTheme();
 const graphContainer = ref<HTMLDivElement | null>(null);
 
@@ -238,17 +255,13 @@ const getLatencyColor = (latencyMs: number | null | undefined): string => {
   }
 };
 
-const initializeGraph = () => {
-  if (!webglSupported || !graphContainer.value || !networkMap.value) return;
+/**
+ * Transform network map to 3d-force-graph format
+ */
+const transformToGraphData = () => {
+  if (!networkMap.value) return { nodes: [], links: [] };
 
-  // Clear any existing graph
-  if (graphInstance) {
-    graphInstance._destructor();
-    graphInstance = null;
-  }
-
-  // Transform network map data to 3d-force-graph format
-  const graphData = {
+  return {
     nodes: networkMap.value.nodes.map(node => ({
       id: node.id,
       name: node.label,
@@ -258,7 +271,6 @@ const initializeGraph = () => {
       online: node.online,
     })),
     links: networkMap.value.edges.map(edge => {
-      // Determine if this is a browser connection (one endpoint is browser)
       const fromNode = networkMap.value!.nodes.find(n => n.id === edge.from);
       const toNode = networkMap.value!.nodes.find(n => n.id === edge.to);
       const isBrowserConnection = fromNode?.peer_type === 'browser' || toNode?.peer_type === 'browser';
@@ -274,6 +286,28 @@ const initializeGraph = () => {
       };
     }),
   };
+};
+
+/**
+ * Update graph data in-place (preserves camera position and animations)
+ */
+const updateGraphData = () => {
+  if (!graphInstance || !networkMap.value) return;
+
+  const graphData = transformToGraphData();
+  graphInstance.graphData(graphData);
+};
+
+const initializeGraph = () => {
+  if (!webglSupported || !graphContainer.value || !networkMap.value) return;
+
+  // If graph already exists, just update the data
+  if (graphInstance) {
+    updateGraphData();
+    return;
+  }
+
+  const graphData = transformToGraphData();
 
   // Initialize 3D force graph
   graphInstance = new ForceGraph3D(graphContainer.value)
@@ -453,9 +487,13 @@ const refresh = async () => {
 
 // Initialize on mount
 onMounted(async () => {
+  // Fetch initial data via HTTP
   await fetchNetworkMap();
   await nextTick();
   initializeGraph();
+
+  // Connect WebSocket for real-time updates
+  connectWebSocket();
 });
 
 // Reinitialize when network map changes
@@ -472,6 +510,9 @@ watch([isDark, serverNodeColor, browserNodeColor, backgroundColor], async () => 
 
 // Cleanup on unmount
 onBeforeUnmount(() => {
+  // Disconnect WebSocket
+  disconnectWebSocket();
+
   // Clean up graph instance
   if (graphInstance) {
     graphInstance._destructor();
