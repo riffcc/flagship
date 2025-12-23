@@ -140,10 +140,11 @@ def generate_compose(num_nodes: int, docker_rust_build: bool = True) -> dict:
     if docker_rust_build:
         citadel_node_base['depends_on'] = ['citadel-builder']
 
-    # Resolve home directory for bind mounts
-    home = os.path.expanduser('~')
-    flagship_src = f'{home}/projects/flagship'
-    citadel_src = f'{home}/projects/citadel'
+    # Resolve project directories from script location
+    # Assumes flagship and citadel are sibling directories
+    script_dir = Path(__file__).resolve().parent  # docker/
+    flagship_src = str(script_dir.parent)  # flagship/
+    citadel_src = str(script_dir.parent.parent / 'citadel')  # ../citadel/
 
     # Build services dict
     services = {
@@ -300,16 +301,20 @@ def main():
         args = [a for a in args if not a.startswith('--')]
         num_nodes = int(args[0]) if args else 5
 
+        # Resolve citadel path for help message
+        script_dir = Path(__file__).resolve().parent
+        citadel_path = script_dir.parent.parent / 'citadel'
+
         if docker_rust_build:
             print(f"Starting {num_nodes}-node Citadel cluster (Rust builds in Docker)...")
         else:
             target = get_cross_compile_target()
             if target:
                 print(f"Starting {num_nodes}-node Citadel cluster (cross-compile to {target})...")
-                print(f"  Build: cd ~/projects/citadel && cross build --release -p citadel-lens --target {target}")
+                print(f"  Build: cd {citadel_path} && cross build --release -p citadel-lens --target {target}")
             else:
                 print(f"Starting {num_nodes}-node Citadel cluster (native build)...")
-                print("  Build: cd ~/projects/citadel && cargo build --release -p citadel-lens")
+                print(f"  Build: cd {citadel_path} && cargo build --release -p citadel-lens")
 
         # Ensure base image exists (builds once, reused by all nodes)
         ensure_citadel_node_image()
