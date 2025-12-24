@@ -57,7 +57,9 @@
                   class="mb-2 pl-1"
                   min-height="12px"
                   height="24px"
-                  @click="item.path === '/contact' ? openEmailClient() : router.push(item.path)"
+                  :href="isExternalUrl(item.path) ? item.path : undefined"
+                  :target="isExternalUrl(item.path) ? '_blank' : undefined"
+                  @click.prevent="handleNavClick(item.path)"
                 ></v-list-item>
                 <template v-if="key === 'explore'">
                   <v-list-item
@@ -114,6 +116,20 @@ const { data: contentCategories } = useContentCategoriesQuery();
 const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
 const openEmailClient = () => {
   window.location.href = 'mailto:wings@riff.cc';
+};
+
+const isExternalUrl = (path: string) => {
+  return path.startsWith('http://') || path.startsWith('https://');
+};
+
+const handleNavClick = (path: string) => {
+  if (path === '/contact') {
+    openEmailClient();
+  } else if (isExternalUrl(path)) {
+    window.open(path, '_blank');
+  } else {
+    router.push(path);
+  }
 };
 
 // Map category slugs to clean routes
