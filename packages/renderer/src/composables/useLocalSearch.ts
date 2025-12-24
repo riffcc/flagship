@@ -27,6 +27,7 @@ export interface SearchResult extends SearchableContent {
 let searchIndex: MiniSearch<SearchableContent> | null = null;
 const isIndexReady = ref(false);
 const indexedCount = ref(0);
+const contentCount = ref(0); // Excludes artists/meta-objects
 
 export function useLocalSearch() {
   // Initialize index if not already created
@@ -58,9 +59,11 @@ export function useLocalSearch() {
       searchIndex.addAll(content);
 
       indexedCount.value = content.length;
+      // Content count excludes artists (meta-objects) - this is "what's on the site"
+      contentCount.value = content.filter(c => c.type !== 'artist').length;
       isIndexReady.value = true;
 
-      console.log(`[LocalSearch] Indexed ${content.length} items`);
+      console.log(`[LocalSearch] Indexed ${content.length} items (${contentCount.value} content)`);
     } catch (error) {
       console.error('[LocalSearch] Error indexing content:', error);
       isIndexReady.value = false;
@@ -187,6 +190,7 @@ export function useLocalSearch() {
 
     searchIndex.removeAll();
     indexedCount.value = 0;
+    contentCount.value = 0;
     isIndexReady.value = false;
   }
 
@@ -194,6 +198,7 @@ export function useLocalSearch() {
     // State
     isIndexReady: computed(() => isIndexReady.value),
     indexedCount: computed(() => indexedCount.value),
+    contentCount: computed(() => contentCount.value), // Excludes artists - "what's on the site"
 
     // Methods
     indexContent,

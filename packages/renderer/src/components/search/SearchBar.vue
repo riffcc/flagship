@@ -4,18 +4,24 @@
       v-model="query"
       label="Search music, movies, TV shows..."
       prepend-inner-icon="$magnify"
-      clearable
       variant="outlined"
       density="comfortable"
       hide-details
       @update:model-value="onSearch"
-      @keydown.enter="onEnter"
+      @keydown="onKeydown"
       @focus="showResults = true"
       @blur="onBlur"
     >
       <template #append-inner>
-        <v-chip v-if="isIndexReady && indexedCount > 0" size="x-small" variant="text">
-          {{ indexedCount }} items
+        <v-btn
+          v-if="query"
+          icon="$close"
+          size="x-small"
+          variant="text"
+          @click="clearQuery"
+        />
+        <v-chip v-if="isIndexReady && contentCount > 0" size="x-small" variant="text">
+          {{ contentCount }} items
         </v-chip>
       </template>
     </v-text-field>
@@ -25,9 +31,21 @@
       v-if="showResults && results.length > 0"
       :results="results"
       :query="query"
+      :focused-index="focusedIndex"
       @select="onSelectResult"
       @close="showResults = false"
     />
+
+    <!-- No Results Message -->
+    <v-card
+      v-else-if="showResults && query.length >= 2 && results.length === 0"
+      class="search-no-results"
+      elevation="8"
+    >
+      <v-card-text class="text-center text-grey">
+        No results for "{{ query }}"
+      </v-card-text>
+    </v-card>
   </div>
 </template>
 
@@ -39,30 +57,66 @@ import { useLocalSearch } from '/@/composables/useLocalSearch';
 import SearchResults from './SearchResults.vue';
 
 const router = useRouter();
-const { search, isIndexReady, indexedCount } = useLocalSearch();
+const { search, isIndexReady, contentCount } = useLocalSearch();
 
 const query = ref('');
 const results = ref<any[]>([]);
 const showResults = ref(false);
+const focusedIndex = ref(-1);
 
-// Debounced search function
+// Debounced search function (150ms like QuickSearch)
 const onSearch = useDebounceFn((value: string) => {
   if (!value || value.length < 2) {
     results.value = [];
+    showResults.value = false;
     return;
   }
 
   const searchResults = search(value);
+  console.log('[SearchBar] Search for:', value, '-> results:', searchResults.length);
   results.value = searchResults;
-  showResults.value = searchResults.length > 0;
-}, 300);
+  showResults.value = true;
+}, 150);
 
-// Handle Enter key
-function onEnter() {
-  if (results.value.length > 0) {
-    // Navigate to first result
-    onSelectResult(results.value[0]);
+// Handle keyboard navigation
+function onKeydown(event: KeyboardEvent) {
+  const total = results.value.length;
+
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault();
+      if (total > 0) {
+        focusedIndex.value = Math.min(total - 1, focusedIndex.value + 1);
+      }
+      break;
+    case 'ArrowUp':
+      event.preventDefault();
+      if (total > 0) {
+        focusedIndex.value = Math.max(-1, focusedIndex.value - 1);
+      }
+      break;
+    case 'Enter':
+      event.preventDefault();
+      if (focusedIndex.value >= 0 && results.value[focusedIndex.value]) {
+        onSelectResult(results.value[focusedIndex.value]);
+      } else if (results.value.length > 0) {
+        onSelectResult(results.value[0]);
+      }
+      break;
+    case 'Escape':
+      event.preventDefault();
+      showResults.value = false;
+      focusedIndex.value = -1;
+      break;
   }
+}
+
+// Clear search query
+function clearQuery() {
+  query.value = '';
+  results.value = [];
+  showResults.value = false;
+  focusedIndex.value = -1;
 }
 
 // Handle result selection
@@ -70,7 +124,6 @@ function onSelectResult(result: any) {
   showResults.value = false;
   query.value = '';
 
-  // Navigate to content page based on type
   const route = getRouteForContent(result);
   if (route) {
     router.push(route);
@@ -81,15 +134,12 @@ function onSelectResult(result: any) {
 function getRouteForContent(content: any): string | null {
   if (!content.id) return null;
 
-  // Map content type to route
   switch (content.type) {
     case 'artist':
-      return `/artists/${content.id}`;
+      return `/artist/${content.id}`;
     case 'music':
-      return `/release/${content.id}`;
     case 'movie':
     case 'tv':
-      return `/release/${content.id}`;
     default:
       return `/release/${content.id}`;
   }
@@ -117,4 +167,14 @@ watch(query, (newValue) => {
   width: 100%;
   max-width: 600px;
 }
+
+.search-no-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 8px;
+  z-index: 9999;
+}
+
 </style>

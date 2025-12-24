@@ -37,7 +37,7 @@
       </router-link>
     </div>
     <v-spacer></v-spacer>
-    <div class="search-container d-none d-sm-flex mx-2" style="max-width: 400px; width: 100%;">
+    <div class="search-container d-none d-sm-flex mx-2" style="max-width: 400px; width: 100%; overflow: visible; z-index: 9999;">
       <SearchBar />
     </div>
     <v-bottom-sheet
@@ -182,6 +182,11 @@ const getCategoryRoute = (categoryId: string) => {
   background: rgba(0, 0, 0, 0.95) !important;
   backdrop-filter: blur(10px);
   border-bottom: none !important;
+  overflow: visible !important;
+}
+
+:deep(.v-toolbar__content) {
+  overflow: visible !important;
 }
 
 /* Animated breathing glow divider */

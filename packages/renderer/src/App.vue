@@ -254,34 +254,46 @@ const { data: contentCategories } = useContentCategoriesQuery({
 const { indexContent } = useLocalSearch();
 
 // Index catalog data when releases load
-// Structure types (artists, series, etc.) are excluded from the count
-const STRUCTURE_TYPES = ['artist', 'series', 'season', 'author', 'collection'];
+// Artists are indexed for search but excluded from content count
+const EXCLUDED_STRUCTURE_TYPES = ['series', 'season', 'collection'];
 
 watchEffect(() => {
   console.log('[App] watchEffect triggered, releases:', releases.value?.length || 0);
   if (releases.value && releases.value.length > 0) {
-    // Filter out structure-type releases (artists, series, etc.)
-    const contentReleases = releases.value.filter(release =>
-      !STRUCTURE_TYPES.includes(release.metadata?.type as string)
+    // Filter out non-searchable structure types (but keep artists - they're searchable!)
+    const searchableReleases = releases.value.filter(release =>
+      !EXCLUDED_STRUCTURE_TYPES.includes(release.metadata?.type as string)
     );
 
-    const searchableContent = contentReleases.map(release => ({
-      id: release.id,
-      title: release.name,
-      artist: release.metadata?.artist as string | undefined,
-      description: release.metadata?.description as string | undefined,
-      category: release.categoryId || 'other',
-      tags: (release.metadata?.tags as string[]) || [],
-      year: release.metadata?.year as number | undefined,
-      type: (release.categoryId === 'music' ? 'music' :
-             release.categoryId === 'movies' ? 'movie' :
-             release.categoryId === 'tv-shows' ? 'tv' :
-             'other') as 'music' | 'movie' | 'tv' | 'artist' | 'other',
-      thumbnailCID: release.thumbnailCID,
-    }));
+    // Index everything including artists
+    const searchableContent = searchableReleases.map(release => {
+      const metadataType = release.metadata?.type as string;
+      const isArtist = metadataType === 'artist' || metadataType === 'author';
+
+      // Artist can be in 'artist' or 'author' field
+      const artistName = (release.metadata?.artist || release.metadata?.author) as string | undefined;
+
+      return {
+        id: release.id,
+        title: release.name,
+        artist: artistName,
+        description: release.metadata?.description as string | undefined,
+        category: release.categoryId || 'other',
+        tags: (release.metadata?.tags as string[]) || [],
+        year: release.metadata?.year as number | undefined,
+        type: (isArtist ? 'artist' :
+               release.categoryId === 'music' ? 'music' :
+               release.categoryId === 'movies' ? 'movie' :
+               release.categoryId === 'tv-shows' ? 'tv' :
+               'other') as 'music' | 'movie' | 'tv' | 'artist' | 'other',
+        thumbnailCID: release.thumbnailCID,
+      };
+    });
 
     indexContent(searchableContent);
-    console.log(`[App] Indexed ${searchableContent.length} content releases for search (${releases.value.length - searchableContent.length} structure releases excluded)`);
+    const contentCount = searchableContent.filter(c => c.type !== 'artist').length;
+    const artistCount = searchableContent.filter(c => c.type === 'artist').length;
+    console.log(`[App] Indexed ${contentCount} content items + ${artistCount} artists for search`);
   }
 });
 

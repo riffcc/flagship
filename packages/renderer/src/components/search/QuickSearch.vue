@@ -23,18 +23,16 @@
               autofocus
               @keydown="handleInputKeydown"
             />
-            <span
-              v-if="query.length > 0"
-              class="quick-search-hint"
-            >
+            <span class="quick-search-hint">
               ESC to close
             </span>
-            <span
-              v-else
-              class="quick-search-hint"
-            >
-              Type to search
-            </span>
+            <v-btn
+              icon="mdi-close"
+              variant="text"
+              size="small"
+              class="quick-search-close"
+              @click="close"
+            />
           </div>
 
           <!-- Results Grid -->
@@ -326,6 +324,15 @@ function getTypeColor(type: string): string {
 .quick-search-hint {
   color: rgba(255, 255, 255, 0.4);
   font-size: 12px;
+}
+
+.quick-search-close {
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: 8px;
+}
+
+.quick-search-close:hover {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .quick-search-results {

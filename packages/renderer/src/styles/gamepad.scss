@@ -116,7 +116,7 @@ html {
 }
 
 .gamepad-focused,
-*:focus-visible:not(.nav-tab) {
+*:focus-visible:not(.nav-tab):not(.search-bar-container *) {
   box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.8),
               0 0 20px rgba(138, 43, 226, 0.5) !important;
   outline: none !important;

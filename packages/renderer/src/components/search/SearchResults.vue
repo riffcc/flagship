@@ -2,10 +2,11 @@
   <v-card class="search-results" elevation="8">
     <v-list density="compact">
       <v-list-item
-        v-for="result in results"
+        v-for="(result, index) in results"
         :key="result.id"
         @click="$emit('select', result)"
         class="search-result-item"
+        :class="{ 'search-result-focused': index === props.focusedIndex }"
       >
         <template #prepend>
           <v-avatar
@@ -69,9 +70,10 @@ import { useAccountStatusQuery } from '/@/plugins/lensService/hooks';
 const router = useRouter();
 const { data: accountStatus } = useAccountStatusQuery();
 
-defineProps<{
+const props = defineProps<{
   results: any[];
   query: string;
+  focusedIndex?: number;
 }>();
 
 const emit = defineEmits<{
@@ -144,14 +146,12 @@ function escapeRegex(str: string): string {
 .search-results {
   position: absolute;
   top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   margin-top: 8px;
-  width: 800px;
-  max-width: 90vw;
   max-height: 500px;
   overflow-y: auto;
-  z-index: 1000;
+  z-index: 9999;
 }
 
 .search-result-item {
@@ -160,8 +160,9 @@ function escapeRegex(str: string): string {
   min-height: 64px;
 }
 
-.search-result-item:hover {
-  background-color: rgba(138, 43, 226, 0.1);
+.search-result-item:hover,
+.search-result-item.search-result-focused {
+  background-color: rgba(138, 43, 226, 0.35);
 }
 
 .thumbnail-avatar {
