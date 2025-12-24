@@ -154,12 +154,33 @@
           v-else
           class="d-flex ga-1"
         >
-          <v-btn
-            :icon="volume === 0 ? '$volume-off' : '$volume-high'"
-            size="small"
-            density="comfortable"
-            @click="toggleVolume"
-          ></v-btn>
+          <!-- Volume Button with Flyout -->
+          <div class="volume-control" v-click-outside="closeVolumeFlyout">
+            <v-btn
+              :icon="volume === 0 ? '$volume-off' : '$volume-high'"
+              size="small"
+              density="comfortable"
+              class="volume-btn"
+              :class="{ 'volume-active': showVolumeFlyout }"
+              @click="handleVolumeClick"
+            ></v-btn>
+            <Transition name="volume-flyout">
+              <div v-if="showVolumeFlyout" class="volume-flyout">
+                <v-slider
+                  :model-value="volume"
+                  :min="0"
+                  :max="1"
+                  :step="0.01"
+                  hide-details
+                  thumb-color="white"
+                  track-color="grey"
+                  track-fill-color="primary"
+                  :thumb-size="12"
+                  @update:model-value="setVolume"
+                />
+              </div>
+            </Transition>
+          </div>
           <v-btn
             icon="$rotate-left"
             :color="repeat ? 'grey-lighten-3' : 'default'"
@@ -181,7 +202,7 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, watch, onUnmounted} from 'vue';
+import {ref, onMounted, watch, onUnmounted} from 'vue';
 import {useDisplay} from 'vuetify';
 import {useRouter} from 'vue-router';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
@@ -193,6 +214,23 @@ import QualityBadge from '/@/components/badges/QualityBadge.vue';
 
 const {xs, smAndDown} = useDisplay();
 const router = useRouter();
+
+// Volume flyout state
+const showVolumeFlyout = ref(false);
+
+const handleVolumeClick = () => {
+  if (showVolumeFlyout.value) {
+    // Flyout is open - toggle mute/unmute
+    toggleVolume();
+  } else {
+    // Flyout is closed - open it
+    showVolumeFlyout.value = true;
+  }
+};
+
+const closeVolumeFlyout = () => {
+  showVolumeFlyout.value = false;
+};
 
 const {
   playerRef: audioPlayerRef,
@@ -222,7 +260,7 @@ const {
   toggleShuffle,
 } = useAudioAlbum();
 
-const {volume, toggleVolume} = usePlayerVolume();
+const {volume, toggleVolume, setVolume} = usePlayerVolume();
 
 watch(volume, v => {
   if (audioPlayerRef.value) {
@@ -278,3 +316,41 @@ onUnmounted(() => {
   clearPlaybackHandlers();
 });
 </script>
+
+<style scoped>
+.volume-control {
+  position: relative;
+}
+
+.volume-btn:hover,
+.volume-btn.volume-active {
+  color: rgba(138, 43, 226, 0.9) !important;
+  text-shadow: 0 0 8px rgba(138, 43, 226, 0.6);
+}
+
+.volume-flyout {
+  position: absolute;
+  bottom: calc(100% - 0.55em);
+  left: -1.0em;
+  padding: 8px 16px;
+  width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.volume-flyout :deep(.v-slider-thumb) {
+  will-change: transform;
+}
+
+.volume-flyout-enter-active,
+.volume-flyout-leave-active {
+  transition: opacity 50ms ease, transform 50ms ease;
+}
+
+.volume-flyout-enter-from,
+.volume-flyout-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+</style>
