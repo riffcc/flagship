@@ -173,36 +173,40 @@ export function useNetworkMap() {
 
   /**
    * Convert WebSocket snapshot to NetworkMap format
+   * IMPORTANT: Build nodes from SLOTS (all known nodes in mesh), not just PEERS (direct connections)
+   * In SPIRAL, everyone is AWARE of all nodes, even if not directly connected to them
    */
   const snapshotToNetworkMap = (snapshot: MeshEventSnapshot): NetworkMap => {
-    const nodes: PeerNode[] = snapshot.peers.map(peer => ({
-      id: peer.id,
-      label: peer.id.substring(0, 12) + '...',
-      slot: peer.slot ? {
-        index: peer.slot.index,
-        q: peer.slot.coord[0],
-        r: peer.slot.coord[1],
-        z: peer.slot.coord[2],
-      } : {
-        index: null,
-        q: 0,
-        r: 0,
-        z: 0,
-      },
-      peer_type: 'server' as const,
-      last_heartbeat: Date.now(),
-      capabilities: ['mesh'],
-      online: peer.online,
-    }));
+    // Build lookup of connected peers for online status
+    const peerMap = new Map(snapshot.peers.map(p => [p.id, p]));
 
-    // Create edges between peers that have slots (neighbors)
+    // Build nodes from ALL known slots (the complete mesh view)
+    const nodes: PeerNode[] = snapshot.slots.map(slot => {
+      const connectedPeer = peerMap.get(slot.peer_id);
+      return {
+        id: slot.peer_id,
+        label: slot.peer_id.substring(0, 12) + '...',
+        slot: {
+          index: slot.index,
+          q: slot.coord[0],
+          r: slot.coord[1],
+          z: slot.coord[2],
+        },
+        peer_type: 'server' as const,
+        last_heartbeat: Date.now(),
+        capabilities: ['mesh'],
+        // Online if we have a direct connection, otherwise assume online (they claimed a slot)
+        online: connectedPeer?.online ?? true,
+      };
+    });
+
+    // Create edges between all nodes with slots (mesh topology)
     const edges: PeerEdge[] = [];
-    const peersWithSlots = snapshot.peers.filter(p => p.slot);
-    for (let i = 0; i < peersWithSlots.length; i++) {
-      for (let j = i + 1; j < peersWithSlots.length; j++) {
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
         edges.push({
-          from: peersWithSlots[i].id,
-          to: peersWithSlots[j].id,
+          from: nodes[i].id,
+          to: nodes[j].id,
           connection_type: 'neighbor',
           latency_ms: null,
           color: '#4CAF50',
@@ -220,8 +224,8 @@ export function useNetworkMap() {
       nodes,
       edges,
       stats: {
-        total_peers: snapshot.peers.length,
-        server_nodes: snapshot.peers.length,
+        total_peers: nodes.length,  // All known nodes in mesh
+        server_nodes: nodes.length,
         browser_peers: 0,
         mesh_edges: edges.length,
         relay_connections: 0,
