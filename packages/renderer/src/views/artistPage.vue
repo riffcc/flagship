@@ -145,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, toRef } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   useGetReleaseQuery,
@@ -160,8 +160,11 @@ const props = defineProps<{
 
 const router = useRouter();
 
+// Make id reactive so query updates when route changes
+const artistId = toRef(props, 'id');
+
 // Fetch the artist release
-const { data: artist, isLoading: isArtistLoading } = useGetReleaseQuery(props.id);
+const { data: artist, isLoading: isArtistLoading } = useGetReleaseQuery(artistId);
 
 // Fetch all releases to get albums
 const { data: releases, isLoading: isReleasesLoading } = useGetReleasesQuery({
@@ -174,10 +177,10 @@ const isLoading = computed(() =>
 
 // Get all albums for this artist
 const albums = computed<ReleaseItem[]>(() => {
-  if (!releases.value || !props.id) return [];
+  if (!releases.value || !artistId.value) return [];
 
   return releases.value
-    .filter((r: ReleaseItem) => r.metadata?.artistId === props.id)
+    .filter((r: ReleaseItem) => r.metadata?.artistId === artistId.value)
     .sort((a: ReleaseItem, b: ReleaseItem) => {
       const aYear = parseInt(a.metadata?.releaseYear || '0');
       const bYear = parseInt(b.metadata?.releaseYear || '0');
