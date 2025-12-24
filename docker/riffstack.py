@@ -11,6 +11,10 @@ Usage:
     ./riffstack.py ps                List containers
     ./riffstack.py restart           Restart frontend only
 
+Options:
+    --admin-keys=KEY1,KEY2,...  Comma-separated list of admin public keys
+                                (ed25519p/... format)
+
 Services:
     flagship-dev    Frontend (Vite) on http://localhost:9999
     citadel-lb      API load balancer on http://localhost:8085
@@ -20,6 +24,7 @@ Examples:
     ./riffstack.py up 5              # Start with 5 Citadel nodes
     ./riffstack.py logs flagship-dev # View frontend logs
     ./riffstack.py restart           # Restart frontend after config change
+    ./riffstack.py up 5 --admin-keys=ed25519p/abc123,ed25519p/def456
 """
 
 import os
@@ -108,9 +113,31 @@ def citadel_cmd(args: list[str]):
 
 def cmd_up(args: list[str]):
     """Start the full stack."""
+    # Extract options
     docker_rust_build = '--docker-rust-build' in args
-    args = [a for a in args if not a.startswith('--')]
+    admin_keys = None
+    filtered_args = []
+
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == '--docker-rust-build':
+            pass  # Already captured above
+        elif a.startswith('--admin-keys='):
+            admin_keys = a.split('=', 1)[1]
+        elif a == '--admin-keys' and i + 1 < len(args):
+            admin_keys = args[i + 1]
+            i += 1  # Skip the next arg (the value)
+        elif not a.startswith('--'):
+            filtered_args.append(a)
+        i += 1
+    args = filtered_args
     num_nodes = int(args[0]) if args else 5
+
+    # Set ADMIN_PUBLIC_KEY env var if provided
+    if admin_keys:
+        os.environ['ADMIN_PUBLIC_KEY'] = admin_keys
+        print(f"Admin keys: {admin_keys[:50]}..." if len(admin_keys) > 50 else f"Admin keys: {admin_keys}")
 
     print("=" * 60)
     print("Starting Riff.CC Development Stack")
