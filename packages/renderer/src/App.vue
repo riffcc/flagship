@@ -79,6 +79,9 @@
     </v-overlay>
 
     <start-menu v-model="showStartMenu" />
+
+    <!-- Quick Search (activated by typing anywhere) -->
+    <QuickSearch />
   </v-app>
 </template>
 
@@ -93,6 +96,7 @@ import audioPlayer from '/@/components/releases/audioPlayer.vue';
 import videoPlayer from '/@/components/releases/videoPlayer.vue';
 import GamepadHints from '/@/components/gamepad/gamepadHints.vue';
 import StartMenu from '/@/components/misc/startMenu.vue';
+import QuickSearch from '/@/components/search/QuickSearch.vue';
 
 // Lazy load NetworkMapGraph to avoid WebGPU errors from 3d-force-graph on browsers without support
 const NetworkMapGraph = defineAsyncComponent(() => import('/@/components/misc/networkMapGraph.vue'));
@@ -108,6 +112,8 @@ import { useGlobalPlayback } from '/@/composables/globalPlayback';
 import { useInputMethod } from '/@/composables/useInputMethod';
 import { useLocalSearch } from '/@/composables/useLocalSearch';
 import { useIdentity } from '/@/composables/useIdentity';
+import { useKeyboardNavigation } from '/@/composables/useKeyboardNavigation';
+import { useQuickSearch } from '/@/composables/useQuickSearch';
 
 const { showDefederation, showDHTDebug } = useShowDefederation();
 const showNetworkMap = ref(false);
@@ -119,6 +125,10 @@ const { gamepadState, onButtonPress } = useGamepad();
 const { showCursor } = useGamepadNavigation();
 const { currentInputMethod } = useInputMethod();
 const { initialize: initializeIdentity } = useIdentity();
+
+// Initialize keyboard navigation and quick search
+useKeyboardNavigation();
+useQuickSearch();
 
 const showStartMenu = ref(false);
 
