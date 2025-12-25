@@ -124,6 +124,9 @@ import {
   mdiInformation,
   mdiExclamation,
   mdiLink,
+  mdiClockOutline,
+  mdiContentCopy,
+  mdiCloudUpload,
 } from '@mdi/js';
 
 const iconsAliasesMapping = {
@@ -237,6 +240,9 @@ const iconsAliasesMapping = {
   'information': mdiInformation,
   'exclamation': mdiExclamation,
   'link': mdiLink,
+  'clock-outline': mdiClockOutline,
+  'contentCopy': mdiContentCopy,
+  'cloud-upload': mdiCloudUpload,
 
   // Vuetify internal component default aliases
   complete: mdiCheck,

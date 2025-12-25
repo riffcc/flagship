@@ -37,9 +37,28 @@
       </router-link>
     </div>
     <v-spacer></v-spacer>
-    <div class="search-container d-none d-sm-flex mx-2" style="max-width: 400px; width: 100%; overflow: visible; z-index: 9999;">
+    <v-btn
+      v-if="canUpload"
+      icon
+      variant="text"
+      class="d-none d-sm-flex mr-2"
+      @click="showUploadDialog = true"
+    >
+      <v-icon>$upload</v-icon>
+      <v-tooltip
+        activator="parent"
+        location="bottom"
+      >
+        Upload
+      </v-tooltip>
+    </v-btn>
+    <div
+      class="search-container d-none d-sm-flex mx-2"
+      style="max-width: 400px; width: 100%; overflow: visible; z-index: 9999;"
+    >
       <SearchBar />
     </div>
+    <ipfs-upload-dialog v-model="showUploadDialog" />
     <v-bottom-sheet
       inset
       close-on-content-click
@@ -108,12 +127,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserSession } from '/@/composables/userSession';
 import { useAccountStatusQuery, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 import accountMenu from '/@/components/account/accountMenu.vue';
 import SearchBar from '/@/components/search/SearchBar.vue';
+import ipfsUploadDialog from '/@/components/account/ipfsUploadDialog.vue';
+
+const showUploadDialog = ref(false);
 
 const router = useRouter();
 const route = useRoute();
@@ -121,28 +143,24 @@ const route = useRoute();
 const { data: accountStatus } = useAccountStatusQuery();
 const { userData } = useUserSession();
 
-const canUpload = computed(() =>
-  accountStatus.value?.permissions.includes('release:create') ?? false,
-);
+const canUpload = computed(() => {
+  if (!accountStatus.value) return false;
+  return accountStatus.value.permissions?.includes('upload') || accountStatus.value.isAdmin;
+});
 
 const canAccessAdminPanel = computed(() => {
-  // Always guard against the initial undefined state.
   if (!accountStatus.value) {
     return false;
   }
 
-  // Check for the direct isAdmin flag first.
   if (accountStatus.value.isAdmin) {
     return true;
   }
 
-  // FIX: Use .includes() or .some() to check for the presence of a role.
-  // .includes() is cleaner if you only need to check for one role.
   if (accountStatus.value.roles.includes('moderator')) {
     return true;
   }
 
-  // If none of the above, deny access.
   return false;
 });
 
