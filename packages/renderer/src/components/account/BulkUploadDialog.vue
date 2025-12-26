@@ -212,7 +212,11 @@
             >
               <div class="upload-item-header">
                 <div class="upload-cover-status">
-                  <div class="upload-cover-wrapper">
+                  <!-- Show cover art only after upload completes (the UX flourish) -->
+                  <div
+                    v-if="album.uploadStatus === 'complete' || album.uploadStatus === 'skipped' || album.uploadStatus === 'error'"
+                    class="upload-cover-wrapper"
+                  >
                     <img
                       v-if="album.coverArtUrl"
                       :src="album.coverArtUrl"
@@ -225,33 +229,41 @@
                       color="grey-darken-1"
                     >mdi-album</v-icon>
                   </div>
-                  <div class="upload-status-badge" :class="`status-${album.uploadStatus}`">
+                  <!-- Show status icon only during pending/uploading -->
+                  <div
+                    v-else
+                    class="upload-status-icon-wrapper"
+                  >
                     <v-icon
                       v-if="album.uploadStatus === 'pending'"
-                      size="12"
+                      size="24"
                       color="grey"
                     >mdi-clock-outline</v-icon>
                     <v-progress-circular
                       v-else-if="album.uploadStatus === 'uploading'"
-                      :size="12"
-                      :width="2"
+                      :size="24"
+                      :width="3"
                       indeterminate
-                      color="white"
+                      color="primary"
                     />
+                  </div>
+                  <!-- Badge overlay for completed states -->
+                  <div
+                    v-if="album.uploadStatus === 'complete' || album.uploadStatus === 'skipped' || album.uploadStatus === 'error'"
+                    class="upload-status-badge"
+                    :class="`status-${album.uploadStatus}`"
+                  >
                     <v-icon
-                      v-else-if="album.uploadStatus === 'complete'"
+                      v-if="album.uploadStatus === 'complete'"
                       size="12"
-                      color="white"
                     >mdi-check</v-icon>
                     <v-icon
                       v-else-if="album.uploadStatus === 'skipped'"
                       size="12"
-                      color="white"
                     >mdi-skip-next</v-icon>
                     <v-icon
                       v-else-if="album.uploadStatus === 'error'"
                       size="12"
-                      color="white"
                     >mdi-alert-circle</v-icon>
                   </div>
                 </div>
@@ -914,6 +926,8 @@ watch(dialogOpen, (open) => {
 .upload-cover-status {
   position: relative;
   flex-shrink: 0;
+  width: 40px;
+  height: 40px;
 }
 
 .upload-cover-wrapper {
@@ -925,6 +939,14 @@ watch(dialogOpen, (open) => {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 4px;
   overflow: hidden;
+}
+
+.upload-status-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .upload-cover-thumb {
