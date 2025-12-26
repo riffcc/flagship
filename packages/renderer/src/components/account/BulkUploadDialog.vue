@@ -350,7 +350,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useContentCategoriesQuery, useBulkAddReleasesMutation } from '/@/plugins/lensService/hooks';
 import type { AddInput } from '@riffcc/citadel-sdk';
-import { uploadDirectory } from '/@/composables/useArchivist';
+import { uploadDirectory, uploadFile } from '/@/composables/useArchivist';
 import { useIdentity } from '/@/composables/useIdentity';
 import {
   parseAlbumFolder,
@@ -421,6 +421,7 @@ interface AlbumEntry {
   uploadProgress: number;
   uploadError?: string;
   contentCID?: string;
+  thumbnailCID?: string;
 }
 
 const parsedAlbums = ref<AlbumEntry[]>([]);
@@ -671,7 +672,27 @@ async function startBulkUpload() {
       // Use the original files stored in the album entry
       const files = album.files;
 
-      // Upload to Archivist
+      // Upload cover art first if available
+      if (album.coverArt) {
+        try {
+          const coverFile = new File(
+            [album.coverArt],
+            'cover.jpg',
+            { type: album.coverArt.type || 'image/jpeg' }
+          );
+          const coverResult = await uploadFile(coverFile, {
+            publicKey: publicKey.value,
+          });
+          if (coverResult.success && coverResult.cid) {
+            album.thumbnailCID = coverResult.cid;
+          }
+        } catch (coverErr) {
+          console.warn(`Failed to upload cover art for ${album.folderName}:`, coverErr);
+          // Continue with content upload even if cover fails
+        }
+      }
+
+      // Upload content to Archivist
       const uploadResult = await uploadDirectory(files, {
         publicKey: publicKey.value,
         concurrency: 4,
@@ -722,6 +743,7 @@ async function startBulkUpload() {
       name: album.album || album.folderName,
       categoryId: album.categoryId,
       contentCID: album.contentCID!,
+      thumbnailCID: album.thumbnailCID,
       metadata: {
         artist: album.artist,
         year: album.year,
