@@ -84,6 +84,7 @@
                       @change="toggleSelectAll"
                     />
                   </th>
+                  <th style="width: 48px;" />
                   <th>Artist</th>
                   <th>Album</th>
                   <th style="width: 80px;">Year</th>
@@ -103,6 +104,21 @@
                       hide-details
                       density="compact"
                     />
+                  </td>
+                  <td class="pa-1">
+                    <div class="album-cover-cell">
+                      <img
+                        v-if="album.coverArtUrl"
+                        :src="album.coverArtUrl"
+                        class="album-cover-thumb"
+                        alt=""
+                      />
+                      <v-icon
+                        v-else
+                        size="32"
+                        color="grey-darken-1"
+                      >mdi-album</v-icon>
+                    </div>
                   </td>
                   <td>
                     <v-text-field
@@ -169,7 +185,15 @@
           <div class="overall-progress mb-4">
             <div class="d-flex justify-space-between align-center mb-1">
               <span class="text-caption text-grey">Overall Progress</span>
-              <span class="text-caption">{{ overallProgress }}%</span>
+              <span class="text-caption">
+                {{ overallProgress }}%
+                <span
+                  v-if="isUploading && uploadSpeed > 0"
+                  class="text-grey ml-2"
+                >
+                  • {{ formatSpeed(uploadSpeed) }}
+                </span>
+              </span>
             </div>
             <v-progress-linear
               :model-value="overallProgress"
@@ -206,6 +230,11 @@
                     color="success"
                   >$check</v-icon>
                   <v-icon
+                    v-else-if="album.uploadStatus === 'skipped'"
+                    size="16"
+                    color="warning"
+                  >mdi-skip-next</v-icon>
+                  <v-icon
                     v-else-if="album.uploadStatus === 'error'"
                     size="16"
                     color="error"
@@ -224,16 +253,17 @@
                 </span>
               </div>
               <v-progress-linear
-                v-if="album.uploadStatus === 'uploading' || album.uploadStatus === 'complete'"
+                v-if="album.uploadStatus === 'uploading' || album.uploadStatus === 'complete' || album.uploadStatus === 'skipped'"
                 :model-value="album.uploadProgress || 0"
-                :color="album.uploadStatus === 'complete' ? 'success' : 'primary'"
+                :color="album.uploadStatus === 'complete' ? 'success' : album.uploadStatus === 'skipped' ? 'warning' : 'primary'"
                 height="3"
                 rounded
                 class="mt-1"
               />
               <div
                 v-if="album.uploadError"
-                class="text-caption text-error mt-1"
+                class="text-caption mt-1"
+                :class="album.uploadStatus === 'skipped' ? 'text-warning' : 'text-error'"
               >
                 {{ album.uploadError }}
               </div>
@@ -249,6 +279,9 @@
               class="mb-2"
             >
               Upload complete! {{ successCount }} {{ successCount === 1 ? contentTerminology.singular : contentTerminology.plural }} uploaded.
+              <span v-if="skippedCount > 0">
+                {{ skippedCount }} already existed.
+              </span>
             </v-alert>
           </div>
         </div>
@@ -350,10 +383,11 @@ interface AlbumEntry {
   tracks: ParsedTrack[];
   files: File[]; // Original files for upload
   coverArt: Blob | null;
+  coverArtUrl: string | null; // Object URL for display
   folderName: string;
   selected: boolean;
   categoryId: string;
-  uploadStatus: 'pending' | 'uploading' | 'complete' | 'error';
+  uploadStatus: 'pending' | 'uploading' | 'complete' | 'error' | 'skipped';
   uploadProgress: number;
   uploadError?: string;
   contentCID?: string;
@@ -369,6 +403,12 @@ const selectAll = ref(true);
 const isUploading = ref(false);
 const uploadComplete = ref(false);
 const currentUploadIndex = ref(0);
+
+// Speed tracking
+const uploadSpeed = ref(0); // bytes per second
+const lastSpeedCheck = ref({ time: 0, bytes: 0 });
+const speedHistory = ref<number[]>([]); // Rolling average
+const totalBytesUploaded = ref(0);
 
 // Computed
 const categoryItems = computed(() => {
@@ -411,6 +451,10 @@ const successCount = computed(() =>
   selectedAlbums.value.filter(a => a.uploadStatus === 'complete').length
 );
 
+const skippedCount = computed(() =>
+  selectedAlbums.value.filter(a => a.uploadStatus === 'skipped').length
+);
+
 // Adaptive terminology based on content type
 const contentTerminology = computed(() => {
   const categories = new Set(parsedAlbums.value.map(a => a.categoryId));
@@ -442,6 +486,47 @@ const contentTerminology = computed(() => {
 // Methods
 function getRelevantFileCount(album: AlbumEntry): number {
   return countRelevantFiles(album.files, album.categoryId);
+}
+
+function formatSpeed(bytesPerSecond: number): string {
+  if (bytesPerSecond === 0) return '0 KiB/s';
+  const k = 1024;
+  if (bytesPerSecond < k) {
+    return `${Math.round(bytesPerSecond)} B/s`;
+  } else if (bytesPerSecond < k * k) {
+    return `${(bytesPerSecond / k).toFixed(1)} KiB/s`;
+  } else if (bytesPerSecond < k * k * k) {
+    return `${(bytesPerSecond / (k * k)).toFixed(1)} MiB/s`;
+  } else {
+    return `${(bytesPerSecond / (k * k * k)).toFixed(2)} GiB/s`;
+  }
+}
+
+function updateSpeed(loadedBytes: number) {
+  const now = Date.now();
+  const timeDelta = (now - lastSpeedCheck.value.time) / 1000; // seconds
+
+  if (lastSpeedCheck.value.time === 0 || timeDelta < 0.2) {
+    // First update or too soon
+    if (lastSpeedCheck.value.time === 0) {
+      lastSpeedCheck.value = { time: now, bytes: loadedBytes };
+    }
+    return;
+  }
+
+  const bytesDelta = loadedBytes - lastSpeedCheck.value.bytes;
+  const instantSpeed = bytesDelta / timeDelta;
+
+  // Rolling average of last 5 samples for smoothing
+  speedHistory.value.push(instantSpeed);
+  if (speedHistory.value.length > 5) {
+    speedHistory.value.shift();
+  }
+
+  const avgSpeed = speedHistory.value.reduce((a, b) => a + b, 0) / speedHistory.value.length;
+  uploadSpeed.value = Math.max(0, avgSpeed);
+
+  lastSpeedCheck.value = { time: now, bytes: loadedBytes };
 }
 
 function toggleSelectAll() {
@@ -478,6 +563,8 @@ async function parseFiles() {
 
     try {
       const parsed = await parseAlbumFolder(files, folderName);
+      // Create object URL for cover art display
+      const coverArtUrl = parsed.coverArt ? URL.createObjectURL(parsed.coverArt) : null;
       results.push({
         id: `album-${index++}`,
         artist: parsed.artist,
@@ -488,6 +575,7 @@ async function parseFiles() {
         tracks: parsed.tracks,
         files: files,
         coverArt: parsed.coverArt,
+        coverArtUrl,
         folderName: parsed.folderName,
         selected: true,
         categoryId: detectCategoryFromGenre(parsed.genre || '') || defaultCategory,
@@ -507,6 +595,7 @@ async function parseFiles() {
         tracks: [],
         files: files,
         coverArt: null,
+        coverArtUrl: null,
         folderName,
         selected: true,
         categoryId: defaultCategory,
@@ -531,12 +620,22 @@ async function startBulkUpload() {
   isUploading.value = true;
   currentUploadIndex.value = 0;
 
+  // Reset speed tracking
+  uploadSpeed.value = 0;
+  lastSpeedCheck.value = { time: 0, bytes: 0 };
+  speedHistory.value = [];
+  totalBytesUploaded.value = 0;
+
   const albumsToUpload = selectedAlbums.value;
+  let cumulativeBytes = 0;
 
   // Upload each album sequentially
   for (const album of albumsToUpload) {
     album.uploadStatus = 'uploading';
     album.uploadProgress = 0;
+
+    const albumTotalBytes = album.files.reduce((sum, f) => sum + f.size, 0);
+    const albumStartBytes = cumulativeBytes;
 
     try {
       // Use the original files stored in the album entry
@@ -548,6 +647,10 @@ async function startBulkUpload() {
         concurrency: 4,
         onProgress: (progress) => {
           album.uploadProgress = progress.percent;
+          // Update speed tracking with cumulative bytes
+          const currentAlbumBytes = (progress.percent / 100) * albumTotalBytes;
+          totalBytesUploaded.value = albumStartBytes + currentAlbumBytes;
+          updateSpeed(totalBytesUploaded.value);
         },
       });
 
@@ -558,17 +661,31 @@ async function startBulkUpload() {
       album.contentCID = uploadResult.cid;
       album.uploadProgress = 100;
       album.uploadStatus = 'complete';
+      cumulativeBytes += albumTotalBytes;
 
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Upload failed';
       console.error(`Failed to upload album ${album.folderName}:`, err);
-      album.uploadStatus = 'error';
-      album.uploadError = err instanceof Error ? err.message : 'Upload failed';
+
+      // Check for duplicate CID error
+      if (errorMessage.toLowerCase().includes('already') ||
+          errorMessage.toLowerCase().includes('duplicate') ||
+          errorMessage.toLowerCase().includes('exists')) {
+        album.uploadStatus = 'skipped';
+        album.uploadError = 'Already uploaded';
+        album.uploadProgress = 100;
+        cumulativeBytes += albumTotalBytes;
+        // Continue to next album - don't treat as error
+      } else {
+        album.uploadStatus = 'error';
+        album.uploadError = errorMessage;
+      }
     }
 
     currentUploadIndex.value++;
   }
 
-  // Now create all releases via bulk mutation
+  // Now create all releases via bulk mutation (only for newly uploaded, not skipped)
   const releasesToCreate: AddInput[] = albumsToUpload
     .filter(a => a.uploadStatus === 'complete' && a.contentCID)
     .map(album => ({
@@ -601,6 +718,13 @@ function closeDialog() {
 }
 
 function resetState() {
+  // Clean up cover art object URLs before clearing
+  parsedAlbums.value.forEach(album => {
+    if (album.coverArtUrl) {
+      URL.revokeObjectURL(album.coverArtUrl);
+    }
+  });
+
   step.value = 1;
   parseProgress.value = 0;
   parsedCount.value = 0;
@@ -612,6 +736,12 @@ function resetState() {
   isUploading.value = false;
   uploadComplete.value = false;
   currentUploadIndex.value = 0;
+
+  // Reset speed tracking
+  uploadSpeed.value = 0;
+  lastSpeedCheck.value = { time: 0, bytes: 0 };
+  speedHistory.value = [];
+  totalBytesUploaded.value = 0;
 }
 
 // Start parsing when dialog opens
@@ -703,6 +833,23 @@ watch(dialogOpen, (open) => {
   background: rgba(138, 43, 226, 0.05);
 }
 
+.album-cover-cell {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.album-cover-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+}
+
 .upload-list {
   max-height: 350px;
   overflow-y: auto;
@@ -730,6 +877,11 @@ watch(dialogOpen, (open) => {
 
 .upload-item.status-error {
   background: rgba(255, 82, 82, 0.1);
+}
+
+.upload-item.status-skipped {
+  background: rgba(255, 193, 7, 0.08);
+  opacity: 0.8;
 }
 
 .upload-item-header {
