@@ -535,6 +535,12 @@ function formatSpeed(bytesPerSecond: number): string {
   }
 }
 
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 function updateSpeed(loadedBytes: number) {
   const now = Date.now();
   const timeDelta = (now - lastSpeedCheck.value.time) / 1000; // seconds
@@ -751,7 +757,8 @@ async function startBulkUpload() {
         ? JSON.stringify(album.tracks.map(track => ({
             title: track.title || track.fileName.replace(/\.[^.]+$/, ''),
             artist: track.artist || album.artist || null,
-            ...(track.duration ? { duration: track.duration } : {}),
+            // Format duration as "mm:ss" string, not raw seconds
+            ...(track.duration ? { duration: formatDuration(track.duration) } : {}),
             ...(track.trackNumber ? { trackNumber: track.trackNumber } : {}),
           })))
         : undefined;

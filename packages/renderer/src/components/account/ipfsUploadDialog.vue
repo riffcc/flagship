@@ -705,6 +705,12 @@ function formatSpeed(bytesPerSecond: number): string {
   }
 }
 
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 function updateUploadSpeed(totalLoaded: number) {
   const now = Date.now();
   const last = lastSpeedCheck.value;
@@ -1152,7 +1158,8 @@ async function startUpload() {
       const trackData = parsedMetadata.value.tracks.map(track => ({
         title: track.title || track.fileName.replace(/\.[^.]+$/, ''),
         artist: track.artist || parsedMetadata.value?.artist || null,
-        ...(track.duration ? { duration: track.duration } : {}),
+        // Format duration as "mm:ss" string, not raw seconds
+        ...(track.duration ? { duration: formatDuration(track.duration) } : {}),
         ...(track.trackNumber ? { trackNumber: track.trackNumber } : {}),
       }));
       metadata.trackMetadata = JSON.stringify(trackData);
