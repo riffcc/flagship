@@ -256,14 +256,17 @@
                     <v-icon
                       v-if="album.uploadStatus === 'complete'"
                       size="12"
+                      color="white"
                     >mdi-check</v-icon>
                     <v-icon
                       v-else-if="album.uploadStatus === 'skipped'"
                       size="12"
+                      color="white"
                     >mdi-skip-next</v-icon>
                     <v-icon
                       v-else-if="album.uploadStatus === 'error'"
                       size="12"
+                      color="white"
                     >mdi-alert-circle</v-icon>
                   </div>
                 </div>
