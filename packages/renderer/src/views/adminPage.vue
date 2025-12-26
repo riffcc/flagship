@@ -13,6 +13,19 @@
       >
         <v-tab
           slider-color="primary"
+          value="moderation"
+        >
+          Moderation
+          <v-badge
+            v-if="pendingCount > 0"
+            :content="pendingCount"
+            color="warning"
+            inline
+            class="ml-1"
+          />
+        </v-tab>
+        <v-tab
+          slider-color="primary"
           value="content"
         >
           Content
@@ -70,6 +83,11 @@
         v-model="tab"
         class="flex-1-0 border-s-sm"
       >
+        <v-window-item
+          value="moderation"
+        >
+          <moderation-queue />
+        </v-window-item>
         <v-window-item
           value="content"
         >
@@ -129,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, type Ref, defineAsyncComponent} from 'vue';
+import {ref, type Ref, defineAsyncComponent, onMounted, onUnmounted} from 'vue';
 import {useDisplay} from 'vuetify';
 import contentManagement from '/@/components/admin/contentManagement.vue';
 import accessManagement from '/@/components/admin/accessManagement.vue';
@@ -139,6 +157,8 @@ import siteManagement from '/@/components/admin/siteManagement.vue';
 import categoriesManagement from '/@/components/admin/categoriesManagement.vue';
 import structuresManagement from '/@/components/admin/structuresManagement.vue';
 import maintenanceManagement from '/@/components/admin/maintenanceManagement.vue';
+import moderationQueue from '/@/components/admin/ModerationQueue.vue';
+import { useAdminWebSocket } from '/@/composables/useAdminWebSocket';
 
 // Lazy load NetworkMapGraph to avoid WebGPU errors from 3d-force-graph on browsers without support
 const NetworkMapGraph = defineAsyncComponent(() => import('/@/components/misc/networkMapGraph.vue'));

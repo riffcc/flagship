@@ -66,6 +66,14 @@
     <ipfs-upload-dialog
       v-model="showUploadDialog"
       @update:success="handleUploadSuccess"
+      @bulk-upload="handleBulkUpload"
+    />
+
+    <!-- Bulk Upload Dialog -->
+    <bulk-upload-dialog
+      v-model="showBulkUploadDialog"
+      :files="bulkUploadFiles"
+      @upload:success="handleUploadSuccess"
     />
   </v-container>
 
@@ -92,6 +100,7 @@ import { useRouter } from 'vue-router';
 import { useAccountStatusQuery } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
 import ipfsUploadDialog from '/@/components/account/ipfsUploadDialog.vue';
+import bulkUploadDialog from '/@/components/account/BulkUploadDialog.vue';
 import myFilesManager from '/@/components/account/myFilesManager.vue';
 
 const router = useRouter();
@@ -99,6 +108,8 @@ const { data: accountStatus } = useAccountStatusQuery();
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
 const showUploadDialog = ref(false);
+const showBulkUploadDialog = ref(false);
+const bulkUploadFiles = ref<File[]>([]);
 
 const hasUploadPermission = computed(() => {
   if (!accountStatus.value) return false;
@@ -112,6 +123,11 @@ const canCreateRelease = computed(() => {
 
 function handleUploadSuccess() {
   openSnackbar('Files uploaded successfully!', 'success');
+}
+
+function handleBulkUpload(files: File[]) {
+  bulkUploadFiles.value = files;
+  showBulkUploadDialog.value = true;
 }
 
 function goToCreateRelease() {

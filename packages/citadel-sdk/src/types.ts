@@ -13,6 +13,12 @@ export interface ImmutableProps {
 }
 
 // Release types
+
+/**
+ * Moderation status for releases
+ */
+export type ReleaseStatus = 'pending' | 'approved' | 'rejected';
+
 export interface ReleaseData<T = AnyObject> {
   name: string;
   categoryId: string;
@@ -22,6 +28,8 @@ export interface ReleaseData<T = AnyObject> {
   metadata?: T;
   siteAddress?: string;
   postedBy?: string;
+  /** Moderation status - defaults to 'approved' for backward compatibility */
+  status?: ReleaseStatus;
 }
 
 export interface Release extends ImmutableProps, ReleaseData {
@@ -35,6 +43,24 @@ export interface Release extends ImmutableProps, ReleaseData {
   siteAddress: string;
   postedBy: string;
   createdAt: string;
+  /** Moderation status */
+  status: ReleaseStatus;
+  /** Public key of moderator who approved/rejected */
+  moderatedBy?: string;
+  /** Timestamp of moderation action (ISO 8601) */
+  moderatedAt?: string;
+  /** Reason for rejection */
+  rejectionReason?: string;
+}
+
+/**
+ * Moderation statistics response
+ */
+export interface ModerationStats {
+  pending: number;
+  approved: number;
+  rejected: number;
+  total: number;
 }
 
 // Featured release types
@@ -117,6 +143,7 @@ export interface AddInput<T = AnyObject> {
   contentCID: string;
   thumbnailCID?: string;
   metadata?: T;
+  status?: ReleaseStatus; // For admin uploads to moderation queue
 }
 
 export interface EditInput<T = AnyObject> {

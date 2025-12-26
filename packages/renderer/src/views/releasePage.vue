@@ -68,9 +68,11 @@ watch(targetRelease, (r) => {
   if (r) {
     if ('mediaSession' in navigator) {
       try {
+        // Check both 'artist' and 'author' fields for compatibility
+        const artistName = r.metadata?.artist || r.metadata?.author;
         navigator.mediaSession.metadata = new MediaMetadata({
           title: r.name,
-          artist: r.metadata?.['author'] as string | undefined,
+          artist: artistName as string | undefined,
           album: r.metadata?.albumName as string || '',
           artwork: r.thumbnailCID ? [
             {

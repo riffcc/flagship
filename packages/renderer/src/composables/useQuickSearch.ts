@@ -12,17 +12,53 @@ const query = ref('');
 export function useQuickSearch() {
   /**
    * Check if the event target is an input element where we shouldn't intercept keys.
+   * Also checks for Vuetify components like v-select, v-autocomplete, v-combobox.
    */
   function isInputElement(target: EventTarget | null): boolean {
     if (!target) return false;
     const el = target as HTMLElement;
     const tagName = el.tagName?.toLowerCase();
-    return (
+
+    // Standard input elements
+    if (
       tagName === 'input' ||
       tagName === 'textarea' ||
       tagName === 'select' ||
       el.isContentEditable
-    );
+    ) {
+      return true;
+    }
+
+    // Check if inside a Vuetify input component (v-select, v-autocomplete, v-combobox, v-text-field)
+    // These components have focus on internal elements that may not be standard inputs
+    const vuetifyInputClasses = [
+      'v-field',
+      'v-select',
+      'v-autocomplete',
+      'v-combobox',
+      'v-text-field',
+      'v-textarea',
+      'v-list-item', // Dropdown list items
+      'v-menu', // Menu content
+    ];
+
+    // Check the element itself and its parents
+    let current: HTMLElement | null = el;
+    while (current) {
+      for (const cls of vuetifyInputClasses) {
+        if (current.classList?.contains(cls)) {
+          return true;
+        }
+      }
+      // Also check for role="listbox" or role="option" (used by Vuetify dropdowns)
+      const role = current.getAttribute?.('role');
+      if (role === 'listbox' || role === 'option' || role === 'combobox') {
+        return true;
+      }
+      current = current.parentElement;
+    }
+
+    return false;
   }
 
   /**

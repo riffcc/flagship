@@ -58,7 +58,14 @@
     >
       <SearchBar />
     </div>
-    <ipfs-upload-dialog v-model="showUploadDialog" />
+    <ipfs-upload-dialog
+      v-model="showUploadDialog"
+      @bulk-upload="handleBulkUpload"
+    />
+    <bulk-upload-dialog
+      v-model="showBulkUploadDialog"
+      :files="bulkUploadFiles"
+    />
     <v-bottom-sheet
       inset
       close-on-content-click
@@ -134,8 +141,16 @@ import { useAccountStatusQuery, useContentCategoriesQuery } from '/@/plugins/len
 import accountMenu from '/@/components/account/accountMenu.vue';
 import SearchBar from '/@/components/search/SearchBar.vue';
 import ipfsUploadDialog from '/@/components/account/ipfsUploadDialog.vue';
+import bulkUploadDialog from '/@/components/account/BulkUploadDialog.vue';
 
 const showUploadDialog = ref(false);
+const showBulkUploadDialog = ref(false);
+const bulkUploadFiles = ref<File[]>([]);
+
+function handleBulkUpload(files: File[]) {
+  bulkUploadFiles.value = files;
+  showBulkUploadDialog.value = true;
+}
 
 const router = useRouter();
 const route = useRoute();

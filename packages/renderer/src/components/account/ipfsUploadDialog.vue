@@ -123,6 +123,41 @@
 
         <!-- Step 2: Category and Metadata -->
         <div v-if="step === 2">
+          <!-- Parsing indicator -->
+          <v-alert
+            v-if="isParsingMetadata"
+            type="info"
+            density="compact"
+            variant="tonal"
+            class="mb-4"
+          >
+            <template #prepend>
+              <v-progress-circular size="16" width="2" indeterminate />
+            </template>
+            Parsing file metadata...
+          </v-alert>
+
+          <!-- Detected codec badges -->
+          <div v-if="detectedCodec" class="codec-badges mb-3">
+            <v-chip
+              v-if="isLossless"
+              size="small"
+              color="success"
+              variant="tonal"
+              class="mr-2"
+            >
+              <v-icon start size="small">mdi-quality-high</v-icon>
+              Lossless
+            </v-chip>
+            <v-chip
+              size="small"
+              :color="isLossless ? 'success' : 'primary'"
+              variant="outlined"
+            >
+              {{ detectedCodec.toUpperCase() }}
+            </v-chip>
+          </div>
+
           <v-select
             v-model="selectedCategoryId"
             :items="categoryItems"
@@ -142,12 +177,14 @@
 
           <!-- Music-specific fields -->
           <template v-if="isMusicCategory">
-            <v-autocomplete
-              v-model="selectedArtistId"
+            <v-combobox
+              v-model="artistName"
               :items="artistItems"
+              item-title="title"
+              item-value="title"
               :loading="artistsLoading"
               label="Artist"
-              placeholder="Search or create..."
+              placeholder="Type or select artist..."
               clearable
               class="mb-2"
             />
@@ -188,14 +225,64 @@
             </v-row>
           </template>
 
-          <!-- Thumbnail (optional) -->
-          <v-text-field
-            v-model="thumbnailCID"
-            label="Thumbnail CID (optional)"
-            hint="Leave empty to auto-detect from files"
-            persistent-hint
+          <!-- Thumbnail section -->
+          <div class="thumbnail-section mb-4">
+            <div class="d-flex align-center gap-3">
+              <!-- Cover art preview -->
+              <div
+                v-if="extractedCoverArt"
+                class="thumbnail-preview"
+              >
+                <v-img
+                  :src="extractedCoverArt.url"
+                  width="80"
+                  height="80"
+                  cover
+                  class="rounded"
+                />
+                <v-chip
+                  size="x-small"
+                  color="success"
+                  variant="tonal"
+                  class="thumbnail-badge"
+                >
+                  Auto-detected
+                </v-chip>
+              </div>
+              <div
+                v-else
+                class="thumbnail-placeholder"
+              >
+                <v-icon size="32" color="grey">mdi-image-off</v-icon>
+              </div>
+              <div class="flex-grow-1">
+                <v-text-field
+                  v-model="thumbnailCID"
+                  label="Thumbnail CID"
+                  :hint="extractedCoverArt ? 'Auto-detected from files. Enter CID to override.' : 'Enter a CID or leave empty to use extracted cover art'"
+                  persistent-hint
+                  density="compact"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Moderation queue option (admin only) -->
+          <v-checkbox
+            v-if="isAdmin"
+            v-model="uploadToModerationQueue"
+            density="compact"
             class="mb-2"
-          />
+          >
+            <template #label>
+              <div>
+                <span class="text-body-2">Do not automatically approve</span>
+                <p class="text-caption text-grey mt-n1">
+                  Upload releases to the moderation queue instead of directly approving them
+                </p>
+              </div>
+            </template>
+          </v-checkbox>
         </div>
 
         <!-- Step 3: Upload Progress -->
@@ -334,6 +421,17 @@
           Back
         </v-btn>
         <v-spacer />
+        <!-- VIEW RELEASE button - shown after successful upload -->
+        <!-- Uses router-link via :to prop for middle-click support -->
+        <v-btn
+          v-if="uploadComplete && createdReleaseId"
+          :to="`/release/${createdReleaseId}`"
+          color="primary"
+          variant="tonal"
+          @click="dialogOpen = false"
+        >
+          View Release
+        </v-btn>
         <v-btn
           variant="text"
           :disabled="isUploading"
@@ -349,6 +447,34 @@
         >
           Next
         </v-btn>
+        <!-- Advanced options dialog on step 2 -->
+        <ReleaseAdvancedOptions
+          v-if="step === 2"
+          v-model="showAdvanced"
+          :category-id="selectedCategoryId"
+          :metadata-schema="selectedCategoryMetadataSchema"
+          :metadata="advancedMetadata"
+          :license-type="licenseType"
+          :license-version="licenseVersion"
+          :license-jurisdiction="licenseJurisdiction"
+          :license-attribution="licenseAttribution"
+          :custom-license-url="customLicenseUrl"
+          @update:metadata="advancedMetadata = $event"
+          @update:license-type="licenseType = $event"
+          @update:license-version="licenseVersion = $event"
+          @update:license-jurisdiction="licenseJurisdiction = $event"
+          @update:license-attribution="licenseAttribution = $event"
+          @update:custom-license-url="customLicenseUrl = $event"
+        >
+          <template #activator="{ props: activatorProps }">
+            <v-btn
+              v-bind="activatorProps"
+              variant="outlined"
+            >
+              Advanced
+            </v-btn>
+          </template>
+        </ReleaseAdvancedOptions>
         <v-btn
           v-if="step === 2"
           color="primary"
@@ -371,9 +497,19 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAccountStatusQuery, useContentCategoriesQuery, useGetReleasesQuery, useAddReleaseMutation } from '/@/plugins/lensService/hooks';
 import { uploadFile, uploadDirectory, type FileUploadState } from '/@/composables/useArchivist';
 import { useIdentity } from '/@/composables/useIdentity';
+import {
+  parseAlbumFolder,
+  isAudioFile,
+  isVideoFile,
+  filterJunkFiles,
+  detectCategoryFromGenre,
+  type ParsedAlbumMetadata,
+} from '/@/composables/useMetadataParser';
+import ReleaseAdvancedOptions from '/@/components/releases/ReleaseAdvancedOptions.vue';
 
 interface Props {
   modelValue: boolean;
@@ -382,10 +518,14 @@ interface Props {
 interface Emits {
   (e: 'update:modelValue', value: boolean): void;
   (e: 'update:success'): void;
+  (e: 'bulk-upload', files: File[]): void;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
+
+// Router
+const router = useRouter();
 
 // Identity
 const { publicKey } = useIdentity();
@@ -422,12 +562,34 @@ const thumbnailCID = ref('');
 
 // Music-specific
 const selectedArtistId = ref('');
+const artistName = ref(''); // Allow arbitrary artist names
 const albumTitle = ref('');
 
 // TV-specific
-const selectedSeriesId = ref('');
+const selectedSeriesId = ref<string | null>('');
 const seasonNumber = ref(1);
 const episodeNumber = ref(1);
+
+// Parsed metadata from files
+const parsedMetadata = ref<ParsedAlbumMetadata | null>(null);
+const isParsingMetadata = ref(false);
+const extractedCoverArt = ref<{ blob: Blob; url: string } | null>(null);
+
+// Moderation options (admin only)
+const uploadToModerationQueue = ref(false);
+
+// Advanced options
+const showAdvanced = ref(false);
+const advancedMetadata = ref<Record<string, any>>({});
+const licenseType = ref('');
+const licenseVersion = ref('4.0');
+const licenseJurisdiction = ref('');
+const licenseAttribution = ref('');
+const customLicenseUrl = ref('');
+
+// Detected codec info
+const detectedCodec = ref<string | null>(null);
+const isLossless = ref(false);
 
 // Upload state
 const isUploading = ref(false);
@@ -438,6 +600,7 @@ const currentFileIndex = ref(0);
 const currentFileName = ref('');
 const contentCID = ref('');
 const fileUploadStates = ref<FileUploadState[]>([]);
+const createdReleaseId = ref<string | null>(null);
 
 // Speed tracking
 const uploadSpeed = ref(0); // bytes per second
@@ -449,6 +612,8 @@ const hasUploadPermission = computed(() => {
   if (!accountStatus.value) return false;
   return accountStatus.value.permissions?.includes('upload') || accountStatus.value.isAdmin;
 });
+
+const isAdmin = computed(() => accountStatus.value?.isAdmin ?? false);
 
 const totalSize = computed(() => {
   return selectedFiles.value.reduce((sum, file) => sum + file.size, 0);
@@ -496,6 +661,25 @@ const seriesItems = computed(() => {
 
 const canProceedToUpload = computed(() => {
   return selectedCategoryId.value && releaseTitle.value;
+});
+
+const selectedCategoryMetadataSchema = computed(() => {
+  if (!contentCategories.value || !selectedCategoryId.value) {
+    return null;
+  }
+  const category = contentCategories.value.find(c => c.id === selectedCategoryId.value);
+  if (!category?.metadataSchema) {
+    return null;
+  }
+  // Parse if string
+  if (typeof category.metadataSchema === 'string') {
+    try {
+      return JSON.parse(category.metadataSchema);
+    } catch {
+      return null;
+    }
+  }
+  return category.metadataSchema;
 });
 
 // Methods
@@ -566,34 +750,63 @@ async function handleDrop(event: DragEvent) {
   if (!items) return;
 
   const files: File[] = [];
-  let topLevelFolderName: string | null = null;
+  const topLevelFolders: string[] = [];
 
+  // First pass: collect all entries before any async work
+  // (DataTransferItemList becomes invalid after the event handler returns)
+  const entries: FileSystemEntry[] = [];
   for (const item of Array.from(items)) {
     if (item.kind === 'file') {
       const entry = item.webkitGetAsEntry?.();
       if (entry) {
+        entries.push(entry);
         if (entry.isDirectory) {
-          // Capture the top-level folder name for auto-filling title
-          if (!topLevelFolderName) {
-            topLevelFolderName = entry.name;
-          }
-          await traverseDirectory(entry as FileSystemDirectoryEntry, files, entry.name + '/');
-        } else {
-          const file = item.getAsFile();
-          if (file) files.push(file);
+          topLevelFolders.push(entry.name);
         }
-      } else {
-        const file = item.getAsFile();
-        if (file) files.push(file);
       }
+    }
+  }
+
+  console.log(`[ipfsUploadDialog] Detected ${topLevelFolders.length} top-level folders:`, topLevelFolders);
+
+  // If multiple top-level folders detected, switch to bulk upload mode
+  if (topLevelFolders.length >= 2) {
+    // Process all entries to get files before emitting
+    for (const entry of entries) {
+      if (entry.isDirectory) {
+        await traverseDirectory(entry as FileSystemDirectoryEntry, files, entry.name + '/');
+      } else {
+        const fileEntry = entry as FileSystemFileEntry;
+        const file = await new Promise<File>((res) => {
+          fileEntry.file((f) => res(f));
+        });
+        files.push(file);
+      }
+    }
+    console.log(`[ipfsUploadDialog] Bulk upload triggered with ${files.length} files from ${topLevelFolders.length} folders`);
+    emit('bulk-upload', files);
+    dialogOpen.value = false;
+    return;
+  }
+
+  // Process entries for single-folder or file upload
+  for (const entry of entries) {
+    if (entry.isDirectory) {
+      await traverseDirectory(entry as FileSystemDirectoryEntry, files, entry.name + '/');
+    } else {
+      const fileEntry = entry as FileSystemFileEntry;
+      const file = await new Promise<File>((res) => {
+        fileEntry.file((f) => res(f));
+      });
+      files.push(file);
     }
   }
 
   selectedFiles.value = files;
 
   // Auto-fill title from folder name if not already set
-  if (topLevelFolderName && !releaseTitle.value) {
-    releaseTitle.value = topLevelFolderName;
+  if (topLevelFolders.length > 0 && !releaseTitle.value) {
+    releaseTitle.value = topLevelFolders[0];
   }
 }
 
@@ -646,6 +859,112 @@ async function traverseDirectory(
 
 function clearFiles() {
   selectedFiles.value = [];
+  parsedMetadata.value = null;
+  if (extractedCoverArt.value?.url) {
+    URL.revokeObjectURL(extractedCoverArt.value.url);
+  }
+  extractedCoverArt.value = null;
+  detectedCodec.value = null;
+  isLossless.value = false;
+}
+
+/**
+ * Auto-detect category from file types
+ */
+function detectCategoryFromFiles(files: File[]): string | null {
+  const cleanFiles = filterJunkFiles(files);
+  let audioCount = 0;
+  let videoCount = 0;
+
+  for (const file of cleanFiles) {
+    if (isAudioFile(file.name)) audioCount++;
+    else if (isVideoFile(file.name)) videoCount++;
+  }
+
+  // If mostly video, suggest movies/tv
+  if (videoCount > 0 && videoCount >= audioCount) {
+    return 'movies';
+  }
+
+  // If mostly audio, suggest music (genre detection will refine)
+  if (audioCount > 0) {
+    return 'music';
+  }
+
+  return null;
+}
+
+/**
+ * Parse metadata from selected files
+ */
+async function parseSelectedFiles() {
+  if (selectedFiles.value.length === 0) return;
+
+  const cleanFiles = filterJunkFiles(selectedFiles.value);
+  const audioFiles = cleanFiles.filter(f => isAudioFile(f.name));
+
+  if (audioFiles.length === 0) {
+    // Not audio files - just detect category from file types
+    const detected = detectCategoryFromFiles(cleanFiles);
+    if (detected && !selectedCategoryId.value) {
+      // Find matching category
+      const cat = contentCategories.value?.find(c =>
+        c.id === detected || c.name?.toLowerCase() === detected
+      );
+      if (cat) {
+        selectedCategoryId.value = cat.id;
+      }
+    }
+    return;
+  }
+
+  // Parse audio metadata
+  isParsingMetadata.value = true;
+  try {
+    const folderName = (selectedFiles.value[0] as any).webkitRelativePath?.split('/')[0] || 'Upload';
+    const metadata = await parseAlbumFolder(cleanFiles, folderName);
+    parsedMetadata.value = metadata;
+
+    // Auto-fill fields from metadata (prefer metadata over folder name)
+    if (metadata.album) {
+      releaseTitle.value = metadata.album;  // Always use album name from metadata
+      albumTitle.value = metadata.album;
+    }
+    if (metadata.artist) {
+      artistName.value = metadata.artist;
+    }
+
+    // Codec detection
+    detectedCodec.value = metadata.codec;
+    isLossless.value = metadata.lossless;
+
+    // Auto-detect category from genre
+    if (!selectedCategoryId.value) {
+      let categoryId = detectCategoryFromGenre(metadata.genre);
+      if (!categoryId) {
+        categoryId = detectCategoryFromFiles(cleanFiles);
+      }
+      if (categoryId) {
+        const cat = contentCategories.value?.find(c =>
+          c.id === categoryId || c.name?.toLowerCase() === categoryId
+        );
+        if (cat) {
+          selectedCategoryId.value = cat.id;
+        }
+      }
+    }
+
+    // Extract cover art
+    if (metadata.coverArt && metadata.coverArtMimeType) {
+      const url = URL.createObjectURL(metadata.coverArt);
+      extractedCoverArt.value = { blob: metadata.coverArt, url };
+    }
+
+  } catch (err) {
+    console.error('Failed to parse metadata:', err);
+  } finally {
+    isParsingMetadata.value = false;
+  }
 }
 
 async function handlePaste(event: ClipboardEvent) {
@@ -656,6 +975,7 @@ async function handlePaste(event: ClipboardEvent) {
   if (!items) return;
 
   const files: File[] = [];
+  let topLevelFolderCount = 0;
   let topLevelFolderName: string | null = null;
 
   for (const item of Array.from(items)) {
@@ -663,6 +983,7 @@ async function handlePaste(event: ClipboardEvent) {
       const entry = (item as any).webkitGetAsEntry?.();
       if (entry) {
         if (entry.isDirectory) {
+          topLevelFolderCount++;
           if (!topLevelFolderName) {
             topLevelFolderName = entry.name;
           }
@@ -680,6 +1001,14 @@ async function handlePaste(event: ClipboardEvent) {
 
   if (files.length > 0) {
     event.preventDefault();
+
+    // If multiple top-level folders detected, switch to bulk upload mode
+    if (topLevelFolderCount >= 2) {
+      emit('bulk-upload', files);
+      dialogOpen.value = false;
+      return;
+    }
+
     selectedFiles.value = files;
 
     if (topLevelFolderName && !releaseTitle.value) {
@@ -779,9 +1108,11 @@ async function startUpload() {
     contentCID.value = cid;
 
     // Build metadata
-    const metadata: Record<string, any> = {};
+    const metadata: Record<string, any> = {
+      ...advancedMetadata.value, // Include advanced metadata fields
+    };
     if (isMusicCategory.value) {
-      if (selectedArtistId.value) metadata.artistId = selectedArtistId.value;
+      if (artistName.value) metadata.artist = artistName.value;
       if (albumTitle.value) metadata.albumTitle = albumTitle.value;
     }
     if (isTVCategory.value) {
@@ -791,15 +1122,98 @@ async function startUpload() {
         metadata.episodeNumber = episodeNumber.value;
       }
     }
+    // Add codec info to metadata
+    if (detectedCodec.value) {
+      metadata.codec = detectedCodec.value;
+      metadata.lossless = isLossless.value;
+    }
+    // Add license to metadata if selected
+    if (licenseType.value) {
+      if (licenseType.value === 'custom') {
+        metadata.license = JSON.stringify({
+          type: 'custom',
+          url: customLicenseUrl.value,
+          ...(licenseAttribution.value ? { attribution: licenseAttribution.value } : {}),
+        });
+      } else {
+        metadata.license = JSON.stringify({
+          type: licenseType.value,
+          version: licenseVersion.value,
+          ...(licenseJurisdiction.value ? { jurisdiction: licenseJurisdiction.value } : {}),
+          ...(licenseAttribution.value ? { attribution: licenseAttribution.value } : {}),
+        });
+      }
+    }
+
+    // Add track metadata from parsed ID3/FLAC tags
+    console.log('[ipfsUploadDialog] parsedMetadata.value:', parsedMetadata.value);
+    console.log('[ipfsUploadDialog] parsedMetadata.value?.tracks:', parsedMetadata.value?.tracks);
+    if (parsedMetadata.value?.tracks && parsedMetadata.value.tracks.length > 0) {
+      const trackData = parsedMetadata.value.tracks.map(track => ({
+        title: track.title || track.fileName.replace(/\.[^.]+$/, ''),
+        artist: track.artist || parsedMetadata.value?.artist || null,
+        ...(track.duration ? { duration: track.duration } : {}),
+        ...(track.trackNumber ? { trackNumber: track.trackNumber } : {}),
+      }));
+      metadata.trackMetadata = JSON.stringify(trackData);
+      console.log('[ipfsUploadDialog] Pre-populated trackMetadata:', trackData);
+    } else {
+      console.warn('[ipfsUploadDialog] No tracks found in parsedMetadata - trackMetadata will not be set');
+    }
+
+    // Upload cover art if extracted and no thumbnail CID provided
+    let finalThumbnailCID = thumbnailCID.value;
+    if (!finalThumbnailCID && extractedCoverArt.value) {
+      try {
+        const coverFile = new File(
+          [extractedCoverArt.value.blob],
+          'cover.jpg',
+          { type: extractedCoverArt.value.blob.type || 'image/jpeg' }
+        );
+        const coverResult = await uploadFile(coverFile, {
+          publicKey: publicKey.value,
+        });
+        if (coverResult.success && coverResult.cid) {
+          finalThumbnailCID = coverResult.cid;
+        }
+      } catch (err) {
+        console.warn('Failed to upload cover art:', err);
+        // Continue without thumbnail
+      }
+    }
 
     // Create the release
-    await addReleaseMutation.mutateAsync({
+    const releaseData = {
       name: releaseTitle.value,
       categoryId: selectedCategoryId.value,
-      contentCID: contentCID.value,
-      thumbnailCID: thumbnailCID.value || undefined,
+      contentCID: cid, // Use the cid variable directly, not contentCID.value
+      thumbnailCID: finalThumbnailCID || undefined,
       metadata,
-    });
+      // If admin chose to upload to moderation queue, set status to pending
+      ...(uploadToModerationQueue.value ? { status: 'pending' as const } : {}),
+    };
+
+    console.log('[ipfsUploadDialog] Creating release with data:', releaseData);
+    console.log('[ipfsUploadDialog] CID value:', cid);
+    console.log('[ipfsUploadDialog] CID type:', typeof cid);
+    console.log('[ipfsUploadDialog] contentCID.value:', contentCID.value);
+
+    if (!cid) {
+      throw new Error('BUG: CID is empty or undefined before creating release!');
+    }
+
+    const result = await addReleaseMutation.mutateAsync(releaseData);
+    console.log('[ipfsUploadDialog] Release created:', result);
+
+    // Store the release ID for the VIEW RELEASE button
+    // API might return 'hash' or 'id' depending on implementation
+    const releaseId = result?.hash || result?.id;
+    if (releaseId) {
+      createdReleaseId.value = releaseId;
+      console.log('[ipfsUploadDialog] Release ID stored:', releaseId);
+    } else {
+      console.warn('[ipfsUploadDialog] No release ID in response:', result);
+    }
 
     uploadComplete.value = true;
     isUploading.value = false;
@@ -819,6 +1233,13 @@ function closeDialog() {
   dialogOpen.value = false;
 }
 
+function navigateToRelease() {
+  if (createdReleaseId.value) {
+    dialogOpen.value = false;
+    router.push(`/release/${createdReleaseId.value}`);
+  }
+}
+
 function resetForm() {
   step.value = 1;
   selectedFiles.value = [];
@@ -826,6 +1247,7 @@ function resetForm() {
   releaseTitle.value = '';
   thumbnailCID.value = '';
   selectedArtistId.value = '';
+  artistName.value = '';
   albumTitle.value = '';
   selectedSeriesId.value = '';
   seasonNumber.value = 1;
@@ -837,14 +1259,40 @@ function resetForm() {
   contentCID.value = '';
   fileUploadStates.value = [];
   uploadSpeed.value = 0;
+  createdReleaseId.value = null;
   lastSpeedCheck.value = { time: 0, bytes: 0 };
   speedHistory.value = [];
+
+  // Reset metadata parsing state
+  parsedMetadata.value = null;
+  isParsingMetadata.value = false;
+  if (extractedCoverArt.value?.url) {
+    URL.revokeObjectURL(extractedCoverArt.value.url);
+  }
+  extractedCoverArt.value = null;
+  detectedCodec.value = null;
+  isLossless.value = false;
+  uploadToModerationQueue.value = false;
+  showAdvanced.value = false;
+  advancedMetadata.value = {};
+  licenseType.value = '';
+  licenseVersion.value = '4.0';
+  licenseJurisdiction.value = '';
+  licenseAttribution.value = '';
+  customLicenseUrl.value = '';
 }
 
 // Reset when dialog closes
 watch(dialogOpen, (open) => {
   if (!open) {
     setTimeout(resetForm, 300);
+  }
+});
+
+// Parse metadata when moving to step 2
+watch(step, async (newStep, oldStep) => {
+  if (newStep === 2 && oldStep === 1) {
+    await parseSelectedFiles();
   }
 });
 </script>
@@ -1041,5 +1489,44 @@ watch(dialogOpen, (open) => {
   padding: 12px;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 8px;
+}
+
+/* Thumbnail section */
+.thumbnail-section {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.thumbnail-preview {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.thumbnail-badge {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px !important;
+}
+
+.thumbnail-placeholder {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+/* Codec badges */
+.codec-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 </style>

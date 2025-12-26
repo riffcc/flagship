@@ -13,6 +13,8 @@ import type {
   SubscriptionData,
   AddInput,
   EditInput,
+  ModerationStats,
+  Release,
 } from '@riffcc/citadel-sdk';
 import type { ContentCategoryItem, FeaturedReleaseItem, ReleaseItem } from '/@/types';
 
@@ -295,6 +297,10 @@ export function useAddReleaseMutation(options?: {
           ...data,
           metadata: data.metadata,
         });
+
+        console.log('[AddRelease] Input data:', data);
+        console.log('[AddRelease] contentCID in data:', data.contentCID);
+        console.log('[AddRelease] Payload being sent:', payload);
 
         // Sign the payload
         const timestamp = Date.now().toString();
@@ -1147,6 +1153,235 @@ export function useHttpAuthorizeAdminMutation(options?: {
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+// #### MODERATION HOOKS ####
+
+/**
+ * Query for pending releases (moderation queue)
+ */
+export function usePendingReleasesQuery(options?: {
+  enabled?: boolean | Ref<boolean>;
+}) {
+  const { publicKey } = useIdentity();
+
+  return useQuery<ReleaseItem[]>({
+    queryKey: ['releases', 'pending'],
+    queryFn: async () => {
+      if (!publicKey.value) {
+        return [];
+      }
+
+      const headers: Record<string, string> = {
+        'X-Public-Key': publicKey.value,
+      };
+
+      const response = await fetch(`${API_URL}/releases/pending`, { headers });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          console.warn('[PendingReleases] Not authorized to view pending releases');
+          return [];
+        }
+        throw new Error(`Failed to fetch pending releases: ${response.statusText}`);
+      }
+
+      return await response.json();
+    },
+    enabled: computed(() => {
+      return (options?.enabled !== false) && !!publicKey.value;
+    }),
+    refetchInterval: 30000, // Poll every 30 seconds
+  });
+}
+
+/**
+ * Query for moderation statistics
+ */
+export function useModerationStatsQuery(options?: {
+  enabled?: boolean | Ref<boolean>;
+}) {
+  const { publicKey } = useIdentity();
+
+  return useQuery<ModerationStats>({
+    queryKey: ['moderation', 'stats'],
+    queryFn: async () => {
+      if (!publicKey.value) {
+        return { pending: 0, approved: 0, rejected: 0, total: 0 };
+      }
+
+      const headers: Record<string, string> = {
+        'X-Public-Key': publicKey.value,
+      };
+
+      const response = await fetch(`${API_URL}/moderation/stats`, { headers });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          return { pending: 0, approved: 0, rejected: 0, total: 0 };
+        }
+        throw new Error(`Failed to fetch moderation stats: ${response.statusText}`);
+      }
+
+      return await response.json();
+    },
+    enabled: computed(() => {
+      return (options?.enabled !== false) && !!publicKey.value;
+    }),
+    refetchInterval: 30000,
+  });
+}
+
+/**
+ * Mutation to approve a release
+ */
+export function useApproveReleaseMutation(options?: {
+  onSuccess?: (response: Release) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { publicKey, sign } = useIdentity();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (releaseId: string) => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      const payload = JSON.stringify({});
+      const timestamp = Date.now().toString();
+      const messageToSign = `${timestamp}:${payload}`;
+      const signature = await sign(messageToSign);
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
+      };
+
+      const response = await fetch(`${API_URL}/releases/${releaseId}/approve`, {
+        method: 'POST',
+        headers,
+        body: payload,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(error.error || `Failed to approve release: ${response.statusText}`);
+      }
+
+      return await response.json();
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      // Invalidate all release-related queries
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['releases', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['moderation', 'stats'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+/**
+ * Mutation to reject a release
+ */
+export function useRejectReleaseMutation(options?: {
+  onSuccess?: (response: Release) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { publicKey, sign } = useIdentity();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ releaseId, reason }: { releaseId: string; reason?: string }) => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      const payload = JSON.stringify({ reason });
+      const timestamp = Date.now().toString();
+      const messageToSign = `${timestamp}:${payload}`;
+      const signature = await sign(messageToSign);
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
+      };
+
+      const response = await fetch(`${API_URL}/releases/${releaseId}/reject`, {
+        method: 'POST',
+        headers,
+        body: payload,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(error.error || `Failed to reject release: ${response.statusText}`);
+      }
+
+      return await response.json();
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      // Invalidate all release-related queries
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['releases', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['moderation', 'stats'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+/**
+ * Mutation to add multiple releases in bulk
+ */
+export function useBulkAddReleasesMutation(options?: {
+  onSuccess?: (results: Array<{ success: boolean; release?: Release; error?: string }>) => void;
+  onError?: (e: Error) => void;
+  onProgress?: (current: number, total: number) => void;
+}) {
+  const addReleaseMutation = useAddReleaseMutation();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (releases: AddInput[]) => {
+      const results: Array<{ success: boolean; release?: any; error?: string }> = [];
+
+      for (let i = 0; i < releases.length; i++) {
+        const releaseData = releases[i];
+        options?.onProgress?.(i + 1, releases.length);
+
+        try {
+          const result = await addReleaseMutation.mutateAsync(releaseData);
+          results.push({ success: true, release: result });
+        } catch (error) {
+          results.push({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
+      }
+
+      return results;
+    },
+    onSuccess: (results) => {
+      options?.onSuccess?.(results);
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['releases', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['moderation', 'stats'] });
     },
     onError: (error) => {
       options?.onError?.(error);

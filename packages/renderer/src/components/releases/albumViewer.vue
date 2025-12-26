@@ -51,15 +51,15 @@
         >
           <p class="text-h5 text-md-h4 font-weight-medium">{{ props.release.name }}</p>
           <p v-if="metadata?.description">{{ metadata.description }}</p>
-          <p v-if="metadata?.author">
+          <p v-if="artistName">
             <span v-if="metadata?.artistId">
               <a
                 @click.prevent="router.push(`/artist/${metadata.artistId}`)"
                 class="artist-link"
                 style="cursor: pointer; color: rgb(var(--v-theme-primary)); text-decoration: none;"
-              >{{ metadata.author }}</a>
+              >{{ artistName }}</a>
             </span>
-            <span v-else>{{ metadata.author }}</span>
+            <span v-else>{{ artistName }}</span>
           </p>
           <p>{{ albumFiles.length }} Songs<span v-if="totalDuration"> • {{ totalDuration }}</span></p>
           <p v-if="metadata?.releaseYear">{{ metadata.releaseYear }}</p>
@@ -79,15 +79,20 @@
         </v-col>
       </v-row>
 
-      <!-- Show ID3 tag warnings for users who can edit -->
+      <!-- Show metadata fix option for users who can edit -->
       <v-alert
-        v-if="canEditRelease && trackWarnings.size > 0"
+        v-if="canEditRelease && hasMetadataToSave"
         type="warning"
         class="mb-4"
         variant="outlined"
       >
-        <div class="d-flex align-center justify-space-between mb-2">
-          <p class="text-subtitle-2 font-weight-bold">ID3 Tag Mismatches Detected:</p>
+        <div class="d-flex align-center justify-space-between">
+          <div>
+            <p class="text-subtitle-2 font-weight-bold mb-1">Track Metadata Needs Fixing</p>
+            <p class="text-body-2 text-medium-emphasis">
+              Will update: {{ pendingChanges.join(', ') }}
+            </p>
+          </div>
           <v-btn
             color="warning"
             variant="tonal"
@@ -102,13 +107,8 @@
           v-if="isFixingTracks"
           color="warning"
           indeterminate
-          class="mb-2"
+          class="mt-2"
         ></v-progress-linear>
-        <ul class="ml-4">
-          <li v-for="[index, warning] in trackWarnings" :key="index">
-            Track {{ index + 1 }}: {{ warning }}
-          </li>
-        </ul>
       </v-alert>
 
       <v-row>
@@ -195,14 +195,14 @@
   </v-sheet>
 </template>
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, ref} from 'vue';
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue';
 import {useRouter} from 'vue-router';
 import {useDisplay} from 'vuetify';
 import trackDownloaderDialog from './trackDownloader.vue';
 import type {AudioTrack} from '/@/composables/audioAlbum';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {useFloatingVideo} from '/@/composables/floatingVideo';
-import { parseUrlOrCid } from '/@/utils';
+import { parseUrlOrCid, isArchivistCid as checkIsArchivistCid } from '/@/utils';
 import type { ReleaseItem } from '/@/types';
 import { useAccountStatusQuery, useEditReleaseMutation } from '/@/plugins/lensService/hooks';
 import QualityBadge from '/@/components/badges/QualityBadge.vue';
@@ -218,6 +218,58 @@ const props = defineProps<{
 const trackWarnings = ref<Map<number, string>>(new Map());
 const id3TrackData = ref<Map<number, { title: string; artist?: string }>>(new Map());
 const isFixingTracks = ref(false);
+const metadataJustSaved = ref(false);
+
+// Reset saved flag when release changes
+watch(() => props.release.id, () => {
+  metadataJustSaved.value = false;
+});
+
+// Get list of pending changes to show user
+const pendingChanges = computed(() => {
+  // If we just saved, no pending changes
+  if (metadataJustSaved.value) return [];
+
+  const changes: string[] = [];
+
+  let storedTracks: Array<{ title?: string; artist?: string; duration?: string }> = [];
+  if (metadata.value?.trackMetadata) {
+    try {
+      storedTracks = typeof metadata.value.trackMetadata === 'string'
+        ? JSON.parse(metadata.value.trackMetadata)
+        : metadata.value.trackMetadata;
+    } catch { /* ignore */ }
+  }
+
+  let newDurations = 0;
+  let titleFixes = 0;
+  let artistFixes = 0;
+
+  for (let i = 0; i < albumFiles.value.length; i++) {
+    const track = albumFiles.value[i];
+    const stored = storedTracks[i];
+    const id3 = id3TrackData.value.get(i);
+
+    // Count new durations
+    if (track.duration && (!stored || !stored.duration)) newDurations++;
+    // Count title fixes
+    if (id3?.title && (!stored || stored.title !== id3.title)) titleFixes++;
+    // Count artist fixes
+    if (id3?.artist && (!stored || stored.artist !== id3.artist)) artistFixes++;
+  }
+
+  // Add warnings as title fixes too
+  titleFixes += trackWarnings.value.size;
+
+  if (newDurations > 0) changes.push(`${newDurations} duration${newDurations > 1 ? 's' : ''}`);
+  if (titleFixes > 0) changes.push(`${titleFixes} title${titleFixes > 1 ? 's' : ''}`);
+  if (artistFixes > 0) changes.push(`${artistFixes} artist${artistFixes > 1 ? 's' : ''}`);
+
+  return changes;
+});
+
+// Check if we have actual changes to save
+const hasMetadataToSave = computed(() => pendingChanges.value.length > 0);
 
 // Abort controller for cancelling in-flight requests
 const abortController = ref<AbortController | null>(null);
@@ -238,6 +290,11 @@ const metadata = computed(() => {
     }
   }
   return meta;
+});
+
+// Get artist name - check both 'artist' and 'author' fields for compatibility
+const artistName = computed(() => {
+  return metadata.value?.artist || metadata.value?.author || null;
 });
 
 // Per-track artwork support (generic for any album)
@@ -402,6 +459,130 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
 
   try {
     const ipfsFiles: AudioTrack[] = [];
+
+    // Check if this is an Archivist CID - handle directory listing first
+    const isArchivistCidVal = checkIsArchivistCid(cid);
+
+    if (isArchivistCidVal) {
+      // For Archivist CIDs, go directly to directory/file handling
+      // Build the correct Archivist data URL (without /network/stream suffix)
+      const archivistGateway = import.meta.env.VITE_ARCHIVIST_GATEWAY as string | undefined
+        || import.meta.env.VITE_ARCHIVIST_API_URL as string | undefined
+        || 'https://uploads.island.riff.cc';  // Fallback to known working gateway
+      const baseUrl = archivistGateway.startsWith('http') ? archivistGateway : `https://${archivistGateway}`;
+      const dataUrl = `${baseUrl}/api/archivist/v1/data/${cid}`;
+
+      console.log('[albumViewer] Fetching Archivist CID:', dataUrl);
+
+      // First, check what type of content this is
+      const headResponse = await fetch(dataUrl, { method: 'HEAD' });
+
+      if (!headResponse.ok) {
+        console.error('[albumViewer] HEAD request failed:', headResponse.status);
+        throw new Error(`Failed to fetch CID: ${headResponse.status}`);
+      }
+
+      const contentType = headResponse.headers.get('content-type');
+      console.log('[albumViewer] Content-Type:', contentType);
+
+      // If it's an audio file, treat as single file
+      if (contentType && (contentType.includes('audio/') || contentType.includes('application/octet-stream'))) {
+        const contentLength = headResponse.headers.get('content-length');
+        const fileName = props.release.name || 'Unknown Track';
+
+        ipfsFiles.push({
+          index: 0,
+          album: props.release.name,
+          cid: cid,
+          title: storedTracks?.[0]?.title || fileName,
+          artist: storedTracks?.[0]?.artist || artistName.value,
+          duration: storedTracks?.[0]?.duration,
+          size: contentLength ? `${(parseInt(contentLength) / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
+        });
+        return ipfsFiles;
+      }
+
+      // Otherwise, fetch as directory (request JSON)
+      const jsonResponse = await fetch(dataUrl, {
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (!jsonResponse.ok) {
+        console.error('[albumViewer] Failed to fetch directory:', jsonResponse.status, jsonResponse.statusText);
+        throw new Error(`Failed to fetch directory: ${jsonResponse.status}`);
+      }
+
+      const data = await jsonResponse.json() as {
+        cid?: string;
+        name?: string;
+        totalSize?: number;
+        // Archivist format
+        entries?: {
+          name: string;
+          cid: string;
+          size: number;
+          isDirectory: boolean;
+          mimetype?: string;
+        }[];
+        // Legacy format
+        files?: {
+          title: string;
+          cid: string;
+          size: string;
+        }[];
+      };
+
+      console.log('[albumViewer] Archivist response:', data);
+
+      // Support both Archivist 'entries' format and legacy 'files' format
+      const entries = data.entries || data.files?.map(f => ({
+        name: f.title,
+        cid: f.cid,
+        size: typeof f.size === 'string' ? parseInt(f.size) || 0 : f.size,
+        isDirectory: false,
+      }));
+
+      if (!entries || !Array.isArray(entries)) {
+        console.error('[albumViewer] Invalid directory structure:', data);
+        throw new Error(`Invalid directory structure received from ${dataUrl}`);
+      }
+
+      console.log('[albumViewer] Found entries:', entries.length);
+
+      // Filter to audio files only and sort by name
+      const audioExtensions = ['flac', 'mp3', 'ogg', 'opus', 'm4a', 'aac', 'wav'];
+      const audioEntries = entries
+        .filter(entry => {
+          if (entry.isDirectory) return false;
+          const ext = entry.name.split('.').pop()?.toLowerCase() || '';
+          return audioExtensions.includes(ext);
+        })
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+      console.log('[albumViewer] Audio entries after filter:', audioEntries.length);
+
+      audioEntries.forEach((entry, index) => {
+        const storedTrack = storedTracks?.[index];
+        // Remove file extension for title
+        const titleWithoutExt = entry.name.replace(/\.[^/.]+$/, '');
+
+        ipfsFiles.push({
+          index: index,
+          album: props.release.name,
+          cid: entry.cid,
+          title: storedTrack?.title || titleWithoutExt,
+          artist: storedTrack?.artist || artistName.value,
+          duration: storedTrack?.duration,
+          size: typeof entry.size === 'number'
+            ? `${(entry.size / 1024 / 1024).toFixed(2)} MB`
+            : String(entry.size),
+        });
+      });
+
+      return ipfsFiles;
+    }
+
+    // For IPFS CIDs, use the original flow
     const response = await fetch(url, { method: 'HEAD' });
     if (!response.ok) {
       throw new Error(`Request failed on fetchIPFSFiles: ${response.status} ${response.statusText}. URL: ${url}`);
@@ -419,87 +600,54 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
         album: props.release.name,
         cid: cid,
         title: storedTracks?.[0]?.title || fileName,
-        artist: storedTracks?.[0]?.artist || metadata.value?.author,
+        artist: storedTracks?.[0]?.artist || artistName.value,
         duration: storedTracks?.[0]?.duration,
         size: contentLength ? `${(parseInt(contentLength) / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
       });
       return ipfsFiles;
     }
 
-    // Otherwise, try to parse as directory
+    // Fallback: parse HTML directory listing (legacy IPFS gateway format)
     const fullResponse = await fetch(url);
     const responseText = await fullResponse.text();
 
-    if (cid.startsWith('zD')) {
-      const data = JSON.parse(responseText) as {
-        files: {
-          title: string;
-          cid: string;
-          size: string;
-        }[];
-      };
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(responseText, 'text/html');
 
-      if (!data || !Array.isArray(data.files)) {
-          throw new Error(`Invalid JSON structure received from ${url}`);
-      }
+    const ipfsLinks = doc.querySelectorAll<HTMLAnchorElement>('a.ipfs-hash');
+    const ipfsSizesData = doc.querySelectorAll<HTMLAnchorElement>(
+      '[title="Cumulative size of IPFS DAG (data + metadata)"]',
+    );
 
-      data.files.forEach((file, index) => {
-        if (file.cid && file.title && file.size) {
-            const storedTrack = storedTracks?.[index];
+    ipfsLinks.forEach((link, key) => {
+      const href = link.getAttribute('href');
+      if (href) {
+        const cidMatch = href.match(/\/ipfs\/([^?]+)/);
+        const fileCid = cidMatch ? cidMatch[1] : null;
+
+        const urlParams = new URLSearchParams(href.split('?')[1]);
+        const encodedName = urlParams.get('filename');
+        const fileName = encodedName ? decodeURIComponent(encodedName) : null;
+        const fileSize = ipfsSizesData[key + 1]?.innerText || 'Unknown';
+
+        if (fileCid && fileName) {
+          const ext = fileName.split('.').pop()?.toLowerCase() || '';
+          if (['flac', 'mp3', 'ogg', 'opus', 'm4a', 'aac', 'wav'].includes(ext)) {
+            const storedTrack = storedTracks?.[ipfsFiles.length];
             ipfsFiles.push({
-                index: index,
-                album: props.release.name,
-                cid: file.cid,
-                title: storedTrack?.title || file.title.split('.')[0],
-                artist: storedTrack?.artist || metadata.value?.author,
-                duration: storedTrack?.duration,
-                size: file.size,
+              index: key,
+              album: props.release.name,
+              cid: fileCid,
+              title: storedTrack?.title || fileName.replace(/\.[^/.]+$/, ''),
+              artist: storedTrack?.artist || artistName.value,
+              duration: storedTrack?.duration,
+              size: fileSize,
             });
-        } else {
-            console.warn('Skipping invalid file entry in JSON response:', file);
-        }
-      });
-      return ipfsFiles;
-
-    }
-    else {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(responseText, 'text/html');
-
-      const ipfsLinks = doc.querySelectorAll<HTMLAnchorElement>('a.ipfs-hash');
-      const ipfsSizesData = doc.querySelectorAll<HTMLAnchorElement>(
-        '[title="Cumulative size of IPFS DAG (data + metadata)"]',
-      );
-
-      ipfsLinks.forEach((link, key) => {
-        const href = link.getAttribute('href');
-        if (href) {
-          const cidMatch = href.match(/\/ipfs\/([^?]+)/);
-          const cid = cidMatch ? cidMatch[1] : null;
-
-          const urlParams = new URLSearchParams(href.split('?')[1]);
-          const encodedName = urlParams.get('filename');
-          const fileName = encodedName ? decodeURIComponent(encodedName) : null;
-          const fileSize = ipfsSizesData[key + 1].innerText;
-
-          if (cid && fileName) {
-            if (['flac', 'mp3', 'ogg'].includes(fileName.split('.')[1])) {
-              const storedTrack = storedTracks?.[ipfsFiles.length];
-              ipfsFiles.push({
-                index: key,
-                album: props.release.name,
-                cid,
-                title: storedTrack?.title || fileName.split('.')[0],
-                artist: storedTrack?.artist || metadata.value?.author,
-                duration: storedTrack?.duration,
-                size: fileSize,
-              });
-            }
           }
         }
-      });
-      return ipfsFiles;
-    }
+      }
+    });
+    return ipfsFiles;
   } catch (error) {
     console.error(`Error fetching or processing IPFS data for CID ${cid} from ${url}:`, error);
     return [];
@@ -524,20 +672,16 @@ async function fixAllTrackTitles() {
       canEditRelease: canEditRelease.value
     });
 
-    // Build updated track metadata from ID3 data
+    // Build updated track metadata from ID3 data + cached durations
     const updatedTracks = albumFiles.value.map((track, index) => {
       const id3Data = id3TrackData.value.get(index);
-      if (id3Data?.title) {
-        return {
-          title: id3Data.title,
-          artist: id3Data.artist || track.artist,
-          duration: track.duration
-        };
-      }
       return {
-        title: track.title,
-        artist: track.artist,
-        duration: track.duration
+        title: id3Data?.title || track.title,
+        artist: id3Data?.artist || track.artist,
+        // Cache duration so we don't need to load audio again
+        ...(track.duration ? { duration: track.duration } : {}),
+        // Include track number for proper ordering
+        trackNumber: index + 1,
       };
     });
 
@@ -569,6 +713,12 @@ async function fixAllTrackTitles() {
 
     const result = await editReleaseMutation.mutateAsync(mutationPayload);
     console.log('Mutation result:', result);
+
+    // Success! Mark as saved so the alert disappears
+    metadataJustSaved.value = true;
+    trackWarnings.value.clear();
+    id3TrackData.value.clear();
+    console.log('Fix complete - metadata saved successfully');
   } catch (error) {
     console.error('Error in fixAllTrackTitles:', error);
   } finally {
@@ -627,17 +777,22 @@ async function loadTrackMetadataAndVerify() {
           const audio = new Audio();
           audioElements.value.push(audio); // Track for cleanup
           audio.crossOrigin = 'anonymous';
+          audio.preload = 'metadata'; // Only load metadata, not full file
           audio.src = url;
 
           const trackWithDuration = await new Promise<AudioTrack>((resolve) => {
+            let resolved = false;
             const cleanup = () => {
               audio.removeEventListener('loadedmetadata', onLoadedMetadata);
               audio.removeEventListener('error', onError);
             };
 
             const onLoadedMetadata = () => {
+              if (resolved) return;
+              resolved = true;
               cleanup();
               if (!signal.aborted) {
+                console.log(`[albumViewer] Duration loaded for track ${index}: ${audio.duration}s`);
                 resolve({
                   ...track,
                   duration: formatTime(audio.duration)
@@ -647,9 +802,11 @@ async function loadTrackMetadataAndVerify() {
               }
             };
 
-            const onError = () => {
+            const onError = (e: Event) => {
+              if (resolved) return;
+              resolved = true;
               cleanup();
-              // Silently fail - durations should be stored in metadata anyway
+              console.warn(`[albumViewer] Failed to load duration for track ${index}:`, e);
               resolve(track); // Return track without duration on error
             };
 
@@ -658,19 +815,23 @@ async function loadTrackMetadataAndVerify() {
 
             // Check if aborted
             signal.addEventListener('abort', () => {
+              if (resolved) return;
+              resolved = true;
               cleanup();
               audio.src = '';
               resolve(track);
             });
 
-            // Timeout after 10 seconds
+            // Timeout after 30 seconds (increased for slower connections)
             setTimeout(() => {
-              if (!signal.aborted) {
+              if (!resolved && !signal.aborted) {
+                resolved = true;
                 cleanup();
+                console.warn(`[albumViewer] Timeout loading duration for track ${index}`);
                 audio.src = ''; // Cancel loading
                 resolve(track);
               }
-            }, 10000);
+            }, 30000);
           });
 
           track = trackWithDuration;
@@ -678,11 +839,12 @@ async function loadTrackMetadataAndVerify() {
 
         // Only check ID3 tags if user can edit the release
         if (canEditRelease.value) {
+          console.log('[albumViewer] Reading ID3 tags from:', url);
           return new Promise<AudioTrack>((resolve) => {
             jsmediatags.read(url, {
               onSuccess: (tag) => {
                 const tags = tag.tags;
-                console.log('ID3 tags for track:', track.title, tags);
+                console.log('[albumViewer] ID3 tags for track:', track.title, tags);
 
                 // Store ID3 data
                 if (tags.title || tags.artist) {
@@ -700,7 +862,7 @@ async function loadTrackMetadataAndVerify() {
                 resolve(track); // Keep stored data, just log warnings
               },
               onError: (error) => {
-                console.warn(`Failed to read ID3 tags for ${track.title}:`, error);
+                console.error(`[albumViewer] Failed to read ID3 tags for ${track.title} from ${url}:`, error);
                 resolve(track);
               }
             });

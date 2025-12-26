@@ -28,7 +28,9 @@
       </template>
       <template #item.contentCID="{ item }">
         <span>{{
-          lgAndUp ? item.contentCID : `${item.contentCID.slice(0, 6)}...${item.contentCID.slice(-6)}`
+          item.contentCID
+            ? (lgAndUp ? item.contentCID : `${item.contentCID.slice(0, 6)}...${item.contentCID.slice(-6)}`)
+            : '—'
         }}</span>
       </template>
       <template #item.category="{ item }">
