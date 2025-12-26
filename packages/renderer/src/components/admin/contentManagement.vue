@@ -204,8 +204,8 @@ const deleteReleaseMutation = useDeleteReleaseMutation({
     targetReleaseToDelete.value = null;
   },
   onError: (e) => {
-    console.error('Error blocking release:', e);
-    openSnackbar('Error on blocking release.', 'error');
+    console.error('Error deleting release:', e);
+    openSnackbar('Error deleting release.', 'error');
   },
 });
 
