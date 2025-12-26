@@ -365,9 +365,14 @@ const totalDuration = computed(() => {
 
   albumFiles.value.forEach(track => {
     if (track.duration) {
-      const [minutes, seconds] = track.duration.split(':').map(Number);
-      if (!isNaN(minutes) && !isNaN(seconds)) {
-        totalSeconds += minutes * 60 + seconds;
+      // Handle both string "mm:ss" format and numeric seconds
+      if (typeof track.duration === 'number') {
+        totalSeconds += track.duration;
+      } else if (typeof track.duration === 'string' && track.duration.includes(':')) {
+        const [minutes, seconds] = track.duration.split(':').map(Number);
+        if (!isNaN(minutes) && !isNaN(seconds)) {
+          totalSeconds += minutes * 60 + seconds;
+        }
       }
     }
   });
