@@ -127,6 +127,7 @@ import {
   mdiClockOutline,
   mdiContentCopy,
   mdiCloudUpload,
+  mdiCheckDecagram,
 } from '@mdi/js';
 
 const iconsAliasesMapping = {
@@ -197,6 +198,7 @@ const iconsAliasesMapping = {
   'vector-polyline': mdiVectorPolyline,
   'speedometer': mdiSpeedometer,
   'check-circle': mdiCheckCircle,
+  'check-decagram': mdiCheckDecagram,
   'sync': mdiSync,
   'alert-circle': mdiAlertCircle,
   'alpha-c-circle': mdiAlphaCCircle,
