@@ -417,6 +417,8 @@ interface AlbumEntry {
   folderName: string;
   selected: boolean;
   categoryId: string;
+  codec: string | null;
+  lossless: boolean;
   uploadStatus: 'pending' | 'uploading' | 'complete' | 'error' | 'skipped';
   uploadProgress: number;
   uploadError?: string;
@@ -610,6 +612,8 @@ async function parseFiles() {
         folderName: parsed.folderName,
         selected: true,
         categoryId: detectCategoryFromGenre(parsed.genre || '') || defaultCategory,
+        codec: parsed.codec,
+        lossless: parsed.lossless,
         uploadStatus: 'pending',
         uploadProgress: 0,
       });
@@ -630,6 +634,8 @@ async function parseFiles() {
         folderName,
         selected: true,
         categoryId: defaultCategory,
+        codec: null,
+        lossless: false,
         uploadStatus: 'pending',
         uploadProgress: 0,
       });
@@ -739,19 +745,35 @@ async function startBulkUpload() {
   // Now create all releases via bulk mutation (only for newly uploaded, not skipped)
   const releasesToCreate: AddInput[] = albumsToUpload
     .filter(a => a.uploadStatus === 'complete' && a.contentCID)
-    .map(album => ({
-      name: album.album || album.folderName,
-      categoryId: album.categoryId,
-      contentCID: album.contentCID!,
-      thumbnailCID: album.thumbnailCID,
-      metadata: {
-        artist: album.artist,
-        year: album.year,
-        genre: album.genre,
-        label: album.label,
-        trackCount: getRelevantFileCount(album),
-      },
-    }));
+    .map(album => {
+      // Build trackMetadata from parsed tracks (same format as single upload)
+      const trackMetadata = album.tracks.length > 0
+        ? JSON.stringify(album.tracks.map(track => ({
+            title: track.title || track.fileName.replace(/\.[^.]+$/, ''),
+            artist: track.artist || album.artist || null,
+            ...(track.duration ? { duration: track.duration } : {}),
+            ...(track.trackNumber ? { trackNumber: track.trackNumber } : {}),
+          })))
+        : undefined;
+
+      return {
+        name: album.album || album.folderName,
+        categoryId: album.categoryId,
+        contentCID: album.contentCID!,
+        thumbnailCID: album.thumbnailCID,
+        metadata: {
+          artist: album.artist,
+          albumTitle: album.album,
+          year: album.year,
+          genre: album.genre,
+          label: album.label,
+          trackCount: getRelevantFileCount(album),
+          codec: album.codec,
+          lossless: album.lossless,
+          trackMetadata,
+        },
+      };
+    });
 
   if (releasesToCreate.length > 0) {
     try {
