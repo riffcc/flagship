@@ -477,7 +477,10 @@ export function useDeleteReleaseMutation(options?: {
           throw new Error(error.error || `Failed to delete release: ${response.statusText}`);
         }
 
-        const result = await response.json();
+        // Handle 204 No Content or parse JSON response
+        const result = response.status === 204
+          ? { id }
+          : await response.json().catch(() => ({ id }));
         // Immediately invalidate queries after successful HTTP API call
         queryClient.invalidateQueries({ queryKey: ['releases'] });
         queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
