@@ -105,13 +105,22 @@
                     />
                   </td>
                   <td>
-                    <div class="artist-cell">
+                    <v-text-field
+                      v-model="album.artist"
+                      variant="plain"
+                      hide-details
+                      density="compact"
+                      placeholder="Unknown Artist"
+                    />
+                  </td>
+                  <td>
+                    <div class="album-cell">
                       <v-text-field
-                        v-model="album.artist"
+                        v-model="album.album"
                         variant="plain"
                         hide-details
                         density="compact"
-                        placeholder="Unknown Artist"
+                        :placeholder="album.folderName"
                         class="flex-grow-1"
                       />
                       <div class="album-cover-cell ml-2">
@@ -128,15 +137,6 @@
                         >mdi-album</v-icon>
                       </div>
                     </div>
-                  </td>
-                  <td>
-                    <v-text-field
-                      v-model="album.album"
-                      variant="plain"
-                      hide-details
-                      density="compact"
-                      :placeholder="album.folderName"
-                    />
                   </td>
                   <td>
                     <v-text-field
@@ -833,7 +833,7 @@ watch(dialogOpen, (open) => {
   background: rgba(138, 43, 226, 0.05);
 }
 
-.artist-cell {
+.album-cell {
   display: flex;
   align-items: center;
 }
