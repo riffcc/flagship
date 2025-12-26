@@ -84,7 +84,6 @@
                       @change="toggleSelectAll"
                     />
                   </th>
-                  <th style="width: 48px;" />
                   <th>Artist</th>
                   <th>Album</th>
                   <th style="width: 80px;">Year</th>
@@ -105,29 +104,30 @@
                       density="compact"
                     />
                   </td>
-                  <td class="pa-1">
-                    <div class="album-cover-cell">
-                      <img
-                        v-if="album.coverArtUrl"
-                        :src="album.coverArtUrl"
-                        class="album-cover-thumb"
-                        alt=""
-                      />
-                      <v-icon
-                        v-else
-                        size="32"
-                        color="grey-darken-1"
-                      >mdi-album</v-icon>
-                    </div>
-                  </td>
                   <td>
-                    <v-text-field
-                      v-model="album.artist"
-                      variant="plain"
-                      hide-details
-                      density="compact"
-                      placeholder="Unknown Artist"
-                    />
+                    <div class="artist-cell">
+                      <v-text-field
+                        v-model="album.artist"
+                        variant="plain"
+                        hide-details
+                        density="compact"
+                        placeholder="Unknown Artist"
+                        class="flex-grow-1"
+                      />
+                      <div class="album-cover-cell ml-2">
+                        <img
+                          v-if="album.coverArtUrl"
+                          :src="album.coverArtUrl"
+                          class="album-cover-thumb"
+                          alt=""
+                        />
+                        <v-icon
+                          v-else
+                          size="24"
+                          color="grey-darken-1"
+                        >mdi-album</v-icon>
+                      </div>
+                    </div>
                   </td>
                   <td>
                     <v-text-field
@@ -833,9 +833,15 @@ watch(dialogOpen, (open) => {
   background: rgba(138, 43, 226, 0.05);
 }
 
+.artist-cell {
+  display: flex;
+  align-items: center;
+}
+
 .album-cover-cell {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -845,8 +851,8 @@ watch(dialogOpen, (open) => {
 }
 
 .album-cover-thumb {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   object-fit: cover;
 }
 
