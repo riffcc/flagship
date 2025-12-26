@@ -211,35 +211,50 @@
               :class="[`status-${album.uploadStatus}`]"
             >
               <div class="upload-item-header">
-                <span class="upload-status-icon">
-                  <v-icon
-                    v-if="album.uploadStatus === 'pending'"
-                    size="16"
-                    color="grey"
-                  >$clock-outline</v-icon>
-                  <v-progress-circular
-                    v-else-if="album.uploadStatus === 'uploading'"
-                    :size="16"
-                    :width="2"
-                    indeterminate
-                    color="primary"
-                  />
-                  <v-icon
-                    v-else-if="album.uploadStatus === 'complete'"
-                    size="16"
-                    color="success"
-                  >$check</v-icon>
-                  <v-icon
-                    v-else-if="album.uploadStatus === 'skipped'"
-                    size="16"
-                    color="warning"
-                  >mdi-skip-next</v-icon>
-                  <v-icon
-                    v-else-if="album.uploadStatus === 'error'"
-                    size="16"
-                    color="error"
-                  >$alert-circle</v-icon>
-                </span>
+                <div class="upload-cover-status">
+                  <div class="upload-cover-wrapper">
+                    <img
+                      v-if="album.coverArtUrl"
+                      :src="album.coverArtUrl"
+                      class="upload-cover-thumb"
+                      alt=""
+                    />
+                    <v-icon
+                      v-else
+                      size="28"
+                      color="grey-darken-1"
+                    >mdi-album</v-icon>
+                  </div>
+                  <div class="upload-status-badge" :class="`status-${album.uploadStatus}`">
+                    <v-icon
+                      v-if="album.uploadStatus === 'pending'"
+                      size="12"
+                      color="grey"
+                    >mdi-clock-outline</v-icon>
+                    <v-progress-circular
+                      v-else-if="album.uploadStatus === 'uploading'"
+                      :size="12"
+                      :width="2"
+                      indeterminate
+                      color="white"
+                    />
+                    <v-icon
+                      v-else-if="album.uploadStatus === 'complete'"
+                      size="12"
+                      color="white"
+                    >mdi-check</v-icon>
+                    <v-icon
+                      v-else-if="album.uploadStatus === 'skipped'"
+                      size="12"
+                      color="white"
+                    >mdi-skip-next</v-icon>
+                    <v-icon
+                      v-else-if="album.uploadStatus === 'error'"
+                      size="12"
+                      color="white"
+                    >mdi-alert-circle</v-icon>
+                  </div>
+                </div>
                 <div class="upload-item-info">
                   <div class="upload-item-title">
                     {{ album.artist || 'Unknown' }} - {{ album.album || album.folderName }}
@@ -896,12 +911,60 @@ watch(dialogOpen, (open) => {
   gap: 10px;
 }
 
-.upload-status-icon {
+.upload-cover-status {
+  position: relative;
   flex-shrink: 0;
-  width: 20px;
+}
+
+.upload-cover-wrapper {
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.upload-cover-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+.upload-status-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(100, 100, 100, 0.9);
+  border: 2px solid rgba(30, 30, 30, 1);
+}
+
+.upload-status-badge.status-pending {
+  background: rgba(100, 100, 100, 0.9);
+}
+
+.upload-status-badge.status-uploading {
+  background: rgba(138, 43, 226, 0.9);
+}
+
+.upload-status-badge.status-complete {
+  background: rgba(76, 175, 80, 0.95);
+}
+
+.upload-status-badge.status-skipped {
+  background: rgba(255, 193, 7, 0.95);
+}
+
+.upload-status-badge.status-error {
+  background: rgba(244, 67, 54, 0.95);
 }
 
 .upload-item-info {
