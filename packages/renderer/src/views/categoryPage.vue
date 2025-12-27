@@ -57,6 +57,7 @@ import ContentCard from '/@/components/misc/contentCard.vue';
 import InfiniteReleaseList from '/@/components/misc/infiniteReleaseList.vue';
 import { useContentCategoriesQuery, useGetReleasesQuery, useGetFeaturedReleasesQuery, useGetStructuresQuery } from '/@/plugins/lensService/hooks';
 import { filterActivedFeatured } from '/@/utils';
+import { prefetchArchivistManifest } from '/@/composables/useArchivistPrefetch';
 import type { ReleaseItem } from '/@/types';
 
 const props = defineProps<{
@@ -218,11 +219,26 @@ const featuredReleasesInCategory = computed<ReleaseItem[]>(() => {
 
 // Handle clicking on items - navigate to series or release page
 const handleItemClick = (item: ReleaseItem) => {
+  // PREFETCH: Start Archivist manifest fetch BEFORE navigation
+  if (item.contentCID && !item.metadata?.isSeries) {
+    prefetchArchivistManifest(item.contentCID);
+  }
+
+  // Pass tile data for instant render
+  const tileState = {
+    name: item.name,
+    thumbnailCID: item.thumbnailCID,
+    contentCID: item.contentCID,
+    author: item.metadata?.author,
+    artistId: item.metadata?.artistId,
+    releaseYear: item.metadata?.releaseYear,
+    trackCount: item.metadata?.trackCount,
+  };
+
   if (item.metadata?.isSeries) {
-    // Navigate to the series view page
-    router.push(`/series/${item.id}`);
+    router.push({ path: `/series/${item.id}`, state: tileState });
   } else {
-    router.push(`/release/${item.id}`);
+    router.push({ path: `/release/${item.id}`, state: tileState });
   }
 };
 

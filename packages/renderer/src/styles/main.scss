@@ -11,3 +11,9 @@
 
 // Import gamepad-specific styles after @use
 @import './gamepad.scss';
+
+// Tooltip styling - ensure readable in dark mode
+.v-tooltip > .v-overlay__content {
+  background: rgba(30, 30, 30, 0.95) !important;
+  color: #fff !important;
+}

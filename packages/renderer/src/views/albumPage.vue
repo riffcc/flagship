@@ -13,9 +13,9 @@
       ></v-progress-circular>
     </v-sheet>
 
-    <!-- Album not found -->
+    <!-- Album not found (only show if fetch completed with no result AND no tile data) -->
     <v-sheet
-      v-else-if="!album && !isLoading"
+      v-else-if="!album && !tileData && !isFetching"
       color="transparent"
       class="d-flex flex-column mx-auto mt-8"
       max-width="20rem"
@@ -37,8 +37,8 @@
       </v-btn>
     </v-sheet>
 
-    <!-- Album content -->
-    <template v-else-if="album">
+    <!-- Album content - renders INSTANTLY with tile data, fills in with fetch -->
+    <template v-else-if="album || tileData">
       <!-- Album header -->
       <v-row class="mb-6">
         <v-col cols="12" md="4" lg="3">
@@ -46,14 +46,14 @@
           <div
             class="album-cover-container"
             :class="{ 'is-flipped': isFlipped }"
-            @mousedown="album.metadata?.backCoverCID ? startDrag($event) : null"
-            @touchstart="album.metadata?.backCoverCID ? startDrag($event) : null"
+            @mousedown="album?.metadata?.backCoverCID ? startDrag($event) : null"
+            @touchstart="album?.metadata?.backCoverCID ? startDrag($event) : null"
           >
             <div class="album-cover-flipper">
               <!-- Front Cover -->
               <div class="album-cover-face album-cover-front">
                 <v-img
-                  :src="parseUrlOrCid(album.thumbnailCID)"
+                  :src="parseUrlOrCid(displayThumbnail)"
                   aspect-ratio="1"
                   cover
                   rounded="lg"
@@ -73,7 +73,7 @@
               <!-- Back Cover (if available) -->
               <div class="album-cover-face album-cover-back">
                 <v-img
-                  v-if="album.metadata?.backCoverCID"
+                  v-if="album?.metadata?.backCoverCID"
                   :src="parseUrlOrCid(album.metadata.backCoverCID)"
                   aspect-ratio="1"
                   cover
@@ -98,7 +98,7 @@
 
         <v-col cols="12" md="8" lg="9">
           <p class="text-overline text-grey mb-1">Album</p>
-          <h1 class="text-h3 text-sm-h2 font-weight-bold mb-3">{{ album.name }}</h1>
+          <h1 class="text-h3 text-sm-h2 font-weight-bold mb-3">{{ displayName }}</h1>
 
           <div class="d-flex align-center ga-3 mb-4">
             <v-avatar
@@ -106,31 +106,31 @@
               :image="parseUrlOrCid(artist.thumbnailCID)"
               size="32"
               class="cursor-pointer"
-              @click="router.push(`/artist/${album.metadata?.artistId}`)"
+              @click="router.push(`/artist/${displayArtistId}`)"
             >
               <template #placeholder>
                 <v-icon size="20">$account-music</v-icon>
               </template>
             </v-avatar>
             <a
-              v-if="album.metadata?.artistId"
-              @click.prevent="router.push(`/artist/${album.metadata.artistId}`)"
+              v-if="displayArtistId"
+              @click.prevent="router.push(`/artist/${displayArtistId}`)"
               class="artist-link text-h6"
               style="cursor: pointer; color: rgb(var(--v-theme-primary)); text-decoration: none;"
-            >{{ album.metadata?.author || 'Unknown Artist' }}</a>
-            <span v-else class="text-h6">{{ album.metadata?.author || 'Unknown Artist' }}</span>
+            >{{ displayAuthor || 'Unknown Artist' }}</a>
+            <span v-else class="text-h6">{{ displayAuthor || 'Unknown Artist' }}</span>
           </div>
 
           <div class="d-flex align-center ga-3 mb-4">
-            <v-chip v-if="album.metadata?.releaseYear" size="small" color="secondary">
-              {{ album.metadata.releaseYear }}
+            <v-chip v-if="displayYear" size="small" color="secondary">
+              {{ displayYear }}
             </v-chip>
-            <v-chip v-if="trackList.length > 0" size="small" color="accent">
-              {{ trackList.length }} {{ trackList.length === 1 ? 'Track' : 'Tracks' }}
+            <v-chip v-if="displayTrackCount" size="small" color="accent">
+              {{ displayTrackCount }} {{ displayTrackCount === 1 ? 'Track' : 'Tracks' }}
             </v-chip>
           </div>
 
-          <p v-if="album.metadata?.description" class="text-body-1 mb-4">
+          <p v-if="album?.metadata?.description" class="text-body-1 mb-4">
             {{ album.metadata.description }}
           </p>
 
@@ -139,7 +139,7 @@
             size="large"
             prepend-icon="$play-circle"
             class="mt-2"
-            @click="router.push(`/release/${album.id}`)"
+            @click="router.push(`/release/${props.id}`)"
           >
             Play Album
           </v-btn>
@@ -226,10 +226,27 @@
       <v-divider v-if="hasTrackArtwork" class="my-6" />
 
       <!-- Track list -->
-      <div v-if="trackList.length > 0">
+      <div>
         <h2 class="text-h5 font-weight-bold mb-4">Track List</h2>
 
-        <v-list bg-color="transparent">
+        <!-- Skeleton while loading tracks -->
+        <v-list v-if="isFetching && trackList.length === 0" bg-color="transparent">
+          <v-list-item
+            v-for="i in (tileData?.trackCount || 8)"
+            :key="i"
+            class="track-item px-2 rounded"
+          >
+            <template #prepend>
+              <span class="text-body-2 text-grey mr-4" style="min-width: 2rem;">
+                {{ i.toString().padStart(2, '0') }}
+              </span>
+            </template>
+            <v-skeleton-loader type="text" width="60%" />
+          </v-list-item>
+        </v-list>
+
+        <!-- Actual track list -->
+        <v-list v-else-if="trackList.length > 0" bg-color="transparent">
           <v-list-item
             v-for="(track, index) in trackList"
             :key="index"
@@ -245,30 +262,30 @@
               {{ track.title }}
             </v-list-item-title>
 
-            <v-list-item-subtitle v-if="track.artist && track.artist !== album.metadata?.author">
+            <v-list-item-subtitle v-if="track.artist && track.artist !== album?.metadata?.author">
               {{ track.artist }}
             </v-list-item-subtitle>
           </v-list-item>
         </v-list>
-      </div>
 
-      <!-- No tracks message -->
-      <v-sheet
-        v-else
-        color="transparent"
-        class="d-flex flex-column mx-auto mt-8"
-        max-width="20rem"
-      >
-        <p class="text-body-1 text-center text-grey">
-          No track information available for this album.
-        </p>
-      </v-sheet>
+        <!-- No tracks message (only after loading complete) -->
+        <v-sheet
+          v-else-if="!isFetching"
+          color="transparent"
+          class="d-flex flex-column mx-auto mt-8"
+          max-width="20rem"
+        >
+          <p class="text-body-1 text-center text-grey">
+            No track information available for this album.
+          </p>
+        </v-sheet>
+      </div>
     </template>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   useGetReleaseQuery,
@@ -286,8 +303,46 @@ const props = defineProps<{
 
 const router = useRouter();
 
-// Fetch the album release
-const { data: album, isLoading } = useGetReleaseQuery(props.id);
+// INSTANT: Get tile data from router state (passed from contentCard)
+const tileData = ref<{
+  name?: string;
+  thumbnailCID?: string;
+  author?: string;
+  artistId?: string;
+  releaseYear?: string | number;
+  trackCount?: number;
+} | null>(null);
+
+onMounted(() => {
+  // history.state contains data passed via router.push({ state: ... })
+  if (history.state) {
+    tileData.value = {
+      name: history.state.name,
+      thumbnailCID: history.state.thumbnailCID,
+      author: history.state.author,
+      artistId: history.state.artistId,
+      releaseYear: history.state.releaseYear,
+      trackCount: history.state.trackCount,
+    };
+  }
+});
+
+// Fetch the album release (lazy - fills in details)
+const { data: album, isLoading: isFetching } = useGetReleaseQuery(props.id);
+
+// Show loading only if we have NO data (no tile data AND no fetched data)
+const isLoading = computed(() => !tileData.value && !album.value && isFetching.value);
+
+// Use tile data for instant render, fall back to fetched data
+const displayName = computed(() => album.value?.name || tileData.value?.name);
+const displayThumbnail = computed(() => album.value?.thumbnailCID || tileData.value?.thumbnailCID);
+const displayAuthor = computed(() => album.value?.metadata?.author || tileData.value?.author);
+const displayArtistId = computed(() => album.value?.metadata?.artistId || tileData.value?.artistId);
+const displayYear = computed(() => album.value?.metadata?.releaseYear || tileData.value?.releaseYear);
+const displayTrackCount = computed(() => {
+  if (trackList.value.length > 0) return trackList.value.length;
+  return tileData.value?.trackCount;
+});
 
 // Fetch the artist if we have an artistId
 const { data: artist } = useGetReleaseQuery(

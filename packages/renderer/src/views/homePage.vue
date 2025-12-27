@@ -77,6 +77,7 @@ import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import type { ReleaseItem } from '/@/types';
 import { useContentCategoriesQuery, useGetFeaturedReleasesQuery, useGetReleasesQuery, useGetStructuresQuery } from '/@/plugins/lensService/hooks';
 import { filterActivedFeatured, filterPromotedFeatured } from '../utils';
+import { prefetchArchivistManifest } from '/@/composables/useArchivistPrefetch';
 
 const router = useRouter();
 
@@ -285,11 +286,25 @@ const noContent = computed(() => {
 
 // Handle clicking on items - navigate to series or release page
 const handleItemClick = (item: any) => {
+  // PREFETCH: Start Archivist manifest fetch BEFORE navigation
+  if (item.contentCID && !item.metadata?.isSeries) {
+    prefetchArchivistManifest(item.contentCID);
+  }
+
+  const tileState = {
+    name: item.name,
+    thumbnailCID: item.thumbnailCID,
+    contentCID: item.contentCID,
+    author: item.metadata?.author,
+    artistId: item.metadata?.artistId,
+    releaseYear: item.metadata?.releaseYear,
+    trackCount: item.metadata?.trackCount,
+  };
+
   if (item.metadata?.isSeries) {
-    // Navigate to the series view page
-    router.push(`/series/${item.id}`);
+    router.push({ path: `/series/${item.id}`, state: tileState });
   } else {
-    router.push(`/release/${item.id}`);
+    router.push({ path: `/release/${item.id}`, state: tileState });
   }
 };
 </script>

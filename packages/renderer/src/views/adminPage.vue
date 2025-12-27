@@ -78,6 +78,13 @@
         >
           P2P
         </v-tab>
+        <v-tab
+          v-if="librarianEnabled"
+          slider-color="primary"
+          value="librarian"
+        >
+          Librarian
+        </v-tab>
       </v-tabs>
       <v-window
         v-model="tab"
@@ -141,13 +148,19 @@
             </div>
           </v-container>
         </v-window-item>
+        <v-window-item
+          v-if="librarianEnabled"
+          value="librarian"
+        >
+          <librarian-panel />
+        </v-window-item>
       </v-window>
     </div>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import {ref, type Ref, defineAsyncComponent, onMounted, onUnmounted} from 'vue';
+import {ref, computed, type Ref, defineAsyncComponent, onMounted, onUnmounted} from 'vue';
 import {useDisplay} from 'vuetify';
 import contentManagement from '/@/components/admin/contentManagement.vue';
 import accessManagement from '/@/components/admin/accessManagement.vue';
@@ -159,6 +172,10 @@ import structuresManagement from '/@/components/admin/structuresManagement.vue';
 import maintenanceManagement from '/@/components/admin/maintenanceManagement.vue';
 import moderationQueue from '/@/components/admin/ModerationQueue.vue';
 import { useAdminWebSocket } from '/@/composables/useAdminWebSocket';
+import { isLibrarianEnabled } from '/@/composables/useLibrarian';
+
+// Lazy load LibrarianPanel since it's conditionally rendered
+const LibrarianPanel = defineAsyncComponent(() => import('/@/components/admin/librarian/librarianPanel.vue'));
 
 // Lazy load NetworkMapGraph to avoid WebGPU errors from 3d-force-graph on browsers without support
 const NetworkMapGraph = defineAsyncComponent(() => import('/@/components/misc/networkMapGraph.vue'));
@@ -166,6 +183,9 @@ import type { PartialFeaturedReleaseItem } from '/@//types';
 
 const {lgAndUp} = useDisplay();
 const tab = ref('content');
+
+// Librarian integration (conditional on VITE_LIBRARIAN_API_URL)
+const librarianEnabled = computed(() => isLibrarianEnabled());
 
 const initialFeatureData: Ref<PartialFeaturedReleaseItem | null> = ref(null);
 const handleFeatureReleaseRequest = async (releaseId: string) => {

@@ -128,6 +128,19 @@ import {
   mdiContentCopy,
   mdiCloudUpload,
   mdiCheckDecagram,
+  // Librarian icons
+  mdiArchive,
+  mdiFolderMultiple,
+  mdiPlaylistMusic,
+  mdiPlaylistPlay,
+  mdiTuneVertical,
+  mdiCloudDownload,
+  mdiPlaylistCheck,
+  mdiTune,
+  mdiCloud,
+  mdiFileMusic,
+  mdiImport,
+  mdiTransfer,
 } from '@mdi/js';
 
 const iconsAliasesMapping = {
@@ -199,6 +212,7 @@ const iconsAliasesMapping = {
   'speedometer': mdiSpeedometer,
   'check-circle': mdiCheckCircle,
   'check-decagram': mdiCheckDecagram,
+  'checkbox-marked': mdiCheckboxMarked,
   'sync': mdiSync,
   'alert-circle': mdiAlertCircle,
   'alpha-c-circle': mdiAlphaCCircle,
@@ -227,7 +241,6 @@ const iconsAliasesMapping = {
   'cog': mdiCog,
   'alert-circle-outline': mdiAlertCircleOutline,
   'help-circle': mdiHelpCircle,
-  'arrow-left': mdiArrowLeft,
   'chevron-down': mdiChevronDown,
   'star-outline': mdiStarOutline,
   'star-half-full': mdiStarHalfFull,
@@ -245,6 +258,19 @@ const iconsAliasesMapping = {
   'clock-outline': mdiClockOutline,
   'contentCopy': mdiContentCopy,
   'cloud-upload': mdiCloudUpload,
+  // Librarian icons
+  'archive': mdiArchive,
+  'folder-multiple': mdiFolderMultiple,
+  'playlist-music': mdiPlaylistMusic,
+  'playlist-play': mdiPlaylistPlay,
+  'tune-vertical': mdiTuneVertical,
+  'cloud-download': mdiCloudDownload,
+  'playlist-check': mdiPlaylistCheck,
+  'tune': mdiTune,
+  'cloud': mdiCloud,
+  'file-music': mdiFileMusic,
+  'import': mdiImport,
+  'transfer': mdiTransfer,
 
   // Vuetify internal component default aliases
   complete: mdiCheck,
@@ -268,20 +294,13 @@ const iconsAliasesMapping = {
   ratingEmpty: mdiStarOutline,
   ratingFull: mdiStar,
   ratingHalf: mdiStarHalfFull,
-  loading: mdiLoading,
   delimiter: mdiCircle,
   sort: mdiArrowUp,
   sortAsc: mdiArrowUp,
   sortDesc: mdiArrowDown,
   subgroup: mdiMenuDown,
-  file: mdiPaperclip,
-  plus: mdiPlus,
-  minus: mdiMinus,
-  calendar: mdiCalendar,
   treeviewCollapse: mdiMenuDown,
   treeviewExpand: mdiMenuRight,
-  menu: mdiMenu,
-  close: mdiClose,
 };
 
 const vuetify = createVuetify({

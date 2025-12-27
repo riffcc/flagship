@@ -1,12 +1,12 @@
 <template>
   <v-hover
     v-slot="{props: hoveringProps, isHovering}"
-    open-delay="150"
-    close-delay="150"
+    open-delay="100"
+    close-delay="100"
   >
     <v-sheet
       v-bind="hoveringProps"
-      :class="cursorPointer ? 'cursor-pointer mx-auto content-card' : 'mx-auto content-card'"
+      class="cursor-pointer mx-auto content-card"
       color="transparent"
       :height="cardHeight"
       :width="cardWidth"
@@ -38,52 +38,6 @@
           >
             {{ item.metadata.episodeCount }} episode{{ item.metadata.episodeCount !== 1 ? 's' : '' }}
           </p>
-          <template v-if="isHovering">
-            <v-icon
-              v-if="item.categoryId === 'music'"
-              size="4.5rem"
-              icon="$play"
-              color="primary"
-              class="position-absolute top-0 left-0 right-0 bottom-0 ma-auto"
-            ></v-icon>
-            <div
-              v-else-if="item.categoryId === 'tvShow'"
-              class="position-absolute top-0 bottom-0 right-0 d-flex flex-column justify-center mr-2 ga-1"
-            >
-              <v-btn
-                size="small"
-                color="grey-lighten-3"
-                density="comfortable"
-                icon="$share-variant"
-              ></v-btn>
-              <v-btn
-                size="small"
-                color="grey-lighten-3"
-                density="comfortable"
-                icon="$heart"
-              ></v-btn>
-              <v-btn
-                size="small"
-                color="grey-lighten-3"
-                density="comfortable"
-                icon="$plus"
-              ></v-btn>
-            </div>
-          </template>
-          <!-- Actions slot content (e.g., TV show buttons, play button) -->
-          <template
-            v-if="item.categoryId === 'tvShow'"
-          >
-            <v-btn
-              color="primary"
-              rounded="0"
-              prepend-icon="$play"
-              size="small"
-              class="position-absolute bottom-0 rigth-0 text-none ml-4 mb-10"
-              text="Play now"
-              @click="router.push(`/release/${item.id}`)"
-            ></v-btn>
-          </template>
         </v-img>
       </template>
       <template v-else>
@@ -92,14 +46,13 @@
           width="100%"
           cover
           aspect-ratio="1"
-        >
-          <slot
-            v-if="isHovering"
-            name="hovering"
-          ></slot>
-        </v-img>
+          class="card-image"
+        />
         <p class="text-caption text-sm-subtitle-1 text-center mt-1">
-          {{ cardTitle }}
+          <a
+            class="title-link"
+            @click.stop="handleTitleClick"
+          >{{ cardTitle }}</a>
         </p>
         <p
           v-if="cardSubtitle"
@@ -145,6 +98,54 @@ const props = defineProps<{
   cursorPointer?: boolean;
   onClick?: () => void;
 }>();
+
+const emit = defineEmits<{
+  'play': [item: ReleaseItem];
+  'info': [item: ReleaseItem];
+}>();
+
+function handleTitleClick() {
+  navigateToInfoPage();
+}
+
+function navigateToInfoPage() {
+  const item = props.item;
+  const category = item.categoryId;
+  const metadata = item.metadata;
+
+  // Tile data we already have - pass through router state for instant render
+  const tileState = {
+    name: item.name,
+    thumbnailCID: item.thumbnailCID,
+    contentCID: item.contentCID,
+    author: metadata?.author,
+    artistId: metadata?.artistId,
+    releaseYear: metadata?.releaseYear,
+    trackCount: metadata?.trackCount,
+  };
+
+  // Route to appropriate info page based on content type
+  if (metadata?.type === 'artist') {
+    router.push({ path: `/artist/${item.id}`, state: tileState });
+  } else if (metadata?.type === 'series' || metadata?.isSeries) {
+    router.push({ path: `/series/${item.id}`, state: tileState });
+  } else if (category === 'music') {
+    router.push({ path: `/album/${item.id}`, state: tileState });
+  } else if (category === 'movies') {
+    router.push({ path: `/movie/${item.id}`, state: tileState });
+  } else if (category === 'tv-shows' || category === 'tvShow') {
+    router.push({ path: `/series/${item.id}`, state: tileState });
+  } else if (category === 'books') {
+    router.push({ path: `/book/${item.id}`, state: tileState });
+  } else if (category === 'audiobooks') {
+    router.push({ path: `/audiobook/${item.id}`, state: tileState });
+  } else if (category === 'podcasts') {
+    router.push({ path: `/podcast/${item.id}`, state: tileState });
+  } else {
+    // Fallback to generic release page
+    router.push({ path: `/release/${item.id}`, state: tileState });
+  }
+}
 
 // Dynamic gradient based on image color
 const dynamicGradient = ref<string>('to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)');
@@ -197,38 +198,29 @@ const cardTitle = computed(() => {
     return props.item.name;
   }
 
-  if (categoryId === 'movie') {
-    return props.item.name;
-  }
-  return props.item.metadata?.['author'] ?? '';
+  // Default: show item name (covers movies, books, etc.)
+  return props.item.name;
 });
 
 const cardSubtitle = computed(() => {
   const categoryId = props.item.categoryId;
   const metadata = props.item.metadata;
 
+  // Music: show artist name
   if (categoryId === 'music') {
     return props.item.metadata?.['author'] ?? '';
   }
 
-  // For TV content - check if it's a series or an episode
-  if (categoryId === 'tvShow' || metadata?.seriesId) {
-    // If it's a series tile
-    if (metadata?.isSeries) {
-      return metadata?.['seasons'] ? `${metadata['seasons']} Seasons` : undefined;
-    }
-    // If it's an episode, show season and episode info
-    if (metadata?.seasonNumber !== undefined && metadata?.episodeNumber !== undefined) {
-      return `S${String(metadata.seasonNumber).padStart(2, '0')}E${String(metadata.episodeNumber).padStart(2, '0')}: ${props.item.name}`;
-    }
-    return props.item.name;
+  // Movies: no subtitle (no director/creator)
+  if (categoryId === 'movies') {
+    return undefined;
+  }
+  if (categoryId === 'tvShow' || categoryId === 'tv-shows' || metadata?.seriesId || metadata?.isSeries) {
+    return undefined;
   }
 
-  // Default
-  if (categoryId === 'movie') {
-    return props.item.metadata?.['releaseYear'] ? `(${props.item.metadata['releaseYear']})` : undefined;
-  }
-  return props.item.name;
+  // Default: no subtitle
+  return undefined;
 });
 
 const isOverlapping = computed(() => {
@@ -241,13 +233,16 @@ const cardBackgroundGradient = computed(() => {
 </script>
 
 <style scoped>
-.artist-link {
+.artist-link,
+.title-link {
   color: inherit;
   cursor: pointer;
   text-decoration: none;
 }
 
-.artist-link:hover {
+.artist-link:hover,
+.title-link:hover {
   text-decoration: underline;
 }
+
 </style>

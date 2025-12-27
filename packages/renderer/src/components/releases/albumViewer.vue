@@ -61,7 +61,7 @@
             </span>
             <span v-else>{{ artistName }}</span>
           </p>
-          <p>{{ albumFiles.length }} Songs<span v-if="totalDuration"> • {{ totalDuration }}</span></p>
+          <p>{{ albumFiles.length || metadata?.trackCount || 0 }} Songs<span v-if="totalDuration"> • {{ totalDuration }}</span></p>
           <p v-if="metadata?.releaseYear">{{ metadata.releaseYear }}</p>
 
           <!-- Quality and License Badges -->
@@ -121,7 +121,7 @@
             :class="i === 0 ? 'cursor-pointer border-t border-b' : 'cursor-pointer border-b'"
             :active="i === activeTrack?.index"
             color="primary-accent"
-            @click="async () => await selectTrack(i)"
+            @click="selectTrack(i)"
           >
             <template #prepend>
               <v-sheet :width="xs ? '24px' : '48px'">
@@ -203,6 +203,7 @@ import type {AudioTrack} from '/@/composables/audioAlbum';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {useFloatingVideo} from '/@/composables/floatingVideo';
 import { parseUrlOrCid, isArchivistCid as checkIsArchivistCid } from '/@/utils';
+import { getPrefetchedManifest } from '/@/composables/useArchivistPrefetch';
 import type { ReleaseItem } from '/@/types';
 import { useAccountStatusQuery, useEditReleaseMutation } from '/@/plugins/lensService/hooks';
 import QualityBadge from '/@/components/badges/QualityBadge.vue';
@@ -211,7 +212,7 @@ import LicenseBadge from '/@/components/badges/LicenseBadge.vue';
 import jsmediatags from 'jsmediatags/dist/jsmediatags.min.js';
 
 const props = defineProps<{
-  release: ReleaseItem
+  release: ReleaseItem;
 }>();
 
 // Track metadata mismatch warnings and ID3 data
@@ -420,7 +421,7 @@ const canEditRelease = computed(() => {
          (accountStatus.value?.publicKey && props.release.postedBy?.toString() === accountStatus.value.publicKey);
 });
 
-const {albumFiles, handlePlay, activeTrack, albumQuality} = useAudioAlbum();
+const {albumFiles, handlePlay, activeTrack, albumQuality, currentAlbumId} = useAudioAlbum();
 const {closeFloatingVideo} = useFloatingVideo();
 
 // Edit release mutation
@@ -438,9 +439,20 @@ const editReleaseMutation = useEditReleaseMutation({
   }
 });
 
-const selectTrack = async (i: number) => {
-  await new Promise(r => setTimeout(r, 200));
-  handlePlay(i);
+// Pending play intent - for optimistic playback when CIDs aren't loaded yet
+const pendingPlayIndex = ref<number | null>(null);
+
+const selectTrack = (i: number) => {
+  const track = albumFiles.value[i];
+
+  // If track has a CID, play immediately
+  if (track?.cid) {
+    handlePlay(i);
+    return;
+  }
+
+  // No CID yet - store intent, will auto-play when CIDs arrive
+  pendingPlayIndex.value = i;
 };
 
 async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
@@ -477,47 +489,67 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
       const baseUrl = archivistGateway.startsWith('http') ? archivistGateway : `https://${archivistGateway}`;
       const dataUrl = `${baseUrl}/api/archivist/v1/data/${cid}`;
 
-      console.log('[albumViewer] Fetching Archivist CID:', dataUrl);
+      // CHECK PREFETCH CACHE FIRST - may have started on click before navigation
+      const prefetchedPromise = getPrefetchedManifest(cid);
+      let data: any = null;
 
-      // First, check what type of content this is
-      const headResponse = await fetch(dataUrl, { method: 'HEAD' });
-
-      if (!headResponse.ok) {
-        console.error('[albumViewer] HEAD request failed:', headResponse.status);
-        throw new Error(`Failed to fetch CID: ${headResponse.status}`);
+      if (prefetchedPromise) {
+        console.log('[albumViewer] Using prefetched Archivist manifest');
+        try {
+          data = await prefetchedPromise;
+        } catch (e) {
+          console.warn('[albumViewer] Prefetch failed, falling back to direct fetch');
+          data = null;
+        }
       }
 
-      const contentType = headResponse.headers.get('content-type');
-      console.log('[albumViewer] Content-Type:', contentType);
+      // If no prefetch or it failed, fetch normally
+      if (!data) {
+        console.log('[albumViewer] Fetching Archivist CID:', dataUrl);
 
-      // If it's an audio file, treat as single file
-      if (contentType && (contentType.includes('audio/') || contentType.includes('application/octet-stream'))) {
-        const contentLength = headResponse.headers.get('content-length');
-        const fileName = props.release.name || 'Unknown Track';
+        // First, check what type of content this is
+        const headResponse = await fetch(dataUrl, { method: 'HEAD' });
 
-        ipfsFiles.push({
-          index: 0,
-          album: props.release.name,
-          cid: cid,
-          title: storedTracks?.[0]?.title || fileName,
-          artist: storedTracks?.[0]?.artist || artistName.value,
-          duration: storedTracks?.[0]?.duration,
-          size: contentLength ? `${(parseInt(contentLength) / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
+        if (!headResponse.ok) {
+          console.error('[albumViewer] HEAD request failed:', headResponse.status);
+          throw new Error(`Failed to fetch CID: ${headResponse.status}`);
+        }
+
+        const contentType = headResponse.headers.get('content-type');
+        console.log('[albumViewer] Content-Type:', contentType);
+
+        // If it's an audio file, treat as single file
+        if (contentType && (contentType.includes('audio/') || contentType.includes('application/octet-stream'))) {
+          const contentLength = headResponse.headers.get('content-length');
+          const fileName = props.release.name || 'Unknown Track';
+
+          ipfsFiles.push({
+            index: 0,
+            album: props.release.name,
+            cid: cid,
+            title: storedTracks?.[0]?.title || fileName,
+            artist: storedTracks?.[0]?.artist || artistName.value,
+            duration: storedTracks?.[0]?.duration,
+            size: contentLength ? `${(parseInt(contentLength) / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
+          });
+          return ipfsFiles;
+        }
+
+        // Otherwise, fetch as directory (request JSON)
+        const jsonResponse = await fetch(dataUrl, {
+          headers: { 'Accept': 'application/json' }
         });
-        return ipfsFiles;
+
+        if (!jsonResponse.ok) {
+          console.error('[albumViewer] Failed to fetch directory:', jsonResponse.status, jsonResponse.statusText);
+          throw new Error(`Failed to fetch directory: ${jsonResponse.status}`);
+        }
+
+        data = await jsonResponse.json();
       }
 
-      // Otherwise, fetch as directory (request JSON)
-      const jsonResponse = await fetch(dataUrl, {
-        headers: { 'Accept': 'application/json' }
-      });
-
-      if (!jsonResponse.ok) {
-        console.error('[albumViewer] Failed to fetch directory:', jsonResponse.status, jsonResponse.statusText);
-        throw new Error(`Failed to fetch directory: ${jsonResponse.status}`);
-      }
-
-      const data = await jsonResponse.json() as {
+      // Type the data we received (either from prefetch or fresh fetch)
+      const typedData = data as {
         cid?: string;
         name?: string;
         totalSize?: number;
@@ -537,10 +569,10 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
         }[];
       };
 
-      console.log('[albumViewer] Archivist response:', data);
+      console.log('[albumViewer] Archivist response:', typedData);
 
       // Support both Archivist 'entries' format and legacy 'files' format
-      const entries = data.entries || data.files?.map(f => ({
+      const entries = typedData.entries || typedData.files?.map(f => ({
         name: f.title,
         cid: f.cid,
         size: typeof f.size === 'string' ? parseInt(f.size) || 0 : f.size,
@@ -548,7 +580,7 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
       }));
 
       if (!entries || !Array.isArray(entries)) {
-        console.error('[albumViewer] Invalid directory structure:', data);
+        console.error('[albumViewer] Invalid directory structure:', typedData);
         throw new Error(`Invalid directory structure received from ${dataUrl}`);
       }
 
@@ -659,6 +691,7 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
   }
 };
 
+
 function setTrackToDownload(track: AudioTrack) {
   trackDownloader.value.setTrack(track);
 }
@@ -768,6 +801,9 @@ async function loadTrackMetadataAndVerify() {
   // Create new abort controller
   abortController.value = new AbortController();
   const signal = abortController.value.signal;
+
+  // Store the album ID we're loading metadata for
+  const releaseId = props.release.id;
 
   // Load durations for all tracks, and ID3 tags only for admins
   const updatedTracks = await Promise.all(
@@ -882,11 +918,17 @@ async function loadTrackMetadataAndVerify() {
     })
   );
 
-  albumFiles.value = updatedTracks;
+  // Only update if we're still viewing the same album
+  if (currentAlbumId.value === releaseId) {
+    albumFiles.value = updatedTracks;
+  }
 }
 
 onMounted(async () => {
   closeFloatingVideo();
+
+  // Show content immediately - tracks load in background
+  isLoading.value = false;
 
   // Set album quality from metadata
   if (metadata.value?.audioQuality) {
@@ -895,18 +937,48 @@ onMounted(async () => {
     albumQuality.value = null;
   }
 
-  // Only load the audio tracks if they are not currently playing or if the active track's album is different from the browsed album.
-  if (!activeTrack.value || (activeTrack.value && activeTrack.value.album !== props.release.name)) {
-    albumFiles.value = [];
-    activeTrack.value = undefined;
-    const ipfsFiles = await fetchIPFSFiles(props.release.contentCID);
-    albumFiles.value = ipfsFiles;
+  // Track which album we're loading to prevent state pollution
+  const releaseId = props.release.id;
+  currentAlbumId.value = releaseId;
 
-    // Load track metadata after initial files are loaded
-    isLoading.value = false; // Show content immediately
-    loadTrackMetadataAndVerify(); // Load metadata and verify in background
-  } else {
-    isLoading.value = false;
+  // Load the album's tracks for display, but DON'T touch activeTrack
+  // The player is a global singleton - playback persists through navigation
+  if (!activeTrack.value || activeTrack.value.album !== props.release.name) {
+    // INSTANT RENDER: If we have pre-parsed tracks from cache, show them immediately
+    const parsedTracks = metadata.value?._parsedTracks;
+    if (parsedTracks && Array.isArray(parsedTracks)) {
+      albumFiles.value = parsedTracks.map((track, index) => ({
+        index,
+        album: props.release.name,
+        cid: '', // CID not known yet - will be populated by IPFS fetch
+        title: track.title || `Track ${index + 1}`,
+        artist: track.artist || metadata.value?.author || '',
+        duration: track.duration,
+      }));
+    } else {
+      albumFiles.value = [];
+    }
+
+    // NOTE: We intentionally do NOT clear activeTrack here
+    // Playback continues even when browsing other albums
+
+    // Fetch CIDs in background (needed for playback)
+    const ipfsFiles = await fetchIPFSFiles(props.release.contentCID);
+
+    // Only update albumFiles if we're still viewing the same album
+    // This prevents race conditions when quickly switching between albums
+    if (currentAlbumId.value === releaseId) {
+      albumFiles.value = ipfsFiles;
+
+      // OPTIMISTIC PLAYBACK: If user clicked a track while CIDs were loading, play it now
+      if (pendingPlayIndex.value !== null) {
+        const pendingIndex = pendingPlayIndex.value;
+        pendingPlayIndex.value = null;
+        handlePlay(pendingIndex);
+      }
+
+      loadTrackMetadataAndVerify(); // Load metadata and verify in background
+    }
   }
 });
 

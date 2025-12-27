@@ -16,6 +16,8 @@ const activeTrack = ref<AudioTrack>();
 const repeat = ref(false);
 const shuffle = ref(false);
 const albumQuality = ref<AudioQuality | null>(null);
+// Track which album's files are currently loaded to prevent state pollution
+const currentAlbumId = ref<string | null>(null);
 
 const toggleRepeat = () => (repeat.value ? (repeat.value = false) : (repeat.value = true));
 const toggleShuffle = () => (shuffle.value ? (shuffle.value = false) : (shuffle.value = true));
@@ -77,6 +79,7 @@ export const useAudioAlbum = () => {
     repeat,
     shuffle,
     albumQuality,
+    currentAlbumId,
     handlePlay,
     handlePrevious,
     handleNext,

@@ -310,3 +310,41 @@ docker push riffcc/flagship:vX.Y.Z
 - NEVER create files unless they're absolutely necessary
 - ALWAYS prefer editing existing files to creating new ones
 - Browser navigation rule: Unless explicitly stated, the USER navigates, Claude only screenshots - never use browser navigation tools without explicit permission
+
+## 🚨 CRITICAL: No Polling, No Sleeps - EVENT DRIVEN ONLY 🚨
+
+**POLLING IS BANNED. SLEEPS ARE BANNED.**
+
+All code must be fully event-driven:
+- Use channels (tokio::sync::mpsc, broadcast, watch) for notifications
+- Use async/await with proper wakers - NO busy loops
+- Workers wait on channels, not timers
+- State changes push events, consumers react
+
+### Correct Pattern (Event-Driven)
+```rust
+// Worker waits on channel - wakes ONLY when there's work
+async fn run(&self, mut job_rx: mpsc::Receiver<JobId>) {
+    while let Some(job_id) = job_rx.recv().await {
+        self.execute(job_id).await;
+    }
+}
+
+// Job creation sends notification - worker wakes immediately
+async fn create_job(&self, job: Job) {
+    self.store.insert(job.id, job);
+    self.job_tx.send(job.id).await; // Worker wakes NOW
+}
+```
+
+### WRONG Pattern (Polling - BANNED)
+```rust
+// ❌ NEVER DO THIS - wastes CPU, adds latency
+loop {
+    tokio::time::sleep(Duration::from_secs(5)).await; // BANNED
+    let jobs = self.poll_for_jobs().await; // BANNED
+    for job in jobs { ... }
+}
+```
+
+**Cost of polling: Wasted CPU cycles, unnecessary latency, disappointed users, and my eternal disappointment.**

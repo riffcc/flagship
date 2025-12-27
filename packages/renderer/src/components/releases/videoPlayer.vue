@@ -470,8 +470,9 @@ const onVideoError = (event: Event) => {
 };
 
 onMounted((): void => {
-  albumFiles.value = [];
-  activeTrack.value = undefined;
+  // NOTE: Do NOT clear albumFiles or activeTrack here!
+  // The audio player is a global singleton - playback must persist through navigation.
+  // Video and audio are separate concerns.
 
   if (props.floating) {
     if (floatingVideoInitialTime.value && videoPlayerRef.value) {

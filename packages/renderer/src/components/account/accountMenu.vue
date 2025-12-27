@@ -74,7 +74,7 @@ const menuItems = computed(() => {
   }
 
   items.push(
-    { label: 'Settings', onClick: () => router.push('/account/settings')},
+    { label: 'Settings', onClick: () => router.push('/settings')},
     { label: 'Disconnect', onClick: () => { userData.value = null; }},
   );
 

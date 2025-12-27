@@ -87,7 +87,22 @@ const routes: Array<RouteRecordRaw> = [
     path: '/account',
     name: 'Account',
     component: AccountPage,
-
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../views/settingsPage.vue'),
+  },
+  {
+    path: '/settings/history',
+    name: 'History',
+    component: () => import('../views/historyPage.vue'),
+  },
+  {
+    path: '/movie/:id',
+    name: 'Movie',
+    component: () => import('../views/moviePage.vue'),
+    props: true,
   },
   {
     path: '/upload',
@@ -172,57 +187,7 @@ const routes: Array<RouteRecordRaw> = [
     name: 'Release',
     component: ReleasePage,
     props: true,
-    beforeEnter: async (to, from, next) => {
-      // 1. Get the release ID from the route params.
-      const id = to.params.id as string;
-
-      // Ensure we have an ID to work with.
-      if (!id) {
-        console.error('Release page navigation attempted without an ID.');
-        // Optionally, redirect to a 404 page or the homepage.
-        next({ path: '/' });
-        return;
-      }
-
-      console.log(`Release Guard: Pre-fetching data for release ID: ${id}`);
-
-      // 2. Define the specific query key for this release.
-      const queryKey = ['release', id];
-
-      // 3. Check if data for this specific release is already in the cache.
-      // This is a crucial optimization. If the user clicks a release, then navigates
-      // away and clicks the same release again, we don't need to re-fetch.
-      if (queryClient.getQueryData(queryKey)) {
-        console.log(`Cache hit for release ${id}. Skipping fetch.`);
-        next();
-        return;
-      }
-
-      try {
-        // 4. Fetch the data from your fast API.
-        const response = await fetch(`${API_URL}/releases/${id}`);
-
-        if (response.ok) {
-          const releaseData = await response.json();
-
-          // 5. Seed the cache with the fetched data.
-          queryClient.setQueryData(queryKey, releaseData);
-          console.log(`✅ Cache seeded for release ${id}.`);
-        } else {
-          // Handle cases where the release is not found (404) or other server errors.
-          console.error(`API Error fetching release ${id}: Status ${response.status}`);
-          // You might want to clear any stale data if it exists and redirect.
-          queryClient.setQueryData(queryKey, undefined);
-          // Optionally redirect to a 'not-found' page.
-          // For now, we'll just proceed and let the component handle the empty state.
-        }
-      } catch (error) {
-        console.error(`Fetch failed for release ${id}:`, error);
-      } finally {
-        // 6. Always call next() to allow navigation to proceed.
-        next();
-      }
-    },
+    // No beforeEnter guard - page uses tile data for instant render, fetches in background
   },
   // Simplified category routes
   {
