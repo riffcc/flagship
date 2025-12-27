@@ -1,7 +1,11 @@
-# Flagship Production Image
+# Flagship Dev Preview Image
 # Lightweight Alpine + lighttpd serving static SPA bundle
 
 FROM node:22-alpine AS builder
+
+ENV VITE_API_URL=https://citadel.island.riff.cc/api/v1 \ 
+    VITE_ARCHIVIST_API_URL=https://uploads.island.riff.cc \
+    VITE_LIBRARIAN_API_URL=http://localhost:7878
 
 # Install build dependencies for native modules
 RUN apk add --no-cache python3 py3-setuptools make g++ linux-headers
