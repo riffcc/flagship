@@ -376,7 +376,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 // Identity
-const { publicKey } = useIdentity();
+const { publicKey, sign } = useIdentity();
 
 // Queries
 const { data: contentCategories } = useContentCategoriesQuery();
@@ -694,6 +694,7 @@ async function startBulkUpload() {
           );
           const coverResult = await uploadFile(coverFile, {
             publicKey: publicKey.value,
+            sign,
           });
           if (coverResult.success && coverResult.cid) {
             album.thumbnailCID = coverResult.cid;
@@ -707,6 +708,7 @@ async function startBulkUpload() {
       // Upload content to Archivist
       const uploadResult = await uploadDirectory(files, {
         publicKey: publicKey.value,
+        sign,
         concurrency: 4,
         onProgress: (progress) => {
           album.uploadProgress = progress.percent;

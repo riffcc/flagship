@@ -91,7 +91,8 @@ async function uploadFile(
   file: File,
   options?: {
     relativePath?: string;
-    publicKey?: string; // For auth via nginx
+    publicKey?: string;
+    sign?: (message: string) => Promise<string>;
     onProgress?: (progress: UploadProgress) => void;
     signal?: AbortSignal;
   },
@@ -152,10 +153,19 @@ async function uploadToNode(
   options?: {
     relativePath?: string;
     publicKey?: string;
+    sign?: (message: string) => Promise<string>;
     onProgress?: (progress: UploadProgress) => void;
     signal?: AbortSignal;
   },
 ): Promise<{ cid: string }> {
+  // Generate auth headers if sign function provided
+  let timestamp: string | undefined;
+  let signature: string | undefined;
+  if (options?.sign && options?.publicKey) {
+    timestamp = Math.floor(Date.now() / 1000).toString();
+    signature = await options.sign(`${timestamp}:UPLOAD`);
+  }
+
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
@@ -221,9 +231,15 @@ async function uploadToNode(
     const filename = options?.relativePath || file.name;
     xhr.setRequestHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
-    // Set auth header for nginx validation
+    // Set auth headers for Caddy forward_auth validation
     if (options?.publicKey) {
       xhr.setRequestHeader('X-Pubkey', options.publicKey);
+    }
+    if (timestamp) {
+      xhr.setRequestHeader('X-Timestamp', timestamp);
+    }
+    if (signature) {
+      xhr.setRequestHeader('X-Signature', signature);
     }
 
     // Send raw file data
@@ -291,6 +307,7 @@ async function uploadDirectory(
   files: File[],
   options?: {
     publicKey?: string;
+    sign?: (message: string) => Promise<string>;
     concurrency?: number;  // Max parallel uploads (default: 4)
     onProgress?: (progress: UploadProgress) => void;
     onFileProgress?: (fileName: string, progress: UploadProgress) => void;
@@ -390,6 +407,7 @@ async function uploadDirectory(
           uploadToNode(baseUrl, file, {
             relativePath: state.relativePath,
             publicKey: options?.publicKey,
+            sign: options?.sign,
             onProgress: (progress) => {
               updateFileState(fileIndex, {
                 progress: progress.percent,
@@ -449,7 +467,7 @@ async function uploadDirectory(
       }
 
       // Phase 2: Finalize directory structure
-      const dirResult = await finalizeDirectory(baseUrl, entries, options?.publicKey);
+      const dirResult = await finalizeDirectory(baseUrl, entries, options?.publicKey, options?.sign);
 
       // Update health status on success
       nodeHealth.value.set(baseUrl, {
@@ -494,13 +512,25 @@ async function finalizeDirectory(
   baseUrl: string,
   entries: Array<{ path: string; cid: string; size: number; mimetype?: string }>,
   publicKey?: string,
+  sign?: (message: string) => Promise<string>,
 ): Promise<{ cid: string }> {
+  // Generate auth headers if sign function provided
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (publicKey) {
+    headers['X-Pubkey'] = publicKey;
+  }
+  if (sign && publicKey) {
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const signature = await sign(`${timestamp}:UPLOAD`);
+    headers['X-Timestamp'] = timestamp;
+    headers['X-Signature'] = signature;
+  }
+
   const response = await fetch(`${baseUrl}/api/archivist/v1/directory`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(publicKey ? { 'X-Pubkey': publicKey } : {}),
-    },
+    headers,
     body: JSON.stringify({ entries }),
   });
 

@@ -528,7 +528,7 @@ const emit = defineEmits<Emits>();
 const router = useRouter();
 
 // Identity
-const { publicKey } = useIdentity();
+const { publicKey, sign } = useIdentity();
 
 // Queries
 const { data: accountStatus } = useAccountStatusQuery();
@@ -1066,6 +1066,7 @@ async function startUpload() {
 
       const result = await uploadFile(file, {
         publicKey: publicKey.value,
+        sign,
         onProgress: (progress) => {
           uploadProgress.value = progress.percent;
           fileUploadStates.value = [{
@@ -1094,6 +1095,7 @@ async function startUpload() {
       // Multiple files: upload in parallel with individual progress tracking
       const result = await uploadDirectory(selectedFiles.value, {
         publicKey: publicKey.value,
+        sign,
         concurrency: 4,  // Upload 4 files at a time
         onProgress: (progress) => {
           uploadProgress.value = progress.percent;
@@ -1179,6 +1181,7 @@ async function startUpload() {
         );
         const coverResult = await uploadFile(coverFile, {
           publicKey: publicKey.value,
+          sign,
         });
         if (coverResult.success && coverResult.cid) {
           finalThumbnailCID = coverResult.cid;
