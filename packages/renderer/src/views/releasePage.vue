@@ -142,7 +142,7 @@ const displayRelease = computed(() => {
 });
 
 const categorySlug = computed(() => {
-  return targetRelease.value?.categorySlug || cachedRelease.value?.categorySlug || tileData?.categorySlug || 'music';
+  return displayRelease.value?.categorySlug || targetRelease.value?.categorySlug || cachedRelease.value?.categorySlug || tileData?.categorySlug || 'music';
 });
 
 watch(targetRelease, (r) => {
