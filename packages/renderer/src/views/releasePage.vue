@@ -76,8 +76,8 @@ const tileData = history.state?.name ? {
   name: history.state.name,
   thumbnailCID: history.state.thumbnailCID || '',
   contentCID: history.state.contentCID || '',
-  categoryId: 'music',
-  categorySlug: 'music',
+  categoryId: history.state.categoryId || 'music',
+  categorySlug: history.state.categorySlug || 'music',
   metadata: {
     author: history.state.author,
     artistId: history.state.artistId,
@@ -142,7 +142,7 @@ const displayRelease = computed(() => {
 });
 
 const categorySlug = computed(() => {
-  return targetRelease.value?.categorySlug || tileData?.categorySlug || 'music';
+  return targetRelease.value?.categorySlug || cachedRelease.value?.categorySlug || tileData?.categorySlug || 'music';
 });
 
 watch(targetRelease, (r) => {
