@@ -153,8 +153,9 @@ def cmd_up(args: list[str]):
     print()
 
     # Check if Flagship is already running (hot-reloads, no need to rebuild)
+    # Use exact match with ^...$ to avoid matching flagship-devpreview
     result = subprocess.run(
-        ['docker', 'ps', '-q', '-f', 'name=flagship-dev', '-f', 'status=running'],
+        ['docker', 'ps', '-q', '-f', 'name=^flagship-dev$', '-f', 'status=running'],
         capture_output=True, text=True
     )
     flagship_running = bool(result.stdout.strip())

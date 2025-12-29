@@ -3,8 +3,12 @@
 FROM debian:trixie-slim
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends inotify-tools && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+    inotify-tools \
+    curl \
+    wget \
+    iproute2 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Default command just waits - overridden by compose
 CMD ["sleep", "infinity"]
