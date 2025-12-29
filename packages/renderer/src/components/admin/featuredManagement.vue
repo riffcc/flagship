@@ -46,25 +46,6 @@
                   </template>
                 </v-autocomplete>
 
-                <v-text-field
-                  v-model.number="newFeaturedRelease.priority"
-                  type="number"
-                  label="Priority"
-                  hint="Higher priority items appear first (default: 100)"
-                  persistent-hint
-                  min="1"
-                  max="1000"
-                ></v-text-field>
-
-                <v-slider
-                  v-model="newFeaturedRelease.priority"
-                  :min="1"
-                  :max="1000"
-                  :step="1"
-                  thumb-label
-                  class="mt-4"
-                ></v-slider>
-
                 <v-switch
                   v-model="newFeaturedRelease.promoted"
                   :color="newFeaturedRelease.promoted ? 'primary' : 'default'"
@@ -180,6 +161,17 @@
 
               <!-- Advanced Tab -->
               <v-window-item value="advanced">
+                <v-text-field
+                  v-model.number="newFeaturedRelease.priority"
+                  type="number"
+                  label="Priority (for large libraries)"
+                  hint="Higher values appear first. Use drag-drop for easier reordering."
+                  persistent-hint
+                  min="1"
+                  max="1000"
+                  class="mb-4"
+                ></v-text-field>
+
                 <v-text-field
                   v-model="newFeaturedRelease.variant"
                   label="A/B Test Variant"
@@ -345,25 +337,6 @@
             <v-window v-model="editTab">
               <!-- Basic Tab -->
               <v-window-item value="basic">
-                <v-text-field
-                  v-model.number="editingFeatured.priority"
-                  type="number"
-                  label="Priority"
-                  hint="Higher priority items appear first"
-                  persistent-hint
-                  min="1"
-                  max="1000"
-                ></v-text-field>
-
-                <v-slider
-                  v-model="editingFeatured.priority"
-                  :min="1"
-                  :max="1000"
-                  :step="1"
-                  thumb-label
-                  class="mt-4"
-                ></v-slider>
-
                 <v-switch
                   v-model="editingFeatured.promoted"
                   :color="editingFeatured.promoted ? 'primary' : 'default'"
@@ -479,6 +452,17 @@
               <!-- Advanced Tab -->
               <v-window-item value="advanced">
                 <v-text-field
+                  v-model.number="editingFeatured.priority"
+                  type="number"
+                  label="Priority (for large libraries)"
+                  hint="Higher values appear first. Use drag-drop for easier reordering."
+                  persistent-hint
+                  min="1"
+                  max="1000"
+                  class="mb-4"
+                ></v-text-field>
+
+                <v-text-field
                   v-model="editingFeatured.variant"
                   label="A/B Test Variant"
                   hint="Optional variant identifier for A/B testing"
@@ -571,7 +555,7 @@ const emit = defineEmits<{
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
-const { data: featuredReleases } = useGetFeaturedReleasesQuery();
+const { data: featuredReleases, refetch: refetchFeatured } = useGetFeaturedReleasesQuery();
 const { data: releases, isLoading: releasesLoading } = useGetReleasesQuery();
 
 // Enhanced featured releases with release names and sorted by order
@@ -595,7 +579,7 @@ const featuredWithReleases = computed(() => {
     if (a.order !== undefined) return -1;
     if (b.order !== undefined) return 1;
     // Otherwise sort by created date (newest first)
-    return new Date(b.created).getTime() - new Date(a.created).getTime();
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 });
 
@@ -1023,19 +1007,21 @@ const onDrop = async (dropIndex: number, event: DragEvent) => {
   try {
     reorderingLoading.value = true;
 
-    // Update each item with its new order
+    // Update each item with its new order (LWW merge uses modified_at)
     const updatePromises = items.map((item, index) => {
       // Only update if order changed or item didn't have order before
       if (item.order !== index || item.order === undefined) {
         return editFeaturedReleaseMutation.mutateAsync({
           ...item,
-          order: index
+          order: index,
         });
       }
       return Promise.resolve();
     });
 
     await Promise.all(updatePromises);
+    // Force refetch to update UI
+    await refetchFeatured();
     openSnackbar('Featured releases reordered successfully!', 'success');
 
   } catch (error) {

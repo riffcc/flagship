@@ -66,9 +66,22 @@ export interface ModerationStats {
 // Featured release types
 export interface FeaturedReleaseData {
   releaseId: string;
-  position: number;
-  title?: string;
-  description?: string;
+  startTime: string;
+  endTime: string;
+  promoted?: boolean;
+  priority?: number;
+  order?: number;
+  customTitle?: string;
+  customDescription?: string;
+  customThumbnail?: string;
+  regions?: string[] | null;
+  languages?: string[] | null;
+  tags?: string[];
+  variant?: string;
+  metadata?: Record<string, unknown>;
+  // Analytics (read-only, set by backend)
+  views?: number;
+  clicks?: number;
 }
 
 export interface FeaturedRelease extends ImmutableProps, FeaturedReleaseData {}

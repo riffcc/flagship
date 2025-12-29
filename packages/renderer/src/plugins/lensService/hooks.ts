@@ -596,7 +596,7 @@ export function useEditFeaturedReleaseMutation(options?: {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: EditInput<FeaturedReleaseData>) => {
+    mutationFn: async (data: FeaturedReleaseData & { id: string }) => {
       if (!publicKey.value) {
         throw new Error('Identity not initialized');
       }

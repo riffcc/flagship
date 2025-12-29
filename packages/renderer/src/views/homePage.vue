@@ -113,21 +113,44 @@ const activedFeaturedReleases = computed<ReleaseItem[]>(() => {
 
 const promotedFeaturedReleases = computed<ReleaseItem[]>(() => {
   if (!releases.value || !featuredReleases.value) return [];
-  const promotedActivedFeaturedReleasesIds = featuredReleases.value
+
+  // Get promoted featured releases sorted by order (ascending)
+  const sortedPromoted = featuredReleases.value
     .filter(filterActivedFeatured)
     .filter(filterPromotedFeatured)
-    .map(fr => fr.releaseId);
-  return releases.value.filter(r => r.id && promotedActivedFeaturedReleasesIds.includes(r.id));
+    .sort((a, b) => {
+      // Sort by order field (lower order = first), fallback to creation date
+      const aOrder = (a as any).order ?? Infinity;
+      const bOrder = (b as any).order ?? Infinity;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+  // Map to releases preserving the sort order
+  return sortedPromoted
+    .map(fr => releases.value!.find(r => r.id === fr.releaseId))
+    .filter((r): r is ReleaseItem => r !== undefined);
 });
 
 // Non-promoted featured releases for category sections
 const nonPromotedFeaturedReleases = computed<ReleaseItem[]>(() => {
   if (!releases.value || !featuredReleases.value) return [];
-  const nonPromotedFeaturedIds = featuredReleases.value
+
+  // Get non-promoted featured releases sorted by order
+  const sortedNonPromoted = featuredReleases.value
     .filter(filterActivedFeatured)
     .filter(fr => !filterPromotedFeatured(fr)) // NOT promoted
-    .map(fr => fr.releaseId);
-  return releases.value.filter(r => r.id && nonPromotedFeaturedIds.includes(r.id));
+    .sort((a, b) => {
+      const aOrder = (a as any).order ?? Infinity;
+      const bOrder = (b as any).order ?? Infinity;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+  // Map to releases preserving the sort order
+  return sortedNonPromoted
+    .map(fr => releases.value!.find(r => r.id === fr.releaseId))
+    .filter((r): r is ReleaseItem => r !== undefined);
 });
 
 const activeSections = computed(() => {

@@ -411,16 +411,21 @@ const performImport = async () => {
 
     const result = await response.json();
 
-    // Result format: { success: boolean, imported: number, skipped: number, errors: string[] }
+    // Result format: { success, imported, skipped, featuredImported, featuredSkipped, errors }
+    const releasesMsg = `${result.imported} releases imported, ${result.skipped} skipped`;
+    const featuredMsg = result.featuredImported > 0 || result.featuredSkipped > 0
+      ? `, ${result.featuredImported} featured imported, ${result.featuredSkipped} featured skipped`
+      : '';
+
     if (result.errors && result.errors.length > 0) {
       console.error('Import errors:', result.errors);
       openSnackbar(
-        `Import completed with warnings: ${result.imported} imported, ${result.skipped} skipped. Check console for errors.`,
+        `Import completed with warnings: ${releasesMsg}${featuredMsg}. Check console for errors.`,
         'warning'
       );
     } else {
       openSnackbar(
-        `Import successful: ${result.imported} releases imported, ${result.skipped} already existed`,
+        `Import successful: ${releasesMsg}${featuredMsg}`,
         'success'
       );
     }
