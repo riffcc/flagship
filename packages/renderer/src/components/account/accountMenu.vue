@@ -30,22 +30,42 @@
       </v-list>
     </v-sheet>
   </v-menu>
+  <ipfs-upload-dialog
+    v-model="showUploadDialog"
+    @bulk-upload="handleBulkUpload"
+  />
+  <bulk-upload-dialog
+    v-model="showBulkUploadDialog"
+    :files="bulkUploadFiles"
+  />
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserSession } from '/@/composables/userSession';
 import { useAccountStatusQuery } from '/@/plugins/lensService/hooks';
+import ipfsUploadDialog from '/@/components/account/ipfsUploadDialog.vue';
+import bulkUploadDialog from '/@/components/account/BulkUploadDialog.vue';
 
 const router = useRouter();
 
 const { userData } = useUserSession();
 const { data: accountStatus } = useAccountStatusQuery();
 
-const canUpload = computed(() =>
-  accountStatus.value?.permissions.includes('release:create') ?? false,
-);
+const showUploadDialog = ref(false);
+const showBulkUploadDialog = ref(false);
+const bulkUploadFiles = ref<File[]>([]);
+
+function handleBulkUpload(files: File[]) {
+  bulkUploadFiles.value = files;
+  showBulkUploadDialog.value = true;
+}
+
+const canUpload = computed(() => {
+  if (!accountStatus.value) return false;
+  return accountStatus.value.permissions?.includes('upload') || accountStatus.value.isAdmin;
+});
 
 const canAccessAdminPanel = computed(() => {
   if (!accountStatus.value) {
@@ -65,12 +85,12 @@ const menuItems = computed(() => {
     { label: 'Account', onClick: () => router.push('/account')},
   ];
 
-  if (canUpload.value) {
-    items.push({ label: 'Upload', onClick: () => router.push('/upload')});
-  }
-
   if (canAccessAdminPanel.value) {
     items.push({ label: 'Admin', onClick: () => router.push('/admin')});
+  }
+
+  if (canUpload.value) {
+    items.push({ label: 'Upload', onClick: () => { showUploadDialog.value = true; }});
   }
 
   items.push(

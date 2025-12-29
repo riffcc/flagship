@@ -37,35 +37,12 @@
       </router-link>
     </div>
     <v-spacer></v-spacer>
-    <v-btn
-      v-if="canUpload"
-      icon
-      variant="text"
-      class="d-none d-sm-flex mr-2"
-      @click="showUploadDialog = true"
-    >
-      <v-icon>$upload</v-icon>
-      <v-tooltip
-        activator="parent"
-        location="bottom"
-      >
-        Upload
-      </v-tooltip>
-    </v-btn>
     <div
       class="search-container d-none d-sm-flex mx-2"
       style="max-width: 400px; width: 100%; overflow: visible; z-index: 9999;"
     >
       <SearchBar />
     </div>
-    <ipfs-upload-dialog
-      v-model="showUploadDialog"
-      @bulk-upload="handleBulkUpload"
-    />
-    <bulk-upload-dialog
-      v-model="showBulkUploadDialog"
-      :files="bulkUploadFiles"
-    />
     <v-bottom-sheet
       inset
       close-on-content-click
@@ -134,23 +111,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserSession } from '/@/composables/userSession';
 import { useAccountStatusQuery, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 import accountMenu from '/@/components/account/accountMenu.vue';
 import SearchBar from '/@/components/search/SearchBar.vue';
-import ipfsUploadDialog from '/@/components/account/ipfsUploadDialog.vue';
-import bulkUploadDialog from '/@/components/account/BulkUploadDialog.vue';
-
-const showUploadDialog = ref(false);
-const showBulkUploadDialog = ref(false);
-const bulkUploadFiles = ref<File[]>([]);
-
-function handleBulkUpload(files: File[]) {
-  bulkUploadFiles.value = files;
-  showBulkUploadDialog.value = true;
-}
 
 const router = useRouter();
 const route = useRoute();
