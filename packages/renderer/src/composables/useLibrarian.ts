@@ -88,7 +88,7 @@ export interface ItemResponse {
 }
 
 export interface JobResult {
-  type: 'Import' | 'Audit' | 'Transcode' | 'Migrate' | 'Error';
+  type: 'Import' | 'Audit' | 'Transcode' | 'Migrate' | 'SourceImport' | 'Error';
   // Import result
   files_imported?: number;
   // Audit result
@@ -100,8 +100,39 @@ export interface JobResult {
   old_cid?: string;
   new_cid?: string;
   size?: number;
+  // SourceImport result
+  source?: string;
+  content_type?: string;
   // Error result
   message?: string;
+}
+
+/**
+ * Parameters for source import (URL or CID)
+ */
+export interface SourceImportParams {
+  /** The source URL or CID to import */
+  source: string;
+  /** Optional gateway URL for CID resolution */
+  gateway?: string;
+  /** If set, update this release's contentCID after import */
+  existing_release_id?: string;
+  /** Pre-authorized public key for Archivist uploads */
+  pubkey?: string;
+  /** Signature for Archivist authorization */
+  signature?: string;
+  /** Timestamp when signature was created */
+  timestamp?: number;
+}
+
+/**
+ * Response from source import endpoint
+ */
+export interface SourceImportResponse {
+  /** Job ID (hex-encoded) */
+  job_id: string;
+  /** Current status */
+  status: string;
 }
 
 export interface Job {
@@ -354,6 +385,31 @@ export function useCreateImport() {
   });
 }
 
+/**
+ * Import content from a URL or CID
+ *
+ * Creates a job that fetches content from the source and uploads to Archivist.
+ * Supports:
+ * - HTTP/HTTPS URLs
+ * - IPFS CIDs (Qm..., bafy...)
+ * - Archivist CIDs (zD..., zE...)
+ */
+export function useCreateSourceImport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: SourceImportParams) =>
+      librarianFetch<SourceImportResponse>('/api/v1/sources/import', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+    onSuccess: () => {
+      // Invalidate jobs query to show the new import job
+      queryClient.invalidateQueries({ queryKey: ['librarian', 'jobs'] });
+    },
+  });
+}
+
 // ============================================================================
 // URL Helpers
 // ============================================================================
@@ -402,6 +458,7 @@ export function useLibrarian() {
   // Mutations
   const createJob = useCreateJob();
   const createImport = useCreateImport();
+  const createSourceImport = useCreateSourceImport();
 
   // Computed
   const pendingJobCount = computed(() =>
@@ -432,6 +489,7 @@ export function useLibrarian() {
     // Mutations
     createJob,
     createImport,
+    createSourceImport,
 
     // Computed
     pendingJobCount,

@@ -179,16 +179,16 @@
             </v-card>
           </v-col>
 
-          <!-- HTTPS/S3 -->
+          <!-- HTTPS/S3/CID -->
           <v-col cols="12" md="6">
             <v-card class="nav-card" @click="currentView = 'sources'">
               <v-card-title class="d-flex align-center">
                 <v-icon icon="$cloud-download" class="mr-2"></v-icon>
-                HTTPS/S3
+                HTTPS/S3/CID
                 <v-spacer></v-spacer>
               </v-card-title>
               <v-card-text>
-                Import from direct URLs or S3-compatible storage
+                Import from URLs, S3 storage, or IPFS/Archivist CIDs
               </v-card-text>
             </v-card>
           </v-col>
@@ -754,6 +754,15 @@
                     >
                       Created {{ job.result.outputs?.length || 0 }} variants
                     </v-alert>
+                    <v-alert
+                      v-else-if="job.result.type === 'SourceImport'"
+                      type="success"
+                      variant="tonal"
+                      density="compact"
+                    >
+                      Imported {{ formatSize(String(job.result.size || 0)) }}
+                      <span v-if="job.result.new_cid"> · CID: {{ job.result.new_cid?.slice(0, 12) }}...</span>
+                    </v-alert>
                   </div>
                 </v-card-text>
               </div>
@@ -813,14 +822,15 @@
       </div>
 
       <!-- ============================================================ -->
-      <!-- SOURCES VIEW (HTTPS/S3) -->
+      <!-- SOURCES VIEW (HTTPS/S3/CID) -->
       <!-- ============================================================ -->
       <div v-else-if="currentView === 'sources'">
         <div class="d-flex align-center mb-4">
-          <h4>HTTPS / S3 Sources</h4>
+          <h4>HTTPS / S3 / CID Sources</h4>
         </div>
 
         <v-row>
+          <!-- Import from URL -->
           <v-col cols="12" md="6">
             <v-card>
               <v-card-title>
@@ -838,10 +848,59 @@
                 ></v-text-field>
               </v-card-text>
               <v-card-actions>
-                <v-btn color="primary" :disabled="!directUrl">Import</v-btn>
+                <v-btn
+                  color="primary"
+                  :disabled="!directUrl"
+                  :loading="sourceImportLoading"
+                  @click="importFromUrl"
+                >
+                  Import
+                </v-btn>
               </v-card-actions>
             </v-card>
           </v-col>
+
+          <!-- Import from CID -->
+          <v-col cols="12" md="6">
+            <v-card>
+              <v-card-title>
+                <v-icon class="mr-2">$content-copy</v-icon>
+                Import from CID
+              </v-card-title>
+              <v-card-text>
+                <v-text-field
+                  v-model="importCid"
+                  label="IPFS or Archivist CID"
+                  placeholder="Qm... or bafy... or zD..."
+                  variant="outlined"
+                  density="compact"
+                  :error-messages="cidError"
+                  hide-details="auto"
+                ></v-text-field>
+                <v-alert v-if="existingReleaseByCid" type="info" variant="tonal" class="mt-3" density="compact">
+                  <div class="d-flex align-center">
+                    <v-icon class="mr-2">$information</v-icon>
+                    <div>
+                      CID exists as release: <strong>{{ existingReleaseByCid.name }}</strong>
+                      <br><span class="text-caption">Will re-archive and update release</span>
+                    </div>
+                  </div>
+                </v-alert>
+              </v-card-text>
+              <v-card-actions>
+                <v-btn
+                  color="primary"
+                  :disabled="!isValidCid"
+                  :loading="sourceImportLoading"
+                  @click="importFromCid"
+                >
+                  {{ existingReleaseByCid ? 'Re-archive' : 'Import' }}
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-col>
+
+          <!-- S3 Configuration -->
           <v-col cols="12" md="6">
             <v-card>
               <v-card-title>
@@ -1004,6 +1063,16 @@
                 <v-alert-title>Transcode Complete</v-alert-title>
                 Created {{ selectedJob.result.outputs?.length || 0 }} quality variants.
               </v-alert>
+              <v-alert
+                v-else-if="selectedJob.result.type === 'SourceImport'"
+                type="success"
+                variant="tonal"
+              >
+                <v-alert-title>Source Import Complete</v-alert-title>
+                <div>Size: {{ formatSize(String(selectedJob.result.size || 0)) }}</div>
+                <div v-if="selectedJob.result.new_cid">New CID: <code>{{ selectedJob.result.new_cid }}</code></div>
+                <div v-if="selectedJob.result.content_type">Type: {{ selectedJob.result.content_type }}</div>
+              </v-alert>
             </div>
           </v-card-text>
           <v-card-actions>
@@ -1076,6 +1145,7 @@ import {
   useCreateJob,
   useStartJob,
   useStopJob,
+  useCreateSourceImport,
   fetchAllCollectionItems,
   getThumbnailUrl,
   getStreamUrl,
@@ -1084,6 +1154,7 @@ import {
   type ItemFile,
   type Job,
 } from '/@/composables/useLibrarian';
+import { cid as isValidCidCheck } from 'is-ipfs';
 import { useAudioAlbum, type AudioTrack } from '/@/composables/audioAlbum';
 
 // ============================================================================
@@ -1103,6 +1174,7 @@ const jobs = useLibrarianJobs();
 const createJobMutation = useCreateJob();
 const startJobMutation = useStartJob();
 const stopJobMutation = useStopJob();
+const sourceImportMutation = useCreateSourceImport();
 
 // Collection/Search
 const collectionId = ref('');
@@ -1172,10 +1244,26 @@ const selectedJob = ref<Job | null>(null);
 const { albumFiles, handlePlay } = useAudioAlbum();
 
 // ============================================================================
-// HTTPS/S3 State
+// HTTPS/S3/CID State
 // ============================================================================
 
 const directUrl = ref('');
+const importCid = ref('');
+const cidError = ref('');
+const sourceImportLoading = ref(false);
+const existingReleaseByCid = ref<{ id: string; name: string } | null>(null);
+
+// CID validation
+const isValidCid = computed(() => {
+  if (!importCid.value) return false;
+  const cid = importCid.value.trim();
+  // Check for IPFS CIDs (Qm... or bafy...) or Archivist CIDs (zD... or zE...)
+  if (cid.startsWith('Qm') && cid.length === 46) return true;
+  if (cid.startsWith('bafy')) return true;
+  if (cid.startsWith('zD') || cid.startsWith('zE')) return true;
+  // Use is-ipfs for more comprehensive check
+  return isValidCidCheck(cid);
+});
 
 // ============================================================================
 // Snackbar
@@ -1197,7 +1285,7 @@ const currentViewTitle = computed(() => {
     case 'selected': return 'Selected';
     case 'queue': return 'Queue';
     case 'quality': return 'Quality';
-    case 'sources': return 'HTTPS/S3';
+    case 'sources': return 'HTTPS/S3/CID';
     default: return 'Librarian';
   }
 });
@@ -1622,6 +1710,14 @@ function formatJobTarget(target: string): string {
   if (target.startsWith('category:')) {
     return `Category: ${target.replace('category:', '')}`;
   }
+  if (target.startsWith('source:')) {
+    const source = target.replace('source:', '');
+    // Truncate long URLs/CIDs
+    if (source.length > 40) {
+      return `Source: ${source.slice(0, 37)}...`;
+    }
+    return `Source: ${source}`;
+  }
   if (target === 'all') {
     return 'All releases';
   }
@@ -1676,6 +1772,68 @@ function unescapeMetadata(str: string | null | undefined): string | null {
   if (str === null || str === undefined) return null;
   // Archive.org sometimes escapes parentheses and other chars with backslashes
   return str.replace(/\\([()[\]{}])/g, '$1');
+}
+
+// ============================================================================
+// Source Import Methods (URL/CID)
+// ============================================================================
+
+async function importFromUrl() {
+  if (!directUrl.value.trim()) return;
+
+  sourceImportLoading.value = true;
+  cidError.value = '';
+
+  try {
+    await sourceImportMutation.mutateAsync({
+      source: directUrl.value.trim(),
+    });
+
+    snackbarText.value = 'Import job created';
+    snackbarColor.value = 'success';
+    snackbar.value = true;
+
+    // Clear input and navigate to queue
+    directUrl.value = '';
+    currentView.value = 'queue';
+  } catch (error: any) {
+    snackbarText.value = `Import failed: ${error.message}`;
+    snackbarColor.value = 'error';
+    snackbar.value = true;
+  } finally {
+    sourceImportLoading.value = false;
+  }
+}
+
+async function importFromCid() {
+  if (!isValidCid.value) return;
+
+  sourceImportLoading.value = true;
+  cidError.value = '';
+
+  try {
+    await sourceImportMutation.mutateAsync({
+      source: importCid.value.trim(),
+      existing_release_id: existingReleaseByCid.value?.id,
+    });
+
+    const action = existingReleaseByCid.value ? 'Re-archive' : 'Import';
+    snackbarText.value = `${action} job created`;
+    snackbarColor.value = 'success';
+    snackbar.value = true;
+
+    // Clear input and navigate to queue
+    importCid.value = '';
+    existingReleaseByCid.value = null;
+    currentView.value = 'queue';
+  } catch (error: any) {
+    cidError.value = error.message;
+    snackbarText.value = `Import failed: ${error.message}`;
+    snackbarColor.value = 'error';
+    snackbar.value = true;
+  } finally {
+    sourceImportLoading.value = false;
+  }
 }
 
 // No cleanup needed - global audio player manages its own lifecycle
