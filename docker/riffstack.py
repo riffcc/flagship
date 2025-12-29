@@ -71,7 +71,7 @@ def generate_compose() -> dict:
                     f'{flagship_src}:/app',
                     'flagship_node_modules:/app/node_modules',
                 ],
-                'env_file': ['.env'],
+                'env_file': ['.env.docker.dev'],
                 'environment': [
                     'NODE_ENV=development',
                     'WEB=true',
