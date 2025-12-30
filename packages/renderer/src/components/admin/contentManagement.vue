@@ -16,7 +16,7 @@
             rounded
           >
             <v-img
-              :src="parseUrlOrCid(item.thumbnailCID)"
+              :src="parseUrlOrCid(item.thumbnailCID) ?? (item.categoryId === 'music' ? '/cd-case-placeholder.svg' : '/no-image-icon.png')"
               height="64"
               width="113"
             ></v-img>
