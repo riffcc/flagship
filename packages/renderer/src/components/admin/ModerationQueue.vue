@@ -339,65 +339,33 @@
       </template>
     </content-management>
 
-    <!-- Preview dialog -->
+    <!-- Preview dialog with album viewer embedded in moderation chrome -->
     <v-dialog
       v-model="previewDialogOpen"
-      max-width="600"
+      max-width="1000"
+      scrollable
     >
-      <v-card v-if="previewingRelease">
-        <v-img
-          :src="getThumbnailUrl(previewingRelease.thumbnailCid)"
-          :alt="previewingRelease.name"
-          height="300"
-          cover
+      <v-card style="max-height: 90vh; overflow-y: auto;">
+        <!-- Loading state -->
+        <div v-if="isLoadingPreview" class="d-flex align-center justify-center pa-8" style="min-height: 400px;">
+          <v-progress-circular indeterminate size="64" />
+        </div>
+        <!-- Album viewer with moderation controls -->
+        <AlbumViewer
+          v-else-if="fullPreviewRelease"
+          :release="fullPreviewRelease as ReleaseItem"
+          :moderation-mode="true"
+          :moderation-loading="previewingReleaseId ? processingIds.has(previewingReleaseId) : false"
+          @close="previewDialogOpen = false"
+          @approve="handlePreviewApprove"
+          @reject="handlePreviewReject"
+          @delete="handlePreviewDelete"
         />
-        <v-card-title>{{ previewingRelease.name }}</v-card-title>
-        <v-card-subtitle v-if="previewingRelease.creator">
-          {{ previewingRelease.creator }}
-        </v-card-subtitle>
-        <v-card-text>
-          <v-chip size="small" variant="tonal" class="mr-2">
-            {{ previewingRelease.categoryId }}
-          </v-chip>
-          <v-chip
-            size="small"
-            color="warning"
-            variant="tonal"
-          >
-            Pending
-          </v-chip>
-          <p
-            v-if="previewingRelease.createdAt"
-            class="text-caption mt-2"
-          >
-            Submitted: {{ formatDate(previewingRelease.createdAt) }}
-          </p>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            variant="text"
-            @click="previewDialogOpen = false"
-          >
-            Close
-          </v-btn>
-          <v-btn
-            color="error"
-            variant="tonal"
-            :loading="processingIds.has(previewingRelease.id)"
-            @click="openRejectDialog(previewingRelease); previewDialogOpen = false"
-          >
-            Reject
-          </v-btn>
-          <v-btn
-            color="success"
-            variant="flat"
-            :loading="processingIds.has(previewingRelease.id)"
-            @click="approveRelease(previewingRelease.id); previewDialogOpen = false"
-          >
-            Approve
-          </v-btn>
-        </v-card-actions>
+        <!-- Fallback if release not found -->
+        <div v-else class="d-flex flex-column align-center justify-center pa-8" style="min-height: 200px;">
+          <p class="text-h6 mb-4">Release not found</p>
+          <v-btn @click="previewDialogOpen = false">Close</v-btn>
+        </div>
       </v-card>
     </v-dialog>
 
@@ -482,10 +450,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, reactive } from 'vue';
 import { useAdminWebSocket, type ReleaseInfo } from '/@/composables/useAdminWebSocket';
-import { useApproveReleaseMutation, useRejectReleaseMutation, useDeleteReleaseMutation } from '/@/plugins/lensService/hooks';
+import { useApproveReleaseMutation, useRejectReleaseMutation, useDeleteReleaseMutation, usePendingReleasesQuery } from '/@/plugins/lensService/hooks';
 import { parseUrlOrCid } from '/@/utils';
 import ContentManagement from '/@/components/admin/contentManagement.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
+import AlbumViewer from '/@/components/releases/albumViewer.vue';
 import type { ReleaseItem } from '/@/types';
 
 // WebSocket connection
@@ -546,7 +515,20 @@ const rejectingRelease = ref<ReleaseInfo | null>(null);
 const rejectReason = ref('');
 const isRejecting = ref(false);
 const previewDialogOpen = ref(false);
-const previewingRelease = ref<ReleaseInfo | null>(null);
+const previewingReleaseId = ref<string | null>(null);
+
+// Fetch pending releases with full data (includes contentCID for playback)
+// This fetches from /releases/pending which returns complete ReleaseItem objects
+const { data: pendingReleasesData, isLoading: isLoadingPendingReleases } = usePendingReleasesQuery({
+  enabled: computed(() => previewDialogOpen.value),
+});
+
+// Find the full release data from the pending releases query
+const fullPreviewRelease = computed(() => {
+  if (!previewingReleaseId.value || !pendingReleasesData.value) return null;
+  return pendingReleasesData.value.find(r => r.id === previewingReleaseId.value) ?? null;
+});
+const isLoadingPreview = computed(() => isLoadingPendingReleases.value && previewDialogOpen.value);
 
 // Filter releases by status
 const filteredReleases = computed(() => {
@@ -608,7 +590,7 @@ function clearSelection() {
 // Track if long-press just completed to ignore the subsequent click
 let longPressJustCompleted = false;
 
-function handleItemClick(id: string, event: MouseEvent) {
+function handleItemClick(id: string, _event: MouseEvent) {
   // Ignore click if it's from the end of a long-press
   if (longPressJustCompleted) {
     longPressJustCompleted = false;
@@ -834,14 +816,25 @@ async function approveRelease(releaseId: string) {
   }
 }
 
+async function deleteRelease(releaseId: string) {
+  processingIds.value.add(releaseId);
+  try {
+    await deleteMutation.mutateAsync(releaseId);
+  } catch (err) {
+    console.error('Failed to delete release:', err);
+  } finally {
+    processingIds.value.delete(releaseId);
+  }
+}
+
 function openRejectDialog(release: ReleaseInfo) {
   rejectingRelease.value = release;
   rejectReason.value = '';
   rejectDialogOpen.value = true;
 }
 
-function openPreviewDialog(release: ReleaseInfo) {
-  previewingRelease.value = release;
+function openPreviewDialogById(releaseId: string) {
+  previewingReleaseId.value = releaseId;
   previewDialogOpen.value = true;
 }
 
@@ -852,10 +845,28 @@ function openRejectDialogById(releaseId: string) {
   }
 }
 
-function openPreviewDialogById(releaseId: string) {
-  const release = pendingReleases.value.find(r => r.id === releaseId);
-  if (release) {
-    openPreviewDialog(release);
+// Handlers for moderation actions from album viewer
+function handlePreviewApprove() {
+  if (previewingReleaseId.value) {
+    approveRelease(previewingReleaseId.value);
+    previewDialogOpen.value = false;
+  }
+}
+
+function handlePreviewReject() {
+  if (previewingReleaseId.value) {
+    const release = pendingReleases.value.find(r => r.id === previewingReleaseId.value);
+    if (release) {
+      openRejectDialog(release);
+    }
+    previewDialogOpen.value = false;
+  }
+}
+
+function handlePreviewDelete() {
+  if (previewingReleaseId.value) {
+    deleteRelease(previewingReleaseId.value);
+    previewDialogOpen.value = false;
   }
 }
 

@@ -25,7 +25,49 @@
     max-width="960px"
   >
     <v-container fluid>
+      <!-- Moderation mode: show action buttons -->
+      <div v-if="props.moderationMode" class="d-flex align-center mb-4 ga-2" :style="{zIndex: 1000}">
+        <v-btn
+          icon="$close"
+          variant="text"
+          :size="xs ? 'small' : 'default'"
+          @click="emit('close')"
+        ></v-btn>
+        <v-spacer />
+        <v-btn
+          color="error"
+          variant="tonal"
+          :size="xs ? 'small' : 'default'"
+          :loading="props.moderationLoading"
+          prepend-icon="$delete"
+          @click="emit('delete')"
+        >
+          Delete
+        </v-btn>
+        <v-btn
+          color="warning"
+          variant="tonal"
+          :size="xs ? 'small' : 'default'"
+          :loading="props.moderationLoading"
+          prepend-icon="$close"
+          @click="emit('reject')"
+        >
+          Reject
+        </v-btn>
+        <v-btn
+          color="success"
+          variant="flat"
+          :size="xs ? 'small' : 'default'"
+          :loading="props.moderationLoading"
+          prepend-icon="$check"
+          @click="emit('approve')"
+        >
+          Approve
+        </v-btn>
+      </div>
+      <!-- Normal mode: show back button -->
       <v-btn
+        v-else
         icon="$arrow-left"
         class="mb-md-4"
         :size="xs ? 'small' : 'default'"
@@ -210,11 +252,22 @@ import type { ReleaseItem } from '/@/types';
 import { useAccountStatusQuery, useEditReleaseMutation } from '/@/plugins/lensService/hooks';
 import QualityBadge from '/@/components/badges/QualityBadge.vue';
 import LicenseBadge from '/@/components/badges/LicenseBadge.vue';
-// @ts-ignore
+// @ts-expect-error - jsmediatags has no types
 import jsmediatags from 'jsmediatags/dist/jsmediatags.min.js';
 
 const props = defineProps<{
   release: ReleaseItem;
+  /** When true, shows approve/reject/delete buttons instead of back button */
+  moderationMode?: boolean;
+  /** Loading state for moderation actions */
+  moderationLoading?: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: 'approve'): void;
+  (e: 'reject'): void;
+  (e: 'delete'): void;
+  (e: 'close'): void;
 }>();
 
 // Track metadata mismatch warnings and ID3 data
@@ -499,15 +552,24 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
       const baseUrl = archivistGateway.startsWith('http') ? archivistGateway : `https://${archivistGateway}`;
       const dataUrl = `${baseUrl}/api/archivist/v1/data/${cid}`;
 
+      // Type for Archivist directory response
+      type ArchivistData = {
+        cid?: string;
+        name?: string;
+        totalSize?: number;
+        entries?: { name: string; cid: string; size: number; isDirectory: boolean; mimetype?: string }[];
+        files?: { title: string; cid: string; size: string }[];
+      } | null;
+
       // CHECK PREFETCH CACHE FIRST - may have started on click before navigation
       const prefetchedPromise = getPrefetchedManifest(cid);
-      let data: any = null;
+      let data: ArchivistData = null;
 
       if (prefetchedPromise) {
         console.log('[albumViewer] Using prefetched Archivist manifest');
         try {
           data = await prefetchedPromise;
-        } catch (e) {
+        } catch (_e) {
           console.warn('[albumViewer] Prefetch failed, falling back to direct fetch');
           data = null;
         }
@@ -558,26 +620,8 @@ async function fetchIPFSFiles(cid: string): Promise<AudioTrack[]> {
         data = await jsonResponse.json();
       }
 
-      // Type the data we received (either from prefetch or fresh fetch)
-      const typedData = data as {
-        cid?: string;
-        name?: string;
-        totalSize?: number;
-        // Archivist format
-        entries?: {
-          name: string;
-          cid: string;
-          size: number;
-          isDirectory: boolean;
-          mimetype?: string;
-        }[];
-        // Legacy format
-        files?: {
-          title: string;
-          cid: string;
-          size: string;
-        }[];
-      };
+      // Use the typed data (already typed as ArchivistData)
+      const typedData = data;
 
       console.log('[albumViewer] Archivist response:', typedData);
 
@@ -1034,8 +1078,38 @@ onMounted(async () => {
     qualityLadder.value = null;
   }
 
+  // Determine the best content CID to use
+  // If we have a quality ladder, pick the best available tier instead of root CID
+  let contentCidToUse = props.release.contentCID;
+  if (qualityLadder.value && Object.keys(qualityLadder.value).length > 0) {
+    // Quality preference order (best first) and their display quality info
+    const tierConfig: Record<string, { format: string; bitrate?: number; codec?: string }> = {
+      'lossless': { format: 'flac', codec: 'FLAC' },
+      'opus': { format: 'opus', codec: 'Opus' },
+      'mp3_320': { format: 'mp3', bitrate: 320, codec: 'MP3' },
+      'mp3_v0': { format: 'mp3', bitrate: 245, codec: 'LAME VBR' },
+      'mp3_256': { format: 'mp3', bitrate: 256, codec: 'MP3' },
+      'ogg': { format: 'vorbis', codec: 'Vorbis' },
+      'mp3_vbr': { format: 'mp3', bitrate: 192, codec: 'LAME VBR' },
+      'mp3_192': { format: 'mp3', bitrate: 192, codec: 'MP3' },
+      'aac': { format: 'aac', codec: 'AAC' },
+      'mp3_128': { format: 'mp3', bitrate: 128, codec: 'MP3' },
+    };
+    const tierPreference = Object.keys(tierConfig);
+
+    for (const tier of tierPreference) {
+      if (qualityLadder.value[tier]) {
+        contentCidToUse = qualityLadder.value[tier];
+        // Also set the audio quality to match the selected tier
+        albumQuality.value = tierConfig[tier] as typeof albumQuality.value;
+        console.log(`[albumViewer] Using quality tier '${tier}' CID: ${contentCidToUse}`);
+        break;
+      }
+    }
+  }
+
   // Set initial content CID
-  currentContentCid.value = props.release.contentCID;
+  currentContentCid.value = contentCidToUse;
 
   // Track which album we're loading to prevent state pollution
   const releaseId = props.release.id;
@@ -1062,8 +1136,8 @@ onMounted(async () => {
     // NOTE: We intentionally do NOT clear activeTrack here
     // Playback continues even when browsing other albums
 
-    // Fetch CIDs in background (needed for playback)
-    const ipfsFiles = await fetchIPFSFiles(props.release.contentCID);
+    // Fetch CIDs in background - use the best tier CID if quality ladder exists
+    const ipfsFiles = await fetchIPFSFiles(contentCidToUse);
 
     // Only update albumFiles if we're still viewing the same album
     // This prevents race conditions when quickly switching between albums
