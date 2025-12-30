@@ -121,8 +121,38 @@ export interface ReleaseAudit {
   contentCid: string | null;
 }
 
+/**
+ * Fields that may be missing and need user input.
+ */
+export type MissingField = 'artist' | 'album' | 'year' | 'track_titles' | 'cover_art';
+
+/**
+ * Partial metadata detected during import.
+ */
+export interface PartialMetadata {
+  artist?: string;
+  album?: string;
+  year?: number;
+  trackCount: number;
+  detectedFormat?: string;
+  hasEmbeddedCover: boolean;
+  hasDirectoryCover: boolean;
+  trackTitles?: (string | null)[];
+}
+
+/**
+ * User-provided metadata to complete a NeedsInput job.
+ */
+export interface ProvidedMetadata {
+  artist: string;
+  album: string;
+  year?: number;
+  trackTitles?: string[];
+  coverCid?: string;
+}
+
 export interface JobResult {
-  type: 'Import' | 'Audit' | 'Transcode' | 'Migrate' | 'SourceImport' | 'Error';
+  type: 'Import' | 'Audit' | 'Transcode' | 'Migrate' | 'SourceImport' | 'Error' | 'NeedsInput' | 'Analyze';
   // Import result
   files_imported?: number;
   // Audit result (legacy single-release)
@@ -142,8 +172,25 @@ export interface JobResult {
   // SourceImport result
   source?: string;
   content_type?: string;
+  thumbnail_cid?: string;
   // Error result
   message?: string;
+  // NeedsInput result
+  missing_fields?: MissingField[];
+  detected?: PartialMetadata;
+  archive_org_hint?: string;
+  temp_content_cid?: string;
+  // Analyze result
+  release_id?: string;
+  audio_quality?: {
+    format: string;
+    bitrate?: number;
+    sampleRate?: number;
+    bitDepth?: number;
+    codec?: string;
+  };
+  tracks_found?: number;
+  track_metadata?: string;
 }
 
 /**
@@ -358,7 +405,7 @@ export function useCreateJob() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (params: { job_type: string; target: string }) =>
+    mutationFn: (params: { job_type: string; target: string; existing_release_id?: string }) =>
       librarianFetch<Job>('/api/v1/jobs', {
         method: 'POST',
         body: JSON.stringify(params),
@@ -534,6 +581,24 @@ export function useCreateSourceImport() {
       }),
     onSuccess: () => {
       // Invalidate jobs query to show the new import job
+      queryClient.invalidateQueries({ queryKey: ['librarian', 'jobs'] });
+    },
+  });
+}
+
+/**
+ * Provide metadata for a NeedsInput job
+ */
+export function useProvideMetadataMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ jobId, metadata }: { jobId: string; metadata: ProvidedMetadata }) =>
+      librarianFetch<Job>(`/api/v1/jobs/${jobId}/metadata`, {
+        method: 'POST',
+        body: JSON.stringify(metadata),
+      }),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['librarian', 'jobs'] });
     },
   });

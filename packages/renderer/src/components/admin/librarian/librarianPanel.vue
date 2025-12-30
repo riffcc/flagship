@@ -807,6 +807,26 @@
                       Imported {{ formatSize(String(getResultData(job.result).size || 0)) }}
                       <span v-if="getResultData(job.result).new_cid"> · CID: {{ getResultData(job.result).new_cid?.slice(0, 12) }}...</span>
                     </v-alert>
+                    <v-alert
+                      v-else-if="getResultType(job.result) === 'NeedsInput'"
+                      type="warning"
+                      variant="tonal"
+                      density="compact"
+                    >
+                      <div class="d-flex align-center">
+                        <v-icon class="mr-2">$pencil</v-icon>
+                        <span>Needs metadata input</span>
+                        <v-btn
+                          size="small"
+                          color="warning"
+                          variant="text"
+                          class="ml-2"
+                          @click.stop="openMetadataDialog(job)"
+                        >
+                          Provide Info
+                        </v-btn>
+                      </div>
+                    </v-alert>
                   </div>
                 </v-card-text>
               </div>
@@ -1534,6 +1554,79 @@
         </v-card>
       </v-dialog>
 
+      <!-- Metadata Input Dialog (for NeedsInput jobs) -->
+      <v-dialog v-model="metadataDialog" max-width="500px">
+        <v-card>
+          <v-card-title>Provide Metadata</v-card-title>
+          <v-card-text>
+            <p v-if="metadataDetected?.trackCount" class="text-body-2 mb-4">
+              Detected {{ metadataDetected.trackCount }} tracks
+              <span v-if="metadataDetected.detectedFormat">({{ metadataDetected.detectedFormat }})</span>
+            </p>
+
+            <v-text-field
+              v-model="metadataForm.artist"
+              label="Artist"
+              :hint="metadataDetected?.artist ? `Detected: ${metadataDetected.artist}` : undefined"
+              persistent-hint
+              class="mb-2"
+            />
+
+            <v-text-field
+              v-model="metadataForm.album"
+              label="Album"
+              :hint="metadataDetected?.album ? `Detected: ${metadataDetected.album}` : undefined"
+              persistent-hint
+              class="mb-2"
+            />
+
+            <v-text-field
+              v-model.number="metadataForm.year"
+              label="Year"
+              type="number"
+              :hint="metadataDetected?.year ? `Detected: ${metadataDetected.year}` : undefined"
+              persistent-hint
+              class="mb-2"
+            />
+
+            <v-alert
+              v-if="metadataDetected?.hasEmbeddedCover || metadataDetected?.hasDirectoryCover"
+              type="success"
+              variant="tonal"
+              density="compact"
+              class="mt-2"
+            >
+              Cover art detected
+              <span v-if="metadataDetected?.hasEmbeddedCover">(embedded)</span>
+              <span v-if="metadataDetected?.hasDirectoryCover">(directory)</span>
+            </v-alert>
+
+            <v-alert
+              v-if="metadataDetected?.archiveOrgHint"
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mt-2"
+            >
+              Archive.org hint: {{ metadataDetected.archiveOrgHint }}
+            </v-alert>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn variant="text" @click="metadataDialog = false">Cancel</v-btn>
+            <v-btn
+              color="primary"
+              variant="flat"
+              :disabled="!metadataForm.artist || !metadataForm.album"
+              :loading="provideMetadataMutation.isPending.value"
+              @click="submitMetadata"
+            >
+              Submit & Retry
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <!-- Snackbar -->
       <v-snackbar v-model="snackbar" :color="snackbarColor">
         {{ snackbarText }}
@@ -1557,6 +1650,7 @@ import {
   useArchiveJob,
   useClearArchivedJobs,
   useCreateSourceImport,
+  useProvideMetadataMutation,
   fetchAllCollectionItems,
   getThumbnailUrl,
   getStreamUrl,
@@ -1591,6 +1685,7 @@ const retryJobMutation = useRetryJob();
 const archiveJobMutation = useArchiveJob();
 const clearArchivedMutation = useClearArchivedJobs();
 const sourceImportMutation = useCreateSourceImport();
+const provideMetadataMutation = useProvideMetadataMutation();
 
 // Collection/Search
 const collectionId = ref('');
@@ -1673,6 +1768,25 @@ const selectedIssue = ref<{
   key: string;
   audit: ReleaseAudit | null;
   archiveOrgId: string | null;
+} | null>(null);
+
+// Metadata input dialog state (for NeedsInput jobs)
+const metadataDialog = ref(false);
+const metadataJobId = ref<string | null>(null);
+const metadataForm = ref({
+  artist: '',
+  album: '',
+  year: null as number | null,
+});
+const metadataDetected = ref<{
+  artist?: string;
+  album?: string;
+  year?: number;
+  trackCount?: number;
+  detectedFormat?: string;
+  hasEmbeddedCover?: boolean;
+  hasDirectoryCover?: boolean;
+  archiveOrgHint?: string;
 } | null>(null);
 
 // ============================================================================
@@ -2406,6 +2520,67 @@ function archiveJob(jobId: string) {
   snackbar.value = true;
 }
 
+function openMetadataDialog(job: Job) {
+  metadataJobId.value = job.id;
+
+  // Extract detected metadata from the NeedsInput result
+  if (job.result && job.result.type === 'NeedsInput' && job.result.detected) {
+    const detected = job.result.detected;
+
+    // Pre-fill form with detected values
+    metadataForm.value = {
+      artist: detected.artist || '',
+      album: detected.album || '',
+      year: detected.year || null,
+    };
+
+    // Store detected info for display
+    metadataDetected.value = {
+      artist: detected.artist,
+      album: detected.album,
+      year: detected.year,
+      trackCount: detected.trackCount,
+      detectedFormat: detected.detectedFormat,
+      hasEmbeddedCover: detected.hasEmbeddedCover,
+      hasDirectoryCover: detected.hasDirectoryCover,
+      archiveOrgHint: job.result.archive_org_hint,
+    };
+  } else {
+    // Reset to empty state
+    metadataForm.value = { artist: '', album: '', year: null };
+    metadataDetected.value = null;
+  }
+
+  metadataDialog.value = true;
+}
+
+function submitMetadata() {
+  if (!metadataJobId.value) return;
+
+  provideMetadataMutation.mutate({
+    jobId: metadataJobId.value,
+    metadata: {
+      artist: metadataForm.value.artist,
+      album: metadataForm.value.album,
+      year: metadataForm.value.year || undefined,
+      trackTitles: [], // TODO: add track title editing
+    },
+  }, {
+    onSuccess: () => {
+      metadataDialog.value = false;
+      metadataJobId.value = null;
+      snackbarText.value = 'Metadata provided - job will retry';
+      snackbarColor.value = 'success';
+      snackbar.value = true;
+    },
+    onError: (error) => {
+      snackbarText.value = `Failed to provide metadata: ${error.message}`;
+      snackbarColor.value = 'error';
+      snackbar.value = true;
+    },
+  });
+}
+
 // ============================================================================
 // Audit Helper Functions
 // ============================================================================
@@ -2649,6 +2824,7 @@ async function runIssueFix(action: string) {
           createJobMutation.mutate({
             job_type: 'analyze',
             target: `source:${audit.contentCid}`,
+            existing_release_id: audit.releaseId,
           });
           snackbarText.value = `Analyzing ${audit.title}...`;
         } else {
@@ -2656,6 +2832,7 @@ async function runIssueFix(action: string) {
           createJobMutation.mutate({
             job_type: 'source_import',
             target: `source:${audit.contentCid}`,
+            existing_release_id: audit.releaseId,
           });
           snackbarText.value = `Re-ingesting ${audit.title}...`;
         }
@@ -2672,6 +2849,7 @@ async function runIssueFix(action: string) {
         createJobMutation.mutate({
           job_type: 'import',
           target: `archive.org:${archiveId}`,
+          existing_release_id: audit?.releaseId,
         });
         snackbarText.value = `Re-fetching ${audit?.title} from Archive.org...`;
         snackbarColor.value = 'success';
@@ -2702,7 +2880,7 @@ function getResultType(result: any): string | null {
   if (!result) return null;
   // Check for externally-tagged (Rust serde default)
   const keys = Object.keys(result);
-  if (keys.length === 1 && ['Import', 'Audit', 'Transcode', 'Migrate', 'SourceImport', 'Analyze', 'Error'].includes(keys[0])) {
+  if (keys.length === 1 && ['Import', 'Audit', 'Transcode', 'Migrate', 'SourceImport', 'Analyze', 'Error', 'NeedsInput'].includes(keys[0])) {
     return keys[0];
   }
   // Check for internally-tagged
