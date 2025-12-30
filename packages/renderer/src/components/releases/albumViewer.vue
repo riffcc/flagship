@@ -40,7 +40,7 @@
           <v-img
             :height="xs ? '148px' : '160px'"
             aspect-ratio="1/1"
-            :src="parseUrlOrCid(props.release.thumbnailCID)"
+            :src="parseUrlOrCid(props.release.thumbnailCID) ?? '/cd-case-placeholder.svg'"
           ></v-img>
         </v-col>
 
