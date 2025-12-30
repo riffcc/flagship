@@ -67,8 +67,10 @@
           <!-- Quality and License Badges -->
           <div class="d-flex mt-2" style="gap: 3.5px">
             <QualityBadge
-              v-if="metadata?.audioQuality"
-              :quality="metadata.audioQuality"
+              v-if="albumQuality"
+              :quality="albumQuality"
+              :quality-ladder="qualityLadder"
+              @quality-change="handleQualityChange"
             />
             <LicenseBadge
               v-if="metadata?.license"
@@ -420,7 +422,16 @@ const canEditRelease = computed(() => {
          (accountStatus.value?.publicKey && props.release.postedBy?.toString() === accountStatus.value.publicKey);
 });
 
-const {albumFiles, handlePlay, activeTrack, albumQuality, currentAlbumId} = useAudioAlbum();
+const {
+  albumFiles,
+  handlePlay,
+  activeTrack,
+  albumQuality,
+  currentAlbumId,
+  currentContentCid,
+  qualityLadder,
+  isSwitchingQuality,
+} = useAudioAlbum();
 const {closeFloatingVideo} = useFloatingVideo();
 
 // Edit release mutation
@@ -941,18 +952,90 @@ async function loadTrackMetadataAndVerify() {
   }
 }
 
+/**
+ * Handle quality tier change from QualityBadge dropdown.
+ * Reloads tracks from the selected quality's CID.
+ */
+async function handleQualityChange(tierName: string, newCid: string) {
+  console.log(`[albumViewer] Switching quality to ${tierName} (CID: ${newCid})`);
+
+  // Don't switch if we're already on this CID
+  if (currentContentCid.value === newCid) {
+    console.log('[albumViewer] Already on this quality tier');
+    return;
+  }
+
+  // Remember current playback state
+  const wasPlaying = activeTrack.value;
+  const playingIndex = wasPlaying?.index;
+
+  isSwitchingQuality.value = true;
+
+  try {
+    // Update the content CID
+    currentContentCid.value = newCid;
+
+    // Update audio quality to match the tier
+    const tierToQuality: Record<string, { format: string; bitrate?: number; codec?: string }> = {
+      'lossless': { format: 'flac', codec: 'FLAC' },
+      'opus': { format: 'opus', codec: 'Opus' },
+      'mp3_320': { format: 'mp3', bitrate: 320, codec: 'MP3' },
+      'mp3_v0': { format: 'mp3', bitrate: 245, codec: 'LAME VBR' },
+      'mp3_256': { format: 'mp3', bitrate: 256, codec: 'MP3' },
+      'ogg': { format: 'vorbis', codec: 'Vorbis' },
+      'mp3_vbr': { format: 'mp3', bitrate: 245, codec: 'LAME VBR' },
+      'mp3_192': { format: 'mp3', bitrate: 192, codec: 'MP3' },
+      'aac': { format: 'aac', codec: 'AAC' },
+    };
+
+    const newQuality = tierToQuality[tierName];
+    if (newQuality) {
+      albumQuality.value = newQuality as typeof albumQuality.value;
+    }
+
+    // Fetch tracks from the new CID
+    const newTracks = await fetchIPFSFiles(newCid);
+
+    // Update album files
+    albumFiles.value = newTracks;
+
+    // If we were playing, resume at the same track index
+    if (wasPlaying && playingIndex !== undefined && newTracks[playingIndex]) {
+      handlePlay(playingIndex);
+    }
+
+    console.log(`[albumViewer] Quality switched to ${tierName}`);
+  } catch (error) {
+    console.error('[albumViewer] Failed to switch quality:', error);
+    // Revert to original CID on error
+    currentContentCid.value = props.release.contentCID;
+  } finally {
+    isSwitchingQuality.value = false;
+  }
+}
+
 onMounted(async () => {
   closeFloatingVideo();
 
   // Show content immediately - tracks load in background
   isLoading.value = false;
 
-  // Set album quality from metadata
+  // Set album quality from server metadata
   if (metadata.value?.audioQuality) {
     albumQuality.value = metadata.value.audioQuality;
   } else {
     albumQuality.value = null;
   }
+
+  // Set quality ladder if available
+  if (metadata.value?.qualityLadder) {
+    qualityLadder.value = metadata.value.qualityLadder;
+  } else {
+    qualityLadder.value = null;
+  }
+
+  // Set initial content CID
+  currentContentCid.value = props.release.contentCID;
 
   // Track which album we're loading to prevent state pollution
   const releaseId = props.release.id;

@@ -87,13 +87,52 @@ export interface ItemResponse {
   files: ItemFile[];
 }
 
+/**
+ * Types of quality issues detected during audit.
+ */
+export type AuditIssue =
+  | 'missing_audio_quality'
+  | 'missing_license'
+  | 'missing_source'
+  | 'missing_opus_encodes'
+  | 'missing_cover_art'
+  | 'unused_track_art'
+  | 'missing_description'
+  | 'missing_year'
+  | 'missing_credits'
+  | 'no_audio_files'
+  | 'not_on_archivist'
+  | 'invalid_content_cid'
+  | 'missing_track_metadata'
+  | { can_refetch_from_archive: { identifier: string } };
+
+/**
+ * Audit result for a single release.
+ */
+export interface ReleaseAudit {
+  releaseId: string;
+  title: string;
+  artist: string | null;
+  sourceQuality: string | null;
+  availableTiers: string[];
+  missingTiers: string[];
+  issues: AuditIssue[];
+  archiveOrgId: string | null;
+  contentCid: string | null;
+}
+
 export interface JobResult {
   type: 'Import' | 'Audit' | 'Transcode' | 'Migrate' | 'SourceImport' | 'Error';
   // Import result
   files_imported?: number;
-  // Audit result
+  // Audit result (legacy single-release)
   missing_formats?: string[];
   source_quality?: string;
+  // Audit result (new comprehensive)
+  total_releases?: number;
+  releases_with_issues?: number;
+  audits?: ReleaseAudit[];
+  issue_counts?: Record<string, number>;
   // Transcode result
   outputs?: { quality: string; cid: string; size: number }[];
   // Migrate result
@@ -145,6 +184,7 @@ export interface Job {
   executor: string | null;
   result: JobResult | null;
   retry_count: number;
+  archived: boolean;
   // Progress fields (set during execution)
   progress?: number;
   progress_message?: string;
@@ -355,7 +395,7 @@ export function useStopJob() {
   return useMutation({
     mutationFn: (jobId: string) =>
       librarianFetch<Job>(`/api/v1/jobs/${jobId}/stop`, {
-        method: 'DELETE',
+        method: 'POST',
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['librarian', 'jobs'] });
@@ -374,6 +414,77 @@ export function useRetryJob() {
       librarianFetch<Job>(`/api/v1/jobs/${jobId}/retry`, {
         method: 'POST',
       }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['librarian', 'jobs'] });
+    },
+  });
+}
+
+/**
+ * Archive a completed or failed job (hide from main queue)
+ */
+export function useArchiveJob() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (jobId: string) =>
+      librarianFetch<Job>(`/api/v1/jobs/${jobId}/archive`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['librarian', 'jobs'] });
+    },
+  });
+}
+
+/**
+ * Delete an archived job permanently
+ */
+export function useDeleteJob() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (jobId: string) => {
+      const baseUrl = getLibrarianApiUrl();
+      if (!baseUrl) throw new Error('Librarian API not configured');
+
+      const response = await fetch(`${baseUrl}/api/v1/jobs/${jobId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Librarian API error: ${response.status} - ${error}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['librarian', 'jobs'] });
+    },
+  });
+}
+
+/**
+ * Clear all archived jobs
+ */
+export function useClearArchivedJobs() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const baseUrl = getLibrarianApiUrl();
+      if (!baseUrl) throw new Error('Librarian API not configured');
+
+      const response = await fetch(`${baseUrl}/api/v1/jobs/archived`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Librarian API error: ${response.status} - ${error}`);
+      }
+
+      return response.json() as Promise<{ deleted: number }>;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['librarian', 'jobs'] });
     },

@@ -239,11 +239,94 @@
             </v-text-field>
           </template>
         </template>
+
+        <!-- Quality Tiers Section (for music) -->
+        <template v-if="isMusicCategory">
+          <v-divider class="my-4" />
+          <p class="text-subtitle-2 mb-3">Quality Tiers</p>
+          <p class="text-caption text-grey mb-3">
+            Manage different quality versions (FLAC, MP3, etc.)
+          </p>
+
+          <template v-for="(tierCid, tierName) in qualityTiers" :key="tierName">
+            <v-row dense class="align-center mb-2">
+              <v-col cols="3">
+                <v-chip
+                  size="small"
+                  :color="getTierColor(tierName)"
+                  variant="tonal"
+                >
+                  {{ formatTierName(tierName) }}
+                </v-chip>
+              </v-col>
+              <v-col cols="7">
+                <v-text-field
+                  :model-value="tierCid"
+                  :label="`${formatTierName(tierName)} CID`"
+                  density="compact"
+                  hide-details
+                  :rules="[rules.isValidCid]"
+                  @update:model-value="(v) => updateTierCid(tierName, v)"
+                />
+              </v-col>
+              <v-col cols="2" class="d-flex justify-end">
+                <v-btn
+                  icon
+                  size="small"
+                  variant="text"
+                  color="error"
+                  @click="removeTier(tierName)"
+                >
+                  <v-icon size="small">$close</v-icon>
+                </v-btn>
+              </v-col>
+            </v-row>
+          </template>
+
+          <!-- Add new tier -->
+          <v-row dense class="mt-2">
+            <v-col cols="4">
+              <v-select
+                v-model="newTierName"
+                :items="availableTiers"
+                label="Add tier"
+                density="compact"
+                hide-details
+                item-title="title"
+                item-value="value"
+              />
+            </v-col>
+            <v-col cols="5">
+              <v-text-field
+                v-model="newTierCid"
+                label="CID"
+                density="compact"
+                hide-details
+                :disabled="!newTierName"
+                :rules="[rules.isValidCid]"
+              />
+            </v-col>
+            <v-col cols="3" class="d-flex justify-end">
+              <v-btn
+                size="small"
+                variant="tonal"
+                color="success"
+                :disabled="!newTierName || !newTierCid"
+                @click="addTier"
+              >
+                <v-icon start size="small">$plus</v-icon>
+                Add
+              </v-btn>
+            </v-col>
+          </v-row>
+        </template>
+
         <v-btn
           rounded="0"
           text="Save"
           color="primary"
           block
+          class="mt-4"
           @click="openAdvanced = false"
         />
       </v-card>
@@ -314,6 +397,77 @@ const licenseVersion = ref<string>('4.0');
 const licenseJurisdiction = ref<string>('');
 const licenseAttribution = ref<string>('');
 const customLicenseUrl = ref<string>('');
+
+// Quality tier state
+const qualityTiers = ref<Record<string, string>>({});
+const newTierName = ref<string>('');
+const newTierCid = ref<string>('');
+
+// All available quality tier options
+const allTierOptions = [
+  { value: 'lossless', title: 'Lossless (FLAC/WAV)' },
+  { value: 'opus', title: 'Opus' },
+  { value: 'mp3_320', title: 'MP3 320kbps' },
+  { value: 'mp3_v0', title: 'MP3 V0 (~245kbps)' },
+  { value: 'mp3_256', title: 'MP3 256kbps' },
+  { value: 'mp3_vbr', title: 'MP3 VBR' },
+  { value: 'mp3_192', title: 'MP3 192kbps' },
+  { value: 'ogg', title: 'Ogg Vorbis' },
+  { value: 'aac', title: 'AAC/M4A' },
+];
+
+// Tiers that haven't been added yet
+const availableTiers = computed(() =>
+  allTierOptions.filter(t => !qualityTiers.value[t.value])
+);
+
+// Check if release has quality tiers (from metadata or imported)
+const hasQualityTiers = computed(() => {
+  // Show if we have existing tiers OR if we're in music category (to allow adding)
+  return Object.keys(qualityTiers.value).length > 0 || props.mode === 'edit';
+});
+
+// Format tier name for display
+function formatTierName(tier: string): string {
+  const option = allTierOptions.find(t => t.value === tier);
+  return option?.title || tier.toUpperCase();
+}
+
+// Get color for tier chip
+function getTierColor(tier: string): string {
+  switch (tier) {
+    case 'lossless': return 'purple';
+    case 'opus': return 'blue';
+    case 'mp3_320':
+    case 'mp3_v0': return 'green';
+    case 'mp3_256':
+    case 'mp3_vbr': return 'teal';
+    case 'mp3_192': return 'orange';
+    case 'ogg': return 'cyan';
+    case 'aac': return 'amber';
+    default: return 'grey';
+  }
+}
+
+// Update a tier CID
+function updateTierCid(tier: string, cid: string) {
+  qualityTiers.value = { ...qualityTiers.value, [tier]: cid };
+}
+
+// Remove a tier
+function removeTier(tier: string) {
+  const { [tier]: _, ...rest } = qualityTiers.value;
+  qualityTiers.value = rest;
+}
+
+// Add a new tier
+function addTier() {
+  if (newTierName.value && newTierCid.value) {
+    qualityTiers.value = { ...qualityTiers.value, [newTierName.value]: newTierCid.value };
+    newTierName.value = '';
+    newTierCid.value = '';
+  }
+}
 
 // License options
 const licenseOptions = [
@@ -656,6 +810,15 @@ onMounted(() => {
       licenseAttribution.value = license.attribution || '';
       console.log('Initialized license:', license);
     }
+
+    // If editing, initialize quality tiers
+    if (props.initialData.metadata?.qualityTiers) {
+      const tiers = typeof props.initialData.metadata.qualityTiers === 'string'
+        ? JSON.parse(props.initialData.metadata.qualityTiers)
+        : props.initialData.metadata.qualityTiers;
+      qualityTiers.value = tiers;
+      console.log('Initialized quality tiers:', tiers);
+    }
   }
 });
 
@@ -904,6 +1067,18 @@ const handleOnSubmit = async () => {
     // Clear license if none selected
     if (data.metadata?.license) {
       delete data.metadata.license;
+    }
+  }
+
+  // Add quality tiers to metadata if any exist
+  if (Object.keys(qualityTiers.value).length > 0) {
+    if (!data.metadata) data.metadata = {};
+    data.metadata.qualityTiers = JSON.stringify(qualityTiers.value);
+    console.log('[ReleaseForm] Quality tiers to save:', data.metadata.qualityTiers);
+  } else {
+    // Clear quality tiers if none
+    if (data.metadata?.qualityTiers) {
+      delete data.metadata.qualityTiers;
     }
   }
 

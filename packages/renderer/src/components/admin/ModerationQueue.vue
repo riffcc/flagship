@@ -148,6 +148,40 @@
             <v-icon class="mr-1">$close</v-icon>
             Reject selected
           </v-btn>
+          <!-- Delete button with confirmation -->
+          <v-btn
+            :color="deleteConfirmState === 'idle' ? 'grey' : (deleteConfirmState === 'confirm-block' ? 'error' : 'warning')"
+            :variant="deleteConfirmState === 'idle' ? 'tonal' : 'flat'"
+            size="small"
+            class="ml-2"
+            :loading="isBulkProcessing"
+            @mousedown="startDeleteHold"
+            @mouseup="endDeleteHold"
+            @mouseleave="endDeleteHold"
+            @touchstart.passive="startDeleteHold"
+            @touchend="endDeleteHold"
+            @touchcancel="endDeleteHold"
+            @click="handleDeleteClick"
+          >
+            <v-icon class="mr-1">$delete</v-icon>
+            <template v-if="deleteConfirmState === 'idle'">
+              Delete selected
+            </template>
+            <template v-else-if="deleteConfirmState === 'confirm'">
+              Click to confirm
+            </template>
+            <template v-else-if="deleteConfirmState === 'confirm-block'">
+              DELETE + BLOCK
+            </template>
+          </v-btn>
+          <!-- Delete hold progress indicator -->
+          <v-progress-linear
+            v-if="deleteHoldProgress > 0"
+            :model-value="deleteHoldProgress"
+            color="error"
+            height="3"
+            class="delete-progress"
+          />
         </div>
       </div>
     </v-slide-y-transition>
@@ -448,7 +482,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, reactive } from 'vue';
 import { useAdminWebSocket, type ReleaseInfo } from '/@/composables/useAdminWebSocket';
-import { useApproveReleaseMutation, useRejectReleaseMutation } from '/@/plugins/lensService/hooks';
+import { useApproveReleaseMutation, useRejectReleaseMutation, useDeleteReleaseMutation } from '/@/plugins/lensService/hooks';
 import { parseUrlOrCid } from '/@/utils';
 import ContentManagement from '/@/components/admin/contentManagement.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
@@ -468,6 +502,7 @@ const {
 // Mutations
 const approveMutation = useApproveReleaseMutation();
 const rejectMutation = useRejectReleaseMutation();
+const deleteMutation = useDeleteReleaseMutation();
 
 // View mode state
 const viewMode = ref<'endless' | 'paged'>('endless');
@@ -485,6 +520,14 @@ const LONG_PRESS_DURATION = 500; // ms
 const bulkRejectDialog = ref(false);
 const bulkRejectReason = ref('');
 const isBulkProcessing = ref(false);
+
+// Delete confirmation state
+const deleteConfirmState = ref<'idle' | 'confirm' | 'confirm-block'>('idle');
+const deleteHoldProgress = ref(0);
+let deleteHoldTimer: ReturnType<typeof setInterval> | null = null;
+let deleteConfirmTimeout: ReturnType<typeof setTimeout> | null = null;
+const DELETE_HOLD_DURATION = 4000; // 4 seconds to enable blocklist
+const DELETE_CONFIRM_TIMEOUT = 5000; // 5 seconds before resetting confirm state
 
 // Custom headers for moderation queue (passed to ContentManagement)
 const moderationHeaders = [
@@ -562,7 +605,16 @@ function clearSelection() {
   selectionMode.value = false;
 }
 
+// Track if long-press just completed to ignore the subsequent click
+let longPressJustCompleted = false;
+
 function handleItemClick(id: string, event: MouseEvent) {
+  // Ignore click if it's from the end of a long-press
+  if (longPressJustCompleted) {
+    longPressJustCompleted = false;
+    return;
+  }
+
   if (selectionMode.value) {
     toggleSelection(id);
   } else {
@@ -572,10 +624,12 @@ function handleItemClick(id: string, event: MouseEvent) {
 
 function startLongPress(id: string) {
   cancelLongPress();
+  longPressJustCompleted = false;
   longPressTimer = setTimeout(() => {
     // Enter selection mode and select this item
     selectionMode.value = true;
     selectedIds.add(id);
+    longPressJustCompleted = true; // Flag to ignore subsequent click
     // Provide haptic feedback if available
     if (navigator.vibrate) {
       navigator.vibrate(50);
@@ -595,49 +649,135 @@ async function bulkApprove() {
   if (selectedIds.size === 0) return;
 
   isBulkProcessing.value = true;
-  const ids = Array.from(selectedIds);
+  // Use spread with values() for proper iteration over reactive Set
+  const ids = [...selectedIds.values()];
 
-  try {
-    // Process in parallel, but not too many at once
-    const batchSize = 5;
-    for (let i = 0; i < ids.length; i += batchSize) {
-      const batch = ids.slice(i, i + batchSize);
-      await Promise.all(batch.map(id => approveMutation.mutateAsync(id)));
-    }
-    clearSelection();
-  } catch (err) {
-    console.error('Failed to bulk approve:', err);
-  } finally {
-    isBulkProcessing.value = false;
+  // Clear selection immediately - we're committing to these
+  clearSelection();
+
+  // Process all in parallel - the mutations will each trigger their own
+  // invalidation, but since we've already cleared selection it's fine
+  const results = await Promise.allSettled(
+    ids.map(id => approveMutation.mutateAsync(id))
+  );
+
+  const failures = results.filter(r => r.status === 'rejected');
+  if (failures.length > 0) {
+    console.error(`Failed to approve ${failures.length} releases:`, failures);
   }
+
+  isBulkProcessing.value = false;
 }
 
 async function confirmBulkReject() {
   if (selectedIds.size === 0) return;
 
   isBulkProcessing.value = true;
-  const ids = Array.from(selectedIds);
+  // Use spread with values() for proper iteration over reactive Set
+  const ids = [...selectedIds.values()];
+  const reason = bulkRejectReason.value || undefined;
 
-  try {
-    // Process in parallel, but not too many at once
-    const batchSize = 5;
-    for (let i = 0; i < ids.length; i += batchSize) {
-      const batch = ids.slice(i, i + batchSize);
-      await Promise.all(batch.map(id =>
-        rejectMutation.mutateAsync({
-          releaseId: id,
-          reason: bulkRejectReason.value || undefined,
-        })
-      ));
-    }
-    clearSelection();
-    bulkRejectDialog.value = false;
-    bulkRejectReason.value = '';
-  } catch (err) {
-    console.error('Failed to bulk reject:', err);
-  } finally {
-    isBulkProcessing.value = false;
+  // Clear selection and close dialog immediately
+  clearSelection();
+  bulkRejectDialog.value = false;
+  bulkRejectReason.value = '';
+
+  // Process all in parallel
+  const results = await Promise.allSettled(
+    ids.map(id => rejectMutation.mutateAsync({ releaseId: id, reason }))
+  );
+
+  const failures = results.filter(r => r.status === 'rejected');
+  if (failures.length > 0) {
+    console.error(`Failed to reject ${failures.length} releases:`, failures);
   }
+
+  isBulkProcessing.value = false;
+}
+
+// Delete hold/click handlers
+function startDeleteHold() {
+  if (deleteConfirmState.value === 'idle') return;
+
+  // Start the hold timer for blocklist mode
+  let elapsed = 0;
+  const interval = 50; // Update every 50ms for smooth progress
+  deleteHoldTimer = setInterval(() => {
+    elapsed += interval;
+    deleteHoldProgress.value = (elapsed / DELETE_HOLD_DURATION) * 100;
+
+    if (elapsed >= DELETE_HOLD_DURATION) {
+      // Hold complete - enable blocklist mode
+      deleteConfirmState.value = 'confirm-block';
+      if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]); // Double vibration
+      }
+      endDeleteHold();
+    }
+  }, interval);
+}
+
+function endDeleteHold() {
+  if (deleteHoldTimer) {
+    clearInterval(deleteHoldTimer);
+    deleteHoldTimer = null;
+  }
+  // Keep progress visible if in blocklist mode
+  if (deleteConfirmState.value !== 'confirm-block') {
+    deleteHoldProgress.value = 0;
+  }
+}
+
+function resetDeleteState() {
+  deleteConfirmState.value = 'idle';
+  deleteHoldProgress.value = 0;
+  if (deleteConfirmTimeout) {
+    clearTimeout(deleteConfirmTimeout);
+    deleteConfirmTimeout = null;
+  }
+}
+
+function handleDeleteClick() {
+  if (deleteConfirmState.value === 'idle') {
+    // First click - enter confirm mode
+    deleteConfirmState.value = 'confirm';
+    // Auto-reset after timeout
+    deleteConfirmTimeout = setTimeout(() => {
+      resetDeleteState();
+    }, DELETE_CONFIRM_TIMEOUT);
+  } else {
+    // Second click - execute delete
+    executeDelete(deleteConfirmState.value === 'confirm-block');
+    resetDeleteState();
+  }
+}
+
+async function executeDelete(blocklist: boolean) {
+  if (selectedIds.size === 0) return;
+
+  isBulkProcessing.value = true;
+  // Use spread with values() for proper iteration over reactive Set
+  const ids = [...selectedIds.values()];
+
+  // Clear selection immediately
+  clearSelection();
+
+  if (blocklist) {
+    // TODO: When blocklist API is available, blocklist these releases
+    console.log('Blocklist requested for releases:', ids);
+  }
+
+  // Process all in parallel
+  const results = await Promise.allSettled(
+    ids.map(id => deleteMutation.mutateAsync(id))
+  );
+
+  const failures = results.filter(r => r.status === 'rejected');
+  if (failures.length > 0) {
+    console.error(`Failed to delete ${failures.length} releases:`, failures);
+  }
+
+  isBulkProcessing.value = false;
 }
 
 // Connect on mount
@@ -660,6 +800,11 @@ watch(canConnect, (can) => {
 
 onUnmounted(() => {
   disconnect();
+  cancelLongPress();
+  endDeleteHold();
+  if (deleteConfirmTimeout) {
+    clearTimeout(deleteConfirmTimeout);
+  }
 });
 
 // Helper functions
@@ -820,6 +965,15 @@ async function confirmReject() {
 .selection-actions {
   display: flex;
   align-items: center;
+  position: relative;
+}
+
+.delete-progress {
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  border-radius: 2px;
 }
 
 /* Selectable grid */

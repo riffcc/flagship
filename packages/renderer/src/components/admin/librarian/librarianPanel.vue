@@ -299,7 +299,7 @@
           <v-menu>
             <template #activator="{ props: menuProps }">
               <v-btn v-bind="menuProps" variant="outlined" size="small" prepend-icon="$checkbox-marked">
-                Select All
+                Select
                 <v-icon size="small" class="ml-1">$menu-down</v-icon>
               </v-btn>
             </template>
@@ -309,6 +309,10 @@
               </v-list-item>
               <v-list-item @click="selectAllInCollection">
                 <v-list-item-title>All in collection ({{ totalResults }})</v-list-item-title>
+              </v-list-item>
+              <v-divider class="my-1" />
+              <v-list-item @click="clearSelection" :disabled="totalSelectionCount === 0">
+                <v-list-item-title class="text-error">None (clear selection)</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
@@ -613,7 +617,28 @@
       <div v-else-if="currentView === 'queue'">
         <div class="d-flex align-center mb-4">
           <h4>Job Queue</h4>
+          <v-chip
+            v-if="archivedJobs.length > 0"
+            size="small"
+            variant="tonal"
+            color="grey"
+            class="ml-2"
+          >
+            {{ archivedJobs.length }} archived
+          </v-chip>
           <v-spacer></v-spacer>
+          <v-btn
+            v-if="archivedJobs.length > 0"
+            color="grey"
+            variant="tonal"
+            size="small"
+            prepend-icon="$delete"
+            class="mr-2"
+            :loading="clearArchivedMutation.isPending.value"
+            @click="clearArchivedJobs"
+          >
+            Clear Archived
+          </v-btn>
           <v-btn color="primary" prepend-icon="$plus" @click="createJobDialog = true">
             Create Job
           </v-btn>
@@ -682,6 +707,16 @@
                   color="warning"
                   @click.stop="retryJob(job.id)"
                 ></v-btn>
+                <!-- Archive button for completed/failed jobs -->
+                <v-btn
+                  v-if="job.status === 'Completed' || job.status === 'Failed'"
+                  icon="$archive-outline"
+                  variant="text"
+                  size="small"
+                  color="grey"
+                  title="Archive job"
+                  @click.stop="archiveJob(job.id)"
+                ></v-btn>
                 <!-- Stop button for running jobs -->
                 <v-btn
                   v-if="job.status === 'Running'"
@@ -729,48 +764,48 @@
                   <!-- Result for completed jobs -->
                   <div v-if="job.result" class="mt-3">
                     <v-alert
-                      v-if="job.result.type === 'Import'"
+                      v-if="getResultType(job.result) === 'Import'"
                       type="success"
                       variant="tonal"
                       density="compact"
                     >
-                      Imported {{ job.result.files_imported }} files
+                      Imported {{ getResultData(job.result).files_imported }} files
                     </v-alert>
                     <v-alert
-                      v-else-if="job.result.type === 'Error'"
+                      v-else-if="getResultType(job.result) === 'Error'"
                       type="error"
                       variant="tonal"
                       density="compact"
                     >
-                      {{ job.result.message }}
+                      {{ getResultData(job.result) }}
                     </v-alert>
                     <v-alert
-                      v-else-if="job.result.type === 'Audit'"
+                      v-else-if="getResultType(job.result) === 'Audit'"
                       type="info"
                       variant="tonal"
                       density="compact"
                     >
-                      Source quality: {{ job.result.source_quality }}
-                      <span v-if="job.result.missing_formats?.length">
-                        · Missing: {{ job.result.missing_formats.join(', ') }}
+                      Audited {{ getResultData(job.result).total_releases }} releases
+                      <span v-if="getResultData(job.result).releases_with_issues > 0">
+                        · {{ getResultData(job.result).releases_with_issues }} with issues
                       </span>
                     </v-alert>
                     <v-alert
-                      v-else-if="job.result.type === 'Transcode'"
+                      v-else-if="getResultType(job.result) === 'Transcode'"
                       type="success"
                       variant="tonal"
                       density="compact"
                     >
-                      Created {{ job.result.outputs?.length || 0 }} variants
+                      Created {{ getResultData(job.result).outputs?.length || 0 }} variants
                     </v-alert>
                     <v-alert
-                      v-else-if="job.result.type === 'SourceImport'"
+                      v-else-if="getResultType(job.result) === 'SourceImport'"
                       type="success"
                       variant="tonal"
                       density="compact"
                     >
-                      Imported {{ formatSize(String(job.result.size || 0)) }}
-                      <span v-if="job.result.new_cid"> · CID: {{ job.result.new_cid?.slice(0, 12) }}...</span>
+                      Imported {{ formatSize(String(getResultData(job.result).size || 0)) }}
+                      <span v-if="getResultData(job.result).new_cid"> · CID: {{ getResultData(job.result).new_cid?.slice(0, 12) }}...</span>
                     </v-alert>
                   </div>
                 </v-card-text>
@@ -792,42 +827,290 @@
         <div class="d-flex align-center mb-4">
           <h4>Quality Ladder</h4>
           <v-spacer></v-spacer>
+
+          <!-- Sub-navigation tabs -->
+          <v-btn-toggle v-model="qualitySubView" mandatory density="compact" variant="outlined">
+            <v-btn value="overview" size="small">Overview</v-btn>
+            <v-btn value="issues" size="small">
+              Issues
+              <v-chip
+                v-if="auditResults?.releasesWithIssues"
+                size="x-small"
+                color="warning"
+                class="ml-2"
+              >
+                {{ auditResults.releasesWithIssues }}
+              </v-chip>
+            </v-btn>
+          </v-btn-toggle>
         </div>
 
-        <v-alert type="info" variant="tonal" class="mb-4">
-          Quality ladder: 24-bit FLAC, 16-bit FLAC, Opus 192, Opus 160, Opus 128, Opus 96, Opus 64
-        </v-alert>
+        <!-- QUALITY OVERVIEW -->
+        <div v-if="qualitySubView === 'overview'">
+          <v-alert type="info" variant="tonal" class="mb-4">
+            Quality ladder: 24-bit FLAC, 16-bit FLAC, Opus 192, Opus 160, Opus 128, Opus 96, Opus 64
+          </v-alert>
 
-        <v-row>
-          <v-col cols="12" md="6">
-            <v-card>
-              <v-card-title>
-                <v-icon class="mr-2">$check-circle</v-icon>
-                Audit Releases
-              </v-card-title>
-              <v-card-text>
-                Scan releases to check for missing quality variants
-              </v-card-text>
-              <v-card-actions>
-                <v-btn color="primary" @click="startAudit">Start Audit</v-btn>
-              </v-card-actions>
-            </v-card>
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-card>
-              <v-card-title>
-                <v-icon class="mr-2">$tune</v-icon>
-                Transcode Queue
-              </v-card-title>
-              <v-card-text>
-                FLAC files waiting to be transcoded to Opus variants
-              </v-card-text>
-              <v-card-actions>
-                <v-btn variant="outlined">View Queue</v-btn>
-              </v-card-actions>
-            </v-card>
-          </v-col>
-        </v-row>
+          <v-row>
+            <v-col cols="12" md="6">
+              <v-card>
+                <v-card-title>
+                  <v-icon class="mr-2">$check-circle</v-icon>
+                  Audit Releases
+                </v-card-title>
+                <v-card-text>
+                  Scan all releases in Citadel Lens for quality issues
+                  <div v-if="auditResults" class="mt-3">
+                    <v-chip size="small" color="success" class="mr-2">
+                      {{ auditResults.totalReleases - auditResults.releasesWithIssues }} healthy
+                    </v-chip>
+                    <v-chip size="small" color="warning">
+                      {{ auditResults.releasesWithIssues }} with issues
+                    </v-chip>
+                  </div>
+                </v-card-text>
+                <v-card-actions>
+                  <v-btn color="primary" @click="startAudit">Start Audit</v-btn>
+                  <v-btn
+                    v-if="auditResults?.releasesWithIssues"
+                    variant="outlined"
+                    @click="qualitySubView = 'issues'"
+                  >
+                    View Issues
+                  </v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-card>
+                <v-card-title>
+                  <v-icon class="mr-2">$tune</v-icon>
+                  Transcode Queue
+                </v-card-title>
+                <v-card-text>
+                  FLAC files waiting to be transcoded to Opus variants
+                </v-card-text>
+                <v-card-actions>
+                  <v-btn variant="outlined">View Queue</v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-col>
+          </v-row>
+
+          <!-- Issue Summary Cards (if audit results exist) -->
+          <div v-if="auditResults?.issueCounts && Object.keys(auditResults.issueCounts).length > 0" class="mt-6">
+            <h5 class="mb-3">Issue Summary</h5>
+            <div class="issue-summary-grid">
+              <v-card
+                v-for="(count, issueType) in auditResults.issueCounts"
+                :key="issueType"
+                class="issue-summary-card"
+                :color="issueColors[issueType] || 'grey'"
+                variant="tonal"
+                @click="issueFilter = issueType; qualitySubView = 'issues'"
+              >
+                <v-card-text class="text-center pa-3">
+                  <div class="text-h5 font-weight-bold">{{ count }}</div>
+                  <div class="text-caption">{{ issueLabels[issueType] || issueType }}</div>
+                </v-card-text>
+              </v-card>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUALITY ISSUES -->
+        <div v-else-if="qualitySubView === 'issues'">
+          <!-- No audit results yet -->
+          <v-alert v-if="!auditResults" type="info" variant="tonal" class="mb-4">
+            No audit results yet. Run an audit to detect quality issues.
+            <template #append>
+              <v-btn color="primary" size="small" @click="startAudit">Start Audit</v-btn>
+            </template>
+          </v-alert>
+
+          <!-- Audit results exist -->
+          <template v-else>
+            <!-- Filter bar and Fix All button -->
+            <div class="d-flex align-center flex-wrap gap-2 mb-4">
+              <v-chip
+                :color="issueFilter === null ? 'primary' : 'default'"
+                :variant="issueFilter === null ? 'flat' : 'outlined'"
+                size="small"
+                @click="filterByIssue(null)"
+              >
+                All ({{ auditResults.releasesWithIssues }})
+              </v-chip>
+              <v-chip
+                v-for="(count, issueType) in auditResults.issueCounts"
+                :key="issueType"
+                :color="issueFilter === issueType ? issueColors[issueType] : 'default'"
+                :variant="issueFilter === issueType ? 'flat' : 'outlined'"
+                size="small"
+                @click="filterByIssue(issueType)"
+              >
+                {{ issueLabels[issueType] || issueType }} ({{ count }})
+              </v-chip>
+              <v-spacer></v-spacer>
+              <v-btn
+                v-if="getTotalAutoFixableCount() > 0"
+                color="primary"
+                variant="flat"
+                size="small"
+                prepend-icon="$auto-fix"
+                @click="fixAllReleases"
+              >
+                Fix all releases ({{ getTotalAutoFixableCount() }} issues)
+              </v-btn>
+            </div>
+
+            <!-- Issues list -->
+            <div v-if="filteredAudits.length > 0" class="issues-list">
+              <v-card
+                v-for="audit in filteredAudits"
+                :key="audit.releaseId"
+                class="issue-card mb-3"
+              >
+                <v-card-item @click="toggleAuditExpand(audit.releaseId)">
+                  <template #prepend>
+                    <v-avatar color="surface-variant" size="40">
+                      <v-icon>$music</v-icon>
+                    </v-avatar>
+                  </template>
+
+                  <v-card-title class="text-body-1">
+                    {{ audit.title }}
+                  </v-card-title>
+                  <v-card-subtitle>
+                    {{ audit.artist || 'Unknown artist' }}
+                    <span v-if="audit.sourceQuality" class="ml-2">
+                      · {{ audit.sourceQuality.toUpperCase() }}
+                    </span>
+                  </v-card-subtitle>
+
+                  <template #append>
+                    <!-- Issue chips summary -->
+                    <div class="d-flex align-center gap-1 mr-2">
+                      <v-chip
+                        v-for="issue in audit.issues.slice(0, 3)"
+                        :key="getIssueKey(issue)"
+                        :color="getIssueColor(issue)"
+                        size="x-small"
+                        variant="tonal"
+                      >
+                        {{ getIssueLabel(issue) }}
+                      </v-chip>
+                      <v-chip
+                        v-if="audit.issues.length > 3"
+                        size="x-small"
+                        variant="tonal"
+                      >
+                        +{{ audit.issues.length - 3 }}
+                      </v-chip>
+                    </div>
+                    <v-btn
+                      :icon="expandedAudits.has(audit.releaseId) ? '$chevron-up' : '$chevron-down'"
+                      variant="text"
+                      size="small"
+                    ></v-btn>
+                  </template>
+                </v-card-item>
+
+                <!-- Expanded details -->
+                <v-expand-transition>
+                  <div v-if="expandedAudits.has(audit.releaseId)">
+                    <v-divider></v-divider>
+                    <v-card-text>
+                      <!-- All issues - clickable to fix -->
+                      <div class="mb-3">
+                        <div class="text-caption text-grey mb-2">Issues</div>
+                        <div class="d-flex flex-wrap gap-2">
+                          <v-chip
+                            v-for="issue in audit.issues"
+                            :key="getIssueKey(issue)"
+                            :color="getIssueColor(issue)"
+                            size="small"
+                            variant="tonal"
+                            class="issue-chip"
+                            @click.stop="showIssueFix(issue, audit)"
+                          >
+                            {{ getIssueLabel(issue) }}
+                            <span
+                              v-if="getArchiveOrgIdentifier(issue)"
+                              class="ml-1 text-caption"
+                            >
+                              ({{ getArchiveOrgIdentifier(issue) }})
+                            </span>
+                          </v-chip>
+                        </div>
+                      </div>
+
+                      <!-- Quality tiers -->
+                      <div v-if="audit.availableTiers.length > 0" class="mb-3">
+                        <div class="text-caption text-grey mb-2">Available Quality Tiers</div>
+                        <div class="d-flex flex-wrap gap-1">
+                          <v-chip
+                            v-for="tier in audit.availableTiers"
+                            :key="tier"
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                          >
+                            {{ tier }}
+                          </v-chip>
+                        </div>
+                      </div>
+
+                      <div v-if="audit.missingTiers.length > 0" class="mb-3">
+                        <div class="text-caption text-grey mb-2">Missing Quality Tiers</div>
+                        <div class="d-flex flex-wrap gap-1">
+                          <v-chip
+                            v-for="tier in audit.missingTiers"
+                            :key="tier"
+                            size="small"
+                            color="warning"
+                            variant="outlined"
+                          >
+                            {{ tier }}
+                          </v-chip>
+                        </div>
+                      </div>
+
+                      <!-- Metadata -->
+                      <div class="text-caption text-grey">
+                        <span v-if="audit.contentCid">CID: {{ audit.contentCid?.slice(0, 16) }}...</span>
+                        <span v-if="audit.archiveOrgId" class="ml-3">
+                          Archive.org: {{ audit.archiveOrgId }}
+                        </span>
+                      </div>
+                    </v-card-text>
+                    <v-card-actions>
+                      <!-- Fix all button for this release -->
+                      <v-btn
+                        v-if="getAutoFixableIssues(audit).length > 0"
+                        color="primary"
+                        variant="flat"
+                        size="small"
+                        prepend-icon="$wrench"
+                        @click="fixAllForRelease(audit)"
+                      >
+                        Fix all ({{ getAutoFixableIssues(audit).length }})
+                      </v-btn>
+                      <v-spacer></v-spacer>
+                    </v-card-actions>
+                  </div>
+                </v-expand-transition>
+              </v-card>
+            </div>
+
+            <!-- Empty state -->
+            <v-sheet v-else class="text-center pa-8" color="transparent">
+              <v-icon size="64" color="success" class="mb-4">$check-circle</v-icon>
+              <p class="text-body-1 text-grey">
+                {{ issueFilter ? 'No releases with this issue type' : 'All releases are healthy!' }}
+              </p>
+            </v-sheet>
+          </template>
+        </div>
       </div>
 
       <!-- ============================================================ -->
@@ -1038,49 +1321,49 @@
             <!-- Result -->
             <div v-if="selectedJob.result" class="mt-4">
               <v-alert
-                v-if="selectedJob.result.type === 'Import'"
+                v-if="getResultType(selectedJob.result) === 'Import'"
                 type="success"
                 variant="tonal"
               >
                 <v-alert-title>Import Complete</v-alert-title>
-                Imported {{ selectedJob.result.files_imported }} files successfully.
+                Imported {{ getResultData(selectedJob.result).files_imported }} files successfully.
               </v-alert>
               <v-alert
-                v-else-if="selectedJob.result.type === 'Error'"
+                v-else-if="getResultType(selectedJob.result) === 'Error'"
                 type="error"
                 variant="tonal"
               >
                 <v-alert-title>Job Failed</v-alert-title>
-                {{ selectedJob.result.message }}
+                {{ getResultData(selectedJob.result) }}
               </v-alert>
               <v-alert
-                v-else-if="selectedJob.result.type === 'Audit'"
+                v-else-if="getResultType(selectedJob.result) === 'Audit'"
                 type="info"
                 variant="tonal"
               >
                 <v-alert-title>Audit Complete</v-alert-title>
-                Source quality: {{ selectedJob.result.source_quality }}
-                <div v-if="selectedJob.result.missing_formats?.length">
-                  Missing formats: {{ selectedJob.result.missing_formats.join(', ') }}
+                Audited {{ getResultData(selectedJob.result).total_releases }} releases.
+                <div v-if="getResultData(selectedJob.result).releases_with_issues > 0">
+                  {{ getResultData(selectedJob.result).releases_with_issues }} releases with issues detected.
                 </div>
               </v-alert>
               <v-alert
-                v-else-if="selectedJob.result.type === 'Transcode'"
+                v-else-if="getResultType(selectedJob.result) === 'Transcode'"
                 type="success"
                 variant="tonal"
               >
                 <v-alert-title>Transcode Complete</v-alert-title>
-                Created {{ selectedJob.result.outputs?.length || 0 }} quality variants.
+                Created {{ getResultData(selectedJob.result).outputs?.length || 0 }} quality variants.
               </v-alert>
               <v-alert
-                v-else-if="selectedJob.result.type === 'SourceImport'"
+                v-else-if="getResultType(selectedJob.result) === 'SourceImport'"
                 type="success"
                 variant="tonal"
               >
                 <v-alert-title>Source Import Complete</v-alert-title>
-                <div>Size: {{ formatSize(String(selectedJob.result.size || 0)) }}</div>
-                <div v-if="selectedJob.result.new_cid">New CID: <code>{{ selectedJob.result.new_cid }}</code></div>
-                <div v-if="selectedJob.result.content_type">Type: {{ selectedJob.result.content_type }}</div>
+                <div>Size: {{ formatSize(String(getResultData(selectedJob.result).size || 0)) }}</div>
+                <div v-if="getResultData(selectedJob.result).new_cid">New CID: <code>{{ getResultData(selectedJob.result).new_cid }}</code></div>
+                <div v-if="getResultData(selectedJob.result).content_type">Type: {{ getResultData(selectedJob.result).content_type }}</div>
               </v-alert>
             </div>
           </v-card-text>
@@ -1109,6 +1392,15 @@
               @click="stopJob(selectedJob.id); jobDetailsDialog = false"
             >
               Stop
+            </v-btn>
+            <v-btn
+              v-if="selectedJob.status === 'Completed' || selectedJob.status === 'Failed'"
+              color="grey"
+              variant="tonal"
+              prepend-icon="$archive-outline"
+              @click="archiveJob(selectedJob.id); jobDetailsDialog = false"
+            >
+              Archive
             </v-btn>
             <v-btn variant="text" @click="jobDetailsDialog = false">Close</v-btn>
           </v-card-actions>
@@ -1143,6 +1435,105 @@
         </v-card>
       </v-dialog>
 
+      <!-- Issue Fix Dialog -->
+      <v-dialog v-model="issueFixDialog" max-width="500px">
+        <v-card v-if="selectedIssue">
+          <v-card-title class="d-flex align-center">
+            <v-chip
+              :color="getIssueInfo(selectedIssue.key).color"
+              size="small"
+              variant="flat"
+              class="mr-3"
+            >
+              {{ getIssueInfo(selectedIssue.key).label }}
+            </v-chip>
+            <v-spacer></v-spacer>
+            <v-btn icon="$close" variant="text" size="small" @click="issueFixDialog = false"></v-btn>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text>
+            <!-- Release info -->
+            <div class="mb-4">
+              <div class="text-subtitle-2">{{ selectedIssue.audit?.title }}</div>
+              <div class="text-caption text-grey">{{ selectedIssue.audit?.artist || 'Unknown artist' }}</div>
+            </div>
+
+            <!-- Issue description -->
+            <v-alert
+              :color="getIssueInfo(selectedIssue.key).color"
+              variant="tonal"
+              density="compact"
+              class="mb-4"
+            >
+              {{ getIssueInfo(selectedIssue.key).description }}
+            </v-alert>
+
+            <!-- Fix suggestions -->
+            <div class="text-subtitle-2 mb-2">How to fix</div>
+            <v-list density="compact" class="bg-transparent">
+              <v-list-item
+                v-for="(suggestion, idx) in getIssueInfo(selectedIssue.key).fixSuggestions"
+                :key="idx"
+                class="px-0"
+              >
+                <template #prepend>
+                  <v-icon size="small" color="grey" class="mr-2">$circle-small</v-icon>
+                </template>
+                <v-list-item-title class="text-body-2">{{ suggestion }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+          <v-divider></v-divider>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <!-- Auto-fix buttons based on issue type -->
+            <v-btn
+              v-if="(selectedIssue.key === 'missing_audio_quality' || selectedIssue.key === 'missing_track_metadata') && selectedIssue.audit?.contentCid"
+              color="primary"
+              variant="flat"
+              prepend-icon="$magnify"
+              @click="runIssueFix('reingest_archivist')"
+            >
+              Analyze content
+            </v-btn>
+            <v-btn
+              v-if="selectedIssue.key === 'not_on_archivist' && selectedIssue.audit?.contentCid"
+              color="primary"
+              variant="flat"
+              prepend-icon="$upload"
+              @click="runIssueFix('reingest_archivist')"
+            >
+              Ingest into Archivist
+            </v-btn>
+            <v-btn
+              v-if="(selectedIssue.key === 'can_refetch_from_archive' || selectedIssue.archiveOrgId || selectedIssue.audit?.archiveOrgId)"
+              color="success"
+              variant="flat"
+              prepend-icon="$refresh"
+              @click="runIssueFix('refetch_archive_org')"
+            >
+              Refetch from Archive.org
+            </v-btn>
+            <v-btn
+              v-if="selectedIssue.key === 'missing_opus_encodes'"
+              color="info"
+              variant="flat"
+              prepend-icon="$tune"
+              @click="runIssueFix('generate_opus')"
+            >
+              Generate Opus ladder
+            </v-btn>
+            <v-btn
+              v-if="!getIssueInfo(selectedIssue.key).canAutoFix"
+              variant="outlined"
+              @click="issueFixDialog = false"
+            >
+              Close
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <!-- Snackbar -->
       <v-snackbar v-model="snackbar" :color="snackbarColor">
         {{ snackbarText }}
@@ -1163,6 +1554,8 @@ import {
   useStartJob,
   useStopJob,
   useRetryJob,
+  useArchiveJob,
+  useClearArchivedJobs,
   useCreateSourceImport,
   fetchAllCollectionItems,
   getThumbnailUrl,
@@ -1171,6 +1564,8 @@ import {
   type SearchResultItem,
   type ItemFile,
   type Job,
+  type ReleaseAudit,
+  type AuditIssue,
 } from '/@/composables/useLibrarian';
 import { cid as isValidCidCheck } from 'is-ipfs';
 import { useAudioAlbum, type AudioTrack } from '/@/composables/audioAlbum';
@@ -1193,6 +1588,8 @@ const createJobMutation = useCreateJob();
 const startJobMutation = useStartJob();
 const stopJobMutation = useStopJob();
 const retryJobMutation = useRetryJob();
+const archiveJobMutation = useArchiveJob();
+const clearArchivedMutation = useClearArchivedJobs();
 const sourceImportMutation = useCreateSourceImport();
 
 // Collection/Search
@@ -1255,6 +1652,28 @@ const newJob = ref({ job_type: 'import', target: '' });
 const expandedJobs = ref<Set<string>>(new Set());
 const jobDetailsDialog = ref(false);
 const selectedJob = ref<Job | null>(null);
+
+// ============================================================================
+// Audit Results State
+// ============================================================================
+
+const auditResults = ref<{
+  totalReleases: number;
+  releasesWithIssues: number;
+  audits: ReleaseAudit[];
+  issueCounts: Record<string, number>;
+} | null>(null);
+const qualitySubView = ref<'overview' | 'issues'>('overview');
+const expandedAudits = ref<Set<string>>(new Set());
+const issueFilter = ref<string | null>(null);
+
+// Issue fix dialog state
+const issueFixDialog = ref(false);
+const selectedIssue = ref<{
+  key: string;
+  audit: ReleaseAudit | null;
+  archiveOrgId: string | null;
+} | null>(null);
 
 // ============================================================================
 // Audio Player (global Flagship player)
@@ -1369,14 +1788,195 @@ const visibleItems = computed(() => {
 
 const sortedJobs = computed(() => {
   if (!jobs.data.value) return [];
-  return [...jobs.data.value].sort((a, b) => {
-    const statusOrder: Record<string, number> = { Running: 0, Pending: 1, Complete: 2, Failed: 3 };
-    const aOrder = statusOrder[a.status] ?? 99;
-    const bOrder = statusOrder[b.status] ?? 99;
-    if (aOrder !== bOrder) return aOrder - bOrder;
-    return b.created_at - a.created_at;
-  });
+  return [...jobs.data.value]
+    .filter(j => !j.archived)
+    .sort((a, b) => {
+      const statusOrder: Record<string, number> = { Running: 0, Pending: 1, Complete: 2, Failed: 3 };
+      const aOrder = statusOrder[a.status] ?? 99;
+      const bOrder = statusOrder[b.status] ?? 99;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return b.created_at - a.created_at;
+    });
 });
+
+const archivedJobs = computed(() => {
+  if (!jobs.data.value) return [];
+  return jobs.data.value.filter(j => j.archived);
+});
+
+// Filtered audits based on issue filter
+const filteredAudits = computed(() => {
+  if (!auditResults.value?.audits) return [];
+  if (!issueFilter.value) return auditResults.value.audits;
+  return auditResults.value.audits.filter(audit =>
+    audit.issues.some(issue => getIssueKey(issue) === issueFilter.value)
+  );
+});
+
+// Issue metadata: labels, colors, descriptions, and fix suggestions
+const issueInfo: Record<string, {
+  label: string;
+  color: string;
+  description: string;
+  canAutoFix: boolean;
+  fixSuggestions: string[];
+}> = {
+  missing_audio_quality: {
+    label: 'No audio quality info',
+    color: 'warning',
+    description: 'The audio format, bitrate, and codec are unknown.',
+    canAutoFix: true,
+    fixSuggestions: [
+      'Re-analyze the content to detect audio quality automatically',
+    ],
+  },
+  missing_license: {
+    label: 'No license',
+    color: 'orange',
+    description: 'No license information specified for this release.',
+    canAutoFix: false,
+    fixSuggestions: [
+      'Add a Creative Commons or other license in Citadel Lens',
+      'Mark as "All Rights Reserved" if applicable',
+      'Check the original source for license info',
+    ],
+  },
+  missing_source: {
+    label: 'No source URL',
+    color: 'orange',
+    description: 'The original source of this content is not documented.',
+    canAutoFix: false,
+    fixSuggestions: [
+      'Add the original source URL (Archive.org, Bandcamp, etc.)',
+      'Mark as "Self" if you created this content',
+      'Mark as "Unknown" if the source cannot be determined',
+    ],
+  },
+  missing_opus_encodes: {
+    label: 'No Opus ladder',
+    color: 'info',
+    description: 'This release has lossless audio but no Opus transcodes for streaming.',
+    canAutoFix: true,
+    fixSuggestions: [
+      'Generate Opus quality ladder (192, 160, 128, 96, 64 kbps)',
+      'This enables adaptive streaming for different bandwidths',
+    ],
+  },
+  missing_cover_art: {
+    label: 'No cover art',
+    color: 'warning',
+    description: 'This release has no thumbnail or cover image.',
+    canAutoFix: true,
+    fixSuggestions: [
+      'Upload cover art in Citadel Lens',
+      'Re-fetch from Archive.org if available there',
+      'Extract embedded album art from audio files',
+    ],
+  },
+  unused_track_art: {
+    label: 'Unused track art',
+    color: 'grey',
+    description: 'Audio files contain embedded artwork that could be displayed.',
+    canAutoFix: true,
+    fixSuggestions: [
+      'Extract and use embedded track artwork',
+      'This is informational - not a critical issue',
+    ],
+  },
+  missing_description: {
+    label: 'No description',
+    color: 'grey',
+    description: 'This release has no description text.',
+    canAutoFix: true,
+    fixSuggestions: [
+      'Add a description in Citadel Lens',
+      'Re-fetch from Archive.org to get description',
+      'Copy from the original source if available',
+    ],
+  },
+  missing_year: {
+    label: 'No release year',
+    color: 'grey',
+    description: 'The release year is not set.',
+    canAutoFix: true,
+    fixSuggestions: [
+      'Set the release year in Citadel Lens',
+      'Re-fetch from Archive.org to get date metadata',
+      'Check audio file tags for year information',
+    ],
+  },
+  missing_credits: {
+    label: 'No credits',
+    color: 'grey',
+    description: 'No artist credits or attribution information.',
+    canAutoFix: false,
+    fixSuggestions: [
+      'Add credits and attribution in Citadel Lens',
+      'Required for proper licensing compliance',
+    ],
+  },
+  no_audio_files: {
+    label: 'No audio files',
+    color: 'error',
+    description: 'This release contains no playable audio files.',
+    canAutoFix: false,
+    fixSuggestions: [
+      'Check if content was uploaded correctly',
+      'Re-import the release from source',
+      'This may be a broken or incomplete upload',
+    ],
+  },
+  not_on_archivist: {
+    label: 'Not on Archivist',
+    color: 'error',
+    description: 'Content is on IPFS but not archived in Archivist for permanent storage.',
+    canAutoFix: true,
+    fixSuggestions: [
+      'Re-ingest into Archivist from the IPFS CID',
+      'This ensures content is permanently preserved',
+      'IPFS content may become unavailable without pinning',
+    ],
+  },
+  invalid_content_cid: {
+    label: 'Invalid content ID',
+    color: 'error',
+    description: 'The content CID is missing or invalid.',
+    canAutoFix: false,
+    fixSuggestions: [
+      'Re-upload the content to get a valid CID',
+      'Check if the release was created correctly',
+      'This release may need to be recreated',
+    ],
+  },
+  missing_track_metadata: {
+    label: 'No track info',
+    color: 'warning',
+    description: 'Track titles and metadata are not available.',
+    canAutoFix: true,
+    fixSuggestions: [
+      'Re-analyze content to extract track metadata from audio files',
+    ],
+  },
+  can_refetch_from_archive: {
+    label: 'Can refetch',
+    color: 'success',
+    description: 'This Archive.org import can be re-fetched for better metadata.',
+    canAutoFix: true,
+    fixSuggestions: [
+      'Re-fetch from Archive.org to update metadata',
+      'May get better cover art, description, or year',
+      'Will not affect existing audio content',
+    ],
+  },
+};
+
+// Helper accessors for templates
+const issueLabels = Object.fromEntries(
+  Object.entries(issueInfo).map(([k, v]) => [k, v.label])
+);
+const issueColors = Object.fromEntries(
+  Object.entries(issueInfo).map(([k, v]) => [k, v.color])
+);
 
 const itemAudioFiles = computed(() => {
   if (!itemDetails.data.value?.files) return [];
@@ -1672,6 +2272,36 @@ function startAudit() {
   currentView.value = 'queue';
 }
 
+// Watch for completed audit jobs and extract results
+// Note: Rust serde uses externally-tagged enums: { "Audit": { ... } } not { "type": "Audit", ... }
+watch(() => jobs.data.value, (jobList) => {
+  if (!jobList) return;
+
+  // Find the most recent completed audit job with results
+  // Check for both externally-tagged { Audit: {...} } and internally-tagged { type: 'Audit', ... }
+  const auditJob = jobList
+    .filter(j => {
+      if (j.job_type !== 'audit' || !j.result) return false;
+      // Handle externally-tagged enum from Rust serde
+      const auditData = (j.result as any).Audit || (j.result as any);
+      return auditData?.audits !== undefined;
+    })
+    .sort((a, b) => b.created_at - a.created_at)[0];
+
+  if (auditJob?.result) {
+    // Extract data from externally-tagged format
+    const auditData = (auditJob.result as any).Audit || auditJob.result;
+    if (auditData?.audits) {
+      auditResults.value = {
+        totalReleases: auditData.total_releases || 0,
+        releasesWithIssues: auditData.releases_with_issues || 0,
+        audits: auditData.audits,
+        issueCounts: auditData.issue_counts || {},
+      };
+    }
+  }
+}, { immediate: true });
+
 async function submitJob() {
   if (!newJob.value.target.trim()) {
     snackbarText.value = 'Target is required';
@@ -1767,6 +2397,336 @@ function stopJob(jobId: string) {
   snackbarText.value = 'Job cancelled';
   snackbarColor.value = 'warning';
   snackbar.value = true;
+}
+
+function archiveJob(jobId: string) {
+  archiveJobMutation.mutate(jobId);
+  snackbarText.value = 'Job archived';
+  snackbarColor.value = 'info';
+  snackbar.value = true;
+}
+
+// ============================================================================
+// Audit Helper Functions
+// ============================================================================
+
+function getIssueKey(issue: AuditIssue): string {
+  if (typeof issue === 'string') return issue;
+  if ('can_refetch_from_archive' in issue) return 'can_refetch_from_archive';
+  return 'unknown';
+}
+
+function getIssueLabel(issue: AuditIssue): string {
+  const key = getIssueKey(issue);
+  return issueLabels[key] || key;
+}
+
+function getIssueColor(issue: AuditIssue): string {
+  const key = getIssueKey(issue);
+  return issueColors[key] || 'grey';
+}
+
+function getArchiveOrgIdentifier(issue: AuditIssue): string | null {
+  if (typeof issue === 'object' && 'can_refetch_from_archive' in issue) {
+    return issue.can_refetch_from_archive.identifier;
+  }
+  return null;
+}
+
+// Check if CID is already on Archivist (zD or zE prefix)
+function isArchivistCid(cid: string | null | undefined): boolean {
+  if (!cid) return false;
+  return cid.startsWith('zD') || cid.startsWith('zE');
+}
+
+function toggleAuditExpand(releaseId: string) {
+  if (expandedAudits.value.has(releaseId)) {
+    expandedAudits.value.delete(releaseId);
+  } else {
+    expandedAudits.value.add(releaseId);
+  }
+  expandedAudits.value = new Set(expandedAudits.value);
+}
+
+function filterByIssue(issueKey: string | null) {
+  issueFilter.value = issueKey;
+}
+
+function showIssueFix(issue: AuditIssue, audit: ReleaseAudit) {
+  const key = getIssueKey(issue);
+  const archiveOrgId = getArchiveOrgIdentifier(issue);
+  selectedIssue.value = { key, audit, archiveOrgId };
+  issueFixDialog.value = true;
+}
+
+function getIssueInfo(key: string) {
+  return issueInfo[key] || {
+    label: key,
+    color: 'grey',
+    description: 'Unknown issue type.',
+    canAutoFix: false,
+    fixSuggestions: ['Contact support for assistance.'],
+  };
+}
+
+// Get auto-fixable issues for a release
+function getAutoFixableIssues(audit: ReleaseAudit): AuditIssue[] {
+  return audit.issues.filter(issue => {
+    const key = getIssueKey(issue);
+    const info = issueInfo[key];
+    if (!info?.canAutoFix) return false;
+
+    // Check if we have the prerequisites to fix
+    switch (key) {
+      case 'missing_audio_quality':
+      case 'missing_track_metadata':
+      case 'not_on_archivist':
+        return !!audit.contentCid;
+      case 'can_refetch_from_archive':
+      case 'missing_description':
+      case 'missing_year':
+      case 'missing_cover_art':
+        return !!audit.archiveOrgId || !!getArchiveOrgIdentifier(issue);
+      case 'missing_opus_encodes':
+        return !!audit.releaseId;
+      default:
+        return false;
+    }
+  });
+}
+
+// Get total auto-fixable count across all releases
+function getTotalAutoFixableCount(): number {
+  if (!auditResults.value?.audits) return 0;
+  return auditResults.value.audits.reduce((total, audit) => {
+    return total + getAutoFixableIssues(audit).length;
+  }, 0);
+}
+
+// Fix all auto-fixable issues for a single release
+async function fixAllForRelease(audit: ReleaseAudit) {
+  const fixable = getAutoFixableIssues(audit);
+  let fixCount = 0;
+  let didAnalyze = false;
+  let didSourceImport = false;
+  let didArchiveRefetch = false;
+
+  for (const issue of fixable) {
+    const key = getIssueKey(issue);
+
+    // Metadata-only fixes: Use 'analyze' if content is already on Archivist (efficient, no re-upload)
+    if ((key === 'missing_audio_quality' || key === 'missing_track_metadata')
+        && audit.contentCid && isArchivistCid(audit.contentCid) && !didAnalyze) {
+      createJobMutation.mutate({
+        job_type: 'analyze',
+        target: `source:${audit.contentCid}`,
+      });
+      fixCount++;
+      didAnalyze = true; // Only one analyze per release
+    }
+    // Not on Archivist: Use 'source_import' to migrate from IPFS to Archivist
+    else if (key === 'not_on_archivist' && audit.contentCid && !didSourceImport) {
+      createJobMutation.mutate({
+        job_type: 'source_import',
+        target: `source:${audit.contentCid}`,
+      });
+      fixCount++;
+      didSourceImport = true; // Only one source import per release
+    }
+    // Archive.org refetch fixes: can_refetch, missing_description, missing_year, missing_cover_art
+    else if ((key === 'can_refetch_from_archive' || key === 'missing_description' ||
+              key === 'missing_year' || key === 'missing_cover_art') &&
+             (audit.archiveOrgId || getArchiveOrgIdentifier(issue)) && !didArchiveRefetch) {
+      const archiveId = getArchiveOrgIdentifier(issue) || audit.archiveOrgId;
+      createJobMutation.mutate({
+        job_type: 'import',
+        target: `archive.org:${archiveId}`,
+      });
+      fixCount++;
+      didArchiveRefetch = true; // Only one refetch per release
+    }
+    // Transcode fixes: missing_opus_encodes
+    else if (key === 'missing_opus_encodes' && audit.releaseId) {
+      createJobMutation.mutate({
+        job_type: 'transcode',
+        target: `release:${audit.releaseId}`,
+      });
+      fixCount++;
+    }
+  }
+
+  if (fixCount > 0) {
+    snackbarText.value = `Created ${fixCount} fix job(s) for "${audit.title}"`;
+    snackbarColor.value = 'success';
+    snackbar.value = true;
+  }
+}
+
+// Fix all auto-fixable issues across all releases
+async function fixAllReleases() {
+  if (!auditResults.value?.audits) return;
+
+  let totalJobs = 0;
+  const processedAnalyzeCids = new Set<string>(); // For analyze jobs (Archivist CIDs)
+  const processedSourceCids = new Set<string>(); // For source_import jobs (IPFS CIDs)
+  const processedArchiveIds = new Set<string>();
+  const processedTranscodes = new Set<string>();
+
+  for (const audit of auditResults.value.audits) {
+    const fixable = getAutoFixableIssues(audit);
+
+    for (const issue of fixable) {
+      const key = getIssueKey(issue);
+
+      // Metadata-only fixes: Use 'analyze' for Archivist CIDs (efficient, no re-upload)
+      if ((key === 'missing_audio_quality' || key === 'missing_track_metadata')
+          && audit.contentCid && isArchivistCid(audit.contentCid)
+          && !processedAnalyzeCids.has(audit.contentCid)) {
+        processedAnalyzeCids.add(audit.contentCid);
+        createJobMutation.mutate({
+          job_type: 'analyze',
+          target: `source:${audit.contentCid}`,
+        });
+        totalJobs++;
+      }
+      // Not on Archivist: Use 'source_import' to migrate from IPFS (dedupe by CID)
+      else if (key === 'not_on_archivist' && audit.contentCid
+               && !processedSourceCids.has(audit.contentCid)) {
+        processedSourceCids.add(audit.contentCid);
+        createJobMutation.mutate({
+          job_type: 'source_import',
+          target: `source:${audit.contentCid}`,
+        });
+        totalJobs++;
+      }
+      // Archive.org refetch fixes (dedupe by archive ID)
+      else if ((key === 'can_refetch_from_archive' || key === 'missing_description' ||
+                key === 'missing_year' || key === 'missing_cover_art')) {
+        const archiveId = getArchiveOrgIdentifier(issue) || audit.archiveOrgId;
+        if (archiveId && !processedArchiveIds.has(archiveId)) {
+          processedArchiveIds.add(archiveId);
+          createJobMutation.mutate({
+            job_type: 'import',
+            target: `archive.org:${archiveId}`,
+          });
+          totalJobs++;
+        }
+      }
+      // Transcode fixes (dedupe by release ID)
+      else if (key === 'missing_opus_encodes' && audit.releaseId && !processedTranscodes.has(audit.releaseId)) {
+        processedTranscodes.add(audit.releaseId);
+        createJobMutation.mutate({
+          job_type: 'transcode',
+          target: `release:${audit.releaseId}`,
+        });
+        totalJobs++;
+      }
+    }
+  }
+
+  if (totalJobs > 0) {
+    snackbarText.value = `Created ${totalJobs} fix jobs for all releases`;
+    snackbarColor.value = 'success';
+    snackbar.value = true;
+  }
+}
+
+async function runIssueFix(action: string) {
+  if (!selectedIssue.value) return;
+
+  const { key, audit, archiveOrgId } = selectedIssue.value;
+
+  switch (action) {
+    case 'reingest_archivist':
+      // Use 'analyze' for metadata-only fixes if already on Archivist (efficient, no re-upload)
+      // Use 'source_import' if content needs to be migrated from IPFS
+      if (audit?.contentCid) {
+        const isMetadataOnly = key === 'missing_audio_quality' || key === 'missing_track_metadata';
+        const alreadyOnArchivist = isArchivistCid(audit.contentCid);
+
+        if (isMetadataOnly && alreadyOnArchivist) {
+          // Efficient: Just analyze, don't re-upload
+          createJobMutation.mutate({
+            job_type: 'analyze',
+            target: `source:${audit.contentCid}`,
+          });
+          snackbarText.value = `Analyzing ${audit.title}...`;
+        } else {
+          // Need to migrate/re-upload
+          createJobMutation.mutate({
+            job_type: 'source_import',
+            target: `source:${audit.contentCid}`,
+          });
+          snackbarText.value = `Re-ingesting ${audit.title}...`;
+        }
+        snackbarColor.value = 'success';
+        snackbar.value = true;
+        issueFixDialog.value = false;
+      }
+      break;
+
+    case 'refetch_archive_org':
+      // Re-import from Archive.org
+      const archiveId = archiveOrgId || audit?.archiveOrgId;
+      if (archiveId) {
+        createJobMutation.mutate({
+          job_type: 'import',
+          target: `archive.org:${archiveId}`,
+        });
+        snackbarText.value = `Re-fetching ${audit?.title} from Archive.org...`;
+        snackbarColor.value = 'success';
+        snackbar.value = true;
+        issueFixDialog.value = false;
+      }
+      break;
+
+    case 'generate_opus':
+      // Create transcode job
+      if (audit?.releaseId) {
+        createJobMutation.mutate({
+          job_type: 'transcode',
+          target: `release:${audit.releaseId}`,
+        });
+        snackbarText.value = `Generating Opus ladder for ${audit.title}...`;
+        snackbarColor.value = 'success';
+        snackbar.value = true;
+        issueFixDialog.value = false;
+      }
+      break;
+  }
+}
+
+// Helper to get job result type (handles Rust's externally-tagged enum format)
+// Rust serde: { "Import": {...} } vs internally-tagged: { "type": "Import", ... }
+function getResultType(result: any): string | null {
+  if (!result) return null;
+  // Check for externally-tagged (Rust serde default)
+  const keys = Object.keys(result);
+  if (keys.length === 1 && ['Import', 'Audit', 'Transcode', 'Migrate', 'SourceImport', 'Analyze', 'Error'].includes(keys[0])) {
+    return keys[0];
+  }
+  // Check for internally-tagged
+  return result.type || null;
+}
+
+// Helper to get job result data (unwraps externally-tagged format)
+function getResultData(result: any): any {
+  if (!result) return null;
+  const type = getResultType(result);
+  if (type && result[type]) {
+    return result[type];
+  }
+  return result;
+}
+
+function clearArchivedJobs() {
+  clearArchivedMutation.mutate(undefined, {
+    onSuccess: (data) => {
+      snackbarText.value = `Cleared ${data.deleted} archived job${data.deleted === 1 ? '' : 's'}`;
+      snackbarColor.value = 'success';
+      snackbar.value = true;
+    },
+  });
 }
 
 function formatTimestamp(ts: number): string {
@@ -1938,5 +2898,52 @@ async function importFromCid() {
 
 .clickable-card {
   cursor: pointer;
+}
+
+/* Issue summary grid */
+.issue-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.issue-summary-card {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.issue-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Issues list */
+.issues-list .issue-card {
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.issues-list .issue-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Gap utility for older browsers */
+.gap-1 {
+  gap: 4px;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+/* Clickable issue chips */
+.issue-chip {
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.issue-chip:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 </style>

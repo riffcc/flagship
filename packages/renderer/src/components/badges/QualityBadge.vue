@@ -1,20 +1,44 @@
 <template>
-  <div
+  <v-menu
     v-if="displayText"
-    :class="['quality-badge', { 'quality-badge--clickable': clickable }]"
-    :style="badgeStyle"
-    @click="handleClick"
+    v-model="menuOpen"
+    :disabled="!hasMultipleQualities"
+    location="bottom"
+    :close-on-content-click="true"
   >
-    {{ displayText }}
-  </div>
+    <template #activator="{ props: menuProps }">
+      <div
+        v-bind="hasMultipleQualities ? menuProps : {}"
+        :class="['quality-badge', { 'quality-badge--clickable': hasMultipleQualities || clickable }]"
+        :style="badgeStyle"
+        @click="handleClick"
+      >
+        {{ displayText }}
+        <span v-if="hasMultipleQualities" class="quality-badge__chevron">&#9662;</span>
+      </div>
+    </template>
+
+    <v-list density="compact" class="quality-menu">
+      <v-list-subheader>Switch Quality</v-list-subheader>
+      <v-list-item
+        v-for="tier in sortedTiers"
+        :key="tier.name"
+        :active="tier.name === currentTierName"
+        @click="selectQuality(tier.name, tier.cid)"
+      >
+        <v-list-item-title>{{ formatTierName(tier.name) }}</v-list-item-title>
+      </v-list-item>
+    </v-list>
+  </v-menu>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { AudioQuality } from '/@/types/badges';
+import { computed, ref } from 'vue';
+import type { AudioQuality, QualityLadder } from '/@/types/badges';
 
 const props = withDefaults(defineProps<{
   quality?: AudioQuality | null;
+  qualityLadder?: QualityLadder | null;
   clickable?: boolean;
   playerMode?: boolean; // Desaturated when in player
 }>(), {
@@ -24,7 +48,81 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   click: [];
+  'quality-change': [tierName: string, cid: string];
 }>();
+
+const menuOpen = ref(false);
+
+/**
+ * Get sorted tiers from the quality ladder
+ */
+const sortedTiers = computed(() => {
+  if (!props.qualityLadder) return [];
+
+  const tierPriority: Record<string, number> = {
+    'lossless': 100,
+    'opus': 95,
+    'mp3_320': 85,
+    'mp3_v0': 84,
+    'mp3_256': 75,
+    'ogg': 73,
+    'mp3_vbr': 65,
+    'mp3_192': 50,
+    'aac': 30,
+  };
+
+  return Object.entries(props.qualityLadder)
+    .map(([name, cid]) => ({ name, cid }))
+    .sort((a, b) => (tierPriority[b.name] || 0) - (tierPriority[a.name] || 0));
+});
+
+/**
+ * Check if we have multiple quality options
+ */
+const hasMultipleQualities = computed(() => sortedTiers.value.length > 1);
+
+/**
+ * Get the current tier name from the quality format
+ */
+const currentTierName = computed(() => {
+  if (!props.quality?.format) return null;
+
+  const format = props.quality.format;
+  const bitrate = props.quality.bitrate;
+
+  if (format === 'flac' || format === 'wav') return 'lossless';
+  if (format === 'opus') return 'opus';
+  if (format === 'vorbis') return 'ogg';
+  if (format === 'aac') return 'aac';
+
+  if (format === 'mp3') {
+    if (bitrate && bitrate >= 320) return 'mp3_320';
+    if (bitrate && bitrate >= 256) return 'mp3_256';
+    if (bitrate && bitrate >= 192) return 'mp3_192';
+    if (props.quality.codec?.includes('VBR')) return 'mp3_v0';
+    return 'mp3_vbr';
+  }
+
+  return null;
+});
+
+/**
+ * Format tier name for display
+ */
+function formatTierName(tierName: string): string {
+  const names: Record<string, string> = {
+    'lossless': 'FLAC (Lossless)',
+    'opus': 'Opus',
+    'mp3_320': 'MP3 320',
+    'mp3_v0': 'MP3 V0',
+    'mp3_256': 'MP3 256',
+    'ogg': 'Ogg Vorbis',
+    'mp3_vbr': 'MP3 VBR',
+    'mp3_192': 'MP3 192',
+    'aac': 'AAC',
+  };
+  return names[tierName] || tierName.toUpperCase();
+}
 
 /**
  * Get display text based on quality metadata
@@ -63,6 +161,16 @@ const displayText = computed(() => {
     return bitrate ? `Opus ${bitrate}` : 'Opus';
   }
 
+  // Vorbis
+  if (format === 'vorbis') {
+    return 'Vorbis';
+  }
+
+  // WAV
+  if (format === 'wav') {
+    return 'WAV';
+  }
+
   // Generic format
   if (format && format !== 'other') {
     return format.toUpperCase();
@@ -90,9 +198,14 @@ const borderColor = computed(() => {
     return '#9333ea'; // purple-600
   }
 
-  // High quality: FLAC - Golden yellow
-  if (format === 'flac') {
+  // High quality: FLAC/WAV - Golden yellow
+  if (format === 'flac' || format === 'wav') {
     return '#eab308'; // yellow-500
+  }
+
+  // Opus - Green (modern efficient codec)
+  if (format === 'opus') {
+    return '#22c55e'; // green-500
   }
 
   // High bitrate MP3/AAC: 320kbps - Orange
@@ -108,6 +221,11 @@ const borderColor = computed(() => {
   // Medium quality: 192-255kbps - Cyan
   if (bitrate && bitrate >= 192) {
     return '#06b6d4'; // cyan-500
+  }
+
+  // Vorbis - Teal
+  if (format === 'vorbis') {
+    return '#14b8a6'; // teal-500
   }
 
   // Lower quality - Grey
@@ -136,9 +254,13 @@ const badgeStyle = computed(() => {
 });
 
 function handleClick() {
-  if (props.clickable) {
+  if (props.clickable && !hasMultipleQualities.value) {
     emit('click');
   }
+}
+
+function selectQuality(tierName: string, cid: string) {
+  emit('quality-change', tierName, cid);
 }
 </script>
 
@@ -146,6 +268,7 @@ function handleClick() {
 .quality-badge {
   display: inline-flex;
   align-items: center;
+  gap: 2px;
   padding: 4px 4px 3px 4px;
   font-size: 9px;
   font-weight: 600;
@@ -156,6 +279,11 @@ function handleClick() {
   line-height: 1;
   opacity: 0.8;
   transition: opacity 0.2s ease, filter 0.2s ease, brightness 0.15s ease;
+}
+
+.quality-badge__chevron {
+  font-size: 7px;
+  opacity: 0.7;
 }
 
 .quality-badge--clickable {
@@ -169,5 +297,9 @@ function handleClick() {
 
 .quality-badge--clickable:active {
   filter: saturate(1) brightness(1.3) !important; /* Brighten on click */
+}
+
+.quality-menu {
+  min-width: 140px;
 }
 </style>
