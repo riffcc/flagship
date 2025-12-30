@@ -206,9 +206,9 @@ const cardSubtitle = computed(() => {
   const categoryId = props.item.categoryId;
   const metadata = props.item.metadata;
 
-  // Music: show artist name
+  // Music: show artist name (prefer 'artist', fallback to 'author' for legacy)
   if (categoryId === 'music') {
-    return props.item.metadata?.['author'] ?? '';
+    return props.item.metadata?.['artist'] ?? props.item.metadata?.['author'] ?? '';
   }
 
   // Movies: no subtitle (no director/creator)
