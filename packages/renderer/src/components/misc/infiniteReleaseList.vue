@@ -53,6 +53,7 @@ const props = defineProps<{
   categorySlug?: string;    // Category slug (e.g., 'music', 'tv-shows') to filter by
   searchOptions?: SearchOptions;
   pageSize?: number;
+  items?: ReleaseItem[];    // Optional external items (bypasses query)
 }>();
 
 defineEmits<{
@@ -63,8 +64,9 @@ defineEmits<{
 const PAGE_SIZE = props.pageSize || 60; // Show many items to fill ultrawide screens
 const currentPage = ref(1);
 
-// Fetch releases with the configured batch size (100)
-const { data: releases, isLoading } = useGetReleasesQuery();
+// Fetch releases with the configured batch size (100) - skip if external items provided
+const { data: releases, isLoading: queryLoading } = useGetReleasesQuery();
+const isLoading = computed(() => props.items ? false : queryLoading.value);
 
 // Get content categories to check if this is a TV category
 const { data: contentCategories } = useContentCategoriesQuery();
@@ -92,6 +94,11 @@ watch(structures, (newStructures) => {
 
 // Filter releases client-side if we have a category filter
 const filteredReleases = computed(() => {
+  // Use external items if provided (bypass query)
+  if (props.items) {
+    return props.items;
+  }
+
   if (!releases.value) return [];
 
   let categoryReleases = releases.value;
