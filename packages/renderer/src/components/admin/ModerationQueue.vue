@@ -41,15 +41,32 @@
             Paged
           </v-btn>
         </v-btn-toggle>
+        <!-- Clickable filter stats -->
         <div class="queue-stats">
-          <span class="stat">
+          <button
+            class="stat stat--clickable"
+            :class="{ 'stat--active': statusFilter === 'pending' }"
+            @click="toggleFilter('pending')"
+          >
+            <v-icon size="small" color="warning">$clock-outline</v-icon>
+            {{ stats.pending }} pending
+          </button>
+          <button
+            class="stat stat--clickable"
+            :class="{ 'stat--active': statusFilter === 'approved' }"
+            @click="toggleFilter('approved')"
+          >
             <v-icon size="small" color="success">$check-circle</v-icon>
             {{ stats.approved }} approved
-          </span>
-          <span class="stat">
+          </button>
+          <button
+            class="stat stat--clickable"
+            :class="{ 'stat--active': statusFilter === 'rejected' }"
+            @click="toggleFilter('rejected')"
+          >
             <v-icon size="small" color="error">$close-circle</v-icon>
             {{ stats.rejected }} rejected
-          </span>
+          </button>
         </div>
       </div>
     </div>
@@ -84,14 +101,87 @@
       {{ error.message }}
     </v-alert>
 
+    <!-- Selection toolbar -->
+    <v-slide-y-transition>
+      <div
+        v-if="selectedIds.size > 0"
+        class="selection-toolbar"
+      >
+        <div class="selection-info">
+          <v-btn
+            icon
+            variant="text"
+            size="small"
+            @click="clearSelection"
+          >
+            <v-icon>$close</v-icon>
+          </v-btn>
+          <span class="ml-2">{{ selectedIds.size }} selected</span>
+          <v-btn
+            variant="text"
+            size="small"
+            class="ml-2"
+            @click="selectAll"
+          >
+            Select all ({{ filteredReleases.length }})
+          </v-btn>
+        </div>
+        <div class="selection-actions">
+          <v-btn
+            color="success"
+            variant="tonal"
+            size="small"
+            :loading="isBulkProcessing"
+            @click="bulkApprove"
+          >
+            <v-icon class="mr-1">$check</v-icon>
+            Approve selected
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="tonal"
+            size="small"
+            class="ml-2"
+            :loading="isBulkProcessing"
+            @click="bulkRejectDialog = true"
+          >
+            <v-icon class="mr-1">$close</v-icon>
+            Reject selected
+          </v-btn>
+        </div>
+      </div>
+    </v-slide-y-transition>
+
+    <!-- Filter indicator -->
+    <v-chip
+      v-if="statusFilter !== 'all'"
+      closable
+      class="mb-4"
+      @click:close="statusFilter = 'all'"
+    >
+      Showing: {{ statusFilter }}
+    </v-chip>
+
     <!-- Empty state -->
     <div
-      v-if="pendingReleases.length === 0 && !isLoading"
+      v-if="filteredReleases.length === 0 && !isLoading"
       class="empty-state"
     >
       <v-icon size="64" color="grey-lighten-1">$check-decagram</v-icon>
-      <p class="text-h6 mt-4">All caught up!</p>
-      <p class="text-caption text-grey">No pending releases to review.</p>
+      <p class="text-h6 mt-4">
+        {{ statusFilter === 'all' ? 'All caught up!' : `No ${statusFilter} releases` }}
+      </p>
+      <p class="text-caption text-grey">
+        {{ statusFilter === 'all' ? 'No pending releases to review.' : `No releases with status "${statusFilter}".` }}
+      </p>
+      <v-btn
+        v-if="statusFilter !== 'all'"
+        variant="text"
+        class="mt-2"
+        @click="statusFilter = 'all'"
+      >
+        Show all releases
+      </v-btn>
     </div>
 
     <!-- Loading state -->
@@ -103,20 +193,52 @@
         indeterminate
         color="primary"
       />
-      <p class="text-caption mt-2">Loading pending releases...</p>
+      <p class="text-caption mt-2">Loading releases...</p>
     </div>
 
-    <!-- Endless grid view - reuses InfiniteReleaseList -->
-    <infinite-release-list
+    <!-- Endless grid view with selection support -->
+    <div
       v-else-if="viewMode === 'endless'"
-      :items="pendingReleasesAsItems"
-      @release-click="(item) => openPreviewDialogById(item.id)"
-    />
+      class="selectable-grid"
+      :class="{ 'selection-mode': selectionMode }"
+    >
+      <div
+        v-for="item in filteredReleasesAsItems"
+        :key="item.id"
+        class="selectable-item"
+        :class="{
+          'selectable-item--selected': selectedIds.has(item.id),
+        }"
+        @click="handleItemClick(item.id, $event)"
+        @mousedown="startLongPress(item.id)"
+        @mouseup="cancelLongPress"
+        @mouseleave="cancelLongPress"
+        @touchstart.passive="startLongPress(item.id)"
+        @touchend="cancelLongPress"
+        @touchcancel="cancelLongPress"
+      >
+        <!-- Selection checkbox overlay -->
+        <div
+          v-if="selectionMode"
+          class="selection-checkbox"
+        >
+          <v-checkbox-btn
+            :model-value="selectedIds.has(item.id)"
+            color="primary"
+            @click.stop="toggleSelection(item.id)"
+          />
+        </div>
+        <content-card
+          :item="item"
+          @click.stop="handleItemClick(item.id, $event)"
+        />
+      </div>
+    </div>
 
     <!-- Paged data table view - reuses ContentManagement -->
     <content-management
       v-else
-      :items="pendingReleasesAsItems"
+      :items="filteredReleasesAsItems"
       :loading="isLoading"
       :headers="moderationHeaders"
       hide-default-actions
@@ -282,16 +404,54 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Bulk reject dialog -->
+    <v-dialog
+      v-model="bulkRejectDialog"
+      max-width="400"
+    >
+      <v-card>
+        <v-card-title>Reject {{ selectedIds.size }} Releases</v-card-title>
+        <v-card-text>
+          <p class="mb-4">
+            Are you sure you want to reject {{ selectedIds.size }} selected releases?
+          </p>
+          <v-textarea
+            v-model="bulkRejectReason"
+            label="Reason (optional, applies to all)"
+            rows="3"
+            variant="outlined"
+            hide-details
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="bulkRejectDialog = false"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            :loading="isBulkProcessing"
+            @click="confirmBulkReject"
+          >
+            Reject All
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, reactive } from 'vue';
 import { useAdminWebSocket, type ReleaseInfo } from '/@/composables/useAdminWebSocket';
 import { useApproveReleaseMutation, useRejectReleaseMutation } from '/@/plugins/lensService/hooks';
 import { parseUrlOrCid } from '/@/utils';
-import InfiniteReleaseList from '/@/components/misc/infiniteReleaseList.vue';
 import ContentManagement from '/@/components/admin/contentManagement.vue';
+import ContentCard from '/@/components/misc/contentCard.vue';
 import type { ReleaseItem } from '/@/types';
 
 // WebSocket connection
@@ -312,6 +472,20 @@ const rejectMutation = useRejectReleaseMutation();
 // View mode state
 const viewMode = ref<'endless' | 'paged'>('endless');
 
+// Filter state
+const statusFilter = ref<'all' | 'pending' | 'approved' | 'rejected'>('all');
+
+// Selection state
+const selectedIds = reactive(new Set<string>());
+const selectionMode = ref(false);
+let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+const LONG_PRESS_DURATION = 500; // ms
+
+// Bulk action state
+const bulkRejectDialog = ref(false);
+const bulkRejectReason = ref('');
+const isBulkProcessing = ref(false);
+
 // Custom headers for moderation queue (passed to ContentManagement)
 const moderationHeaders = [
   { title: '', key: 'thumbnail', sortable: false, width: '80px' },
@@ -331,9 +505,17 @@ const isRejecting = ref(false);
 const previewDialogOpen = ref(false);
 const previewingRelease = ref<ReleaseInfo | null>(null);
 
-// Map WebSocket ReleaseInfo to ReleaseItem format for ContentCard compatibility
-const pendingReleasesAsItems = computed<ReleaseItem[]>(() => {
-  return pendingReleases.value.map(r => ({
+// Filter releases by status
+const filteredReleases = computed(() => {
+  if (statusFilter.value === 'all') {
+    return pendingReleases.value;
+  }
+  return pendingReleases.value.filter(r => r.status === statusFilter.value);
+});
+
+// Map filtered releases to ReleaseItem format for ContentCard compatibility
+const filteredReleasesAsItems = computed<ReleaseItem[]>(() => {
+  return filteredReleases.value.map(r => ({
     id: r.id,
     name: r.name,
     categoryId: r.categoryId,
@@ -347,6 +529,116 @@ const pendingReleasesAsItems = computed<ReleaseItem[]>(() => {
     },
   } as ReleaseItem));
 });
+
+// Toggle filter
+function toggleFilter(filter: 'pending' | 'approved' | 'rejected') {
+  if (statusFilter.value === filter) {
+    statusFilter.value = 'all';
+  } else {
+    statusFilter.value = filter;
+  }
+  // Clear selection when changing filters
+  clearSelection();
+}
+
+// Selection functions
+function toggleSelection(id: string) {
+  if (selectedIds.has(id)) {
+    selectedIds.delete(id);
+    if (selectedIds.size === 0) {
+      selectionMode.value = false;
+    }
+  } else {
+    selectedIds.add(id);
+  }
+}
+
+function selectAll() {
+  filteredReleases.value.forEach(r => selectedIds.add(r.id));
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  selectionMode.value = false;
+}
+
+function handleItemClick(id: string, event: MouseEvent) {
+  if (selectionMode.value) {
+    toggleSelection(id);
+  } else {
+    openPreviewDialogById(id);
+  }
+}
+
+function startLongPress(id: string) {
+  cancelLongPress();
+  longPressTimer = setTimeout(() => {
+    // Enter selection mode and select this item
+    selectionMode.value = true;
+    selectedIds.add(id);
+    // Provide haptic feedback if available
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
+    }
+  }, LONG_PRESS_DURATION);
+}
+
+function cancelLongPress() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+}
+
+// Bulk actions
+async function bulkApprove() {
+  if (selectedIds.size === 0) return;
+
+  isBulkProcessing.value = true;
+  const ids = Array.from(selectedIds);
+
+  try {
+    // Process in parallel, but not too many at once
+    const batchSize = 5;
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batch = ids.slice(i, i + batchSize);
+      await Promise.all(batch.map(id => approveMutation.mutateAsync(id)));
+    }
+    clearSelection();
+  } catch (err) {
+    console.error('Failed to bulk approve:', err);
+  } finally {
+    isBulkProcessing.value = false;
+  }
+}
+
+async function confirmBulkReject() {
+  if (selectedIds.size === 0) return;
+
+  isBulkProcessing.value = true;
+  const ids = Array.from(selectedIds);
+
+  try {
+    // Process in parallel, but not too many at once
+    const batchSize = 5;
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batch = ids.slice(i, i + batchSize);
+      await Promise.all(batch.map(id =>
+        rejectMutation.mutateAsync({
+          releaseId: id,
+          reason: bulkRejectReason.value || undefined,
+        })
+      ));
+    }
+    clearSelection();
+    bulkRejectDialog.value = false;
+    bulkRejectReason.value = '';
+  } catch (err) {
+    console.error('Failed to bulk reject:', err);
+  } finally {
+    isBulkProcessing.value = false;
+  }
+}
 
 // Connect on mount
 onMounted(() => {
@@ -488,6 +780,81 @@ async function confirmReject() {
   gap: 4px;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.7);
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.stat--clickable {
+  cursor: pointer;
+}
+
+.stat--clickable:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stat--active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+/* Selection toolbar */
+.selection-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(var(--v-theme-primary), 0.15);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.selection-info {
+  display: flex;
+  align-items: center;
+}
+
+.selection-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* Selectable grid */
+.selectable-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.selectable-item {
+  position: relative;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.selectable-item:hover {
+  transform: translateY(-2px);
+}
+
+.selection-mode .selectable-item {
+  user-select: none;
+}
+
+.selectable-item--selected {
+  box-shadow: 0 0 0 3px rgba(var(--v-theme-primary), 0.8);
+}
+
+.selection-checkbox {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
 }
 
 .empty-state,
