@@ -62,7 +62,7 @@
             <span v-else>{{ artistName }}</span>
           </p>
           <p>{{ albumFiles.length || metadata?.trackCount || 0 }} Songs<span v-if="totalDuration"> • {{ totalDuration }}</span></p>
-          <p v-if="metadata?.releaseYear">{{ metadata.releaseYear }}</p>
+          <p v-if="metadata?.releaseYear">{{ displayYear(metadata.releaseYear) }}</p>
 
           <!-- Quality and License Badges -->
           <div class="d-flex mt-2" style="gap: 3.5px">
@@ -253,14 +253,13 @@ const pendingChanges = computed(() => {
 
     // Count new durations
     if (track.duration && (!stored || !stored.duration)) newDurations++;
-    // Count title fixes
+    // Count title fixes (from ID3 data, which is same source as trackWarnings)
     if (id3?.title && (!stored || stored.title !== id3.title)) titleFixes++;
     // Count artist fixes
     if (id3?.artist && (!stored || stored.artist !== id3.artist)) artistFixes++;
   }
 
-  // Add warnings as title fixes too
-  titleFixes += trackWarnings.value.size;
+  // Note: trackWarnings contains the same mismatches as id3TrackData, don't double-count
 
   if (newDurations > 0) changes.push(`${newDurations} duration${newDurations > 1 ? 's' : ''}`);
   if (titleFixes > 0) changes.push(`${titleFixes} title${titleFixes > 1 ? 's' : ''}`);
@@ -783,6 +782,24 @@ function formatTime(seconds: number): string {
 
   // Otherwise use traditional minute:second format
   return `${totalMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Display year from a date string (extracts just the year).
+ * Handles formats like "2005-03-19 00:00:00", "2005-03-19", or just "2005".
+ */
+function displayYear(dateStr: string | number): string {
+  if (!dateStr) return '';
+  const str = String(dateStr);
+
+  // Try parsing as a date
+  const date = new Date(str);
+  if (!isNaN(date.getTime())) {
+    return String(date.getFullYear());
+  }
+
+  // Fallback: return as-is if not parseable
+  return str;
 }
 
 async function loadTrackMetadataAndVerify() {
