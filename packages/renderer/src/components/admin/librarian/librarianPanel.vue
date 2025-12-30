@@ -664,14 +664,23 @@
 
               <!-- Action Buttons -->
               <template #append>
-                <!-- Play button for pending/failed jobs -->
+                <!-- Play button for pending jobs -->
                 <v-btn
-                  v-if="job.status === 'Pending' || job.status === 'Failed'"
+                  v-if="job.status === 'Pending'"
                   icon="$play"
                   variant="text"
                   size="small"
                   color="success"
                   @click.stop="startJob(job.id)"
+                ></v-btn>
+                <!-- Retry button for failed jobs -->
+                <v-btn
+                  v-if="job.status === 'Failed'"
+                  icon="$refresh"
+                  variant="text"
+                  size="small"
+                  color="warning"
+                  @click.stop="retryJob(job.id)"
                 ></v-btn>
                 <!-- Stop button for running jobs -->
                 <v-btn
@@ -1078,12 +1087,20 @@
           <v-card-actions>
             <v-spacer></v-spacer>
             <v-btn
-              v-if="selectedJob.status === 'Pending' || selectedJob.status === 'Failed'"
+              v-if="selectedJob.status === 'Pending'"
               color="success"
               prepend-icon="$play"
               @click="startJob(selectedJob.id); jobDetailsDialog = false"
             >
-              {{ selectedJob.status === 'Failed' ? 'Retry' : 'Start' }}
+              Start
+            </v-btn>
+            <v-btn
+              v-if="selectedJob.status === 'Failed'"
+              color="warning"
+              prepend-icon="$refresh"
+              @click="retryJob(selectedJob.id); jobDetailsDialog = false"
+            >
+              Retry
             </v-btn>
             <v-btn
               v-if="selectedJob.status === 'Running'"
@@ -1145,6 +1162,7 @@ import {
   useCreateJob,
   useStartJob,
   useStopJob,
+  useRetryJob,
   useCreateSourceImport,
   fetchAllCollectionItems,
   getThumbnailUrl,
@@ -1174,6 +1192,7 @@ const jobs = useLibrarianJobs();
 const createJobMutation = useCreateJob();
 const startJobMutation = useStartJob();
 const stopJobMutation = useStopJob();
+const retryJobMutation = useRetryJob();
 const sourceImportMutation = useCreateSourceImport();
 
 // Collection/Search
@@ -1732,6 +1751,13 @@ function showJobDetails(job: Job) {
 function startJob(jobId: string) {
   startJobMutation.mutate(jobId);
   snackbarText.value = 'Job started';
+  snackbarColor.value = 'success';
+  snackbar.value = true;
+}
+
+function retryJob(jobId: string) {
+  retryJobMutation.mutate(jobId);
+  snackbarText.value = 'Job retrying';
   snackbarColor.value = 'success';
   snackbar.value = true;
 }

@@ -144,6 +144,7 @@ export interface Job {
   claim_count: number;
   executor: string | null;
   result: JobResult | null;
+  retry_count: number;
   // Progress fields (set during execution)
   progress?: number;
   progress_message?: string;
@@ -355,6 +356,23 @@ export function useStopJob() {
     mutationFn: (jobId: string) =>
       librarianFetch<Job>(`/api/v1/jobs/${jobId}/stop`, {
         method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['librarian', 'jobs'] });
+    },
+  });
+}
+
+/**
+ * Retry a failed or completed job
+ */
+export function useRetryJob() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (jobId: string) =>
+      librarianFetch<Job>(`/api/v1/jobs/${jobId}/retry`, {
+        method: 'POST',
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['librarian', 'jobs'] });
