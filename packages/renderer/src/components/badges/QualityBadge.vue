@@ -14,7 +14,7 @@
         @click="handleClick"
       >
         {{ displayText }}
-        <span v-if="hasMultipleQualities" class="quality-badge__chevron">&#9662;</span>
+        <span v-if="hasMultipleQualities && !playerMode" class="quality-badge__chevron">&#9662;</span>
       </div>
     </template>
 
@@ -40,7 +40,7 @@ const props = withDefaults(defineProps<{
   quality?: AudioQuality | null;
   qualityLadder?: QualityLadder | null;
   clickable?: boolean;
-  playerMode?: boolean; // Desaturated when in player
+  playerMode?: boolean; // Desaturated when in player, hides chevron for clean look
 }>(), {
   clickable: false,
   playerMode: false,
