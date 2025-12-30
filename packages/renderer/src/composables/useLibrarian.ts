@@ -485,17 +485,23 @@ export function useArchiveJob() {
 }
 
 /**
- * Delete an archived job permanently
+ * Delete a job permanently.
+ * By default, only archived jobs can be deleted.
+ * Pass force=true to delete any job (for bulk cleanup).
  */
 export function useDeleteJob() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (jobId: string) => {
+    mutationFn: async ({ jobId, force = false }: { jobId: string; force?: boolean }) => {
       const baseUrl = getLibrarianApiUrl();
       if (!baseUrl) throw new Error('Librarian API not configured');
 
-      const response = await fetch(`${baseUrl}/api/v1/jobs/${jobId}`, {
+      const url = force
+        ? `${baseUrl}/api/v1/jobs/${jobId}?force=true`
+        : `${baseUrl}/api/v1/jobs/${jobId}`;
+
+      const response = await fetch(url, {
         method: 'DELETE',
       });
 

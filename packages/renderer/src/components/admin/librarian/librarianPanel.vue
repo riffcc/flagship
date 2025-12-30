@@ -644,6 +644,42 @@
           </v-btn>
         </div>
 
+        <!-- Selection Controls -->
+        <div v-if="sortedJobs.length > 0" class="d-flex align-center gap-2 mb-3">
+          <v-btn
+            v-if="!allJobsSelected"
+            variant="text"
+            size="small"
+            prepend-icon="$checkbox-marked-outline"
+            @click="selectAllJobs"
+          >
+            Select All
+          </v-btn>
+          <v-btn
+            v-if="someJobsSelected"
+            variant="text"
+            size="small"
+            prepend-icon="$checkbox-blank-outline"
+            @click="selectNoneJobs"
+          >
+            Select None
+          </v-btn>
+          <v-chip v-if="someJobsSelected" size="small" color="primary">
+            {{ selectedJobIds.size }} selected
+          </v-chip>
+          <v-spacer></v-spacer>
+          <v-btn
+            v-if="someJobsSelected"
+            color="error"
+            variant="tonal"
+            size="small"
+            prepend-icon="$delete"
+            @click="deleteSelectedJobs"
+          >
+            Delete Selected
+          </v-btn>
+        </div>
+
         <v-progress-linear v-if="jobs.isLoading.value" indeterminate color="primary" class="mb-4"></v-progress-linear>
 
         <!-- Job List with Expandable Details -->
@@ -655,8 +691,16 @@
             :class="{ 'job-running': job.status === 'Running' }"
           >
             <v-card-item class="clickable-card" @click="showJobDetails(job)">
-              <!-- Status Icon -->
+              <!-- Selection Checkbox + Status Icon -->
               <template #prepend>
+                <v-checkbox
+                  :model-value="selectedJobIds.has(job.id)"
+                  hide-details
+                  density="compact"
+                  class="mr-2"
+                  @click.stop
+                  @update:model-value="toggleJobSelection(job.id)"
+                ></v-checkbox>
                 <v-avatar
                   :color="getJobStatusColor(job.status)"
                   size="40"
@@ -1648,6 +1692,7 @@ import {
   useStopJob,
   useRetryJob,
   useArchiveJob,
+  useDeleteJob,
   useClearArchivedJobs,
   useCreateSourceImport,
   useProvideMetadataMutation,
@@ -1683,6 +1728,7 @@ const startJobMutation = useStartJob();
 const stopJobMutation = useStopJob();
 const retryJobMutation = useRetryJob();
 const archiveJobMutation = useArchiveJob();
+const deleteJobMutation = useDeleteJob();
 const clearArchivedMutation = useClearArchivedJobs();
 const sourceImportMutation = useCreateSourceImport();
 const provideMetadataMutation = useProvideMetadataMutation();
@@ -1747,6 +1793,7 @@ const newJob = ref({ job_type: 'import', target: '' });
 const expandedJobs = ref<Set<string>>(new Set());
 const jobDetailsDialog = ref(false);
 const selectedJob = ref<Job | null>(null);
+const selectedJobIds = ref<Set<string>>(new Set());
 
 // ============================================================================
 // Audit Results State
@@ -2517,6 +2564,60 @@ function archiveJob(jobId: string) {
   archiveJobMutation.mutate(jobId);
   snackbarText.value = 'Job archived';
   snackbarColor.value = 'info';
+  snackbar.value = true;
+}
+
+// Job selection helpers for bulk operations
+function toggleJobSelection(jobId: string) {
+  if (selectedJobIds.value.has(jobId)) {
+    selectedJobIds.value.delete(jobId);
+  } else {
+    selectedJobIds.value.add(jobId);
+  }
+  // Trigger reactivity
+  selectedJobIds.value = new Set(selectedJobIds.value);
+}
+
+function selectAllJobs() {
+  const allIds = sortedJobs.value.map((j: Job) => j.id);
+  selectedJobIds.value = new Set(allIds);
+}
+
+function selectNoneJobs() {
+  selectedJobIds.value = new Set();
+}
+
+const allJobsSelected = computed(() => {
+  if (!sortedJobs.value.length) return false;
+  return sortedJobs.value.every((j: Job) => selectedJobIds.value.has(j.id));
+});
+
+const someJobsSelected = computed(() => {
+  return selectedJobIds.value.size > 0;
+});
+
+async function deleteSelectedJobs() {
+  const idsToDelete = Array.from(selectedJobIds.value);
+  if (idsToDelete.length === 0) return;
+
+  const confirmed = confirm(`Delete ${idsToDelete.length} job(s)? This cannot be undone.`);
+  if (!confirmed) return;
+
+  let deleted = 0;
+  for (const id of idsToDelete) {
+    try {
+      // Use force=true for bulk delete (skips archived check)
+      await deleteJobMutation.mutateAsync({ jobId: id, force: true });
+      deleted++;
+    } catch (e) {
+      console.error(`Failed to delete job ${id}:`, e);
+    }
+  }
+
+  selectedJobIds.value = new Set();
+
+  snackbarText.value = `Deleted ${deleted} job(s)`;
+  snackbarColor.value = 'success';
   snackbar.value = true;
 }
 
