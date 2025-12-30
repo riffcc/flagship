@@ -17,7 +17,7 @@
     >
       <template v-if="isOverlapping">
         <v-img
-          :src="parseUrlOrCid(props.item.thumbnailCID) ?? '/no-image-icon.png'"
+          :src="parseUrlOrCid(props.item.thumbnailCID) ?? '/cd-case-placeholder.svg'"
           width="100%"
           cover
           aspect-ratio="1"
@@ -42,7 +42,7 @@
       </template>
       <template v-else>
         <v-img
-          :src="parseUrlOrCid(props.item.thumbnailCID) ?? '/no-image-icon.png'"
+          :src="parseUrlOrCid(props.item.thumbnailCID) ?? '/cd-case-placeholder.svg'"
           width="100%"
           cover
           aspect-ratio="1"
