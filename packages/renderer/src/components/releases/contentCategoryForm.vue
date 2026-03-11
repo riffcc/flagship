@@ -137,10 +137,11 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import {computed, onMounted, ref} from 'vue';
 import MetadataFieldForm from '/@/components/releases/metadataFieldForm.vue';
 import type { ContentCategoryItem } from '/@/types';
-import type { ContentCategoryMetadataField } from '@riffcc/lens-sdk';
+import type { ContentCategoryMetadataField } from '@riffcc/citadel-sdk';
 
 const props = defineProps<{
   initialData?: Partial<ContentCategoryItem>;

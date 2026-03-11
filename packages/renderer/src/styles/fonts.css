@@ -1,0 +1,16 @@
+/* Josefin Sans - Self-hosted variable font */
+@font-face {
+  font-family: 'Josefin Sans';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url('/fonts/JosefinSans-VariableFont_wght.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Josefin Sans';
+  font-style: italic;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url('/fonts/JosefinSans-Italic-VariableFont_wght.ttf') format('truetype');
+}

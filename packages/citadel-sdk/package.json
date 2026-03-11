@@ -1,0 +1,32 @@
+{
+  "name": "@riffcc/citadel-sdk",
+  "version": "0.1.0",
+  "description": "Lightweight TypeScript SDK for the Citadel API",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "peerDependencies": {
+    "vue": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vue": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "citadel",
+    "riffcc",
+    "sdk",
+    "api"
+  ],
+  "license": "AGPL-3.0-or-later"
+}

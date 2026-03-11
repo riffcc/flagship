@@ -25,6 +25,7 @@
               width="480px"
               max-height="620px"
               class="pa-8 ma-auto"
+              color="black"
             >
               <content-category-form
                 @update:error="handleError"
@@ -79,7 +80,7 @@
     v-model="editCategoryDialog"
     max-width="500px"
   >
-    <v-card class="py-3">
+    <v-card class="py-3" color="black">
       <v-card-title>
         <span class="text-h6 ml-2">Edit Category</span>
       </v-card-title>

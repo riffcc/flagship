@@ -1,21 +1,23 @@
 <template>
   <v-hover
     v-slot="{props: hoveringProps, isHovering}"
-    open-delay="150"
-    close-delay="150"
+    open-delay="100"
+    close-delay="100"
   >
     <v-sheet
       v-bind="hoveringProps"
-      :class="cursorPointer ? 'cursor-pointer mx-auto' : 'mx-auto'"
+      class="cursor-pointer mx-auto content-card"
       color="transparent"
       :height="cardHeight"
       :width="cardWidth"
       :style="showDefederation ? `border: 1px solid ${getSiteColor(item.siteAddress)};` : ''"
+      data-navigable="true"
+      tabindex="0"
       @click="onClick"
     >
       <template v-if="isOverlapping">
         <v-img
-          :src="parseUrlOrCid(props.item.thumbnailCID) ?? '/no-image-icon.png'"
+          :src="parseUrlOrCid(props.item.thumbnailCID) ?? '/cd-case-placeholder.svg'"
           width="100%"
           cover
           aspect-ratio="1"
@@ -30,74 +32,46 @@
           >
             {{ cardSubtitle }}
           </p>
-          <template v-if="isHovering">
-            <v-icon
-              v-if="item.categoryId === 'music'"
-              size="4.5rem"
-              icon="$play"
-              color="primary"
-              class="position-absolute top-0 left-0 right-0 bottom-0 ma-auto"
-            ></v-icon>
-            <div
-              v-else-if="item.categoryId === 'tvShow'"
-              class="position-absolute top-0 bottom-0 right-0 d-flex flex-column justify-center mr-2 ga-1"
-            >
-              <v-btn
-                size="small"
-                color="grey-lighten-3"
-                density="comfortable"
-                icon="$share-variant"
-              ></v-btn>
-              <v-btn
-                size="small"
-                color="grey-lighten-3"
-                density="comfortable"
-                icon="$heart"
-              ></v-btn>
-              <v-btn
-                size="small"
-                color="grey-lighten-3"
-                density="comfortable"
-                icon="$plus"
-              ></v-btn>
-            </div>
-          </template>
-          <!-- Actions slot content (e.g., TV show buttons, play button) -->
-          <template
-            v-if="item.categoryId === 'tvShow'"
+          <p
+            v-if="item.metadata?.isSeries && item.metadata?.episodeCount"
+            class="ml-4 text-caption"
           >
-            <v-btn
-              color="primary"
-              rounded="0"
-              prepend-icon="$play"
-              size="small"
-              class="position-absolute bottom-0 rigth-0 text-none ml-4 mb-10"
-              text="Play now"
-              @click="router.push(`/release/${item.id}`)"
-            ></v-btn>
-          </template>
+            {{ item.metadata.episodeCount }} episode{{ item.metadata.episodeCount !== 1 ? 's' : '' }}
+          </p>
         </v-img>
       </template>
       <template v-else>
         <v-img
-          :src="parseUrlOrCid(props.item.thumbnailCID) ?? '/no-image-icon.png'"
+          :src="parseUrlOrCid(props.item.thumbnailCID) ?? '/cd-case-placeholder.svg'"
           width="100%"
           cover
           aspect-ratio="1"
-        >
-          <slot
-            v-if="isHovering"
-            name="hovering"
-          ></slot>
-        </v-img>
+          class="card-image"
+        />
         <p class="text-caption text-sm-subtitle-1 text-center mt-1">
-          {{ cardTitle }}
+          <a
+            class="title-link"
+            @click.stop="handleTitleClick"
+          >{{ cardTitle }}</a>
         </p>
         <p
           v-if="cardSubtitle"
           class="text-caption text-sm-subtitle-1 text-center text-medium-emphasis"
         >
-          {{ cardSubtitle }}
+          <a
+            v-if="item.metadata?.artistId"
+            class="artist-link"
+            @click.stop="router.push(`/artist/${item.metadata.artistId}`)"
+          >
+            {{ cardSubtitle }}
+          </a>
+          <span v-else>{{ cardSubtitle }}</span>
+        </p>
+        <p
+          v-if="item.metadata?.isSeries && item.metadata?.episodeCount"
+          class="text-caption text-center text-medium-emphasis"
+        >
+          {{ item.metadata.episodeCount }} episode{{ item.metadata.episodeCount !== 1 ? 's' : '' }}
         </p>
       </template>
     </v-sheet>
@@ -105,10 +79,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useDisplay } from 'vuetify';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useShowDefederation } from '/@/composables/showDefed';
 import { useSiteColors } from '/@/composables/siteColors';
+import { useImageColorExtraction } from '/@/composables/imageColorExtraction';
 import { type ReleaseItem } from '/@/types';
 import { parseUrlOrCid } from '/@/utils';
 import { useRouter } from 'vue-router';
@@ -116,7 +90,7 @@ import { useRouter } from 'vue-router';
 
 const { showDefederation } = useShowDefederation();
 const { getSiteColor } = useSiteColors();
-const { xs } = useDisplay();
+const { getColorTintedGradient } = useImageColorExtraction();
 const router = useRouter();
 
 const props = defineProps<{
@@ -125,15 +99,75 @@ const props = defineProps<{
   onClick?: () => void;
 }>();
 
+const emit = defineEmits<{
+  'play': [item: ReleaseItem];
+  'info': [item: ReleaseItem];
+}>();
+
+function handleTitleClick() {
+  navigateToInfoPage();
+}
+
+function navigateToInfoPage() {
+  const item = props.item;
+  const category = item.categoryId;
+  const metadata = item.metadata;
+
+  // Tile data we already have - pass through router state for instant render
+  const tileState = {
+    name: item.name,
+    thumbnailCID: item.thumbnailCID,
+    contentCID: item.contentCID,
+    author: metadata?.author,
+    artistId: metadata?.artistId,
+    releaseYear: metadata?.releaseYear,
+    trackCount: metadata?.trackCount,
+  };
+
+  // Route to appropriate info page based on content type
+  if (metadata?.type === 'artist') {
+    router.push({ path: `/artist/${item.id}`, state: tileState });
+  } else if (metadata?.type === 'series' || metadata?.isSeries) {
+    router.push({ path: `/series/${item.id}`, state: tileState });
+  } else if (category === 'music') {
+    router.push({ path: `/album/${item.id}`, state: tileState });
+  } else if (category === 'movies') {
+    router.push({ path: `/movie/${item.id}`, state: tileState });
+  } else if (category === 'tv-shows' || category === 'tvShow') {
+    router.push({ path: `/series/${item.id}`, state: tileState });
+  } else if (category === 'books') {
+    router.push({ path: `/book/${item.id}`, state: tileState });
+  } else if (category === 'audiobooks') {
+    router.push({ path: `/audiobook/${item.id}`, state: tileState });
+  } else if (category === 'podcasts') {
+    router.push({ path: `/podcast/${item.id}`, state: tileState });
+  } else {
+    // Fallback to generic release page
+    router.push({ path: `/release/${item.id}`, state: tileState });
+  }
+}
+
+// Dynamic gradient based on image color
+const dynamicGradient = ref<string>('to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)');
+
+// Extract color when component mounts or image changes
+onMounted(async () => {
+  if (props.item.categoryId === 'tvShow') {
+    const imageUrl = parseUrlOrCid(props.item.thumbnailCID);
+    dynamicGradient.value = await getColorTintedGradient(imageUrl);
+  }
+});
+
+watch(() => props.item.thumbnailCID, async (newCID) => {
+  if (props.item.categoryId === 'tvShow') {
+    const imageUrl = parseUrlOrCid(newCID);
+    dynamicGradient.value = await getColorTintedGradient(imageUrl);
+  }
+});
+
 const cardWidth = computed(() => {
-  const categoryId = props.item.categoryId;
-  if (categoryId === 'music') {
-    return xs.value ? '10.5rem' : '15rem';
-  }
-  if (categoryId === 'tvShow') {
-    return '17rem';
-  }
-  return xs.value ? '10.5rem' : '12rem';
+  // Fluid width - let the grid handle sizing
+  return '100%';
 });
 
 const cardHeight = computed(() => {
@@ -145,31 +179,48 @@ const cardHeight = computed(() => {
 
 const cardTitle = computed(() => {
   const categoryId = props.item.categoryId;
+  const metadata = props.item.metadata;
+
   if (categoryId === 'music') {
     return props.item.name;
   }
-  if (categoryId === 'tvShow') {
+
+  // For TV content - check if it's a series or an episode
+  if (categoryId === 'tvShow' || metadata?.seriesId) {
+    // If it's a series tile (has isSeries flag)
+    if (metadata?.isSeries) {
+      return props.item.name;
+    }
+    // If it's an episode, show the series name if available
+    if (metadata?.seriesName) {
+      return metadata.seriesName;
+    }
     return props.item.name;
   }
-  if (categoryId === 'movie') {
-    return props.item.name;
-  }
-  return props.item.metadata?.['author'] ?? '';
+
+  // Default: show item name (covers movies, books, etc.)
+  return props.item.name;
 });
 
 const cardSubtitle = computed(() => {
   const categoryId = props.item.categoryId;
+  const metadata = props.item.metadata;
+
+  // Music: show artist name (prefer 'artist', fallback to 'author' for legacy)
   if (categoryId === 'music') {
-    return props.item.metadata?.['author'] ?? '';
+    return props.item.metadata?.['artist'] ?? props.item.metadata?.['author'] ?? '';
   }
-  if (categoryId === 'tvShow') {
-    return props.item.metadata?.['seasons'] ? `${props.item.metadata['seasons']} Seasons` : undefined;
+
+  // Movies: no subtitle (no director/creator)
+  if (categoryId === 'movies') {
+    return undefined;
   }
-  // Default
-  if (categoryId === 'movie') {
-    return props.item.metadata?.['releaseYear'] ? `(${props.item.metadata['releaseYear']})` : undefined;
+  if (categoryId === 'tvShow' || categoryId === 'tv-shows' || metadata?.seriesId || metadata?.isSeries) {
+    return undefined;
   }
-  return props.item.name;
+
+  // Default: no subtitle
+  return undefined;
 });
 
 const isOverlapping = computed(() => {
@@ -177,8 +228,21 @@ const isOverlapping = computed(() => {
 });
 
 const cardBackgroundGradient = computed(() => {
-  return props.item.categoryId === 'tvShow' ? 'to bottom, rgba(0,0,0,.4), rgba(0,0,0,.41)' : undefined;
+  return props.item.categoryId === 'tvShow' ? dynamicGradient.value : undefined;
 });
-
-
 </script>
+
+<style scoped>
+.artist-link,
+.title-link {
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.artist-link:hover,
+.title-link:hover {
+  text-decoration: underline;
+}
+
+</style>

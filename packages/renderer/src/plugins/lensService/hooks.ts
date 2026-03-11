@@ -1,21 +1,28 @@
-import { inject, type Ref } from 'vue';
+import { inject, type Ref, computed, unref } from 'vue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { API_URL } from '../router';
+import { useIdentity } from '/@/composables/useIdentity';
 import type {
   HashResponse,
   IdResponse,
   AnyObject,
-  LensService,
+  CitadelService,
   ReleaseData,
   SearchOptions,
   FeaturedReleaseData,
   SubscriptionData,
   AddInput,
   EditInput,
-} from '@riffcc/lens-sdk';
+  ModerationStats,
+  Release,
+} from '@riffcc/citadel-sdk';
 import type { ContentCategoryItem, FeaturedReleaseItem, ReleaseItem } from '/@/types';
 
+// Alias for backwards compatibility
+type LensService = CitadelService;
+
 export function useLensService() {
-  const lensService = inject<LensService>('lensService');
+  const lensService = inject<any>('lensService');
   if (!lensService) {
     throw new Error('Lens Service plugin not initialized.');
   }
@@ -46,42 +53,73 @@ export function usePeerIdQuery(options?: { enabled?: boolean | Ref<boolean> }) {
 }
 
 export function useAccountStatusQuery(options?: { enabled?: boolean | Ref<boolean> }) {
-  const { lensService } = useLensService();
+  const { publicKey, isInitialized } = useIdentity();
   return useQuery({
     queryKey: ['accountStatus'],
     queryFn: async () => {
-      return await lensService.getAccountStatus();
+      if (!publicKey.value) {
+        console.warn('[useAccountStatusQuery] Public key not available yet');
+        return { isAdmin: false, roles: [], permissions: [] };
+      }
+
+      const encodedKey = encodeURIComponent(publicKey.value);
+      const response = await fetch(`${API_URL}/account/${encodedKey}`);
+
+      if (!response.ok) {
+        console.warn('[useAccountStatusQuery] API returned error:', response.status);
+        return { isAdmin: false, roles: [], permissions: [] };
+      }
+
+      const result = await response.json();
+      return result;
     },
     refetchInterval: 15000,
-    enabled: options?.enabled ?? true,
+    // Only run when identity is initialized and publicKey is available
+    enabled: computed(() => {
+      return (options?.enabled !== false) && isInitialized.value && !!publicKey.value;
+    }),
   });
 }
 
-export function useGetReleaseQuery(id: string, options?: { enabled?: boolean | Ref<boolean> }) {
+export function useGetReleaseQuery(id: string | Ref<string>, options?: { enabled?: boolean | Ref<boolean> }) {
   const { lensService } = useLensService();
-  return useQuery<ReleaseItem | undefined>({
-    queryKey: ['release', id],
+
+  const actualId = computed(() => unref(id));
+
+  return useQuery<any>({
+    queryKey: ['release', actualId],
     queryFn: async () => {
-      const r = await lensService.getRelease(id);
+      const r = await lensService.getRelease(actualId.value);
       return r ?
         {
           ...r,
-          metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
+          metadata: typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata,
         } : undefined;
     },
     enabled: options?.enabled ?? true,
-  });
+  }) as any;
 }
 
 export function useGetReleasesQuery(options?: {
   enabled?: boolean | Ref<boolean>,
   staleTime?: number,
   searchOptions?: SearchOptions,
+  retry?: boolean,
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
-  return useQuery<ReleaseItem[]>({
+  const queryClient = useQueryClient();
+
+  return useQuery<any>({
     queryKey: ['releases'],
     queryFn: async () => {
+      // When Peerbit is disabled, fetch from HTTP API
+      if (!USE_PEERBIT) {
+        // Always fetch fresh data from HTTP API (don't return stale cache)
+        const response = await fetch(`${API_URL}/releases`);
+        return await response.json();
+      }
+
       // PeerBit-only loading with optimized timeouts
       // Default to fetching 100 releases at a time
       const searchOptions = {
@@ -89,38 +127,53 @@ export function useGetReleasesQuery(options?: {
         ...options?.searchOptions,
       };
       const result = await lensService.getReleases(searchOptions);
-      return result.map((r) => {
-        return {
-          ...r,
-          metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
-        };
-      });
-    },
+        return result.map((r: any) => {
+          return {
+            ...r,
+            metadata: typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata,
+          };
+        });
+      },
     enabled: options?.enabled ?? true,
-    staleTime: options?.staleTime ?? 1000 * 60 * 5,
+    staleTime: options?.staleTime ?? 0, // Always fetch fresh data
+    retry: options?.retry,
     gcTime: 1000 * 60 * 15,
-  });
+  }) as any;
 }
 
 export function useGetFeaturedReleaseQuery(id: string) {
   const { lensService } = useLensService();
-  return useQuery<FeaturedReleaseItem | undefined>({
+  return useQuery<any>({
     queryKey: ['featuredRelease', id],
     queryFn: async () => {
       return await lensService.getFeaturedRelease(id);
     },
-  });
+  }) as any;
 }
 
 export function useGetFeaturedReleasesQuery(options?: {
   enabled?: boolean | Ref<boolean>,
   staleTime?: number,
   searchOptions?: SearchOptions,
+  retry?: boolean,
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
-  return useQuery<FeaturedReleaseItem[]>({
+  const queryClient = useQueryClient();
+
+  return useQuery<any>({
     queryKey: ['featuredReleases'],
     queryFn: async () => {
+      // When Peerbit is disabled, return from cache or fetch from HTTP API
+      if (!USE_PEERBIT) {
+        const cached = queryClient.getQueryData<FeaturedReleaseItem[]>(['featuredReleases']);
+        if (cached) return cached;
+
+        // Fallback: fetch from HTTP API if cache miss
+        const response = await fetch(`${API_URL}/featured-releases`);
+        return await response.json();
+      }
+
       // PeerBit-only loading with optimized timeouts
       // Fetch all featured releases (up to 1000 - should be more than enough)
       const searchOptions = {
@@ -130,37 +183,92 @@ export function useGetFeaturedReleasesQuery(options?: {
       return await lensService.getFeaturedReleases(searchOptions);
     },
     enabled: options?.enabled ?? true,
-    staleTime: options?.staleTime ?? 1000 * 60 * 5,
+    staleTime: options?.staleTime ?? 0, // Always fetch fresh data
+    retry: options?.retry,
     gcTime: 1000 * 60 * 15,
-  });
+  }) as any;
 }
 
 export function useContentCategoriesQuery(options?: {
   enabled?: boolean | Ref<boolean>;
+  retry?: boolean;
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
-  return useQuery<ContentCategoryItem[]>({
+  const queryClient = useQueryClient();
+
+  return useQuery<any>({
     queryKey: ['contentCategories'],
     queryFn: async () => {
-      const result = await lensService.getContentCategories();
-      return result.map((c) => {
-        return {
-          ...c,
-          metadataSchema: c.metadataSchema ? JSON.parse(c.metadataSchema) : undefined,
-        };
-      });
+      // When Peerbit is disabled, return from cache or fetch from HTTP API
+      if (!USE_PEERBIT) {
+        const cached = queryClient.getQueryData<ContentCategoryItem[]>(['contentCategories']);
+        if (cached) return cached;
+
+        // Fallback: fetch from HTTP API if cache miss
+        const response = await fetch(`${API_URL}/content-categories`);
+        const categories = await response.json();
+        return categories.map((c: any) => ({
+          id: c.id,
+          categoryId: c.id,
+          name: c.name,
+          displayName: c.name,
+          slug: c.slug,
+          metadataSchema: c.metadataSchema,
+          siteAddress: c.siteAddress,
+          featured: c.featured,
+        }));
+      }
+
+      try {
+        // Try API first for immediate data
+        const apiUrl = `${API_URL}/content-categories`;
+        try {
+          const response = await fetch(apiUrl);
+          if (response.ok) {
+            const categories = await response.json();
+            return categories.map((c: any) => ({
+              id: c.id,
+              categoryId: c.id, // Map for compatibility
+              name: c.name,
+              displayName: c.name, // Map for compatibility
+              slug: c.slug,
+              metadataSchema: c.metadataSchema, // Already an object from API
+              siteAddress: c.siteAddress, // For filtering by site
+            }));
+          }
+        } catch (apiError) {
+          console.warn('[ContentCategories] API fetch failed, trying Peerbit:', apiError);
+        }
+
+        // Fallback to Peerbit if API fails
+        const result = await lensService.getContentCategories();
+        return result.map((c: any) => {
+          return {
+            ...c,
+            categoryId: c.categoryId ?? c.id,
+            displayName: c.displayName ?? c.name,
+            metadataSchema: typeof c.metadataSchema === 'string' ? JSON.parse(c.metadataSchema) : c.metadataSchema,
+          };
+        });
+      } catch (error) {
+        console.error('[ContentCategories] Failed to fetch categories:', error);
+        return [];
+      }
     },
     enabled: options?.enabled ?? true,
-  });
+    retry: options?.retry,
+  }) as any;
 }
 
 export function useGetSubscriptionsQuery(options?: {
   enabled?: boolean | Ref<boolean>,
   staleTime?: number,
   searchOptions?: SearchOptions,
+  retry?: boolean,
 }) {
   const { lensService } = useLensService();
-  return useQuery({
+  return useQuery<any>({
     queryKey: ['subscriptions'],
     queryFn: async () => {
       const searchOptions = {
@@ -171,8 +279,9 @@ export function useGetSubscriptionsQuery(options?: {
     },
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minutes
+    retry: options?.retry,
     gcTime: 1000 * 60 * 15, // 15 minutes
-  });
+  }) as any;
 }
 
 
@@ -181,10 +290,72 @@ export function useAddReleaseMutation(options?: {
   onSuccess?: (response: HashResponse) => void;
   onError?: (e: Error) => void;
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
+  const { publicKey, sign } = useIdentity();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: AddInput<ReleaseData<AnyObject>>) => {
+      if (!USE_PEERBIT) {
+        // Use HTTP API when Peerbit is disabled
+        if (!publicKey.value) {
+          throw new Error('Identity not initialized');
+        }
+
+        // Create request payload
+        const payload = JSON.stringify({
+          ...data,
+          metadata: data.metadata,
+        });
+
+        console.log('[AddRelease] Input data:', data);
+        console.log('[AddRelease] contentCID in data:', data.contentCID);
+        console.log('[AddRelease] Payload being sent:', payload);
+
+        // Sign the payload
+        const timestamp = Date.now().toString();
+        const messageToSign = `${timestamp}:${payload}`;
+        const signature = await sign(messageToSign);
+
+        console.log('[AddRelease] Signing request:', {
+          publicKey: publicKey.value,
+          timestamp,
+          signatureLength: signature.length,
+          payloadLength: payload.length,
+        });
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'X-Public-Key': publicKey.value,
+          'X-Signature': signature,
+          'X-Timestamp': timestamp,
+        };
+
+        const response = await fetch(`${API_URL}/releases`, {
+          method: 'POST',
+          headers,
+          body: payload,
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: response.statusText }));
+          console.error('[AddRelease] Request failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            error,
+            headers: {
+              publicKey: headers['X-Public-Key'],
+              timestamp: headers['X-Timestamp'],
+              signatureLength: headers['X-Signature']?.length,
+            },
+          });
+          throw new Error(error.error || `Failed to create release: ${response.statusText}`);
+        }
+        const result = await response.json();
+        // Immediately invalidate queries after successful HTTP API call
+        queryClient.invalidateQueries({ queryKey: ['releases'] });
+        return result;
+      }
+
       return await lensService.addRelease({
         ...data,
         metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
@@ -192,6 +363,7 @@ export function useAddReleaseMutation(options?: {
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
+      // Also invalidate here for Peerbit path
       queryClient.invalidateQueries({ queryKey: ['releases'] });
     },
     onError: (error) => {
@@ -204,10 +376,62 @@ export function useEditReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
+  const { publicKey, sign } = useIdentity();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: EditInput<ReleaseData<AnyObject>>) => {
+      if (!USE_PEERBIT) {
+        // Use HTTP API when Peerbit is disabled
+        if (!publicKey.value) {
+          throw new Error('Identity not initialized');
+        }
+
+        // Extract the data payload (could be nested as data.data or flat)
+        const payload = (data as any).data || data;
+        const releaseId = data.id;
+
+        // Create request payload
+        const payloadStr = JSON.stringify({
+          name: payload.name,
+          categoryId: payload.categoryId,
+          contentCID: payload.contentCID,
+          thumbnailCID: payload.thumbnailCID,
+          metadata: payload.metadata,
+          siteAddress: payload.siteAddress,
+          postedBy: payload.postedBy,
+        });
+
+        // Sign the payload
+        const timestamp = Date.now().toString();
+        const messageToSign = `${timestamp}:${payloadStr}`;
+        const signature = await sign(messageToSign);
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'X-Public-Key': publicKey.value,
+          'X-Signature': signature,
+          'X-Timestamp': timestamp,
+        };
+
+        const response = await fetch(`${API_URL}/releases/${releaseId}`, {
+          method: 'PUT',
+          headers,
+          body: payloadStr,
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(error.error || `Failed to update release: ${response.statusText}`);
+        }
+        const result = await response.json();
+        // Immediately invalidate queries after successful HTTP API call
+        queryClient.invalidateQueries({ queryKey: ['releases'] });
+        queryClient.invalidateQueries({ queryKey: ['releases', releaseId] });
+        queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+        return result;
+      }
+
       return await lensService.editRelease({
         ...data,
         metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
@@ -215,8 +439,10 @@ export function useEditReleaseMutation(options?: {
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
+      // Also invalidate here for Peerbit path
       queryClient.invalidateQueries({ queryKey: ['releases'] });
       queryClient.invalidateQueries({ queryKey: ['releases', response.id] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
     },
     onError: (error) => {
       options?.onError?.(error);
@@ -228,17 +454,101 @@ export function useDeleteReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
   const { lensService } = useLensService();
+  const { publicKey, sign } = useIdentity();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      if (!USE_PEERBIT) {
+        // Use HTTP API when Peerbit is disabled
+        if (!publicKey.value) {
+          throw new Error('Identity not initialized');
+        }
+
+        // Sign the request
+        const timestamp = Date.now().toString();
+        const messageToSign = `${timestamp}:DELETE:/releases/${id}`;
+        const signature = await sign(messageToSign);
+
+        const headers: Record<string, string> = {
+          'X-Public-Key': publicKey.value,
+          'X-Signature': signature,
+          'X-Timestamp': timestamp,
+        };
+
+        const response = await fetch(`${API_URL}/releases/${id}`, {
+          method: 'DELETE',
+          headers,
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(error.error || `Failed to delete release: ${response.statusText}`);
+        }
+
+        // Handle 204 No Content or parse JSON response
+        const result = response.status === 204
+          ? { id }
+          : await response.json().catch(() => ({ id }));
+        // Immediately invalidate queries after successful HTTP API call
+        queryClient.invalidateQueries({ queryKey: ['releases'] });
+        queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+        return result;
+      }
+
       return await lensService.deleteRelease(id);
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      // Also invalidate here for Peerbit path
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+      queryClient.invalidateQueries({ queryKey: ['releases', response.id] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useBulkDeleteAllReleasesMutation(options?: {
+  onSuccess?: (response: { success: boolean; deleted: number; delete_transaction_id: string }) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { publicKey } = useIdentity();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      const response = await fetch(`${API_URL}/admin/releases`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          publicKey: publicKey.value,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(error.error || `Failed to delete all releases: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      // Immediately invalidate queries after successful bulk delete
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+      return result;
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
       queryClient.invalidateQueries({ queryKey: ['releases'] });
       queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
-      queryClient.invalidateQueries({ queryKey: ['releases', response.id] });
     },
     onError: (error) => {
       options?.onError?.(error);
@@ -250,11 +560,33 @@ export function useAddFeaturedReleaseMutation(options?: {
   onSuccess?: (response: HashResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { lensService } = useLensService();
+  const { publicKey } = useIdentity();
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (data: AddInput<FeaturedReleaseData>) => {
-      return await lensService.addFeaturedRelease(data);
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      const { API_URL } = await import('../router');
+      const response = await fetch(`${API_URL}/admin/featured-releases`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          publicKey: publicKey.value,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to add featured release: ${errorText}`);
+      }
+
+      return await response.json();
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
@@ -270,11 +602,35 @@ export function useEditFeaturedReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { lensService } = useLensService();
+  const { publicKey } = useIdentity();
   const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: async (data: EditInput<FeaturedReleaseData>) => {
-      return await lensService.editFeaturedRelease(data);
+    mutationFn: async (data: FeaturedReleaseData & { id: string }) => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      const { API_URL } = await import('../router');
+      // URL-encode the ID to handle special characters
+      const encodedId = encodeURIComponent(data.id);
+      const response = await fetch(`${API_URL}/admin/featured-releases/${encodedId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          publicKey: publicKey.value,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to edit featured release: ${error}`);
+      }
+
+      return await response.json();
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
@@ -291,11 +647,34 @@ export function useDeleteFeaturedReleaseMutation(options?: {
   onSuccess?: (response: IdResponse) => void;
   onError?: (e: Error) => void;
 }) {
-  const { lensService } = useLensService();
+  const { publicKey } = useIdentity();
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (id: string) => {
-      return await lensService.deleteFeaturedRelease(id);
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      const { API_URL } = await import('../router');
+      // URL-encode the ID to handle special characters
+      const encodedId = encodeURIComponent(id);
+      const response = await fetch(`${API_URL}/admin/featured-releases/${encodedId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          publicKey: publicKey.value,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to delete featured release: ${errorText}`);
+      }
+
+      return await response.json();
     },
     onSuccess: (response) => {
       options?.onSuccess?.(response);
@@ -341,6 +720,681 @@ export function useDeleteSubscriptionMutation(options?: {
     onSuccess: (response) => {
       options?.onSuccess?.(response);
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+// #### STRUCTURE QUERIES & MUTATIONS ####
+export function useGetStructureQuery(id: string, options?: { enabled?: boolean | Ref<boolean> }) {
+  const { lensService } = useLensService();
+  return useQuery({
+    queryKey: ['structure', id],
+    queryFn: async () => {
+      try {
+        // Try API first for immediate data
+        const apiUrl = `${API_URL}/structures/${id}`;
+        try {
+          const response = await fetch(apiUrl);
+          if (response.ok) {
+            const structure = await response.json();
+            return structure ? {
+              ...structure,
+              metadata: structure.metadata ? JSON.parse(structure.metadata) : undefined,
+            } : null;
+          }
+        } catch (apiError) {
+          console.warn('API fetch failed, falling back to Peerbit:', apiError);
+        }
+
+        // Fallback to Peerbit if API fails
+        const structure = await lensService.getStructure(id);
+        return structure ? {
+          ...structure,
+          metadata: structure.metadata ? JSON.parse(structure.metadata) : undefined,
+        } : null;
+      } catch (error) {
+        console.error('Failed to fetch structure:', error);
+        return null;
+      }
+    },
+    enabled: options?.enabled ?? true,
+    retry: 1,
+  });
+}
+
+export function useGetStructuresQuery(options?: {
+  enabled?: boolean | Ref<boolean>;
+  staleTime?: number;
+  searchOptions?: SearchOptions;
+}) {
+  const { lensService } = useLensService();
+  return useQuery({
+    queryKey: ['structures', options?.searchOptions],
+    queryFn: async () => {
+      try {
+        // Try API first for immediate data
+        const apiUrl = `${API_URL}/structures`;
+        try {
+          const response = await fetch(apiUrl);
+          if (response.ok) {
+            const structures = await response.json();
+            return structures.map((s: any) => ({
+              ...s,
+              metadata: s.metadata ? JSON.parse(s.metadata) : undefined,
+            }));
+          }
+        } catch (apiError) {
+          console.warn('API fetch failed, falling back to Peerbit:', apiError);
+        }
+
+        // Fallback to Peerbit if API fails
+        const structures = await lensService.getStructures(options?.searchOptions);
+        return structures.map(s => ({
+          ...s,
+          metadata: s.metadata ? JSON.parse(s.metadata) : undefined,
+        }));
+      } catch (error) {
+        console.error('Failed to fetch structures:', error);
+        return [];
+      }
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 5,
+    retry: 1,
+  });
+}
+
+export function useAddStructureMutation(options?: {
+  onSuccess?: (response: HashResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: AddInput<{
+      name: string;
+      type: string;
+      description?: string;
+      thumbnailCID?: string;
+      bannerCID?: string;
+      parentId?: string;
+      itemIds?: string[];
+      metadata?: AnyObject;
+      order?: number;
+    }>) => {
+      return await lensService.addStructure({
+        ...data,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
+      });
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useEditStructureMutation(options?: {
+  onSuccess?: (response: HashResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: EditInput<{
+      name: string;
+      type: string;
+      description?: string;
+      thumbnailCID?: string;
+      bannerCID?: string;
+      parentId?: string;
+      itemIds?: string[];
+      metadata?: AnyObject;
+      order?: number;
+    }>) => {
+      return await lensService.editStructure({
+        ...data,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
+      });
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
+      queryClient.invalidateQueries({ queryKey: ['structure', response.id] });
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useDeleteStructureMutation(options?: {
+  onSuccess?: (response: IdResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return await lensService.deleteStructure(id);
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
+      queryClient.invalidateQueries({ queryKey: ['structure', response.id] });
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+// #### ARTIST QUERIES & MUTATIONS (convenience wrappers) ####
+export function useGetArtistQuery(id: string, options?: { enabled?: boolean | Ref<boolean> }) {
+  const { lensService } = useLensService();
+  return useQuery({
+    queryKey: ['artist', id],
+    queryFn: async () => {
+      const artist = await lensService.getArtist(id);
+      return artist ? {
+        ...artist,
+        metadata: artist.metadata ? JSON.parse(artist.metadata) : undefined,
+      } : undefined;
+    },
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useGetArtistsQuery(options?: {
+  enabled?: boolean | Ref<boolean>;
+  staleTime?: number;
+}) {
+  const { lensService } = useLensService();
+  return useQuery({
+    queryKey: ['artists'],
+    queryFn: async () => {
+      const artists = await lensService.getArtists();
+      return artists.map(a => ({
+        ...a,
+        metadata: a.metadata ? JSON.parse(a.metadata) : undefined,
+      }));
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 1000 * 60 * 5,
+  });
+}
+
+export function useAddArtistMutation(options?: {
+  onSuccess?: (response: HashResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: AddInput<{
+      name: string;
+      bio?: string;
+      avatarCID?: string;
+      bannerCID?: string;
+      links?: string[];
+      metadata?: AnyObject;
+    }>) => {
+      return await lensService.addArtist({
+        ...data,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
+      });
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useEditArtistMutation(options?: {
+  onSuccess?: (response: HashResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: EditInput<{
+      name: string;
+      bio?: string;
+      avatarCID?: string;
+      bannerCID?: string;
+      links?: string[];
+      metadata?: AnyObject;
+    }>) => {
+      return await lensService.editArtist({
+        ...data,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
+      });
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+      queryClient.invalidateQueries({ queryKey: ['artist', response.id] });
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useDeleteArtistMutation(options?: {
+  onSuccess?: (response: IdResponse) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { lensService } = useLensService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return await lensService.deleteArtist(id);
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+      queryClient.invalidateQueries({ queryKey: ['artist', response.id] });
+      queryClient.invalidateQueries({ queryKey: ['structures'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+// HTTP-based hooks for direct API calls (UBTS transactions)
+
+function useHttpLensService() {
+  return inject<any>('httpLensService');
+}
+
+export function useHttpDeleteReleaseMutation(options?: {
+  onSuccess?: (response: any) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { publicKey, sign } = useIdentity();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      // Sign the request
+      const timestamp = Date.now().toString();
+      const messageToSign = `${timestamp}:DELETE:/releases/${id}`;
+      const signature = await sign(messageToSign);
+
+      console.log('[DeleteRelease] Signing request:', {
+        publicKey: publicKey.value,
+        timestamp,
+        releaseId: id,
+        signatureLength: signature.length,
+      });
+
+      const headers: Record<string, string> = {
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
+      };
+
+      const response = await fetch(`${API_URL}/releases/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        console.error('[DeleteRelease] Request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error,
+          headers: {
+            publicKey: headers['X-Public-Key'],
+            timestamp: headers['X-Timestamp'],
+            signatureLength: headers['X-Signature']?.length,
+          },
+        });
+        throw new Error(error.error || `Failed to delete release: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result;
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+      queryClient.invalidateQueries({ queryKey: ['releases', response.id] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useHttpDeleteFeaturedReleaseMutation(options?: {
+  onSuccess?: (response: any) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { publicKey, sign } = useIdentity();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      // Sign the request
+      const timestamp = Date.now().toString();
+      const messageToSign = `${timestamp}:DELETE:/admin/featured-releases/${id}`;
+      const signature = await sign(messageToSign);
+
+      console.log('[DeleteFeaturedRelease] Signing request:', {
+        publicKey: publicKey.value,
+        timestamp,
+        featuredReleaseId: id,
+        signatureLength: signature.length,
+      });
+
+      const headers: Record<string, string> = {
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
+      };
+
+      // URL-encode the ID to handle special characters
+      const encodedId = encodeURIComponent(id);
+      const response = await fetch(`${API_URL}/admin/featured-releases/${encodedId}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        console.error('[DeleteFeaturedRelease] Request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error,
+          headers: {
+            publicKey: headers['X-Public-Key'],
+            timestamp: headers['X-Timestamp'],
+            signatureLength: headers['X-Signature']?.length,
+          },
+        });
+        throw new Error(error.error || `Failed to delete featured release: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result;
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases'] });
+      queryClient.invalidateQueries({ queryKey: ['featuredReleases', response.id] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+export function useHttpAuthorizeAdminMutation(options?: {
+  onSuccess?: (response: any) => void;
+  onError?: (e: Error) => void;
+}) {
+  const httpLensService = useHttpLensService();
+  return useMutation({
+    mutationFn: async (publicKey: string) => {
+      return await httpLensService.authorizeAdmin(publicKey);
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+// #### MODERATION HOOKS ####
+
+/**
+ * Query for pending releases (moderation queue)
+ */
+export function usePendingReleasesQuery(options?: {
+  enabled?: boolean | Ref<boolean>;
+}) {
+  const { publicKey } = useIdentity();
+
+  return useQuery<ReleaseItem[]>({
+    queryKey: ['releases', 'pending'],
+    queryFn: async () => {
+      if (!publicKey.value) {
+        return [];
+      }
+
+      const headers: Record<string, string> = {
+        'X-Public-Key': publicKey.value,
+      };
+
+      const response = await fetch(`${API_URL}/releases/pending`, { headers });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          console.warn('[PendingReleases] Not authorized to view pending releases');
+          return [];
+        }
+        throw new Error(`Failed to fetch pending releases: ${response.statusText}`);
+      }
+
+      return await response.json();
+    },
+    enabled: computed(() => {
+      return (options?.enabled !== false) && !!publicKey.value;
+    }),
+    refetchInterval: 30000, // Poll every 30 seconds
+  });
+}
+
+/**
+ * Query for moderation statistics
+ */
+export function useModerationStatsQuery(options?: {
+  enabled?: boolean | Ref<boolean>;
+}) {
+  const { publicKey } = useIdentity();
+
+  return useQuery<ModerationStats>({
+    queryKey: ['moderation', 'stats'],
+    queryFn: async () => {
+      if (!publicKey.value) {
+        return { pending: 0, approved: 0, rejected: 0, total: 0 };
+      }
+
+      const headers: Record<string, string> = {
+        'X-Public-Key': publicKey.value,
+      };
+
+      const response = await fetch(`${API_URL}/moderation/stats`, { headers });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          return { pending: 0, approved: 0, rejected: 0, total: 0 };
+        }
+        throw new Error(`Failed to fetch moderation stats: ${response.statusText}`);
+      }
+
+      return await response.json();
+    },
+    enabled: computed(() => {
+      return (options?.enabled !== false) && !!publicKey.value;
+    }),
+    refetchInterval: 30000,
+  });
+}
+
+/**
+ * Mutation to approve a release
+ */
+export function useApproveReleaseMutation(options?: {
+  onSuccess?: (response: Release) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { publicKey, sign } = useIdentity();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (releaseId: string) => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      const payload = JSON.stringify({});
+      const timestamp = Date.now().toString();
+      const messageToSign = `${timestamp}:${payload}`;
+      const signature = await sign(messageToSign);
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
+      };
+
+      const response = await fetch(`${API_URL}/releases/${releaseId}/approve`, {
+        method: 'POST',
+        headers,
+        body: payload,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(error.error || `Failed to approve release: ${response.statusText}`);
+      }
+
+      return await response.json();
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      // Invalidate all release-related queries
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['releases', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['moderation', 'stats'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+/**
+ * Mutation to reject a release
+ */
+export function useRejectReleaseMutation(options?: {
+  onSuccess?: (response: Release) => void;
+  onError?: (e: Error) => void;
+}) {
+  const { publicKey, sign } = useIdentity();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ releaseId, reason }: { releaseId: string; reason?: string }) => {
+      if (!publicKey.value) {
+        throw new Error('Identity not initialized');
+      }
+
+      const payload = JSON.stringify({ reason });
+      const timestamp = Date.now().toString();
+      const messageToSign = `${timestamp}:${payload}`;
+      const signature = await sign(messageToSign);
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
+      };
+
+      const response = await fetch(`${API_URL}/releases/${releaseId}/reject`, {
+        method: 'POST',
+        headers,
+        body: payload,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(error.error || `Failed to reject release: ${response.statusText}`);
+      }
+
+      return await response.json();
+    },
+    onSuccess: (response) => {
+      options?.onSuccess?.(response);
+      // Invalidate all release-related queries
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['releases', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['moderation', 'stats'] });
+    },
+    onError: (error) => {
+      options?.onError?.(error);
+    },
+  });
+}
+
+/**
+ * Mutation to add multiple releases in bulk
+ */
+export function useBulkAddReleasesMutation(options?: {
+  onSuccess?: (results: Array<{ success: boolean; release?: Release; error?: string }>) => void;
+  onError?: (e: Error) => void;
+  onProgress?: (current: number, total: number) => void;
+}) {
+  const addReleaseMutation = useAddReleaseMutation();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (releases: AddInput[]) => {
+      const results: Array<{ success: boolean; release?: any; error?: string }> = [];
+
+      for (let i = 0; i < releases.length; i++) {
+        const releaseData = releases[i];
+        options?.onProgress?.(i + 1, releases.length);
+
+        try {
+          const result = await addReleaseMutation.mutateAsync(releaseData);
+          results.push({ success: true, release: result });
+        } catch (error) {
+          results.push({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
+      }
+
+      return results;
+    },
+    onSuccess: (results) => {
+      options?.onSuccess?.(results);
+      queryClient.invalidateQueries({ queryKey: ['releases'] });
+      queryClient.invalidateQueries({ queryKey: ['releases', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['moderation', 'stats'] });
     },
     onError: (error) => {
       options?.onError?.(error);

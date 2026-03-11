@@ -103,7 +103,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useGetSubscriptionsQuery, useAddSubscriptionMutation, useDeleteSubscriptionMutation } from '/@/plugins/lensService';
-import { type SubscriptionData } from '@riffcc/lens-sdk';
+import { type SubscriptionData } from '@riffcc/citadel-sdk';
 import { useSiteColors } from '/@/composables/siteColors';
 import { useShowDefederation } from '/@/composables/showDefed';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';

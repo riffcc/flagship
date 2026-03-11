@@ -107,3 +107,14 @@ Thank you to our sponsors, who have generously provided funding for the developm
 * [Riff Labs](https://github.com/rifflabs)
 * [ARData Tech](https://ardata.tech)
 * [Money Every 3 Days](https://moneyevery3days.com/)
+
+
+## Quality Standards
+This project follows Palace best practices:
+- ✅ Test-driven development
+- ✅ Comprehensive test coverage
+- ✅ Small, atomic commits
+- ✅ Clear documentation
+- ✅ Modular architecture
+
+See [CLAUDE.md](./CLAUDE.md) for detailed development guidelines.

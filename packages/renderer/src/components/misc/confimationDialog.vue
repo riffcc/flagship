@@ -3,7 +3,7 @@
     :model-value="dialogOpen"
     max-width="512px"
   >
-    <v-card class="pa-2">
+    <v-card class="pa-2" color="black">
       <v-card-title>{{ message }}</v-card-title>
       <v-card-actions>
         <v-spacer></v-spacer>

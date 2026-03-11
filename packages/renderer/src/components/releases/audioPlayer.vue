@@ -1,11 +1,15 @@
 <template>
   <v-sheet
-    position="sticky"
-    location="bottom right"
-    class="w-100 border rounded-t-xl mx-auto"
+    position="fixed"
+    location="bottom"
+    class="w-100 border rounded-t-xl audio-player-sheet"
+    color="black"
     :elevation="24"
     height="100px"
     max-width="960px"
+    style="left: 50%; transform: translateX(-50%); z-index: 1000;"
+    :data-navigable="true"
+    @dblclick="navigateToAlbum"
   >
     <audio
       ref="audioPlayerRef"
@@ -62,7 +66,40 @@
           color="transparent"
           class="flex-1-0 d-flex flex-column px-2 px-md-4"
         >
-          <p class="text-subtitle-2">{{ activeTrack?.title }}</p>
+          <div class="d-flex align-center ga-1">
+            <p class="text-subtitle-2 d-flex align-center ga-1 mb-0">
+              <span v-if="activeTrack?.artist">{{ activeTrack.artist }}</span>
+              <span
+                v-if="activeTrack?.artist && activeTrack?.title"
+                :style="{
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '1.2em',
+                  lineHeight: '1'
+                }"
+              >
+                ›
+              </span>
+              <span
+                v-if="activeTrack?.title"
+                class="track-name"
+                :style="{
+                  color: 'rgba(168, 85, 247, 1)',
+                  textShadow: '0 0 10px rgba(168, 85, 247, 0.7)',
+                  fontWeight: '500'
+                }"
+              >
+                {{ activeTrack.title }}
+              </span>
+            </p>
+            <QualityBadge
+              v-if="albumQuality"
+              :quality="albumQuality"
+              :quality-ladder="qualityLadder"
+              player-mode
+              @quality-change="handleQualityChange"
+            />
+          </div>
           <v-slider
             v-model="progress"
             :max="audioPlayerRef?.duration"
@@ -73,6 +110,7 @@
             color="background"
             class="mx-0"
             hide-details
+            :data-navigable="true"
             @update:model-value="seekingTrack"
           ></v-slider>
           <div>
@@ -118,12 +156,33 @@
           v-else
           class="d-flex ga-1"
         >
-          <v-btn
-            :icon="volume === 0 ? '$volume-off' : '$volume-high'"
-            size="small"
-            density="comfortable"
-            @click="toggleVolume"
-          ></v-btn>
+          <!-- Volume Button with Flyout -->
+          <div class="volume-control" v-click-outside="closeVolumeFlyout">
+            <v-btn
+              :icon="volume === 0 ? '$volume-off' : '$volume-high'"
+              size="small"
+              density="comfortable"
+              class="volume-btn"
+              :class="{ 'volume-active': showVolumeFlyout }"
+              @click="handleVolumeClick"
+            ></v-btn>
+            <Transition name="volume-flyout">
+              <div v-if="showVolumeFlyout" class="volume-flyout">
+                <v-slider
+                  :model-value="volume"
+                  :min="0"
+                  :max="1"
+                  :step="0.01"
+                  hide-details
+                  thumb-color="white"
+                  track-color="grey"
+                  track-fill-color="primary"
+                  :thumb-size="12"
+                  @update:model-value="setVolume"
+                />
+              </div>
+            </Transition>
+          </div>
           <v-btn
             icon="$rotate-left"
             :color="repeat ? 'grey-lighten-3' : 'default'"
@@ -145,14 +204,35 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, watch} from 'vue';
+import {ref, onMounted, watch, onUnmounted} from 'vue';
 import {useDisplay} from 'vuetify';
+import {useRouter} from 'vue-router';
 import {useAudioAlbum} from '/@/composables/audioAlbum';
 import {usePlaybackController} from '/@/composables/playbackController';
 import {usePlayerVolume} from '/@/composables/playerVolume';
+import {useGlobalPlayback} from '/@/composables/globalPlayback';
 import { parseUrlOrCid } from '/@/utils';
+import QualityBadge from '/@/components/badges/QualityBadge.vue';
 
 const {xs, smAndDown} = useDisplay();
+const router = useRouter();
+
+// Volume flyout state
+const showVolumeFlyout = ref(false);
+
+const handleVolumeClick = () => {
+  if (showVolumeFlyout.value) {
+    // Flyout is open - toggle mute/unmute
+    toggleVolume();
+  } else {
+    // Flyout is closed - open it
+    showVolumeFlyout.value = true;
+  }
+};
+
+const closeVolumeFlyout = () => {
+  showVolumeFlyout.value = false;
+};
 
 const {
   playerRef: audioPlayerRef,
@@ -174,6 +254,12 @@ const {
   activeTrack,
   repeat,
   shuffle,
+  albumQuality,
+  qualityLadder,
+  albumFiles,
+  currentContentCid,
+  isSwitchingQuality,
+  handlePlay,
   handlePrevious,
   handleNext,
   handleOnClose,
@@ -181,7 +267,7 @@ const {
   toggleShuffle,
 } = useAudioAlbum();
 
-const {volume, toggleVolume} = usePlayerVolume();
+const {volume, toggleVolume, setVolume} = usePlayerVolume();
 
 watch(volume, v => {
   if (audioPlayerRef.value) {
@@ -195,8 +281,79 @@ const close = () => {
   handleOnClose();
 };
 
+const navigateToAlbum = () => {
+  router.back();
+};
+
+/**
+ * Handle quality tier change from the badge dropdown.
+ * Switches to the new quality tier by updating the CID and reloading tracks.
+ */
+async function handleQualityChange(tierName: string, newCid: string) {
+  console.log(`[audioPlayer] Switching quality to ${tierName} (CID: ${newCid})`);
+
+  // Don't switch if already on this CID
+  if (currentContentCid.value === newCid) {
+    console.log('[audioPlayer] Already on this quality tier');
+    return;
+  }
+
+  // Remember current playback state
+  const wasPlaying = activeTrack.value;
+  const playingIndex = wasPlaying?.index;
+  const currentPosition = audioPlayerRef.value?.currentTime || 0;
+
+  isSwitchingQuality.value = true;
+
+  try {
+    // Update the content CID
+    currentContentCid.value = newCid;
+
+    // Update audio quality to match the tier
+    const tierToQuality: Record<string, { format: string; bitrate?: number; codec?: string }> = {
+      'lossless': { format: 'flac', codec: 'FLAC' },
+      'opus': { format: 'opus', codec: 'Opus' },
+      'mp3_320': { format: 'mp3', bitrate: 320, codec: 'MP3' },
+      'mp3_v0': { format: 'mp3', bitrate: 245, codec: 'LAME VBR' },
+      'mp3_256': { format: 'mp3', bitrate: 256, codec: 'MP3' },
+      'ogg': { format: 'vorbis', codec: 'Vorbis' },
+      'mp3_vbr': { format: 'mp3', bitrate: 192, codec: 'LAME VBR' },
+      'mp3_192': { format: 'mp3', bitrate: 192, codec: 'MP3' },
+      'aac': { format: 'aac', codec: 'AAC' },
+    };
+
+    const newQuality = tierToQuality[tierName];
+    if (newQuality) {
+      albumQuality.value = newQuality as typeof albumQuality.value;
+    }
+
+    // Fetch tracks from the new CID - this is handled by the album viewer
+    // For now, we just update the current track's CID if playing
+    // The albumViewer will handle the full track list refresh
+
+    // If we were playing, the track CID needs to update
+    // This is a simplified approach - the album viewer handles full switching
+    if (wasPlaying && playingIndex !== undefined && albumFiles.value[playingIndex]) {
+      // The album viewer will refresh albumFiles with new CIDs
+      // For seamless switching, we'd need to coordinate with albumViewer
+      // For now, just log and let the user know quality changed
+      console.log(`[audioPlayer] Quality switched to ${tierName} - track will update on next play`);
+    }
+
+    console.log(`[audioPlayer] Quality switched to ${tierName}`);
+  } catch (error) {
+    console.error('[audioPlayer] Failed to switch quality:', error);
+  } finally {
+    isSwitchingQuality.value = false;
+  }
+}
+
 const defaultSkipTime = 10;
 onMounted(() => {
+  // Register global playback handlers
+  const { registerPlaybackHandlers } = useGlobalPlayback();
+  registerPlaybackHandlers({ play, pause, togglePlay });
+
   if ('mediaSession' in navigator) {
   navigator.mediaSession.setActionHandler('play', play);
   navigator.mediaSession.setActionHandler('pause', pause);
@@ -222,4 +379,48 @@ onMounted(() => {
   navigator.mediaSession.setActionHandler('nexttrack', handleNext);
 }
 });
+
+onUnmounted(() => {
+  // Clear global playback handlers when audio player is unmounted
+  const { clearPlaybackHandlers } = useGlobalPlayback();
+  clearPlaybackHandlers();
+});
 </script>
+
+<style scoped>
+.volume-control {
+  position: relative;
+}
+
+.volume-btn:hover,
+.volume-btn.volume-active {
+  color: rgba(138, 43, 226, 0.9) !important;
+  text-shadow: 0 0 8px rgba(138, 43, 226, 0.6);
+}
+
+.volume-flyout {
+  position: absolute;
+  bottom: calc(100% - 0.55em);
+  left: -1.0em;
+  padding: 8px 16px;
+  width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.volume-flyout :deep(.v-slider-thumb) {
+  will-change: transform;
+}
+
+.volume-flyout-enter-active,
+.volume-flyout-leave-active {
+  transition: opacity 50ms ease, transform 50ms ease;
+}
+
+.volume-flyout-enter-from,
+.volume-flyout-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+</style>

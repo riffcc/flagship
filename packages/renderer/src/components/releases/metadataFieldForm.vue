@@ -72,7 +72,7 @@
 
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue';
-import type { ContentCategoryMetadataField } from '@riffcc/lens-sdk';
+import type { ContentCategoryMetadataField } from '@riffcc/citadel-sdk';
 
 const props = defineProps<{
   initialData?: Partial<ContentCategoryMetadataField[string] & { fieldKey: string; }>;

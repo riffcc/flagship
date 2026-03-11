@@ -13,6 +13,19 @@
       >
         <v-tab
           slider-color="primary"
+          value="moderation"
+        >
+          Moderation
+          <v-badge
+            v-if="pendingCount > 0"
+            :content="pendingCount"
+            color="warning"
+            inline
+            class="ml-1"
+          />
+        </v-tab>
+        <v-tab
+          slider-color="primary"
           value="content"
         >
           Content
@@ -49,15 +62,39 @@
         </v-tab>
         <v-tab
           slider-color="primary"
+          value="structures"
+        >
+          Meta
+        </v-tab>
+        <v-tab
+          slider-color="primary"
           value="maintenance"
         >
           Maintenance
+        </v-tab>
+        <v-tab
+          slider-color="primary"
+          value="p2p"
+        >
+          P2P
+        </v-tab>
+        <v-tab
+          v-if="librarianEnabled"
+          slider-color="primary"
+          value="librarian"
+        >
+          Librarian
         </v-tab>
       </v-tabs>
       <v-window
         v-model="tab"
         class="flex-1-0 border-s-sm"
       >
+        <v-window-item
+          value="moderation"
+        >
+          <moderation-queue />
+        </v-window-item>
         <v-window-item
           value="content"
         >
@@ -92,9 +129,30 @@
           <categories-management></categories-management>
         </v-window-item>
         <v-window-item
+          value="structures"
+        >
+          <structures-management></structures-management>
+        </v-window-item>
+        <v-window-item
           value="maintenance"
         >
           <maintenance-management></maintenance-management>
+        </v-window-item>
+        <v-window-item
+          value="p2p"
+        >
+          <v-container class="fill-height d-flex flex-column">
+            <!-- 3D Network Graph with Split Beam Bidirectional Latency -->
+            <div class="flex-grow-1">
+              <network-map-graph />
+            </div>
+          </v-container>
+        </v-window-item>
+        <v-window-item
+          v-if="librarianEnabled"
+          value="librarian"
+        >
+          <librarian-panel />
         </v-window-item>
       </v-window>
     </div>
@@ -102,7 +160,8 @@
 </template>
 
 <script setup lang="ts">
-import {ref, type Ref} from 'vue';
+// @ts-nocheck
+import {ref, computed, type Ref, defineAsyncComponent, onMounted, onUnmounted} from 'vue';
 import {useDisplay} from 'vuetify';
 import contentManagement from '/@/components/admin/contentManagement.vue';
 import accessManagement from '/@/components/admin/accessManagement.vue';
@@ -110,11 +169,24 @@ import featuredManagement from '/@/components/admin/featuredManagement.vue';
 import subscriptionManagement from '/@/components/admin/subscriptionManagement.vue';
 import siteManagement from '/@/components/admin/siteManagement.vue';
 import categoriesManagement from '/@/components/admin/categoriesManagement.vue';
+import structuresManagement from '/@/components/admin/structuresManagement.vue';
 import maintenanceManagement from '/@/components/admin/maintenanceManagement.vue';
+import moderationQueue from '/@/components/admin/ModerationQueue.vue';
+import { useAdminWebSocket } from '/@/composables/useAdminWebSocket';
+import { isLibrarianEnabled } from '/@/composables/useLibrarian';
+
+// Lazy load LibrarianPanel since it's conditionally rendered
+const LibrarianPanel = defineAsyncComponent(() => import('/@/components/admin/librarian/librarianPanel.vue'));
+
+// Lazy load NetworkMapGraph to avoid WebGPU errors from 3d-force-graph on browsers without support
+const NetworkMapGraph = defineAsyncComponent(() => import('/@/components/misc/networkMapGraph.vue'));
 import type { PartialFeaturedReleaseItem } from '/@//types';
 
 const {lgAndUp} = useDisplay();
 const tab = ref('content');
+
+// Librarian integration (conditional on VITE_LIBRARIAN_API_URL)
+const librarianEnabled = computed(() => isLibrarianEnabled());
 
 const initialFeatureData: Ref<PartialFeaturedReleaseItem | null> = ref(null);
 const handleFeatureReleaseRequest = async (releaseId: string) => {

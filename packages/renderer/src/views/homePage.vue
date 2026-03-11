@@ -1,5 +1,5 @@
 <template>
-  <v-container class="fill-height pb-16">
+  <v-container fluid class="fill-height pb-16">
     <v-sheet
       v-if="isLoading"
       color="transparent"
@@ -54,16 +54,13 @@
           :pagination="section.id === 'tvShow' && section.items.length > 4"
           @navigate="() => router.push(section.navigationPath)"
         >
-          <v-col
+          <content-card
             v-for="item in section.items"
             :key="item.id"
-          >
-            <content-card
-              :item="item"
-              cursor-pointer
-              @click="router.push(`/release/${item.id}`)"
-            />
-          </v-col>
+            :item="item"
+            cursor-pointer
+            @click="handleItemClick(item)"
+          />
         </content-section>
       </template>
     </template>
@@ -71,6 +68,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -78,8 +76,9 @@ import ContentSection from '/@/components/home/contentSection.vue';
 import ContentCard from '/@/components/misc/contentCard.vue';
 import FeaturedSlider from '/@/components/home/featuredSlider.vue';
 import type { ReleaseItem } from '/@/types';
-import { useContentCategoriesQuery, useGetFeaturedReleasesQuery, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
+import { useContentCategoriesQuery, useGetFeaturedReleasesQuery, useGetReleasesQuery, useGetStructuresQuery } from '/@/plugins/lensService/hooks';
 import { filterActivedFeatured, filterPromotedFeatured } from '../utils';
+import { prefetchArchivistManifest } from '/@/composables/useArchivistPrefetch';
 
 const router = useRouter();
 
@@ -97,6 +96,14 @@ const {
 
 const { data: contentCategories } = useContentCategoriesQuery();
 
+// Fetch structures for TV series - only load when needed and handle errors gracefully
+const { data: structures } = useGetStructuresQuery({
+  retry: 1,
+  retryDelay: 1000,
+  // Only enable if we have releases
+  enabled: computed(() => !!releases.value && releases.value.length > 0)
+});
+
 const activedFeaturedReleases = computed<ReleaseItem[]>(() => {
   if (!releases.value || !featuredReleases.value) return [];
   const activedFeaturedReleasesIds = featuredReleases.value
@@ -107,56 +114,221 @@ const activedFeaturedReleases = computed<ReleaseItem[]>(() => {
 
 const promotedFeaturedReleases = computed<ReleaseItem[]>(() => {
   if (!releases.value || !featuredReleases.value) return [];
-  const promotedActivedFeaturedReleasesIds = featuredReleases.value
+
+  // Get promoted featured releases sorted by order (ascending)
+  const sortedPromoted = featuredReleases.value
     .filter(filterActivedFeatured)
     .filter(filterPromotedFeatured)
-    .map(fr => fr.releaseId);
-  return releases.value.filter(r => r.id && promotedActivedFeaturedReleasesIds.includes(r.id));
+    .sort((a, b) => {
+      // Sort by order field (lower order = first), fallback to creation date
+      const aOrder = (a as any).order ?? Infinity;
+      const bOrder = (b as any).order ?? Infinity;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+  // Map to releases preserving the sort order
+  return sortedPromoted
+    .map(fr => releases.value!.find(r => r.id === fr.releaseId))
+    .filter((r): r is ReleaseItem => r !== undefined);
 });
 
+// Non-promoted featured releases for category sections
+const nonPromotedFeaturedReleases = computed<ReleaseItem[]>(() => {
+  if (!releases.value || !featuredReleases.value) return [];
+
+  // Get non-promoted featured releases sorted by order
+  const sortedNonPromoted = featuredReleases.value
+    .filter(filterActivedFeatured)
+    .filter(fr => !filterPromotedFeatured(fr)) // NOT promoted
+    .sort((a, b) => {
+      const aOrder = (a as any).order ?? Infinity;
+      const bOrder = (b as any).order ?? Infinity;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+  // Map to releases preserving the sort order
+  return sortedNonPromoted
+    .map(fr => releases.value!.find(r => r.id === fr.releaseId))
+    .filter((r): r is ReleaseItem => r !== undefined);
+});
 
 const activeSections = computed(() => {
   const limitPerCategory = 8;
-  if (!contentCategories.value || !activedFeaturedReleases.value) return [];
-
-  const releasesByCategory = new Map<string, ReleaseItem[]>();
-  for (const release of activedFeaturedReleases.value) {
-    if (!release.categoryId) continue;
-    if (!releasesByCategory.has(release.categoryId)) {
-      releasesByCategory.set(release.categoryId, []);
-    }
-    releasesByCategory.get(release.categoryId)!.push(release);
-  }
+  if (!contentCategories.value || !nonPromotedFeaturedReleases.value) return [];
 
   return contentCategories.value
     .filter(category => category.featured)
+    .sort((a, b) => {
+      // Put TV Shows last
+      if (a.displayName === 'TV Shows') return 1;
+      if (b.displayName === 'TV Shows') return -1;
+      return 0;
+    })
     .map(featuredCategory => {
-      const items = releasesByCategory.get(featuredCategory.categoryId) || [];
+      // Collect releases that match this category (by ID or slug)
+      let items: ReleaseItem[] = nonPromotedFeaturedReleases.value.filter(release => {
+        if (!release.categoryId) return false;
+
+        // Match by category ID (hash)
+        if (release.categoryId === featuredCategory.id) return true;
+
+        // Match by category slug
+        if (release.categoryId === featuredCategory.categoryId) return true;
+
+        // Match by federated IDs
+        if (featuredCategory.allIds && featuredCategory.allIds.includes(release.categoryId)) return true;
+
+        return false;
+      });
+
+      // For TV shows, group episodes by series
+      // Check both categoryId and displayName for TV category (handle corrupted data)
+      if (featuredCategory.categoryId === 'tv-shows' || featuredCategory.displayName === 'TV Shows') {
+        const seriesMap = new Map<string, any>();
+        const seriesStructures = structures.value ?
+          structures.value.filter((s: any) => s.type === 'series') : [];
+
+        for (const release of items) {
+          const seriesId = release.metadata?.seriesId;
+
+          if (seriesId) {
+            // Episode has a series ID
+            const series = seriesStructures.find((s: any) => s.id === seriesId);
+
+            if (!seriesMap.has(seriesId)) {
+              if (series) {
+                seriesMap.set(seriesId, {
+                  id: series.id,
+                  name: series.name,
+                  categoryId: featuredCategory.id,
+                  thumbnailCID: series.thumbnailCID || release.thumbnailCID,
+                  contentCID: release.contentCID,
+                  description: series.description,
+                  metadata: {
+                    isSeries: true,
+                    episodeCount: 0,
+                    episodes: [],
+                    ...series.metadata
+                  }
+                });
+              } else {
+                // Series structure missing
+                seriesMap.set(seriesId, {
+                  id: seriesId,
+                  name: `Series ${seriesId.substring(0, 8)}...`,
+                  categoryId: featuredCategory.id,
+                  thumbnailCID: release.thumbnailCID,
+                  contentCID: release.contentCID,
+                  description: `TV Series`,
+                  metadata: {
+                    isSeries: true,
+                    isPseudoSeries: true,
+                    episodeCount: 0,
+                    episodes: []
+                  }
+                });
+              }
+            }
+
+            seriesMap.get(seriesId).metadata.episodeCount++;
+            seriesMap.get(seriesId).metadata.episodes.push(release);
+
+            // Sort episodes
+            seriesMap.get(seriesId).metadata.episodes.sort((a: any, b: any) => {
+              const aSeason = a.metadata?.seasonNumber || 0;
+              const bSeason = b.metadata?.seasonNumber || 0;
+              const aEpisode = a.metadata?.episodeNumber || 0;
+              const bEpisode = b.metadata?.episodeNumber || 0;
+
+              if (aSeason !== bSeason) return aSeason - bSeason;
+              return aEpisode - bEpisode;
+            });
+          } else {
+            // Standalone episode without series
+            seriesMap.set(release.id, {
+              ...release,
+              metadata: {
+                ...release.metadata,
+                isStandaloneEpisode: true
+              }
+            });
+          }
+        }
+
+        items = Array.from(seriesMap.values());
+      }
+
+      // Map category slugs to simple routes
+      const routeMap: Record<string, string> = {
+        'music': '/music',
+        'movies': '/movies',
+        'tv-shows': '/tv',
+        'books': '/books',
+        'audiobooks': '/audiobooks',
+        'games': '/games',
+      };
+
       return {
         id: featuredCategory.categoryId,
-        title: featuredCategory.categoryId === 'tv-shows' ? featuredCategory.displayName : `Featured ${featuredCategory.displayName}`,
+        title: featuredCategory.categoryId === 'tv-shows' ? 'Featured TV' : `Featured ${featuredCategory.name || featuredCategory.displayName}`,
         items: items.slice(0, limitPerCategory),
-        navigationPath: `/featured/${featuredCategory.categoryId}`,
+        navigationPath: routeMap[featuredCategory.categoryId] || `/featured/${featuredCategory.categoryId}`,
       };
     })
     .filter(section => section.items.length > 0);
 });
 
 const isLoading = computed(() => {
+  // When Peerbit is disabled, queries don't fetch but data comes from cache
+  // Check if we have data instead of checking loading state
+  const USE_PEERBIT = import.meta.env.VITE_USE_PEERBIT === 'true';
+  if (!USE_PEERBIT) {
+    return !releases.value || !featuredReleases.value || !contentCategories.value;
+  }
   return isReleasesLoading.value || isFeaturedReleasesLoading.value;
 });
 
 const noFeaturedContent = computed(() => {
-  if (!isReleasesFetched.value || !isFeaturedReleasesFetched.value) {
+  // When Peerbit is disabled, queries don't fetch but data comes from cache
+  // Check if we have data instead of checking isFetched
+  if (!releases.value || !featuredReleases.value) {
     return false;
   }
   return promotedFeaturedReleases.value.length === 0 && activeSections.value.length === 0;
 });
 
 const noContent = computed(() => {
-  if (!isReleasesFetched.value || !isFeaturedReleasesFetched.value) {
+  // When Peerbit is disabled, queries don't fetch but data comes from cache
+  // Check if we have data instead of checking isFetched
+  if (!releases.value || !featuredReleases.value) {
     return false;
   }
   return releases.value?.length === 0 && featuredReleases.value?.length === 0;
 });
+
+// Handle clicking on items - navigate to series or release page
+const handleItemClick = (item: any) => {
+  // PREFETCH: Start Archivist manifest fetch BEFORE navigation
+  if (item.contentCID && !item.metadata?.isSeries) {
+    prefetchArchivistManifest(item.contentCID);
+  }
+
+  const tileState = {
+    name: item.name,
+    thumbnailCID: item.thumbnailCID,
+    contentCID: item.contentCID,
+    author: item.metadata?.author,
+    artistId: item.metadata?.artistId,
+    releaseYear: item.metadata?.releaseYear,
+    trackCount: item.metadata?.trackCount,
+  };
+
+  if (item.metadata?.isSeries) {
+    router.push({ path: `/series/${item.id}`, state: tileState });
+  } else {
+    router.push({ path: `/release/${item.id}`, state: tileState });
+  }
+};
 </script>

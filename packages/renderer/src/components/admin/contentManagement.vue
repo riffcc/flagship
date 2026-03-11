@@ -3,121 +3,155 @@
   <v-container>
     <v-data-table
       :headers="smAndDown ? smTableHeaders : tableHeaders"
-      :items="releases"
+      :items="nonArtistReleases"
       :loading="isLoading"
       :items-per-page="20"
       hide-default-header
     >
       <template #item.thumbnail="{ item }">
-        <v-card
-          class="my-2"
-          elevation="2"
-          rounded
-        >
-          <v-img
-            :src="parseUrlOrCid(item.thumbnailCID)"
-            height="64"
-            width="113"
-          ></v-img>
-        </v-card>
+        <slot name="item.thumbnail" :item="item">
+          <v-card
+            class="my-2"
+            elevation="2"
+            rounded
+          >
+            <v-img
+              :src="parseUrlOrCid(item.thumbnailCID) ?? (item.categoryId === 'music' ? '/cd-case-placeholder.svg' : '/no-image-icon.png')"
+              height="64"
+              width="113"
+            ></v-img>
+          </v-card>
+        </slot>
       </template>
       <template #item.name="{ item }">
-        <v-container :max-width="smAndDown ? '128px' : '256px'">
-          <span>{{ item.name }}</span>
-        </v-container>
+        <slot name="item.name" :item="item">
+          <v-container :max-width="smAndDown ? '128px' : '256px'">
+            <span>{{ item.name }}</span>
+          </v-container>
+        </slot>
       </template>
       <template #item.contentCID="{ item }">
-        <span>{{
-          lgAndUp ? item.contentCID : `${item.contentCID.slice(0, 6)}...${item.contentCID.slice(-6)}`
-        }}</span>
+        <slot name="item.contentCID" :item="item">
+          <span>{{
+            item.contentCID
+              ? (lgAndUp ? item.contentCID : `${item.contentCID.slice(0, 6)}...${item.contentCID.slice(-6)}`)
+              : '—'
+          }}</span>
+        </slot>
+      </template>
+      <template #item.category="{ item }">
+        <slot name="item.category" :item="item">
+          {{ getCategoryName(item.categoryId) }}
+        </slot>
+      </template>
+      <!-- Generic slot for any custom columns -->
+      <template #item.categoryId="{ item }">
+        <slot name="item.categoryId" :item="item">
+          <v-chip size="x-small" variant="tonal">{{ item.categoryId }}</v-chip>
+        </slot>
+      </template>
+      <template #item.createdAt="{ item }">
+        <slot name="item.createdAt" :item="item">
+          <span class="text-caption">{{ item.createdAt }}</span>
+        </slot>
       </template>
       <template #item.actions="{ item }">
-        <v-menu v-if="smAndDown">
-          <template #activator="{ props }">
-            <v-btn
-              icon="$dots-vertical"
-              variant="text"
-              v-bind="props"
-            ></v-btn>
-          </template>
-          <v-btn
-            prepend-icon="$clipboard-multiple-outline"
-            @click="copy(item.id!, item.id!)"
-          >
-            Copy ID
-          </v-btn>
-          <v-btn
-            prepend-icon="$pencil"
-            @click="targetReleaseToEdit = item"
-          >
-            Edit
-          </v-btn>
-          <v-btn
-            prepend-icon="$star-plus-outline"
-            @click="requestFeatureRelease(item.id)"
-          >
-            Feature
-          </v-btn>
-          <v-btn
-            prepend-icon="$delete"
-            @click="targetReleaseToDelete = item"
-          >
-            Delete
-          </v-btn>
-        </v-menu>
-        <div
-          v-else
-          class="d-flex"
-        >
-          <v-tooltip
-            text="Copy Release ID"
-            location="bottom"
-          >
-            <template #activator="{ props: tooltipProps }">
+        <!-- Custom actions slot -->
+        <slot
+          v-if="hasCustomActions || hideDefaultActions"
+          name="actions"
+          :item="item"
+        ></slot>
+        <!-- Default actions (edit/delete/feature) -->
+        <template v-else>
+          <v-menu v-if="smAndDown">
+            <template #activator="{ props }">
               <v-btn
-                v-bind="tooltipProps"
-                :icon="getIcon(item.id!)"
-                :color="getColor(item.id!)"
-                class="me-2"
-                size="small"
+                icon="$dots-vertical"
                 variant="text"
-                @click="copy(item.id!, item.id!)"
+                v-bind="props"
               ></v-btn>
             </template>
-          </v-tooltip>
-          <v-btn
-            icon="$pencil"
-            class="me-2"
-            size="small"
-            @click="targetReleaseToEdit = item"
-          ></v-btn>
-          <v-tooltip
-            text="Feature Release"
-            location="bottom"
+            <v-btn
+              prepend-icon="$clipboard-multiple-outline"
+              @click="copy(item.id!, item.id!)"
+            >
+              Copy ID
+            </v-btn>
+            <v-btn
+              prepend-icon="$pencil"
+              @click="targetReleaseToEdit = item"
+            >
+              Edit
+            </v-btn>
+            <v-btn
+              prepend-icon="$star-plus-outline"
+              @click="requestFeatureRelease(item.id)"
+            >
+              Feature
+            </v-btn>
+            <v-btn
+              prepend-icon="$delete"
+              @click="targetReleaseToDelete = item"
+            >
+              Delete
+            </v-btn>
+          </v-menu>
+          <div
+            v-else
+            class="d-flex"
           >
-            <template #activator="{ props: tooltipProps }">
-              <v-btn
-                v-bind="tooltipProps"
-                icon="$star-plus-outline"
-                class="me-2"
-                size="small"
-                @click="requestFeatureRelease(item.id)"
-              ></v-btn>
-            </template>
-          </v-tooltip>
-          <v-btn
-            icon="$delete"
-            size="small"
-            @click="targetReleaseToDelete = item"
-          ></v-btn>
-        </div>
+            <v-tooltip
+              text="Copy Release ID"
+              location="bottom"
+            >
+              <template #activator="{ props: tooltipProps }">
+                <v-btn
+                  v-bind="tooltipProps"
+                  :icon="getIcon(item.id!)"
+                  :color="getColor(item.id!)"
+                  class="me-2"
+                  size="small"
+                  variant="text"
+                  @click="copy(item.id!, item.id!)"
+                ></v-btn>
+              </template>
+            </v-tooltip>
+            <v-btn
+              icon="$pencil"
+              class="me-2"
+              size="small"
+              @click="targetReleaseToEdit = item"
+            ></v-btn>
+            <v-tooltip
+              text="Feature Release"
+              location="bottom"
+            >
+              <template #activator="{ props: tooltipProps }">
+                <v-btn
+                  v-bind="tooltipProps"
+                  icon="$star-plus-outline"
+                  class="me-2"
+                  size="small"
+                  @click="requestFeatureRelease(item.id)"
+                ></v-btn>
+              </template>
+            </v-tooltip>
+            <v-btn
+              icon="$delete"
+              size="small"
+              @click="targetReleaseToDelete = item"
+            ></v-btn>
+          </div>
+        </template>
       </template>
     </v-data-table>
     <v-dialog
       :model-value="Boolean(targetReleaseToEdit)"
       max-width="500px"
+      @update:model-value="(v) => { if (!v) targetReleaseToEdit = null }"
     >
-      <v-card class="py-3">
+      <v-card class="py-3" color="black">
         <v-card-title>
           <span class="text-h6 ml-2">Edit Release</span>
         </v-card-title>
@@ -168,7 +202,8 @@
   </v-snackbar>
 </template>
 <script setup lang="ts">
-import { ref } from 'vue';
+// @ts-nocheck
+import { ref, computed, useSlots } from 'vue';
 import { useDisplay } from 'vuetify';
 import ReleaseForm from '/@/components/releases/releaseForm.vue';
 import confirmationDialog from '/@/components/misc/confimationDialog.vue';
@@ -179,20 +214,50 @@ import {
   parseUrlOrCid,
   // getStatusColor,
 } from '/@/utils';
-import { useDeleteReleaseMutation, useGetReleasesQuery } from '/@/plugins/lensService/hooks';
+import { useDeleteReleaseMutation, useGetReleasesQuery, useContentCategoriesQuery } from '/@/plugins/lensService/hooks';
 
+type Header = {
+  title: string;
+  align?: 'start' | 'end' | 'center';
+  sortable?: boolean;
+  key: string;
+  width?: string;
+};
+
+// Props for reusability
+const props = defineProps<{
+  items?: any[];              // External items (bypasses query)
+  loading?: boolean;          // External loading state
+  hideDefaultActions?: boolean; // Hide edit/delete/feature actions (use slot instead)
+  headers?: Header[];         // Custom headers (overrides default)
+  smHeaders?: Header[];       // Custom small-screen headers
+}>();
+
+const slots = useSlots();
+const hasCustomActions = computed(() => !!slots.actions);
 
 const { lgAndUp, smAndDown } = useDisplay();
 
-const { data: releases, isLoading } = useGetReleasesQuery();
+// Fetch releases - skip if external items provided
+const { data: releases, isLoading: queryLoading } = useGetReleasesQuery();
+const { data: contentCategories } = useContentCategoriesQuery();
+
+const isLoading = computed(() => props.items ? (props.loading ?? false) : queryLoading.value);
+
+// Use external items or filter query results
+const nonArtistReleases = computed(() => {
+  if (props.items) return props.items;
+  if (!releases.value) return [];
+  return releases.value.filter((r: any) => r.metadata?.type !== 'artist');
+});
 const deleteReleaseMutation = useDeleteReleaseMutation({
   onSuccess: () => {
     openSnackbar('Release deleted successfully.', 'success');
     targetReleaseToDelete.value = null;
   },
   onError: (e) => {
-    console.error('Error blocking release:', e);
-    openSnackbar('Error on blocking release.', 'error');
+    console.error('Error deleting release:', e);
+    openSnackbar('Error deleting release.', 'error');
   },
 });
 
@@ -201,34 +266,32 @@ const emit = defineEmits<{
   'feature-release': [id: string]
 }>();
 
-type Header = {
-  title: string;
-  align?: 'start' | 'end' | 'center';
-  sortable?: boolean;
-  key: string;
-};
-const smTableHeaders: Header[] = [
-  { title: 'ID', align: 'start', key: 'id' },
+const defaultSmHeaders: Header[] = [
   { title: 'Name', align: 'start', key: 'name' },
   { title: 'Actions', key: 'actions', sortable: false },
 ];
-const tableHeaders: Header[] = [
-  { title: 'ID', align: 'start', key: 'id' },
-  {
-    title: 'Thumbnail',
-    align: 'start',
-    key: 'thumbnail',
-  },
+const defaultHeaders: Header[] = [
+  { title: 'Thumbnail', align: 'start', key: 'thumbnail' },
   { title: 'Name', align: 'start', key: 'name' },
   { title: 'Category', align: 'start', key: 'category' },
   { title: 'Content CID', align: 'start', key: 'contentCID' },
   { title: 'Actions', key: 'actions', sortable: false },
 ];
 
+// Use custom headers if provided, otherwise defaults
+const smTableHeaders = computed(() => props.smHeaders ?? defaultSmHeaders);
+const tableHeaders = computed(() => props.headers ?? defaultHeaders);
+
 const targetReleaseToEdit = ref<ReleaseItem | null>(null);
 const targetReleaseToDelete = ref<ReleaseItem | null>(null);
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
+
+// Get category display name from category ID
+const getCategoryName = (categoryId: string): string => {
+  const category = contentCategories.value?.find(c => c.id === categoryId || c.categoryId === categoryId);
+  return category?.displayName || category?.name || categoryId;
+};
 
 function handleSuccess(message: string) {
   openSnackbar(message, 'success');

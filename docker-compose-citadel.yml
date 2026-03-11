@@ -1,0 +1,193 @@
+version: '3.8'
+
+# Flagship + Lens V2 with Citadel Integration
+# Full P2P mesh with slot management, Byzantine validation, and VDF epochs
+#
+# Build: docker-compose -f docker-compose-citadel.yml build
+# Start: docker-compose -f docker-compose-citadel.yml up -d
+# Logs:  docker-compose -f docker-compose-citadel.yml logs -f
+
+services:
+  # Lens Node 0 - Primary node with visualization enabled
+  lens-node-0:
+    build:
+      context: ../
+      dockerfile: lens-v2/crates/lens-v2-node/Dockerfile
+    container_name: lens-node-0
+    hostname: lens-node-0
+    ports:
+      - "5000:5000"
+    environment:
+      # Basic configuration
+      - PORT=5000
+      - DB_PATH=/data/.lens-node-data
+      - RELAY_URL=ws://lens-node-0:5000/api/v1/relay/ws
+      - RUST_LOG=info,citadel_slots=debug,citadel_vdf=debug
+
+      # Citadel integration
+      - ENABLE_CITADEL=true
+      - VDF_DIFFICULTY=1000000
+      - BYZANTINE_THRESHOLD=5
+      - ENABLE_SPLIT_BEAM_VIZ=true
+
+      # Node identity
+      - NODE_ID=0
+      - SITE_NAME=Lens Node 0 (Citadel)
+      - SITE_MODE=normal
+    volumes:
+      - lens-data-0:/data
+    networks:
+      - citadel-mesh
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  # Lens Node 1 - Follower node
+  lens-node-1:
+    build:
+      context: ../
+      dockerfile: lens-v2/crates/lens-v2-node/Dockerfile
+    container_name: lens-node-1
+    hostname: lens-node-1
+    ports:
+      - "5001:5000"
+    environment:
+      - PORT=5000
+      - DB_PATH=/data/.lens-node-data
+      - RELAY_URL=ws://lens-node-0:5000/api/v1/relay/ws
+      - RUST_LOG=info,citadel_slots=debug
+
+      # Citadel integration
+      - ENABLE_CITADEL=true
+      - VDF_DIFFICULTY=1000000
+      - BYZANTINE_THRESHOLD=5
+      - ENABLE_SPLIT_BEAM_VIZ=true
+
+      # Node identity
+      - NODE_ID=1
+      - SITE_NAME=Lens Node 1 (Citadel)
+      - SITE_MODE=normal
+    volumes:
+      - lens-data-1:/data
+    networks:
+      - citadel-mesh
+    depends_on:
+      lens-node-0:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  # Lens Node 2 - Follower node
+  lens-node-2:
+    build:
+      context: ../
+      dockerfile: lens-v2/crates/lens-v2-node/Dockerfile
+    container_name: lens-node-2
+    hostname: lens-node-2
+    ports:
+      - "5002:5000"
+    environment:
+      - PORT=5000
+      - DB_PATH=/data/.lens-node-data
+      - RELAY_URL=ws://lens-node-0:5000/api/v1/relay/ws
+      - RUST_LOG=info,citadel_slots=debug
+
+      # Citadel integration
+      - ENABLE_CITADEL=true
+      - VDF_DIFFICULTY=1000000
+      - BYZANTINE_THRESHOLD=5
+      - ENABLE_SPLIT_BEAM_VIZ=true
+
+      # Node identity
+      - NODE_ID=2
+      - SITE_NAME=Lens Node 2 (Citadel)
+      - SITE_MODE=normal
+    volumes:
+      - lens-data-2:/data
+    networks:
+      - citadel-mesh
+    depends_on:
+      lens-node-0:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  # Flagship Frontend (optional - for visualization)
+  flagship-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: flagship-frontend
+    ports:
+      - "3000:80"
+    environment:
+      # Connect to lens-node-0 as primary API
+      - VITE_API_URL=http://localhost:5000/api/v1
+      - VITE_RELAY_URL=ws://localhost:5000/api/v1/relay/ws
+      - VITE_ENABLE_WEBGPU=true
+      - VITE_ENABLE_CITADEL_VIZ=true
+    depends_on:
+      lens-node-0:
+        condition: service_healthy
+    networks:
+      - citadel-mesh
+    restart: unless-stopped
+
+volumes:
+  lens-data-0:
+    driver: local
+  lens-data-1:
+    driver: local
+  lens-data-2:
+    driver: local
+
+networks:
+  citadel-mesh:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Quick Start:
+# 1. Build all services:
+#    docker-compose -f docker-compose-citadel.yml build
+#
+# 2. Start cluster:
+#    docker-compose -f docker-compose-citadel.yml up -d
+#
+# 3. Check node health:
+#    curl http://localhost:5000/api/v1/ready
+#    curl http://localhost:5001/api/v1/ready
+#    curl http://localhost:5002/api/v1/ready
+#
+# 4. Test Citadel endpoints:
+#    curl http://localhost:5000/api/v1/slots/claim -X POST \
+#      -H "Content-Type: application/json" \
+#      -d '{"peer_id":"test-peer-1"}'
+#
+#    curl http://localhost:5000/api/v1/vdf/epoch
+#
+#    curl http://localhost:5000/api/v1/slots/lease
+#
+# 5. View logs:
+#    docker-compose -f docker-compose-citadel.yml logs -f lens-node-0
+#
+# 6. Stop cluster:
+#    docker-compose -f docker-compose-citadel.yml down
+#
+# 7. Full teardown (including volumes):
+#    docker-compose -f docker-compose-citadel.yml down -v

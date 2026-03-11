@@ -1,40 +1,82 @@
 <template>
-  <v-container>
-    <v-sheet
-      width="480px"
-      class="px-8 pb-16 pt-10 mx-auto"
-    >
-      <release-form
-        v-if="canUpload"
-        @update:success="handleSuccess"
-        @update:error="handleError"
-      />
-      <v-alert
-        v-else-if="canUpload === false"
-        type="info"
-        class="mt-4"
-        color="black"
-        text-color="white"
-      >
-        You aren't currently authorised to add releases to this instance of Riff.CC.
-      </v-alert>
-      <div
-        v-else
-      >
-        <v-alert
-          type="info"
-          class="mt-4"
-          color="black"
-          text-color="white"
-        >
-          Loading authorisation data...
-        </v-alert>
-        <v-skeleton-loader
-          type="list-item"
-        />
-      </div>
-    </v-sheet>
+  <v-container fluid class="pa-4">
+    <v-row>
+      <v-col cols="12">
+        <h1 class="text-h4 mb-4">Upload & File Management</h1>
+        <p class="text-body-1 mb-6">
+          Upload files, organize them into folders, and create releases from your uploads.
+        </p>
+      </v-col>
+    </v-row>
+
+    <!-- Quick Actions -->
+    <v-row class="mb-4">
+      <v-col cols="12">
+        <v-card>
+          <v-card-title>Quick Actions</v-card-title>
+          <v-card-text>
+            <v-btn
+              color="primary"
+              size="large"
+              prepend-icon="$upload"
+              class="mr-2 mb-2"
+              @click="showUploadDialog = true"
+              :disabled="!hasUploadPermission"
+            >
+              Upload Files
+            </v-btn>
+            <v-btn
+              color="secondary"
+              size="large"
+              prepend-icon="$plus"
+              class="mr-2 mb-2"
+              @click="goToCreateRelease"
+              :disabled="!canCreateRelease"
+            >
+              Create Release
+            </v-btn>
+            <v-alert
+              v-if="!hasUploadPermission"
+              type="warning"
+              variant="tonal"
+              class="mt-4"
+            >
+              You don't have permission to upload files. Contact an administrator to get upload permissions.
+            </v-alert>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- My Files Section -->
+    <v-row>
+      <v-col cols="12">
+        <my-files-manager v-if="hasUploadPermission" />
+        <v-card v-else>
+          <v-card-text>
+            <v-alert type="info" variant="tonal">
+              File management requires upload permissions. Contact an administrator.
+            </v-alert>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Upload Dialog -->
+    <ipfs-upload-dialog
+      v-model="showUploadDialog"
+      @update:success="handleUploadSuccess"
+      @bulk-upload="handleBulkUpload"
+    />
+
+    <!-- Bulk Upload Dialog -->
+    <bulk-upload-dialog
+      v-model="showBulkUploadDialog"
+      :files="bulkUploadFiles"
+      @upload:success="handleUploadSuccess"
+    />
   </v-container>
+
   <v-snackbar
     v-model="showSnackbar"
     :color="snackbarMessage?.type ?? 'default'"
@@ -53,19 +95,44 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import releaseForm from '/@/components/releases/releaseForm.vue';
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAccountStatusQuery } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
+import ipfsUploadDialog from '/@/components/account/ipfsUploadDialog.vue';
+import bulkUploadDialog from '/@/components/account/BulkUploadDialog.vue';
+import myFilesManager from '/@/components/account/myFilesManager.vue';
 
-const canUpload = computed(() => true);
+const router = useRouter();
+const { data: accountStatus } = useAccountStatusQuery();
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
 
-function handleSuccess(message: string) {
-  openSnackbar(message, 'success');
+const showUploadDialog = ref(false);
+const showBulkUploadDialog = ref(false);
+const bulkUploadFiles = ref<File[]>([]);
+
+const hasUploadPermission = computed(() => {
+  if (!accountStatus.value) return false;
+  return accountStatus.value.permissions?.includes('upload') || accountStatus.value.isAdmin;
+});
+
+const canCreateRelease = computed(() => {
+  if (!accountStatus.value) return false;
+  return accountStatus.value.permissions?.includes('create_release') || accountStatus.value.isAdmin;
+});
+
+function handleUploadSuccess() {
+  openSnackbar('Files uploaded successfully!', 'success');
 }
 
-function handleError(message: string) {
-  openSnackbar(message, 'error');
-  console.error('Error:', message);
+function handleBulkUpload(files: File[]) {
+  bulkUploadFiles.value = files;
+  showBulkUploadDialog.value = true;
+}
+
+function goToCreateRelease() {
+  // The existing upload page flow for creating releases
+  // In future, could show release form here or navigate to it
+  openSnackbar('Navigate to Admin panel to create releases from uploaded files', 'success');
 }
 </script>

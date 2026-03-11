@@ -1,0 +1,500 @@
+# 50-node Citadel cluster with YAML anchors
+# Usage: docker compose -f docker-compose.dev.yml up -d
+
+x-citadel-node: &citadel-node
+  build:
+    context: .
+    dockerfile: Dockerfile.citadel-node
+  command: >
+    bash -c "
+      while [ ! -f /citadel/target/release/lens-node ]; do sleep 2; done &&
+      while true; do
+        /citadel/target/release/lens-node &
+        PID=$$!
+        inotifywait -e close_write /citadel/target/release/lens-node
+        kill $$PID 2>/dev/null || true
+        sleep 1
+      done
+    "
+  volumes:
+    - citadel_src:/citadel:ro
+    - citadel_target:/citadel/target:ro
+  environment: &citadel-env
+    CITADEL_PEERS: citadel-1:9000,citadel-2:9000,citadel-3:9000
+    ADMIN_PUBLIC_KEY: ${ADMIN_PUBLIC_KEY:-}
+    RUST_LOG: ${RUST_LOG:-info}
+  depends_on:
+    - citadel-builder
+  networks:
+    - citadel-mesh
+
+services:
+  flagship-dev:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install && pnpm dev --host 0.0.0.0 --port 5175"
+    ports:
+      - "${FLAGSHIP_HOST:-0.0.0.0}:${FLAGSHIP_PORT:-9999}:5175"
+    volumes:
+      - ..:/app
+      - flagship_node_modules:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8085/api/v1}
+      - VITE_ALLOWED_HOSTS=*
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    depends_on:
+      - citadel-lb
+    networks:
+      - citadel-mesh
+
+  citadel-lb:
+    image: haproxy:2.9-alpine
+    ports:
+      - "${CITADEL_API_HOST:-0.0.0.0}:${CITADEL_API_PORT:-8085}:8085"
+      - "${HAPROXY_STATS_HOST:-0.0.0.0}:${HAPROXY_STATS_PORT:-8404}:8404"
+    volumes:
+      - ./haproxy-dev.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - citadel-1
+      - citadel-2
+      - citadel-3
+    networks:
+      - citadel-mesh
+
+  citadel-builder:
+    image: rust:1.83-bookworm
+    working_dir: /citadel
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y git curl libclang-dev build-essential &&
+        curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+        cargo binstall -y watchexec-cli
+        rustup component add rustfmt
+        if [ ! -d /citadel/.git ]; then
+          git clone https://github.com/rifflabs/citadel.git /citadel-tmp &&
+          mv /citadel-tmp/* /citadel-tmp/.* /citadel/ 2>/dev/null || true &&
+          rm -rf /citadel-tmp
+        fi &&
+        watchexec -r -w crates/citadel-lens/src -- cargo build --release -p citadel-lens &&
+        sleep infinity
+      "
+    volumes:
+      - citadel_src:/citadel
+      - citadel_cargo:/usr/local/cargo/registry
+      - citadel_target:/citadel/target
+
+  # 50 Citadel nodes using YAML anchors
+  citadel-1:
+    <<: *citadel-node
+    ports: ["8080:8080"]
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_1:/data
+
+  citadel-2:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_2:/data
+
+  citadel-3:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_3:/data
+
+  citadel-4:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_4:/data
+
+  citadel-5:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_5:/data
+
+  citadel-6:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_6:/data
+
+  citadel-7:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_7:/data
+
+  citadel-8:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_8:/data
+
+  citadel-9:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_9:/data
+
+  citadel-10:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_10:/data
+
+  citadel-11:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_11:/data
+
+  citadel-12:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_12:/data
+
+  citadel-13:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_13:/data
+
+  citadel-14:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_14:/data
+
+  citadel-15:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_15:/data
+
+  citadel-16:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_16:/data
+
+  citadel-17:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_17:/data
+
+  citadel-18:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_18:/data
+
+  citadel-19:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_19:/data
+
+  citadel-20:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_20:/data
+
+  citadel-21:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_21:/data
+
+  citadel-22:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_22:/data
+
+  citadel-23:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_23:/data
+
+  citadel-24:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_24:/data
+
+  citadel-25:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_25:/data
+
+  citadel-26:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_26:/data
+
+  citadel-27:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_27:/data
+
+  citadel-28:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_28:/data
+
+  citadel-29:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_29:/data
+
+  citadel-30:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_30:/data
+
+  citadel-31:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_31:/data
+
+  citadel-32:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_32:/data
+
+  citadel-33:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_33:/data
+
+  citadel-34:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_34:/data
+
+  citadel-35:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_35:/data
+
+  citadel-36:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_36:/data
+
+  citadel-37:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_37:/data
+
+  citadel-38:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_38:/data
+
+  citadel-39:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_39:/data
+
+  citadel-40:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_40:/data
+
+  citadel-41:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_41:/data
+
+  citadel-42:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_42:/data
+
+  citadel-43:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_43:/data
+
+  citadel-44:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_44:/data
+
+  citadel-45:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_45:/data
+
+  citadel-46:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_46:/data
+
+  citadel-47:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_47:/data
+
+  citadel-48:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_48:/data
+
+  citadel-49:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_49:/data
+
+  citadel-50:
+    <<: *citadel-node
+    volumes:
+      - citadel_src:/citadel:ro
+      - citadel_target:/citadel/target:ro
+      - citadel_data_50:/data
+
+networks:
+  citadel-mesh:
+    driver: bridge
+
+volumes:
+  flagship_node_modules:
+  citadel_src:
+  citadel_cargo:
+  citadel_target:
+  citadel_data_1:
+  citadel_data_2:
+  citadel_data_3:
+  citadel_data_4:
+  citadel_data_5:
+  citadel_data_6:
+  citadel_data_7:
+  citadel_data_8:
+  citadel_data_9:
+  citadel_data_10:
+  citadel_data_11:
+  citadel_data_12:
+  citadel_data_13:
+  citadel_data_14:
+  citadel_data_15:
+  citadel_data_16:
+  citadel_data_17:
+  citadel_data_18:
+  citadel_data_19:
+  citadel_data_20:
+  citadel_data_21:
+  citadel_data_22:
+  citadel_data_23:
+  citadel_data_24:
+  citadel_data_25:
+  citadel_data_26:
+  citadel_data_27:
+  citadel_data_28:
+  citadel_data_29:
+  citadel_data_30:
+  citadel_data_31:
+  citadel_data_32:
+  citadel_data_33:
+  citadel_data_34:
+  citadel_data_35:
+  citadel_data_36:
+  citadel_data_37:
+  citadel_data_38:
+  citadel_data_39:
+  citadel_data_40:
+  citadel_data_41:
+  citadel_data_42:
+  citadel_data_43:
+  citadel_data_44:
+  citadel_data_45:
+  citadel_data_46:
+  citadel_data_47:
+  citadel_data_48:
+  citadel_data_49:
+  citadel_data_50:

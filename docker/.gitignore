@@ -1,0 +1,11 @@
+# Generated files
+docker-compose.generated.yml
+docker-compose.flagship.yml
+haproxy-dynamic.cfg
+
+# Environment
+.env
+.env.docker.dev
+
+# Binary
+lens-node

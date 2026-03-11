@@ -1,4 +1,10 @@
+# AI cruft
+.palace
+synthesis
+.claude
+
 # Node.js
+.pnpm-store/
 node_modules/
 npm-debug.log
 yarn-error.log
@@ -44,6 +50,35 @@ playwright-report/
 # Build tools
 .eslintcache
 .prettierrc
-.electron-vendors.cache.json
 
 *.txt
+
+# lens-sdk
+lens-sdk
+.claude
+
+# env
+.env.production
+
+# Rust
+target/
+**/*.rs.bk
+
+# Research papers
+synthesis/
+
+# Roadmap planning docs
+ROADMAP_v0.6.0.md
+
+# Data
+.lens-node-data/
+# AI configuration (user-specific)
+.mcp.json
+.playwright-mcp/
+
+# Docker dev environment
+docker/.env.docker.dev
+docker/docker-compose.generated.yml
+docker/haproxy-dynamic.cfg
+CLAUDE.local.md
+__pycache__/

@@ -36,7 +36,7 @@ Once the node is running, you will see output similar to this. **Take note of yo
 ```bash
 Node Directory: ~/.lens-node
 Peer ID: 12D3KooWCkhrz3Kob1qLTMVFdbAJs3VnkgtR4XSXyUZsUDD4NC4H
-Node Public Key: ed25119p/2ba30160b78da2b3ceecc6e4488735288fc30433de80f03eb1b4f9e1277aa5c2
+Node Public Key: ed25519p/2ba30160b78da2b3ceecc6e4488735288fc30433de80f03eb1b4f9e1277aa5c2
 Site Address: zb2rhf6jXPAeDtE77qrnqvb3tZFuiZ13dosxtshpDqjUa2coN
 Listening on: [
 "/ip4/127.0.0.1/tcp/8002/ws/p2p/12D3KooWCkhrz3Kob1qLTMVFdbAJs3VnkgtR4XSXyUZsUDD4NC4H",

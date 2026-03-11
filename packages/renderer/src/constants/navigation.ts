@@ -22,7 +22,8 @@ export const navigationMap: NavigationMap = {
     ],
     help: [
       {label: 'Privacy Policy', path: 'https://riff.cc/privacy'},
-      {label: 'Contact Us', path: 'https://riff.cc/contact'},
+      {label: 'Contact us', path: 'https://riff.cc/contact'},
+      {label: 'Credits & Licensing', path: '/credits'},
     ],
   },
 };

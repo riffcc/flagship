@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 
-type MessageType = 'success' | 'error';
+type MessageType = 'success' | 'error' | 'info' | 'warning' | 'default';
 
 export function useSnackbarMessage() {
 
