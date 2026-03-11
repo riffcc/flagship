@@ -65,6 +65,28 @@
       </v-card-text>
     </v-card>
 
+    <v-card class="mt-6">
+      <v-card-title>Cleanup Empty Structures</v-card-title>
+      <v-card-text>
+        <p class="mb-4">Remove empty structures (TV series, seasons, artists, albums) that have no associated content.</p>
+        <v-btn
+          color="warning"
+          prepend-icon="$delete"
+          :loading="isCleaningUp"
+          @click="cleanupEmptyStructures"
+        >
+          Cleanup Empty Structures
+        </v-btn>
+        <v-alert
+          v-if="cleanupResults"
+          :type="cleanupResults.error ? 'error' : 'success'"
+          class="mt-4"
+        >
+          {{ cleanupResults.message }}
+        </v-alert>
+      </v-card-text>
+    </v-card>
+
     <v-dialog
       v-model="confirmDialog"
       max-width="500"
@@ -113,21 +135,29 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useDeleteFeaturedReleaseMutation } from '/@/plugins/lensService/hooks';
+import { useQueryClient } from '@tanstack/vue-query';
+import { useGetReleasesQuery, useGetFeaturedReleasesQuery, useAddReleaseMutation, useEditReleaseMutation, useDeleteReleaseMutation, useDeleteFeaturedReleaseMutation, useAddFeaturedReleaseMutation, useEditFeaturedReleaseMutation, useContentCategoriesQuery, useGetStructuresQuery, useDeleteStructureMutation, useBulkDeleteAllReleasesMutation } from '/@/plugins/lensService/hooks';
 import { useSnackbarMessage } from '/@/composables/snackbarMessage';
+import { useIdentity } from '/@/composables/useIdentity';
 import type { ReleaseItem } from '/@/types';
+
+const queryClient = useQueryClient();
 
 const isExporting = ref(false);
 const isImporting = ref(false);
+const isCleaningUp = ref(false);
 const importMode = ref<'upsert' | 'replace'>('upsert');
 const importFile = ref<File | null>(null);
 const confirmDialog = ref(false);
+const cleanupResults = ref<{ message: string; error: boolean } | null>(null);
 
 const { snackbarMessage, showSnackbar, openSnackbar, closeSnackbar } = useSnackbarMessage();
+const { publicKey, sign } = useIdentity();
 
 // Queries
 const { data: releases } = useGetReleasesQuery();
 const { data: featuredReleases } = useGetFeaturedReleasesQuery();
+const { data: contentCategories } = useContentCategoriesQuery();
 
 // Mutations
 const addReleaseMutation = useAddReleaseMutation({
@@ -140,6 +170,10 @@ const editReleaseMutation = useEditReleaseMutation({
 
 const deleteReleaseMutation = useDeleteReleaseMutation({
   onError: (e) => console.error('Failed to delete release:', e),
+});
+
+const bulkDeleteAllReleasesMutation = useBulkDeleteAllReleasesMutation({
+  onError: (e) => console.error('Failed to bulk delete releases:', e),
 });
 
 const addFeaturedReleaseMutation = useAddFeaturedReleaseMutation({
@@ -177,7 +211,21 @@ const exportAll = async () => {
   isExporting.value = true;
 
   try {
-    const cleanedReleases = cleanForExport(releases.value || []) as unknown[];
+    // Create mapping of category ID to slug
+    const categoryIdToSlugMap = new Map<string, string>();
+    if (contentCategories.value) {
+      contentCategories.value.forEach(cat => {
+        categoryIdToSlugMap.set(cat.id, cat.categoryId);
+      });
+    }
+
+    // Add categorySlug to each release
+    const releasesWithSlug = (releases.value || []).map(release => ({
+      ...release,
+      categorySlug: categoryIdToSlugMap.get(release.categoryId)
+    }));
+
+    const cleanedReleases = cleanForExport(releasesWithSlug) as unknown[];
     const cleanedFeaturedReleases = cleanForExport(featuredReleases.value || []) as unknown[];
 
     const exportData = {
@@ -221,8 +269,16 @@ const importAll = async () => {
 
 const confirmReplaceAll = async () => {
   confirmDialog.value = false;
-  await deleteAllData();
-  await performImport();
+  isImporting.value = true;
+
+  try {
+    await deleteAllData();
+    await performImport();
+  } catch (error) {
+    console.error('Replace all failed:', error);
+    openSnackbar('Replace all failed: ' + (error instanceof Error ? error.message : String(error)), 'error');
+    isImporting.value = false;
+  }
 };
 
 const deleteAllData = async () => {
@@ -230,38 +286,37 @@ const deleteAllData = async () => {
     let featuredDeleted = 0;
     let releasesDeleted = 0;
 
-    // Delete all featured releases first
+    // Delete all featured releases first (still one-by-one as there's no bulk endpoint yet)
     if (featuredReleases.value && featuredReleases.value.length > 0) {
-      console.log(`Deleting ${featuredReleases.value.length} featured releases...`);
+      openSnackbar(`Deleting ${featuredReleases.value.length} featured releases...`, 'info');
       for (const featured of featuredReleases.value) {
         try {
           const result = await deleteFeaturedReleaseMutation.mutateAsync(featured.id);
-          if (result.success) {
+          // WASM P2P mutations return {id: "..."} on success
+          if (result && result.id) {
             featuredDeleted++;
-          } else {
-            console.error(`Failed to delete featured release ${featured.id}:`, result.error);
           }
         } catch (err) {
-          console.error(`Error deleting featured release ${featured.id}:`, err);
+          // Continue on error
         }
       }
+    } else {
+      openSnackbar('No featured releases to delete', 'info');
     }
 
-    // Then delete all releases
+    // Then delete all releases using bulk delete (efficient single UBTS block)
     if (releases.value && releases.value.length > 0) {
-      console.log(`Deleting ${releases.value.length} releases...`);
-      for (const release of releases.value) {
-        try {
-          const result = await deleteReleaseMutation.mutateAsync(release.id);
-          if (result.success) {
-            releasesDeleted++;
-          } else {
-            console.error(`Failed to delete release ${release.id}:`, result.error);
-          }
-        } catch (err) {
-          console.error(`Error deleting release ${release.id}:`, err);
-        }
+      openSnackbar(`Deleting ${releases.value.length} releases in bulk...`, 'info');
+      try {
+        const result = await bulkDeleteAllReleasesMutation.mutateAsync();
+        releasesDeleted = result.deleted;
+        openSnackbar(`Bulk delete complete: ${releasesDeleted} releases deleted (transaction: ${result.delete_transaction_id})`, 'success');
+      } catch (err) {
+        openSnackbar('Bulk delete failed: ' + (err instanceof Error ? err.message : String(err)), 'error');
+        throw err;
       }
+    } else {
+      openSnackbar('No releases to delete', 'info');
     }
 
     // Wait a bit for queries to update
@@ -274,6 +329,46 @@ const deleteAllData = async () => {
   }
 };
 
+// Helper function to map category slug to ID
+const getCategoryIdFromSlug = (categorySlug: string): string => {
+  if (!contentCategories.value) return categorySlug;
+
+  // First check if it's already a valid category ID
+  const existingById = contentCategories.value.find(c => c.id === categorySlug);
+  if (existingById) return categorySlug;
+
+  // Normalize the input slug
+  const normalizedInput = categorySlug.toLowerCase().trim();
+
+  // Try exact match with category slugs
+  const exactMatch = contentCategories.value.find(c =>
+    c.categoryId?.toLowerCase() === normalizedInput
+  );
+  if (exactMatch) return exactMatch.id;
+
+  // Try matching by adding/removing 's' for plural/singular
+  const withS = normalizedInput.endsWith('s') ? normalizedInput : normalizedInput + 's';
+  const withoutS = normalizedInput.endsWith('s') ? normalizedInput.slice(0, -1) : normalizedInput;
+
+  const pluralMatch = contentCategories.value.find(c =>
+    c.categoryId?.toLowerCase() === withS || c.categoryId?.toLowerCase() === withoutS
+  );
+  if (pluralMatch) return pluralMatch.id;
+
+  // Try matching with spaces converted to hyphens and vice versa
+  const withHyphens = normalizedInput.replace(/\s+/g, '-');
+  const withSpaces = normalizedInput.replace(/-/g, ' ');
+
+  const formattedMatch = contentCategories.value.find(c =>
+    c.categoryId?.toLowerCase() === withHyphens ||
+    c.categoryId?.toLowerCase() === withSpaces
+  );
+  if (formattedMatch) return formattedMatch.id;
+
+  // If nothing matches, return the original (will likely fail, but preserves the error)
+  return categorySlug;
+};
+
 const performImport = async () => {
   if (!importFile.value) return;
 
@@ -283,96 +378,180 @@ const performImport = async () => {
     const text = await importFile.value.text();
     const importData = JSON.parse(text);
 
-    if (!importData.version || !importData.releases || !importData.featuredReleases) {
+    if (!importData.version || !importData.releases) {
       throw new Error('Invalid import file format');
     }
 
-    let releasesImported = 0;
-    let featuredImported = 0;
+    // Use bulk HTTP API import endpoint for efficient importing
+    openSnackbar(`Importing ${importData.releases.length} releases via bulk API...`, 'info');
 
-    // Import releases
-    for (const release of importData.releases) {
-      try {
-        // Extract the data without the __context
-        const releaseData: ReleaseItem = {
-          id: release.id,
-          name: release.name,
-          categoryId: release.categoryId,
-          contentCID: release.contentCID,
-          thumbnailCID: release.thumbnailCID,
-          metadata: release.metadata,
-          siteAddress: release.siteAddress,
-          postedBy: release.postedBy,
-        };
+    const { API_URL } = await import('/@/plugins/router');
 
-        if (importMode.value === 'upsert') {
-          // Check if release exists
-          const existing = releases.value?.find(r => r.id === release.id);
-          if (existing) {
-            // Update existing
-            await editReleaseMutation.mutateAsync({
-              ...releaseData,
-              siteAddress: existing.siteAddress,
-            });
-            releasesImported++;
-          } else {
-            // Add new
-            await addReleaseMutation.mutateAsync(releaseData);
-            releasesImported++;
-          }
-        } else {
-          // Replace mode - just add
-          await addReleaseMutation.mutateAsync(releaseData);
-          releasesImported++;
-        }
-      } catch (error) {
-        console.error('Failed to import release:', release.id, error);
-      }
+    // Sign the request body for authentication
+    const payload = JSON.stringify(importData);
+    const timestamp = Date.now().toString();
+    const messageToSign = `${timestamp}:${payload}`;
+    const signature = await sign(messageToSign);
+
+    const response = await fetch(`${API_URL}/import`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
+      },
+      body: payload,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || `Import failed: ${response.statusText}`);
     }
 
-    // Import featured releases
-    for (const featured of importData.featuredReleases) {
-      try {
-        const featuredData = {
-          id: featured.id,
-          siteAddress: featured.siteAddress,
-          postedBy: featured.postedBy,
-          releaseId: featured.releaseId,
-          startTime: featured.startTime,
-          endTime: featured.endTime,
-          promoted: featured.promoted,
-        };
+    const result = await response.json();
 
-        if (importMode.value === 'upsert') {
-          // Check if featured release exists
-          const existing = featuredReleases.value?.find(f => f.id === featured.id);
-          if (existing) {
-            // Update existing
-            await editFeaturedReleaseMutation.mutateAsync({
-              ...featuredData,
-            });
-            featuredImported++;
-          } else {
-            // Add new
-            await addFeaturedReleaseMutation.mutateAsync(featuredData);
-            featuredImported++;
-          }
-        } else {
-          // Replace mode - just add
-          await addFeaturedReleaseMutation.mutateAsync(featuredData);
-          featuredImported++;
-        }
-      } catch (error) {
-        console.error('Failed to import featured release:', featured.id, error);
-      }
+    // Result format: { success, imported, skipped, featuredImported, featuredSkipped, errors }
+    const releasesMsg = `${result.imported} releases imported, ${result.skipped} skipped`;
+    const featuredMsg = result.featuredImported > 0 || result.featuredSkipped > 0
+      ? `, ${result.featuredImported} featured imported, ${result.featuredSkipped} featured skipped`
+      : '';
+
+    if (result.errors && result.errors.length > 0) {
+      console.error('Import errors:', result.errors);
+      openSnackbar(
+        `Import completed with warnings: ${releasesMsg}${featuredMsg}. Check console for errors.`,
+        'warning'
+      );
+    } else {
+      openSnackbar(
+        `Import successful: ${releasesMsg}${featuredMsg}`,
+        'success'
+      );
     }
 
-    openSnackbar(`Import complete: ${releasesImported} releases and ${featuredImported} featured releases imported`, 'success');
+    // Wait for backend to sync, then force refetch to refresh UI
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Force immediate refetch of queries (using queryClient from setup)
+    await queryClient.refetchQueries({ queryKey: ['releases'] });
+    await queryClient.refetchQueries({ queryKey: ['featuredReleases'] });
+
     importFile.value = null;
   } catch (error) {
     openSnackbar('Import failed: ' + (error instanceof Error ? error.message : String(error)), 'error');
+    console.error('Import error:', error);
   } finally {
     isImporting.value = false;
+  }
+};
+
+// Structures query and mutation for cleanup
+const { data: structures } = useGetStructuresQuery();
+const deleteStructureMutation = useDeleteStructureMutation();
+
+// Cleanup empty structures
+const cleanupEmptyStructures = async () => {
+  isCleaningUp.value = true;
+  cleanupResults.value = null;
+
+  try {
+    if (!structures.value || !releases.value) {
+      cleanupResults.value = { message: 'No structures or releases found', error: true };
+      return;
+    }
+
+    let deletedCount = 0;
+    const errors: string[] = [];
+
+    // Find empty series (series with no episodes)
+    const tvSeries = structures.value.filter((s: any) => s.type === 'series');
+    for (const series of tvSeries) {
+      const hasEpisodes = releases.value.some((r: any) =>
+        r.metadata?.seriesId === series.id
+      );
+
+      if (!hasEpisodes) {
+        try {
+          await deleteStructureMutation.mutateAsync(series.id);
+          deletedCount++;
+          console.log(`Deleted empty series: ${series.name}`);
+        } catch (error) {
+          errors.push(`Failed to delete series ${series.name}: ${error}`);
+        }
+      }
+    }
+
+    // Find empty seasons (seasons with no episodes)
+    const seasons = structures.value.filter((s: any) => s.type === 'season');
+    for (const season of seasons) {
+      const hasEpisodes = releases.value.some((r: any) =>
+        r.metadata?.seriesId === season.parentId &&
+        r.metadata?.seasonNumber === season.metadata?.seasonNumber
+      );
+
+      if (!hasEpisodes) {
+        try {
+          await deleteStructureMutation.mutateAsync(season.id);
+          deletedCount++;
+          console.log(`Deleted empty season: ${season.name || `Season ${season.metadata?.seasonNumber}`}`);
+        } catch (error) {
+          errors.push(`Failed to delete season ${season.name}: ${error}`);
+        }
+      }
+    }
+
+    // Find empty artists (artists with no releases)
+    const artists = structures.value.filter((s: any) => s.type === 'artist');
+    for (const artist of artists) {
+      const hasReleases = releases.value.some((r: any) =>
+        r.metadata?.artistId === artist.id || r.metadata?.structureId === artist.id
+      );
+
+      if (!hasReleases) {
+        try {
+          await deleteStructureMutation.mutateAsync(artist.id);
+          deletedCount++;
+          console.log(`Deleted empty artist: ${artist.name}`);
+        } catch (error) {
+          errors.push(`Failed to delete artist ${artist.name}: ${error}`);
+        }
+      }
+    }
+
+    // Find empty albums (albums with no tracks)
+    const albums = structures.value.filter((s: any) => s.type === 'album');
+    for (const album of albums) {
+      const hasTracks = releases.value.some((r: any) =>
+        r.metadata?.albumId === album.id || r.metadata?.structureId === album.id
+      );
+
+      if (!hasTracks) {
+        try {
+          await deleteStructureMutation.mutateAsync(album.id);
+          deletedCount++;
+          console.log(`Deleted empty album: ${album.name}`);
+        } catch (error) {
+          errors.push(`Failed to delete album ${album.name}: ${error}`);
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      cleanupResults.value = {
+        message: `Deleted ${deletedCount} empty structures. Errors: ${errors.join(', ')}`,
+        error: true
+      };
+    } else {
+      cleanupResults.value = {
+        message: `Successfully deleted ${deletedCount} empty structures`,
+        error: false
+      };
+    }
+  } catch (error) {
+    cleanupResults.value = { message: `Cleanup failed: ${error}`, error: true };
+  } finally {
+    isCleaningUp.value = false;
   }
 };
 </script>

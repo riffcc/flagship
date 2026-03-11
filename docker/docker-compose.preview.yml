@@ -1,0 +1,9 @@
+services:
+  flagship-devpreview:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.preview
+    env_file:
+    - .env.dev
+    ports:
+    - ${FLAGSHIP_HOST:-0.0.0.0}:${FLAGSHIP_PORT_PROD:-9998}:80

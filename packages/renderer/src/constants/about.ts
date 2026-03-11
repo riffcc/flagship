@@ -2,7 +2,7 @@ export const aboutRiffCC = {
   about: {
     motto: 'e cinere surgemus (out of ash, rise)',
     description:
-      "The Riff.CC project focuses on improving free and open access to information. We're building collections of Creative Commons and similarly-licensed free media, such as movies, music, and more, and making open source tools and software to manage and publish those collections. We'll be using technology such as IPFS, Codex, and BitTorrent to achieve this at low cost and hopefully at scale.",
+      "The Riff.CC project focuses on improving free and open access to information. We're building collections of Creative Commons and similarly-licensed free media, such as movies, music, and more, and making open source tools and software to manage and publish those collections. We'll be using technology such as IPFS, Archivist, and BitTorrent to achieve this at low cost and hopefully at scale.",
   },
   team: [
     {name: 'Michaela Andrus', role: 'Solutions Engineer', affiliation: 'Riff Labs'},

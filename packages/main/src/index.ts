@@ -1,7 +1,7 @@
 import {app, ipcMain} from 'electron';
 import '/@/security-restrictions';
 import {lensService, restoreOrCreateWindow } from '/@/main-window';
-import type { ReleaseData } from '@riffcc/lens-sdk';
+import type { ReleaseData, EditInput } from '@riffcc/citadel-sdk';
 
 
 const isSingleInstance = app.requestSingleInstanceLock();
@@ -26,17 +26,20 @@ app
   .then(async () => {
     const mainWindow = await restoreOrCreateWindow();
 
-      ipcMain.handle('peerbit:get-public-key', async () => lensService?.getPublicKey());
-      ipcMain.handle('peerbit:get-peer-id', async () => lensService?.getPeerId());
-      ipcMain.handle('peerbit:dial', async (_event, address: string) => lensService?.dial(address));
+      ipcMain.handle('peerbit:get-public-key', async () => undefined);
+      ipcMain.handle('peerbit:get-peer-id', async () => undefined);
+      ipcMain.handle('peerbit:dial', async (_event, _address: string) => false);
       ipcMain.handle('peerbit:add-release', async (_event, releaseData: ReleaseData) =>
         lensService?.addRelease(releaseData),
       );
+      ipcMain.handle('peerbit:edit-release', async (_event, releaseData: EditInput<ReleaseData>) =>
+        lensService?.editRelease(releaseData),
+      );
       ipcMain.handle('peerbit:get-release', async (_event, id: string) =>
-        lensService?.getRelease({ id }),
+        lensService?.getRelease(id),
       );
       ipcMain.handle('peerbit:get-latest-releases', async (_event, size?: number) =>
-        lensService?.getReleases(size ? { fetch: size } : undefined),
+        lensService?.getReleases(size ? { limit: size } : undefined),
       );
     // Notify renderer that main is ready
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {

@@ -5,19 +5,19 @@
   <link rel="icon" href="/logo.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riff.CC</title>
-  <!-- Preconnect to speed up external resources -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!--
-    The vite-plugin-node-polyfills should handle providing 'process' and 'Buffer'
-    If you still face issues, you might need to configure the plugin or uncomment this.
-  <script type="module">
-    import process from "process";
-    import { Buffer } from "buffer";
-    window.Buffer = Buffer;
-    window.process = process;
-  </script>
-  -->
+  <!-- Preload font for fastest possible load -->
+  <link rel="preload" href="/fonts/JosefinSans-VariableFont_wght.ttf" as="font" type="font/ttf" crossorigin>
+  <!-- Inline critical font CSS to eliminate render-blocking -->
+  <style>
+    @font-face {
+      font-family: 'Josefin Sans';
+      font-style: normal;
+      font-weight: 100 700;
+      font-display: swap;
+      src: url('/fonts/JosefinSans-VariableFont_wght.ttf') format('truetype');
+    }
+    body { font-family: 'Josefin Sans', sans-serif; }
+  </style>
 </head>
 <body>
 <div id="app"></div>

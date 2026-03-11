@@ -57,7 +57,9 @@
                   class="mb-2 pl-1"
                   min-height="12px"
                   height="24px"
-                  @click="item.path === '/contact' ? openEmailClient() : router.push(item.path)"
+                  :href="isExternalUrl(item.path) ? item.path : undefined"
+                  :target="isExternalUrl(item.path) ? '_blank' : undefined"
+                  @click.prevent="handleNavClick(item.path)"
                 ></v-list-item>
                 <template v-if="key === 'explore'">
                   <v-list-item
@@ -67,7 +69,7 @@
                     class="mb-2 pl-1"
                     min-height="12px"
                     height="24px"
-                    @click="router.push(`/featured/${item.categoryId}`)"
+                    @click="router.push(getCategoryRoute(item.categoryId))"
                   ></v-list-item>
                 </template>
               </v-list>
@@ -76,23 +78,13 @@
         </v-col>
       </v-row>
     </v-container>
-    <v-btn
-      icon="$chevron-up"
-      density="comfortable"
-      color="primary-darken-1"
-      rounded="0"
-      class="position-absolute bottom-0 right-0 mb-2 mr-2"
-      @click="scrollToTop"
-    >
-      <v-icon />
-    </v-btn>
   </v-footer>
   <v-sheet
     color="primary-darken-1"
     height="64px"
-    class="d-flex align-center items-center justify-center"
+    class="d-flex align-center justify-center px-4"
   >
-    <v-chip variant="text">
+    <v-chip variant="text" class="slogan-chip">
       <template #prepend>
         <img
           src="/cc.svg"
@@ -103,7 +95,10 @@
           height="20"
         />
       </template>
-      e cinere surgemus.
+      <span class="slogan-text">
+        <span class="slogan-default">e cinere surgemus.</span>
+        <span class="slogan-hover">The Library shall not fall again.</span>
+      </span>
     </v-chip>
   </v-sheet>
 </template>
@@ -119,15 +114,59 @@ const router = useRouter();
 const { data: contentCategories } = useContentCategoriesQuery();
 
 const featuredContentCategories = computed(() => contentCategories.value?.filter(c => c.featured));
-const scrollToTop = () => {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth',
-  });
-};
-
 const openEmailClient = () => {
   window.location.href = 'mailto:wings@riff.cc';
 };
 
+const isExternalUrl = (path: string) => {
+  return path.startsWith('http://') || path.startsWith('https://');
+};
+
+const handleNavClick = (path: string) => {
+  if (path === '/contact') {
+    openEmailClient();
+  } else if (isExternalUrl(path)) {
+    window.open(path, '_blank');
+  } else {
+    router.push(path);
+  }
+};
+
+// Map category slugs to clean routes
+const categoryRouteMap: Record<string, string> = {
+  'music': '/music',
+  'movies': '/movies',
+  'tv-shows': '/tv',
+  'books': '/books',
+  'audiobooks': '/audiobooks',
+  'games': '/games',
+};
+
+const getCategoryRoute = (categoryId: string) => {
+  return categoryRouteMap[categoryId] || `/featured/${categoryId}`;
+};
+
 </script>
+
+<style scoped>
+/* Slogan hover effect - simple inline swap */
+.slogan-chip {
+  cursor: default;
+}
+
+.slogan-default {
+  display: inline;
+}
+
+.slogan-hover {
+  display: none;
+}
+
+.slogan-chip:hover .slogan-default {
+  display: none;
+}
+
+.slogan-chip:hover .slogan-hover {
+  display: inline;
+}
+</style>

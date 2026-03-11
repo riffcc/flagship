@@ -76,33 +76,98 @@
           </v-list-item-subtitle>
         </v-list-item>
       </v-list>
+      <v-card-actions v-if="accountStatus && (accountStatus.isAdmin || accountStatus.permissions.includes('upload'))">
+        <v-btn
+          v-if="accountStatus.isAdmin"
+          variant="flat"
+          color="primary"
+          prepend-icon="$shield-crown"
+          to="/admin"
+          block
+        >
+          Open Admin Panel
+        </v-btn>
+        <v-btn
+          v-else-if="accountStatus.permissions.includes('upload')"
+          variant="flat"
+          color="primary"
+          prepend-icon="$upload"
+          to="/upload"
+          block
+        >
+          Upload Content
+        </v-btn>
+      </v-card-actions>
     </v-card>
   </v-container>
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useUserSession } from '/@/composables/userSession';
-import { useAccountStatusQuery, usePeerIdQuery, usePublicKeyQuery } from '/@/plugins/lensService/hooks';
 import { useCopyToClipboard } from '../composables/copyToClipboard';
-import { useLensInitialization } from '../composables/lensInitialization';
+import { useIdentity } from '/@/composables/useIdentity';
+import { getApiUrl } from '/@/utils/runtimeConfig';
 
 const { userData } = useUserSession();
 const { copy, isCopied } = useCopyToClipboard();
-const { isLensReady } = useLensInitialization();
 
-const { data: publicKey, isLoading: publicKeyIsLoading } = usePublicKeyQuery({
-  enabled: isLensReady,
+// New Lens V2 SDK identity system (ed25519)
+const { publicKey: identityPublicKey, isInitialized } = useIdentity();
+
+// State
+const publicKey = ref('');
+const peerId = ref('');
+const accountStatus = ref<any>(null);
+
+// Fetch account status from lens-v2-node
+async function fetchAccountStatus() {
+  if (!identityPublicKey.value) {
+    console.log('[Account] No public key yet');
+    return;
+  }
+
+  try {
+    const apiUrl = getApiUrl();
+    const encodedKey = encodeURIComponent(identityPublicKey.value);
+    console.log('[Account] Fetching status for:', identityPublicKey.value);
+    const response = await fetch(`${apiUrl}/account/${encodedKey}`);
+
+    if (response.ok) {
+      accountStatus.value = await response.json();
+      console.log('[Account] Status:', accountStatus.value);
+    } else {
+      console.warn('[Account] Failed to fetch status:', response.status);
+    }
+  } catch (error) {
+    console.error('[Account] Error fetching status:', error);
+  }
+}
+
+// Watch for identity changes
+watch(identityPublicKey, (newKey) => {
+  publicKey.value = newKey;
+  if (newKey) {
+    fetchAccountStatus();
+  }
 });
-const { data: peerId, isLoading: peerIdIsLoading } = usePeerIdQuery({
-  enabled: isLensReady,
-});
-const { data: accountStatus, isLoading: accountStatusIsLoading } = useAccountStatusQuery({
-  enabled: isLensReady,
+
+onMounted(() => {
+  // Set initial public key if available
+  if (identityPublicKey.value) {
+    publicKey.value = identityPublicKey.value;
+  }
+
+  // Fetch status after a short delay to ensure identity is ready
+  setTimeout(() => {
+    if (identityPublicKey.value) {
+      fetchAccountStatus();
+    }
+  }, 500);
 });
 
 const isLoading = computed(() => {
-  return !publicKey.value || publicKeyIsLoading.value || !peerId.value || peerIdIsLoading.value || !accountStatus.value || accountStatusIsLoading.value;
+  return !isInitialized.value;
 });
 
 const PERMISSION_LABELS: Record<string, string> = {

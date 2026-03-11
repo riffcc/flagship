@@ -2,10 +2,7 @@
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": [
-        "@playwright/mcp@latest",
-        "--headless"
-      ]
+      "args": ["@playwright/mcp@latest", "--headless"]
     },
     "deepwiki": {
       "type": "sse",

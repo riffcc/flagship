@@ -1,4 +1,5 @@
 import {ref, watch} from 'vue';
+import type { AudioQuality, QualityLadder } from '/@/types/badges';
 
 export type AudioTrack = {
   index: number;
@@ -14,6 +15,15 @@ const albumFiles = ref<AudioTrack[]>([]);
 const activeTrack = ref<AudioTrack>();
 const repeat = ref(false);
 const shuffle = ref(false);
+const albumQuality = ref<AudioQuality | null>(null);
+// Track which album's files are currently loaded to prevent state pollution
+const currentAlbumId = ref<string | null>(null);
+// Current content CID being used (can switch for quality ladder)
+const currentContentCid = ref<string | null>(null);
+// Available quality tiers
+const qualityLadder = ref<QualityLadder | null>(null);
+// Flag to indicate quality is being switched
+const isSwitchingQuality = ref(false);
 
 const toggleRepeat = () => (repeat.value ? (repeat.value = false) : (repeat.value = true));
 const toggleShuffle = () => (shuffle.value ? (shuffle.value = false) : (shuffle.value = true));
@@ -74,6 +84,11 @@ export const useAudioAlbum = () => {
     activeTrack,
     repeat,
     shuffle,
+    albumQuality,
+    currentAlbumId,
+    currentContentCid,
+    qualityLadder,
+    isSwitchingQuality,
     handlePlay,
     handlePrevious,
     handleNext,

@@ -1,10 +1,11 @@
 import type { NavigationGuardNext, RouteLocationNormalized } from 'vue-router';
-import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router';
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { multiaddr } from '@multiformats/multiaddr';
 // Keep HomePage as direct import since it's the landing page
 import HomePage from '/@/views/homePage.vue';
 import { queryClient } from './tanstackQuery';
-import type { AccountStatusResponse } from '@riffcc/lens-sdk';
+import type { AccountStatusResponse } from '@riffcc/citadel-sdk';
+import { getApiUrl as getRuntimeApiUrl } from '/@/utils/runtimeConfig';
 
 // Lazy load all other routes
 const AdminPage = () => import('../views/adminPage.vue');
@@ -15,56 +16,20 @@ const ReleasePage = () => import('/@/views/releasePage.vue');
 const TermsPage = () => import('/@/views/termsPage.vue');
 const UploadPage = () => import('/@/views/uploadPage.vue');
 const CategoryPage = () => import('../views/categoryPage.vue');
+const SeriesPage = () => import('../views/seriesPage.vue');
+const ArtistPage = () => import('../views/artistPage.vue');
+const AlbumPage = () => import('../views/albumPage.vue');
+const PodcastPage = () => import('../views/podcastPage.vue');
+const PodcastEpisodePage = () => import('../views/podcastEpisodePage.vue');
+const AudiobookPage = () => import('../views/audiobookPage.vue');
+const BookPage = () => import('../views/bookPage.vue');
+const ReaderPage = () => import('../views/readerPage.vue');
+const BooksPage = () => import('../views/booksPage.vue');
+const P2PPage = () => import('../views/p2pPage.vue');
+const CreditsPage = () => import('../views/creditsPage.vue');
 
-/**
- * Parses the VITE_LENS_NODE environment variable to build the base API URL.
- * This provides a single, reliable source of truth for the API endpoint.
- *
- * @returns {string} The constructed base API URL.
- */
-function getApiUrl(): string {
-  const lensNodeMaStr = import.meta.env.VITE_LENS_NODE;
-
-  if (!lensNodeMaStr) {
-    console.error('VITE_LENS_NODE environment variable is not set. API calls will fail.');
-    // Fallback to a default or return an empty string, depending on desired behavior.
-    return 'http://localhost:5002/api/v1';
-  }
-
-  try {
-    const ma = multiaddr(lensNodeMaStr);
-    const nodeOptions = ma.nodeAddress(); // Gets { family, address, port }
-
-    // Determine the protocol based on the presence of 'wss' or 'ws'
-    // 'wss' implies 'https' and 'ws' implies 'http'
-    const protocol = ma.getComponents().map(c => c.name).includes('wss') ? 'https' : 'http';
-
-    // Determine the API port. Conventionally, it might be different from the P2P port.
-    // Let's assume a convention: P2P port 8002 -> API port 5002, P2P 4003 -> API 9002
-    let apiPort;
-    switch (nodeOptions.port) {
-      case 8002: // Local P2P port
-        apiPort = 5002;
-        break;
-      case 4003: // Production P2P port
-        apiPort = 9002;
-        break;
-      default:
-        // Default fallback if the P2P port is something unexpected
-        console.warn(`Unexpected P2P port ${nodeOptions.port}, defaulting API port to 9002.`);
-        apiPort = 9002;
-    }
-
-    return `${protocol}://${nodeOptions.address}:${apiPort}/api/v1`;
-
-  } catch (error) {
-    console.error('Failed to parse VITE_LENS_NODE multiaddr:', error);
-    // Fallback if parsing fails
-    return 'http://localhost:5002/api/v1';
-  }
-}
-
-export const API_URL = getApiUrl();
+// Use runtime configuration for API URL (supports both build-time and runtime injection)
+export const API_URL = getRuntimeApiUrl();
 const PREFETCH_CONFIG = {
   initialReleases: {
     url: `${API_URL}/releases`,
@@ -123,7 +88,22 @@ const routes: Array<RouteRecordRaw> = [
     path: '/account',
     name: 'Account',
     component: AccountPage,
-
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../views/settingsPage.vue'),
+  },
+  {
+    path: '/settings/history',
+    name: 'History',
+    component: () => import('../views/historyPage.vue'),
+  },
+  {
+    path: '/movie/:id',
+    name: 'Movie',
+    component: () => import('../views/moviePage.vue'),
+    props: true,
   },
   {
     path: '/upload',
@@ -138,13 +118,55 @@ const routes: Array<RouteRecordRaw> = [
     path: '/admin',
     name: 'Admin Website',
     component: AdminPage,
-    beforeEnter: (to, from, next) => {
-      // Example for a more complex check. You would create a dedicated helper for this.
-      const accountStatus = queryClient.getQueryData<AccountStatusResponse>(['accountStatus']);
-      const isAdmin = accountStatus?.isAdmin || accountStatus?.roles.includes('moderator') || false;
-      if (isAdmin) {
-        next();
-      } else {
+    beforeEnter: async (to, from, next) => {
+      // Check admin status using new identity system
+      try {
+        // Import ed25519 library
+        const ed25519 = await import('@noble/ed25519');
+
+        // Try to get identity from localStorage
+        const identitySeed = localStorage.getItem('lens_identity_seed');
+        if (!identitySeed) {
+          console.warn('[Router] No identity found, redirecting to home');
+          next({ path: '/' });
+          return;
+        }
+
+        // Derive public key using @noble/ed25519 (matches useIdentity.ts)
+        const seedBytes = new Uint8Array(identitySeed.length / 2);
+        for (let i = 0; i < identitySeed.length; i += 2) {
+          seedBytes[i / 2] = parseInt(identitySeed.substring(i, i + 2), 16);
+        }
+
+        // Seed is the private key for ed25519
+        const privateKey = seedBytes;
+        const publicKeyBytes = await ed25519.getPublicKeyAsync(privateKey);
+        const publicKeyHex = Array.from(publicKeyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        const publicKey = `ed25519p/${publicKeyHex}`;
+
+        console.log('[Router] Checking admin status for:', publicKey);
+
+        // Check authorization status
+        const encodedKey = encodeURIComponent(publicKey);
+        const response = await fetch(`${API_URL}/account/${encodedKey}`);
+
+        if (response.ok) {
+          const accountStatus = await response.json();
+          const isAdmin = accountStatus?.isAdmin || accountStatus?.roles?.includes('moderator') || false;
+
+          if (isAdmin) {
+            console.log('[Router] Admin access granted for', publicKey);
+            next();
+          } else {
+            console.warn('[Router] Not an admin, redirecting to home. Status:', accountStatus);
+            next({ path: '/' });
+          }
+        } else {
+          console.warn('[Router] Failed to check admin status:', response.status, response.statusText);
+          next({ path: '/' });
+        }
+      } catch (error) {
+        console.error('[Router] Error checking admin status:', error);
         next({ path: '/' });
       }
     },
@@ -166,67 +188,394 @@ const routes: Array<RouteRecordRaw> = [
     name: 'Release',
     component: ReleasePage,
     props: true,
-    beforeEnter: async (to, from, next) => {
-      // 1. Get the release ID from the route params.
-      const id = to.params.id as string;
-
-      // Ensure we have an ID to work with.
-      if (!id) {
-        console.error('Release page navigation attempted without an ID.');
-        // Optionally, redirect to a 404 page or the homepage.
-        next({ path: '/' });
-        return;
-      }
-
-      console.log(`Release Guard: Pre-fetching data for release ID: ${id}`);
-
-      // 2. Define the specific query key for this release.
-      const queryKey = ['release', id];
-
-      // 3. Check if data for this specific release is already in the cache.
-      // This is a crucial optimization. If the user clicks a release, then navigates
-      // away and clicks the same release again, we don't need to re-fetch.
-      if (queryClient.getQueryData(queryKey)) {
-        console.log(`Cache hit for release ${id}. Skipping fetch.`);
-        next();
-        return;
-      }
-
-      try {
-        // 4. Fetch the data from your fast API.
-        const response = await fetch(`${API_URL}/releases/${id}`);
-
-        if (response.ok) {
-          const releaseData = await response.json();
-
-          // 5. Seed the cache with the fetched data.
-          queryClient.setQueryData(queryKey, releaseData);
-          console.log(`✅ Cache seeded for release ${id}.`);
-        } else {
-          // Handle cases where the release is not found (404) or other server errors.
-          console.error(`API Error fetching release ${id}: Status ${response.status}`);
-          // You might want to clear any stale data if it exists and redirect.
-          queryClient.setQueryData(queryKey, undefined);
-          // Optionally redirect to a 'not-found' page.
-          // For now, we'll just proceed and let the component handle the empty state.
-        }
-      } catch (error) {
-        console.error(`Fetch failed for release ${id}:`, error);
-      } finally {
-        // 6. Always call next() to allow navigation to proceed.
-        next();
-      }
-    },
+    // No beforeEnter guard - page uses tile data for instant render, fetches in background
   },
+  // Simplified category routes
+  {
+    path: '/music',
+    component: CategoryPage,
+    props: () => ({ category: 'music', showAll: true }),
+  },
+  {
+    path: '/movies',
+    component: CategoryPage,
+    props: () => ({ category: 'movies', showAll: true }),
+  },
+  {
+    path: '/tv',
+    component: CategoryPage,
+    props: () => ({ category: 'tv-shows', showAll: true }),
+  },
+  {
+    path: '/books',
+    component: BooksPage,
+  },
+  {
+    path: '/audiobooks',
+    component: CategoryPage,
+    props: () => ({ category: 'audiobooks', showAll: true }),
+  },
+  {
+    path: '/games',
+    component: CategoryPage,
+    props: () => ({ category: 'games', showAll: true }),
+  },
+  // Legacy route for backwards compatibility
   {
     path: '/featured/:category',
     component: CategoryPage,
     props: route => ({ ...route.params, showAll: true }),
   },
+  {
+    path: '/series/:id',
+    name: 'Series',
+    component: SeriesPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Series page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Series Guard: Pre-fetching data for series ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for series ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const seriesData = await response.json();
+          queryClient.setQueryData(queryKey, seriesData);
+          console.log(`✅ Cache seeded for series ${id}.`);
+        } else {
+          console.error(`API Error fetching series ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for series ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/artist/:id',
+    name: 'Artist',
+    component: ArtistPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Artist page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Artist Guard: Pre-fetching data for artist ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for artist ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const artistData = await response.json();
+          queryClient.setQueryData(queryKey, artistData);
+          console.log(`✅ Cache seeded for artist ${id}.`);
+        } else {
+          console.error(`API Error fetching artist ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for artist ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/album/:id',
+    name: 'Album',
+    component: AlbumPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Album page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Album Guard: Pre-fetching data for album ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for album ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const albumData = await response.json();
+          queryClient.setQueryData(queryKey, albumData);
+          console.log(`✅ Cache seeded for album ${id}.`);
+        } else {
+          console.error(`API Error fetching album ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for album ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/podcast/:id',
+    name: 'Podcast',
+    component: PodcastPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Podcast page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Podcast Guard: Pre-fetching data for podcast ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for podcast ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const podcastData = await response.json();
+          queryClient.setQueryData(queryKey, podcastData);
+          console.log(`✅ Cache seeded for podcast ${id}.`);
+        } else {
+          console.error(`API Error fetching podcast ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for podcast ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/podcast-episode/:id',
+    name: 'PodcastEpisode',
+    component: PodcastEpisodePage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Podcast episode page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Podcast Episode Guard: Pre-fetching data for episode ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for podcast episode ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const episodeData = await response.json();
+          queryClient.setQueryData(queryKey, episodeData);
+          console.log(`✅ Cache seeded for podcast episode ${id}.`);
+        } else {
+          console.error(`API Error fetching podcast episode ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for podcast episode ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/audiobook/:id',
+    name: 'Audiobook',
+    component: AudiobookPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Audiobook page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Audiobook Guard: Pre-fetching data for audiobook ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for audiobook ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const audiobookData = await response.json();
+          queryClient.setQueryData(queryKey, audiobookData);
+          console.log(`✅ Cache seeded for audiobook ${id}.`);
+        } else {
+          console.error(`API Error fetching audiobook ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for audiobook ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/book/:id',
+    name: 'Book',
+    component: BookPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Book page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Book Guard: Pre-fetching data for book ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for book ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const bookData = await response.json();
+          queryClient.setQueryData(queryKey, bookData);
+          console.log(`✅ Cache seeded for book ${id}.`);
+        } else {
+          console.error(`API Error fetching book ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for book ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/read/:id',
+    name: 'Reader',
+    component: ReaderPage,
+    props: true,
+    beforeEnter: async (to, from, next) => {
+      const id = to.params.id as string;
+
+      if (!id) {
+        console.error('Reader page navigation attempted without an ID.');
+        next({ path: '/' });
+        return;
+      }
+
+      console.log(`Reader Guard: Pre-fetching data for book ID: ${id}`);
+
+      const queryKey = ['release', id];
+
+      if (queryClient.getQueryData(queryKey)) {
+        console.log(`Cache hit for reader ${id}. Skipping fetch.`);
+        next();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/releases/${id}`);
+
+        if (response.ok) {
+          const bookData = await response.json();
+          queryClient.setQueryData(queryKey, bookData);
+          console.log(`✅ Cache seeded for reader ${id}.`);
+        } else {
+          console.error(`API Error fetching book for reader ${id}: Status ${response.status}`);
+          queryClient.setQueryData(queryKey, undefined);
+        }
+      } catch (error) {
+        console.error(`Fetch failed for reader ${id}:`, error);
+      } finally {
+        next();
+      }
+    },
+  },
+  {
+    path: '/p2p',
+    name: 'P2P',
+    component: P2PPage,
+  },
+  {
+    path: '/credits',
+    name: 'Credits',
+    component: CreditsPage,
+  },
 ];
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(),
   routes,
   scrollBehavior() {
     return { top: 0 };
@@ -264,13 +613,30 @@ router.beforeEach(async (to, from, next) => {
     const results = await Promise.allSettled(promises);
 
     console.groupCollapsed('API Pre-fetch Responses & Cache Seeding');
-    // Process each result
-    results.forEach(async (result, index) => {
+    // Process each result - use for...of to properly await async operations
+    for (let index = 0; index < results.length; index++) {
+      const result = results[index];
       const key = prefetchKeys[index];
       const config = PREFETCH_CONFIG[key];
 
       if (result.status === 'fulfilled' && result.value.ok) {
-        const data = await result.value.json();
+        let data = await result.value.json();
+
+        // Transform the data to match what the query hooks return
+        if (key === 'initialReleases' && Array.isArray(data)) {
+          data = data.map((r: any) => ({
+            ...r,
+            // metadata is already an object from the API, no need to parse
+            metadata: r.metadata,
+          }));
+        } else if (key === 'initialContentCategories' && Array.isArray(data)) {
+          data = data.map((c: any) => ({
+            ...c,
+            // metadataSchema is already an object from the API, no need to parse
+            metadataSchema: c.metadataSchema,
+          }));
+        }
+
         queryClient.setQueryData(config.queryKey, data);
         console.log(`✅ [SUCCESS & CACHE SEEDED] ${key}:`, data);
       } else if (result.status === 'fulfilled' && !result.value.ok) {
@@ -278,7 +644,7 @@ router.beforeEach(async (to, from, next) => {
       } else if (result.status === 'rejected') {
         console.error(`❌ [FETCH FAILED] for ${key}:`, result.reason.message);
       }
-    });
+    }
 
     console.groupEnd();
 

@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Lens Node (Backend)
+  lens-node:
+    image: zorlin/lens-v2:latest
+    container_name: lens-node
+    ports:
+      - "5002:5000"
+    volumes:
+      - lens-data:/data
+    environment:
+      - RUST_LOG=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  # Flagship Frontend
+  flagship:
+    image: zorlin/flagship-v2:latest
+    container_name: flagship
+    ports:
+      - "8080:80"
+    environment:
+      # Runtime configuration - change these to point to your backend
+      - API_URL=http://localhost:5002/api/v1
+      - RELAY_URL=ws://localhost:5002/api/v1/relay/ws
+    depends_on:
+      lens-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  lens-data:
+    driver: local
+
+# Quick Start:
+# 1. Copy this file: cp docker-compose.example.yml docker-compose.yml
+# 2. Start services: docker-compose up -d
+# 3. Open browser: http://localhost:8080
+#
+# That's it! The frontend will automatically connect to the backend.
+#
+# To use a different backend (e.g., production):
+#   environment:
+#     - API_URL=https://api.riff.cc/api/v1
+#     - RELAY_URL=wss://api.riff.cc/api/v1/relay/ws
+#
+# No rebuild required - just restart the container!
