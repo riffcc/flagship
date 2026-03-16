@@ -1,4 +1,5 @@
-import { ref, Ref, onUnmounted } from 'vue';
+import type { Ref} from 'vue';
+import { ref, onUnmounted } from 'vue';
 import { getApiUrl } from '../utils/runtimeConfig';
 
 export interface NetworkMap {
@@ -35,7 +36,7 @@ export interface PeerNode {
 export interface PeerEdge {
   from: string;
   to: string;
-  connection_type: 'neighbor' | 'relay';
+  connection_type: 'neighbor' | 'relay' | 'transport';
   latency_ms: number | null;
   latency_stats?: LatencyStats;
   color: string;
@@ -56,7 +57,9 @@ export interface NetworkStats {
   browser_peers: number;
   mesh_edges: number;
   relay_connections: number;
-  occupancy_percent: number;
+  available_slots: number;
+  filled_slots: number;
+  mesh_density: number;
 }
 
 // WebSocket event types from citadel-lens
@@ -65,6 +68,7 @@ interface MeshEventSnapshot {
   self_id: string;
   peers: WsPeerInfo[];
   slots: WsSlotInfo[];
+  edges: WsEdgeInfo[];
 }
 
 interface MeshEventPeerJoined {
@@ -111,7 +115,16 @@ type MeshEvent =
 interface WsPeerInfo {
   id: string;
   addr: string;
-  slot: WsSlotInfo | null;
+  label: string;
+  slot: {
+    index: number | null;
+    q: number;
+    r: number;
+    z: number;
+  };
+  peer_type: 'server' | 'browser';
+  last_heartbeat: number;
+  capabilities: string[];
   online: boolean;
 }
 
@@ -120,6 +133,58 @@ interface WsSlotInfo {
   peer_id: string;
   coord: [number, number, number];
   confirmations: number;
+}
+
+interface WsEdgeInfo {
+  from: string;
+  to: string;
+  connection_type: 'neighbor' | 'relay' | 'transport';
+  latency_ms: number | null;
+  color?: string;
+}
+
+const SLOT_DIRECTIONS: Array<[number, number, number]> = [
+  [1, 0, 0],
+  [1, -1, 0],
+  [0, -1, 0],
+  [-1, 0, 0],
+  [-1, 1, 0],
+  [0, 1, 0],
+  [0, 0, 1],
+  [0, 0, -1],
+  [1, 0, 1],
+  [1, -1, 1],
+  [0, -1, 1],
+  [-1, 0, 1],
+  [-1, 1, 1],
+  [0, 1, 1],
+  [1, 0, -1],
+  [1, -1, -1],
+  [0, -1, -1],
+  [-1, 0, -1],
+  [-1, 1, -1],
+  [0, 1, -1],
+];
+
+function slotKey(q: number, r: number, z: number): string {
+  return `${q},${r},${z}`;
+}
+
+function calculateAvailableSlots(nodes: PeerNode[]): number {
+  const occupied = nodes.filter(node => node.slot.index !== null);
+  if (occupied.length === 0) {
+    return 0;
+  }
+
+  const available = new Set<string>();
+  for (const node of occupied) {
+    available.add(slotKey(node.slot.q, node.slot.r, node.slot.z));
+    for (const [dq, dr, dz] of SLOT_DIRECTIONS) {
+      available.add(slotKey(node.slot.q + dq, node.slot.r + dr, node.slot.z + dz));
+    }
+  }
+
+  return available.size;
 }
 
 /**
@@ -177,42 +242,36 @@ export function useNetworkMap() {
    * In SPIRAL, everyone is AWARE of all nodes, even if not directly connected to them
    */
   const snapshotToNetworkMap = (snapshot: MeshEventSnapshot): NetworkMap => {
-    // Build lookup of connected peers for online status
-    const peerMap = new Map(snapshot.peers.map(p => [p.id, p]));
+    const nodes: PeerNode[] = snapshot.peers.map(peer => ({
+      id: peer.id,
+      label: peer.label,
+      slot: {
+        index: peer.slot.index,
+        q: peer.slot.q,
+        r: peer.slot.r,
+        z: peer.slot.z,
+      },
+      peer_type: peer.peer_type,
+      last_heartbeat: peer.last_heartbeat,
+      capabilities: peer.capabilities,
+      online: peer.online,
+    }));
 
-    // Build nodes from ALL known slots (the complete mesh view)
-    const nodes: PeerNode[] = snapshot.slots.map(slot => {
-      const connectedPeer = peerMap.get(slot.peer_id);
-      return {
-        id: slot.peer_id,
-        label: slot.peer_id.substring(0, 12) + '...',
-        slot: {
-          index: slot.index,
-          q: slot.coord[0],
-          r: slot.coord[1],
-          z: slot.coord[2],
-        },
-        peer_type: 'server' as const,
-        last_heartbeat: Date.now(),
-        capabilities: ['mesh'],
-        // Online if we have a direct connection, otherwise assume online (they claimed a slot)
-        online: connectedPeer?.online ?? true,
-      };
-    });
+    const edges: PeerEdge[] = snapshot.edges.map(edge => ({
+      from: edge.from,
+      to: edge.to,
+      connection_type: edge.connection_type,
+      latency_ms: edge.latency_ms,
+      color:
+        edge.connection_type === 'relay'
+          ? '#FF9800'
+          : edge.connection_type === 'transport'
+            ? '#29B6F6'
+            : '#4CAF50',
+    }));
 
-    // Create edges between all nodes with slots (mesh topology)
-    const edges: PeerEdge[] = [];
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        edges.push({
-          from: nodes[i].id,
-          to: nodes[j].id,
-          connection_type: 'neighbor',
-          latency_ms: null,
-          color: '#4CAF50',
-        });
-      }
-    }
+    const availableSlots = calculateAvailableSlots(nodes);
+    const filledSlots = nodes.filter(node => node.slot.index !== null).length;
 
     return {
       mesh_config: {
@@ -224,12 +283,14 @@ export function useNetworkMap() {
       nodes,
       edges,
       stats: {
-        total_peers: nodes.length,  // All known nodes in mesh
+        total_peers: nodes.length,
         server_nodes: nodes.length,
         browser_peers: 0,
         mesh_edges: edges.length,
         relay_connections: 0,
-        occupancy_percent: (snapshot.slots.length / 1000) * 100,
+        available_slots: availableSlots,
+        filled_slots: filledSlots,
+        mesh_density: availableSlots === 0 ? 0 : (filledSlots / availableSlots) * 100,
       },
     };
   };
@@ -261,13 +322,16 @@ export function useNetworkMap() {
     const serverNodes = nodes.filter(n => n.peer_type === 'server').length;
     const browserPeers = nodes.filter(n => n.peer_type === 'browser').length;
     const slotsOccupied = nodes.filter(n => n.slot.index !== null).length;
+    const availableSlots = calculateAvailableSlots(nodes);
     return {
       total_peers: nodes.length,
       server_nodes: serverNodes,
       browser_peers: browserPeers,
       mesh_edges: edges.length,
       relay_connections: edges.filter(e => e.connection_type === 'relay').length,
-      occupancy_percent: (slotsOccupied / 1000) * 100,
+      available_slots: availableSlots,
+      filled_slots: slotsOccupied,
+      mesh_density: availableSlots === 0 ? 0 : (slotsOccupied / availableSlots) * 100,
     };
   };
 

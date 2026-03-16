@@ -18,39 +18,81 @@
           size="small"
           variant="tonal"
         >
-          <v-icon start size="small">{{ connected ? '$broadcast' : '$broadcast-off' }}</v-icon>
+          <v-icon
+            start
+            size="small"
+          >
+            {{ connected ? '$broadcast' : '$broadcast-off' }}
+          </v-icon>
           {{ connected ? 'Live' : 'Disconnected' }}
         </v-chip>
       </div>
     </v-card-title>
 
     <!-- Stats Bar -->
-    <v-card-subtitle v-if="networkMap" class="px-4 pb-2">
-      <v-row dense class="text-caption">
+    <v-card-subtitle
+      v-if="networkMap"
+      class="px-4 pb-2"
+    >
+      <v-row
+        dense
+        class="text-caption"
+      >
         <v-col>
-          <v-icon start size="small">$server</v-icon>
+          <v-icon
+            start
+            size="small"
+          >
+            $server
+          </v-icon>
           {{ networkMap.stats.total_peers }} peers
         </v-col>
         <v-col>
-          <v-icon start size="small" color="primary">$hexagon-multiple</v-icon>
+          <v-icon
+            start
+            size="small"
+            color="primary"
+          >
+            $hexagon-multiple
+          </v-icon>
           {{ networkMap.stats.server_nodes }} servers
         </v-col>
         <v-col>
-          <v-icon start size="small" color="secondary">$web</v-icon>
+          <v-icon
+            start
+            size="small"
+            color="secondary"
+          >
+            $web
+          </v-icon>
           {{ networkMap.stats.browser_peers }} browsers
         </v-col>
         <v-col>
-          <v-icon start size="small">$vector-polyline</v-icon>
+          <v-icon
+            start
+            size="small"
+          >
+            $vector-polyline
+          </v-icon>
           {{ networkMap.stats.mesh_edges }} edges
         </v-col>
         <v-col>
-          <v-icon start size="small">$percent</v-icon>
-          {{ networkMap.stats.occupancy_percent.toFixed(1) }}% occupancy
+          <v-icon
+            start
+            size="small"
+          >
+            $percent
+          </v-icon>
+          {{ networkMap.stats.mesh_density.toFixed(1) }}% density
+          ({{ networkMap.stats.filled_slots }}/{{ networkMap.stats.available_slots }} slots)
         </v-col>
       </v-row>
     </v-card-subtitle>
 
-    <v-card-text class="flex-grow-1 pa-0" style="position: relative;">
+    <v-card-text
+      class="flex-grow-1 pa-0"
+      style="position: relative;"
+    >
       <!-- Loading State (only shown on initial load) -->
       <v-overlay
         v-if="initialLoading"
@@ -129,7 +171,10 @@
           </div>
           <div class="legend-colors mt-1">
             <div class="color-label">
-              <div class="color-box" style="background: #00ff00;"></div>
+              <div
+                class="color-box"
+                style="background: #00ff00;"
+              ></div>
               <span class="text-caption">Good</span>
             </div>
             <div class="color-label">
@@ -137,11 +182,17 @@
               <span class="text-caption">Medium</span>
             </div>
             <div class="color-label">
-              <div class="color-box" style="background: #ff0000;"></div>
+              <div
+                class="color-box"
+                style="background: #ff0000;"
+              ></div>
               <span class="text-caption">High</span>
             </div>
             <div class="color-label">
-              <div class="color-box" style="background: #880088;"></div>
+              <div
+                class="color-box"
+                style="background: #880088;"
+              ></div>
               <span class="text-caption">Dead</span>
             </div>
           </div>
@@ -159,16 +210,43 @@
         Refresh
       </v-btn>
       <v-spacer></v-spacer>
-      <v-chip size="x-small" variant="text">
-        <v-icon start size="small" color="primary">$hexagon</v-icon>
+      <v-chip
+        size="x-small"
+        variant="text"
+      >
+        <v-icon
+          start
+          size="small"
+          color="primary"
+        >
+          $hexagon
+        </v-icon>
         Server
       </v-chip>
-      <v-chip size="x-small" variant="text">
-        <v-icon start size="small" color="secondary">$circle-small</v-icon>
+      <v-chip
+        size="x-small"
+        variant="text"
+      >
+        <v-icon
+          start
+          size="small"
+          color="secondary"
+        >
+          $circle-small
+        </v-icon>
         Browser
       </v-chip>
-      <v-chip size="x-small" variant="text">
-        <v-icon start size="small" color="success">$circle-small</v-icon>
+      <v-chip
+        size="x-small"
+        variant="text"
+      >
+        <v-icon
+          start
+          size="small"
+          color="success"
+        >
+          $circle-small
+        </v-icon>
         DHT
       </v-chip>
     </v-card-actions>
@@ -176,6 +254,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 // IMPORTANT: Import WebGPU shim FIRST before any Three.js or 3d-force-graph imports
 // This provides fallback constants for browsers without WebGPU support (e.g., Firefox)
 import { isWebGLSupported } from '/@/lib/webgpu-shim';

@@ -71,8 +71,8 @@ export interface MeshConnection {
   latency_down_ms: number;
   /** Multi-window latency statistics */
   latency_stats?: LatencyStats;
-  /** Connection type (neighbor, relay, etc.) */
-  connection_type?: 'neighbor' | 'relay' | 'replication';
+  /** Connection type (neighbor, transport, relay, etc.) */
+  connection_type?: 'neighbor' | 'transport' | 'relay' | 'replication';
 }
 
 /**
@@ -107,8 +107,8 @@ export interface MeshStats {
   min_latency: number;
   /** Maximum latency (ms) */
   max_latency: number;
-  /** Mesh occupancy percentage */
-  occupancy_percent: number;
+  /** Fraction of the live fillable slot frontier that is occupied */
+  mesh_density: number;
 }
 
 /**
