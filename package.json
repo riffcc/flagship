@@ -84,6 +84,7 @@
     "@riffcc/citadel-sdk": "workspace:*",
     "@tanstack/vue-query": "^5.81.2",
     "@vueuse/core": "^12.8.2",
+    "blurhash": "^2.0.5",
     "core-js": "^3.43.0",
     "electron-updater": "^6.6.2",
     "events": "^3.3.0",
