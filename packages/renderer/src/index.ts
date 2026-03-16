@@ -8,6 +8,14 @@ import { createApp, type App as VueApp } from 'vue';
 import App from './App.vue';
 import { registerPlugins } from './plugins';
 
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  void navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (const registration of registrations) {
+      void registration.unregister();
+    }
+  });
+}
+
 const app: VueApp = createApp(App);
 
 registerPlugins(app);

@@ -40,6 +40,8 @@ const générerAliasRésolution = () => {
  * @type {import('vite').UserConfig}
  * @see https://vitejs.dev/config/
  */
+const enablePwa = process.env.FLAGSHIP_ENABLE_PWA === '1';
+
 const config = {
   mode: process.env.MODE,
   root: PACKAGE_ROOT,
@@ -57,8 +59,10 @@ const config = {
     }),
     splitVendorChunkPlugin(),
     injectAppVersion(),
-    // PWA service worker - only for web builds
-    !forElectron && VitePWA({
+    // PWA is opt-in only. The normal web deployment injects runtime config
+    // into index.html at serve time, so precaching the HTML shell causes
+    // stale API/runtime config behavior across deploys.
+    !forElectron && enablePwa && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'fonts/**/*', 'images/**/*'],
       manifest: {
