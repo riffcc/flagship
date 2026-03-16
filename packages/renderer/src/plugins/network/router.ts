@@ -1,9 +1,9 @@
-// @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Network Router
 // Intelligent routing between different network adapters with fallback strategy
 
-import { BaseNetworkAdapter } from './adapters/base';
-import { NetworkConfig } from './config';
+import type { BaseNetworkAdapter } from './adapters/base';
+import type { NetworkConfig } from './config';
 import { NetworkTelemetry } from './telemetry';
 
 export class NetworkRouter {
@@ -31,7 +31,7 @@ export class NetworkRouter {
           adapter.initialize(this.getAdapterConfig(name)).catch(error => {
             console.error(`Failed to initialize ${name} adapter:`, error);
             return null;
-          })
+          }),
         );
       } else {
         console.log(`${name} adapter disabled by configuration`);
@@ -78,19 +78,19 @@ export class NetworkRouter {
       attempt++;
       console.log(`Attempt ${attempt}: Trying ${adapterName} adapter for ${method}`);
 
+      const startTime = Date.now();
       try {
-        const startTime = Date.now();
 
         // Apply timeout to the request
         let result: any;
         if (timeout > 0) {
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error(`${adapterName} timeout after ${timeout}ms`)), timeout)
+            setTimeout(() => reject(new Error(`${adapterName} timeout after ${timeout}ms`)), timeout),
           );
 
           result = await Promise.race([
             (adapter as any)[method](...args),
-            timeoutPromise
+            timeoutPromise,
           ]);
         } else {
           result = await (adapter as any)[method](...args);
@@ -103,7 +103,7 @@ export class NetworkRouter {
           method,
           success: true,
           duration,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
 
         console.log(`Success: ${adapterName} completed ${method} in ${duration}ms`);
@@ -118,7 +118,7 @@ export class NetworkRouter {
           success: false,
           duration,
           error: error instanceof Error ? error.message : String(error),
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
 
         console.warn(`Failed: ${adapterName} ${method} - ${error instanceof Error ? error.message : error}`);
@@ -135,8 +135,7 @@ export class NetworkRouter {
 
   private isAdapterEnabled(adapterName: string): boolean {
     switch (adapterName) {
-      case 'citadel': return this.config.citadel.enabled;
-      case 'peerbit': return this.config.peerbit.enabled;
+      case 'citadel': return true;
       case 'http': return true; // HTTP always available as fallback
       default: return false;
     }
@@ -178,7 +177,7 @@ export class NetworkRouter {
           console.error(`Failed to check health of ${name} adapter:`, error);
           health[name] = {
             isHealthy: false,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
           };
         }
       }

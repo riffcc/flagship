@@ -2,20 +2,8 @@
 // Defines the configuration structure for the hybrid network service
 
 export interface NetworkConfig {
-  // Mode selection
-  mode: 'peerbit-only' | 'citadel-only' | 'hybrid' | 'auto';
-
-  // Peerbit configuration
-  peerbit: {
-    enabled: boolean;
-    relayUrl: string;
-    bootstrappers: string[];
-    siteAddress: string;
-  };
-
   // Citadel configuration
   citadel: {
-    enabled: boolean;
     bootstrapNodes: string[];
     dhtStoragePath: string;
     lazyLoading: boolean;
@@ -32,33 +20,25 @@ export interface NetworkConfig {
   fallback: {
     timeout: number; // ms to wait before fallback
     retryCount: number;
-    order: ('citadel' | 'peerbit' | 'http')[];
+    order: ('citadel' | 'http')[];
   };
 }
 
 // Default configuration
 export const defaultNetworkConfig: NetworkConfig = {
-  mode: 'hybrid',
-  peerbit: {
-    enabled: false, // Disabled - WASM P2P removed, using REST API
-    relayUrl: '',
-    bootstrappers: [],
-    siteAddress: ''
-  },
   citadel: {
-    enabled: true,
     bootstrapNodes: [],
     dhtStoragePath: '.citadel-dht',
     lazyLoading: true,
-    cacheTTL: 10000
+    cacheTTL: 10000,
   },
   http: {
     baseUrl: '/api/v1',
-    timeout: 5000
+    timeout: 5000,
   },
   fallback: {
     timeout: 2000,
     retryCount: 2,
-    order: ['citadel', 'http'] // peerbit removed
-  }
+    order: ['citadel', 'http'],
+  },
 };
