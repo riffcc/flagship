@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Citadel SDK Client
  * HTTP-based client for the Citadel API
@@ -8,6 +9,8 @@ import type {
   FeaturedRelease,
   ContentCategory,
   Subscription,
+  Site,
+  SiteData,
   AccountStatusResponse,
   IdResponse,
   HashResponse,
@@ -38,6 +41,8 @@ export interface ILensService {
   deleteContentCategory(id: string): Promise<IdResponse>;
   getSubscriptions(options?: SearchOptions): Promise<Subscription[]>;
   getAccountStatus(publicKey: string): Promise<AccountStatusResponse>;
+  getSite(): Promise<Site>;
+  updateSite(data: Partial<SiteData>): Promise<Site>;
 }
 
 export class CitadelService implements ILensService {
@@ -319,6 +324,34 @@ export class CitadelService implements ILensService {
 
     if (!response.ok) {
       return { isAdmin: false, roles: [], permissions: [] };
+    }
+
+    return response.json();
+  }
+
+  async getSite(): Promise<Site> {
+    const response = await fetch(`${this.baseUrl}/site`, {
+      headers: await this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get site: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async updateSite(data: Partial<SiteData>): Promise<Site> {
+    const body = JSON.stringify(data);
+    const response = await fetch(`${this.baseUrl}/site`, {
+      method: 'PUT',
+      headers: await this.getHeaders(body, 'PUT'),
+      body,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || `Failed to update site: ${response.statusText}`);
     }
 
     return response.json();

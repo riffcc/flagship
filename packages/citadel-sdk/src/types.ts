@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Citadel SDK Types
  * Lightweight TypeScript definitions for the Citadel API
@@ -197,6 +198,7 @@ export interface SiteData {
   address: string;
   description?: string;
   logo?: string;
+  url?: string;
   theme?: AnyObject;
 }
 

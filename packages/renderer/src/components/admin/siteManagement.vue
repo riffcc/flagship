@@ -99,13 +99,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, type Ref, ref, watch } from 'vue';
+import { computed, onMounted, type Ref, ref, watch } from 'vue';
 import { parseUrlOrCid } from '/@/utils';
 
+import { API_URL } from '/@/plugins/router';
+import { useArchivist } from '/@/composables/useArchivist';
+import { useIdentity } from '/@/composables/useIdentity';
 import { useSiteColors } from '/@/composables/siteColors';
 import { useShowDefederation } from '/@/composables/showDefed';
 import { useCopyToClipboard } from '/@/composables/copyToClipboard';
-import { useLensService } from '/@/plugins/lensService/hooks';
+
+interface SiteManifest {
+  id: string;
+  address: string;
+  name: string;
+  description?: string;
+  logo?: string;
+  url?: string;
+}
 
 const file: Ref<File | undefined> = ref();
 const fileBlobUrl: Ref<string | undefined> = ref();
@@ -113,6 +124,10 @@ const fileBlobUrl: Ref<string | undefined> = ref();
 const siteName: Ref<string | undefined> = ref();
 const siteDescription: Ref<string | undefined> = ref();
 const siteImage: Ref<string | undefined> = ref();
+const siteData = ref<SiteManifest | null>(null);
+const isSaving = ref(false);
+const saveMessage = ref<string | undefined>();
+const saveError = ref<string | undefined>();
 
 watch(file, (v) => {
   if (!v) {
@@ -122,12 +137,99 @@ watch(file, (v) => {
   fileBlobUrl.value = URL.createObjectURL(v);
 });
 
-function handleOnSave(){};
+const { initialize, publicKey, sign } = useIdentity();
+const { uploadFile } = useArchivist();
+
+async function loadSite() {
+  const response = await fetch(`${API_URL}/site`);
+  if (!response.ok) {
+    throw new Error(`Failed to load site: ${response.statusText}`);
+  }
+
+  const manifest = await response.json() as SiteManifest;
+  siteData.value = manifest;
+  siteName.value = manifest.name;
+  siteDescription.value = manifest.description;
+  siteImage.value = manifest.logo;
+}
+
+async function handleOnSave() {
+  if (isSaving.value) {
+    return;
+  }
+
+  isSaving.value = true;
+  saveError.value = undefined;
+  saveMessage.value = undefined;
+
+  try {
+    if (!publicKey.value) {
+      await initialize();
+    }
+
+    let logo = siteImage.value;
+    if (file.value) {
+      const uploaded = await uploadFile(file.value, {
+        publicKey: publicKey.value,
+        sign,
+      });
+
+      if (!uploaded.success || !uploaded.cid) {
+        throw new Error(uploaded.error || 'Logo upload failed');
+      }
+
+      logo = uploaded.cid;
+    }
+
+    const payload = JSON.stringify({
+      name: siteName.value?.trim() || siteData.value?.name || 'Untitled Site',
+      description: siteDescription.value?.trim() || '',
+      logo: logo || '',
+    });
+    const timestamp = Date.now().toString();
+    const signature = await sign(`${timestamp}:${payload}`);
+
+    const response = await fetch(`${API_URL}/site`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Public-Key': publicKey.value,
+        'X-Signature': signature,
+        'X-Timestamp': timestamp,
+      },
+      body: payload,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || 'Failed to save site');
+    }
+
+    const manifest = await response.json() as SiteManifest;
+    siteData.value = manifest;
+    siteName.value = manifest.name;
+    siteDescription.value = manifest.description;
+    siteImage.value = manifest.logo;
+    file.value = undefined;
+    fileBlobUrl.value = undefined;
+    saveMessage.value = 'Site settings saved.';
+  } catch (error) {
+    saveError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    isSaving.value = false;
+  }
+}
+
 const {getSiteColor, saveColor, selectedColors} = useSiteColors();
 const {showDefederation} = useShowDefederation();
-const { lensService } = useLensService();
 const siteAddress = computed(() => {
-  return lensService?.siteProgram?.address;
+  return siteData.value?.address || publicKey.value;
 });
 const { copy, getIcon, getColor } = useCopyToClipboard();
+
+onMounted(() => {
+  loadSite().catch((error) => {
+    saveError.value = error instanceof Error ? error.message : String(error);
+  });
+});
 </script>
