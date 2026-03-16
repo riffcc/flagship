@@ -3,6 +3,8 @@ node_modules
 .pnpm-store-bak
 dist
 packages/renderer/dist
+!packages/renderer/dist/
+!packages/renderer/dist/**
 packages/main/dist
 packages/preload/dist
 .git
@@ -18,5 +20,9 @@ coverage
 *.tsbuildinfo
 .eslintcache
 docker
+!docker/
+!docker/**
 tests
 scripts
+!scripts/
+!scripts/update-electron-vendors.mjs

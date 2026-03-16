@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "packages/epub-wasm",
+    "packages/flagship-serve",
 ]
 resolver = "2"
 

@@ -1,33 +1,47 @@
-# Flagship Frontend - Pre-built Static Files with Runtime Configuration
-# Use this Dockerfile when the frontend has been built on the host
-# Build frontend first: cd /opt/castle/workspace/flagship && pnpm build
+# Flagship Frontend - Pre-built static files served by the native Rust runtime
+# Build frontend first: pnpm build
 
-FROM nginx:alpine
+FROM debian:13 AS builder
 
-# Install envsubst for runtime configuration injection
-RUN apk add --no-cache gettext
+ENV DEBIAN_FRONTEND=noninteractive
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV CARGO_HOME=/usr/local/cargo
+ENV PATH=/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# Copy pre-built static files from host
-COPY packages/renderer/dist/web /usr/share/nginx/html
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    curl \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy nginx config template for API proxying (will be processed at runtime)
-COPY docker/nginx.conf.template /etc/nginx/nginx.conf.template
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --profile minimal --default-toolchain 1.94.0
 
-# Copy runtime configuration template and entrypoint script
-COPY docker/config.template.js /etc/nginx/config.template.js
-COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+COPY packages/epub-wasm/Cargo.toml packages/epub-wasm/Cargo.toml
+COPY packages/epub-wasm/src packages/epub-wasm/src
+COPY packages/flagship-serve/Cargo.toml packages/flagship-serve/Cargo.toml
+COPY packages/flagship-serve/src packages/flagship-serve/src
+RUN cargo build --locked --release -p flagship-cli --bin flagship
+
+FROM debian:13
 
 # Environment variables (can be overridden at runtime)
 # CITADEL_PEERS: comma-separated list of citadel mesh nodes (host:port)
 # LENS_NODE: lens node for local API queries (host:port)
 ENV CITADEL_PEERS=""
 ENV LENS_NODE=""
+ENV FLAGSHIP_STATIC_DIR="/srv/flagship"
 
-# Health check
-HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 80
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+COPY --from=builder /app/target/release/flagship /usr/local/bin/flagship
+COPY packages/renderer/dist/web /srv/flagship
+
+ENTRYPOINT ["/usr/local/bin/flagship", "serve"]
