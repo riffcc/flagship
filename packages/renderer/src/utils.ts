@@ -1,7 +1,7 @@
 import {base16} from 'multiformats/bases/base16';
 import {CID} from 'multiformats/cid';
 import {cid as isCID} from 'is-ipfs';
-import { RIFFCC_IPFS_GATEWAY, RIFFCC_ARCHIVIST_GATEWAY } from './constants/config';
+import { RIFFCC_GATEWAY, RIFFCC_IPFS_GATEWAY, RIFFCC_ARCHIVIST_GATEWAY } from './constants/config';
 import type { FeaturedReleaseItem } from './types';
 import {Duration} from 'luxon';
 
@@ -148,9 +148,12 @@ export function isValidEmail(email: string) {
 /**
  * Resolves a CID or URL to a full content URL.
  *
+ * All CIDs are routed through the Neverust/Archivist gateway (cdn.riff.cc).
+ * IPFS is no longer used as a content source.
+ *
  * Routing logic:
- * - Archivist CIDs (zD prefix) → Archivist gateway (VITE_ARCHIVIST_GATEWAY or VITE_ARCHIVIST_API_URL)
- * - IPFS CIDs (Qm, bafy, etc.) → IPFS gateway (VITE_IPFS_GATEWAY)
+ * - Archivist CIDs (0xcd01-0xcd05) → /api/archivist/v1/data/{cid}
+ * - Legacy IPFS CIDs (Qm, bafy) → /api/archivist/v1/data/{cid} (same endpoint)
  * - Already a URL → returns as-is
  */
 export function parseUrlOrCid(urlOrCid?: string): string | undefined {
@@ -161,16 +164,9 @@ export function parseUrlOrCid(urlOrCid?: string): string | undefined {
     return urlOrCid;
   }
 
-  // Route Archivist CIDs to Archivist gateway
-  // Use /network/stream for buffering and network fetching
-  if (isArchivistCid(urlOrCid)) {
-    const archivistBase = getArchivistBaseUrl();
-    return `${archivistBase}/api/archivist/v1/data/${urlOrCid}/network/stream`;
-  }
-
-  // Route IPFS CIDs to IPFS gateway
-  const ipfsBase = getIpfsBaseUrl();
-  return `${ipfsBase}/ipfs/${urlOrCid}`;
+  // All CIDs go through the Archivist gateway
+  const archivistBase = getArchivistBaseUrl();
+  return `${archivistBase}/api/archivist/v1/data/${urlOrCid}/network/stream`;
 }
 
 export function filterActivedFeatured(featured: FeaturedReleaseItem) {
